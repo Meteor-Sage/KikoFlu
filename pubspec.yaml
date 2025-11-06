@@ -14,7 +14,6 @@ dependencies:
 
   # UI & Material Design
   cupertino_icons: ^1.0.6
-  material_color_utilities: ^0.11.1
   dynamic_color: ^1.7.0
   
   # State Management
@@ -27,7 +26,6 @@ dependencies:
   
   # Audio & Video & Pdf
   just_audio: ^0.9.36
-  just_audio_background: ^0.0.1-beta.14
   video_player: ^2.8.1
   audio_service: ^0.18.12
   flutter_pdfview: ^1.3.2
@@ -42,12 +40,10 @@ dependencies:
   # UI Components
   cached_network_image: ^3.3.0
   flutter_staggered_grid_view: ^0.7.0
-  shimmer: ^3.0.0
   
   # Utilities
   json_annotation: ^4.8.1
   equatable: ^2.0.5
-  uuid: ^4.2.1
   
   # Permissions
   permission_handler: ^11.1.0
