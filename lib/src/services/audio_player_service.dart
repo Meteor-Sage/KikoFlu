@@ -1,0 +1,298 @@
+import 'dart:async';
+import 'package:just_audio/just_audio.dart';
+import 'package:audio_service/audio_service.dart';
+
+import '../models/audio_track.dart';
+
+class AudioPlayerService {
+  static AudioPlayerService? _instance;
+  static AudioPlayerService get instance =>
+      _instance ??= AudioPlayerService._();
+
+  AudioPlayerService._();
+
+  final AudioPlayer _player = AudioPlayer();
+  final List<AudioTrack> _queue = [];
+  int _currentIndex = 0;
+  AudioHandler? _audioHandler;
+  LoopMode _appLoopMode = LoopMode.off; // Track loop mode at app level
+
+  // Stream controllers
+  final StreamController<List<AudioTrack>> _queueController =
+      StreamController.broadcast();
+  final StreamController<AudioTrack?> _currentTrackController =
+      StreamController.broadcast();
+
+  // Initialize the service
+  Future<void> initialize() async {
+    // Initialize audio service handler for system integration
+    _audioHandler = await AudioService.init(
+      builder: () => _AudioPlayerHandler(this),
+      config: const AudioServiceConfig(
+        androidNotificationChannelId:
+            'com.example.kikoeru_flutter.channel.audio',
+        androidNotificationChannelName: 'Kikoeru Audio',
+        androidNotificationOngoing: false,
+        androidStopForegroundOnPause: false,
+        androidShowNotificationBadge: true,
+      ),
+    );
+
+    // Listen to player state changes
+    _player.playerStateStream.listen((state) {
+      if (state.processingState == ProcessingState.completed) {
+        // Handle track completion based on app-level loop mode
+        if (_appLoopMode == LoopMode.one) {
+          // Single track repeat - replay current track
+          seek(Duration.zero);
+          play();
+        } else if (_currentIndex < _queue.length - 1) {
+          // Has next track - play it
+          skipToNext();
+        } else if (_appLoopMode == LoopMode.all && _queue.isNotEmpty) {
+          // List repeat - go back to first track
+          skipToIndex(0);
+        } else {
+          // Reached the end of the queue with no repeat, pause
+          pause();
+        }
+      }
+
+      // Update audio service playback state
+      _updatePlaybackState();
+    });
+
+    // Listen to position changes
+    _player.positionStream.listen((position) {
+      _updatePlaybackState();
+    });
+  }
+
+  // Update audio service playback state for system controls
+  void _updatePlaybackState() {
+    if (_audioHandler == null) return;
+
+    final playing = _player.playing;
+    final processingState = _player.processingState;
+
+    (_audioHandler as _AudioPlayerHandler).playbackState.add(PlaybackState(
+          controls: [
+            MediaControl.skipToPrevious,
+            if (playing) MediaControl.pause else MediaControl.play,
+            MediaControl.skipToNext,
+            MediaControl.stop,
+          ],
+          systemActions: const {
+            MediaAction.seek,
+            MediaAction.seekForward,
+            MediaAction.seekBackward,
+          },
+          androidCompactActionIndices: const [0, 1, 2],
+          processingState: {
+                ProcessingState.idle: AudioProcessingState.idle,
+                ProcessingState.loading: AudioProcessingState.loading,
+                ProcessingState.buffering: AudioProcessingState.buffering,
+                ProcessingState.ready: AudioProcessingState.ready,
+                ProcessingState.completed: AudioProcessingState.completed,
+              }[processingState] ??
+              AudioProcessingState.idle,
+          playing: playing,
+          updatePosition: _player.position,
+          bufferedPosition: _player.bufferedPosition,
+          speed: _player.speed,
+        ));
+  }
+
+  // Queue management
+  Future<void> updateQueue(List<AudioTrack> tracks,
+      {int startIndex = 0}) async {
+    _queue.clear();
+    _queue.addAll(tracks);
+    _currentIndex = startIndex.clamp(0, tracks.length - 1);
+
+    _queueController.add(List.from(_queue));
+
+    // Load the current track
+    if (tracks.isNotEmpty && _currentIndex < tracks.length) {
+      await _loadTrack(tracks[_currentIndex]);
+    }
+  }
+
+  Future<void> _loadTrack(AudioTrack track) async {
+    try {
+      await _player.setAudioSource(AudioSource.uri(
+        Uri.parse(track.url),
+      ));
+      _currentTrackController.add(track);
+
+      // Update media item for system controls
+      _updateMediaItem(track);
+    } catch (e) {
+      print('Error loading audio source: $e');
+    }
+  }
+
+  // Update media item for system notification
+  void _updateMediaItem(AudioTrack track) {
+    if (_audioHandler == null) return;
+
+    (_audioHandler as _AudioPlayerHandler).mediaItem.add(MediaItem(
+          id: track.id,
+          album: track.album ?? '',
+          title: track.title,
+          artist: track.artist ?? '',
+          duration: track.duration,
+          artUri:
+              track.artworkUrl != null ? Uri.parse(track.artworkUrl!) : null,
+        ));
+
+    // Update playback state immediately after media item change
+    _updatePlaybackState();
+  }
+
+  // Playback controls
+  Future<void> play() async {
+    await _player.play();
+    _updatePlaybackState();
+  }
+
+  Future<void> pause() async {
+    await _player.pause();
+    _updatePlaybackState();
+  }
+
+  Future<void> stop() async {
+    await _player.stop();
+    _updatePlaybackState();
+  }
+
+  Future<void> seek(Duration position) async {
+    await _player.seek(position);
+    _updatePlaybackState();
+  }
+
+  Future<void> seekForward(Duration duration) async {
+    final currentPosition = _player.position;
+    final totalDuration = _player.duration;
+    if (totalDuration != null) {
+      final newPosition = currentPosition + duration;
+      await _player
+          .seek(newPosition > totalDuration ? totalDuration : newPosition);
+      _updatePlaybackState();
+    }
+  }
+
+  Future<void> seekBackward(Duration duration) async {
+    final currentPosition = _player.position;
+    final newPosition = currentPosition - duration;
+    await _player
+        .seek(newPosition < Duration.zero ? Duration.zero : newPosition);
+    _updatePlaybackState();
+  }
+
+  Future<void> skipToNext() async {
+    if (_queue.isNotEmpty && _currentIndex < _queue.length - 1) {
+      _currentIndex++;
+      await _loadTrack(_queue[_currentIndex]);
+      await play();
+    } else {
+      // No next track available
+      throw Exception('没有下一首可播放');
+    }
+  }
+
+  Future<void> skipToPrevious() async {
+    if (_queue.isNotEmpty && _currentIndex > 0) {
+      _currentIndex--;
+      await _loadTrack(_queue[_currentIndex]);
+      await play();
+    } else {
+      // No previous track available
+      throw Exception('没有上一首可播放');
+    }
+  }
+
+  Future<void> skipToIndex(int index) async {
+    if (index >= 0 && index < _queue.length) {
+      _currentIndex = index;
+      await _loadTrack(_queue[_currentIndex]);
+      await play();
+    }
+  }
+
+  // Getters and Streams
+  Stream<PlayerState> get playerStateStream => _player.playerStateStream;
+  Stream<Duration> get positionStream => _player.positionStream;
+  Stream<Duration?> get durationStream => _player.durationStream;
+  Stream<List<AudioTrack>> get queueStream => _queueController.stream;
+  Stream<AudioTrack?> get currentTrackStream => _currentTrackController.stream;
+
+  Duration get position => _player.position;
+  Duration? get duration => _player.duration;
+  bool get playing => _player.playing;
+  PlayerState get playerState => _player.playerState;
+
+  AudioTrack? get currentTrack =>
+      _queue.isNotEmpty && _currentIndex < _queue.length
+          ? _queue[_currentIndex]
+          : null;
+
+  List<AudioTrack> get queue => List.unmodifiable(_queue);
+  int get currentIndex => _currentIndex;
+
+  bool get hasNext => _currentIndex < _queue.length - 1;
+  bool get hasPrevious => _currentIndex > 0;
+
+  // Audio settings
+  Future<void> setRepeatMode(LoopMode mode) async {
+    // Store the mode at app level
+    _appLoopMode = mode;
+    // Always keep the player's loop mode off to prevent single-track looping
+    // We handle all repeat logic in the app layer via playerStateStream listener
+    await _player.setLoopMode(LoopMode.off);
+  }
+
+  Future<void> setShuffleMode(bool enabled) async {
+    await _player.setShuffleModeEnabled(enabled);
+  }
+
+  Future<void> setVolume(double volume) async {
+    await _player.setVolume(volume.clamp(0.0, 1.0));
+  }
+
+  Future<void> setSpeed(double speed) async {
+    await _player.setSpeed(speed.clamp(0.5, 2.0));
+  }
+
+  // Cleanup
+  Future<void> dispose() async {
+    await _queueController.close();
+    await _currentTrackController.close();
+    await _player.dispose();
+  }
+}
+
+// Custom AudioHandler for system integration
+class _AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
+  final AudioPlayerService _service;
+
+  _AudioPlayerHandler(this._service);
+
+  @override
+  Future<void> play() => _service.play();
+
+  @override
+  Future<void> pause() => _service.pause();
+
+  @override
+  Future<void> stop() => _service.stop();
+
+  @override
+  Future<void> seek(Duration position) => _service.seek(position);
+
+  @override
+  Future<void> skipToNext() => _service.skipToNext();
+
+  @override
+  Future<void> skipToPrevious() => _service.skipToPrevious();
+}
