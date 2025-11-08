@@ -14,28 +14,117 @@ class LyricPlayerScreen extends ConsumerStatefulWidget {
 
 class _LyricPlayerScreenState extends ConsumerState<LyricPlayerScreen> {
   final ScrollController _scrollController = ScrollController();
+  final Map<int, GlobalKey> _itemKeys = {};
   int? _currentLyricIndex;
   bool _autoScroll = true;
+  bool _isInitialScroll = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // 界面加载完成后，滚动到当前歌词位置
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _performInitialScroll();
+    });
+  }
 
   @override
   void dispose() {
     _scrollController.dispose();
+    _itemKeys.clear();
     super.dispose();
+  }
+
+  // 获取或创建指定索引的 GlobalKey
+  GlobalKey _getKeyForIndex(int index) {
+    if (!_itemKeys.containsKey(index)) {
+      _itemKeys[index] = GlobalKey();
+    }
+    return _itemKeys[index]!;
+  }
+
+  void _performInitialScroll() {
+    if (!mounted || !_scrollController.hasClients) return;
+
+    final lyricState = ref.read(lyricControllerProvider);
+    final position = ref.read(positionProvider).valueOrNull;
+
+    if (position != null && lyricState.lyrics.isNotEmpty) {
+      final currentIndex = _getCurrentLyricIndex(position, lyricState.lyrics);
+      if (currentIndex >= 0) {
+        _currentLyricIndex = currentIndex;
+        _isInitialScroll = false;
+        // 使用混合滚动策略
+        _scrollToLyricHybrid(currentIndex, immediate: true);
+      }
+    }
   }
 
   void _scrollToCurrentLyric(int index, List<LyricLine> lyrics) {
     if (!_autoScroll || !_scrollController.hasClients) return;
+    _scrollToLyricHybrid(index, immediate: _isInitialScroll);
+    _isInitialScroll = false;
+  }
 
+  // 混合滚动策略：先计算滚动触发渲染，再精确定位
+  void _scrollToLyricHybrid(int index, {bool immediate = false}) {
+    final key = _getKeyForIndex(index);
+    final context = key.currentContext;
+
+    // 如果 Widget 已渲染，直接使用精确方式
+    if (context != null) {
+      Scrollable.ensureVisible(
+        context,
+        alignment: 0.5,
+        duration: immediate ? Duration.zero : const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    } else {
+      // Widget 未渲染，先用计算方式滚动到大致位置
+      _scrollToApproximatePosition(index, immediate: immediate).then((_) {
+        // 等待渲染完成后，再精确定位
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final newContext = key.currentContext;
+          if (newContext != null && mounted) {
+            Scrollable.ensureVisible(
+              newContext,
+              alignment: 0.5,
+              duration: const Duration(milliseconds: 150),
+              curve: Curves.easeOut,
+            );
+          }
+        });
+      });
+    }
+  }
+
+  // 计算并滚动到大致位置（用于触发懒加载）
+  Future<void> _scrollToApproximatePosition(int index,
+      {bool immediate = false}) async {
+    if (!_scrollController.hasClients) return;
+
+    // 估算位置：使用平均高度
+    const estimatedItemHeight = 60.0;
     final screenHeight = MediaQuery.of(context).size.height;
-    const itemHeight = 60.0; // 估算的每行高度
-    final targetPosition =
-        index * itemHeight - screenHeight / 2 + itemHeight / 2;
-
-    _scrollController.animateTo(
-      targetPosition.clamp(0.0, _scrollController.position.maxScrollExtent),
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOut,
+    final targetOffset = index * estimatedItemHeight -
+        screenHeight / 2 +
+        estimatedItemHeight / 2;
+    final clampedOffset = targetOffset.clamp(
+      0.0,
+      _scrollController.position.maxScrollExtent,
     );
+
+    if (immediate) {
+      _scrollController.jumpTo(clampedOffset);
+      // 立即跳转后等待一帧以确保渲染
+      await Future.delayed(const Duration(milliseconds: 50));
+    } else {
+      await _scrollController.animateTo(
+        clampedOffset,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
   int _getCurrentLyricIndex(Duration position, List<LyricLine> lyrics) {
@@ -131,6 +220,7 @@ class _LyricPlayerScreenState extends ConsumerState<LyricPlayerScreen> {
                     final isPlaceholder = lyric.text.isEmpty;
 
                     return GestureDetector(
+                      key: _getKeyForIndex(index), // 添加 key 用于精确定位
                       onTap: isPlaceholder
                           ? null
                           : () {
