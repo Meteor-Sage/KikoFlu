@@ -5,7 +5,7 @@ import '../providers/audio_provider.dart';
 import '../widgets/audio_player_widget.dart';
 import 'works_screen.dart';
 import 'simple_search_screen.dart';
-import 'download_screen.dart';
+import 'my_screen.dart';
 import 'settings_screen.dart';
 
 class MainScreen extends ConsumerStatefulWidget {
@@ -21,7 +21,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   final List<Widget> _screens = [
     const WorksScreen(),
     const SimpleSearchScreen(),
-    const DownloadScreen(),
+    const MyScreen(),
     const SettingsScreen(),
   ];
 
@@ -37,9 +37,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       label: '搜索',
     ),
     const NavigationDestination(
-      icon: Icon(Icons.download_outlined),
-      selectedIcon: Icon(Icons.download),
-      label: '下载',
+      icon: Icon(Icons.favorite_border),
+      selectedIcon: Icon(Icons.favorite),
+      label: '我的',
     ),
     const NavigationDestination(
       icon: Icon(Icons.settings_outlined),
@@ -51,7 +51,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(index: _currentIndex, children: _screens),
+      body: _screens[_currentIndex],
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

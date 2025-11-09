@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 
 import '../models/work.dart';
 import '../providers/auth_provider.dart';
+import '../providers/my_reviews_provider.dart';
 import '../widgets/file_explorer_widget.dart';
 import '../widgets/global_audio_player_wrapper.dart';
 import '../widgets/tag_chip.dart';
@@ -28,10 +29,14 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
   String? _errorMessage;
   bool _showHDImage = false; // 控制是否显示高清图片
   ImageProvider? _hdImageProvider; // 预加载的高清图片
+  String? _currentProgress; // 当前收藏状态
+  bool _isUpdatingProgress = false; // 是否正在更新状态
 
   @override
   void initState() {
     super.initState();
+    // 初始化收藏状态（从传入的work中获取）
+    _currentProgress = widget.work.progress;
     _loadWorkDetail();
     // Hero 动画结束后开始预加载高清图
     Future.delayed(const Duration(milliseconds: 400), () {
@@ -95,6 +100,8 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
 
       setState(() {
         _detailedWork = detailedWork;
+        // 更新收藏状态（从详情API响应中获取最新状态）
+        _currentProgress = detailedWork.progress;
         _isLoading = false;
       });
     } catch (e) {
@@ -105,6 +112,161 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
     }
   }
 
+  // 显示收藏状态选择对话框
+  Future<void> _showProgressDialog() async {
+    final filters = [
+      MyReviewFilter.marked,
+      MyReviewFilter.listening,
+      MyReviewFilter.listened,
+      MyReviewFilter.replay,
+      MyReviewFilter.postponed,
+    ];
+
+    await showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Text(
+                  '选择收藏状态',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+              ),
+              const Divider(),
+              ...filters.map((filter) {
+                final isSelected = _currentProgress == filter.value;
+                return ListTile(
+                  leading: Icon(
+                    isSelected ? Icons.check_circle : Icons.circle_outlined,
+                    color: isSelected
+                        ? Theme.of(context).colorScheme.primary
+                        : null,
+                  ),
+                  title: Text(filter.label),
+                  selected: isSelected,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _updateProgress(filter.value!);
+                  },
+                );
+              }).toList(),
+              const SizedBox(height: 8),
+              if (_currentProgress != null)
+                ListTile(
+                  leading: Icon(
+                    Icons.delete_outline,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                  title: Text(
+                    '移除',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _updateProgress(null);
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // 更新收藏状态
+  Future<void> _updateProgress(String? progress) async {
+    if (_isUpdatingProgress) return;
+
+    setState(() {
+      _isUpdatingProgress = true;
+    });
+
+    try {
+      final apiService = ref.read(kikoeruApiServiceProvider);
+
+      if (progress != null) {
+        await apiService.updateReviewProgress(
+          widget.work.id,
+          progress: progress,
+        );
+
+        setState(() {
+          _currentProgress = progress;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('已设置为：${_getProgressLabel(progress)}'),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } else {
+        // 删除收藏状态
+        await apiService.deleteReview(widget.work.id);
+
+        setState(() {
+          _currentProgress = null;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('已移除收藏'),
+              duration: Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('更新失败: $e'),
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } finally {
+      setState(() {
+        _isUpdatingProgress = false;
+      });
+    }
+  }
+
+  // 获取状态标签
+  String _getProgressLabel(String? progress) {
+    if (progress == null) return '未收藏';
+
+    final filter = [
+      MyReviewFilter.marked,
+      MyReviewFilter.listening,
+      MyReviewFilter.listened,
+      MyReviewFilter.replay,
+      MyReviewFilter.postponed,
+    ].firstWhere(
+      (f) => f.value == progress,
+      orElse: () => MyReviewFilter.all,
+    );
+
+    return filter.label;
+  }
+
   @override
   Widget build(BuildContext context) {
     final work = _detailedWork ?? widget.work;
@@ -112,7 +274,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
     return GlobalAudioPlayerWrapper(
       child: Scaffold(
         appBar: AppBar(
-          // RJ号作为标题，支持长按复制
+          // RJ号作为标题,支持长按复制
           title: GestureDetector(
             onLongPress: () => _copyToClipboard('RJ${widget.work.id}', 'RJ号'),
             child: Text(
@@ -125,6 +287,32 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
           ),
           backgroundColor: Colors.transparent,
           elevation: 0,
+          actions: [
+            // 收藏状态按钮
+            IconButton(
+              icon: _isUpdatingProgress
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    )
+                  : Icon(
+                      _currentProgress != null
+                          ? Icons.bookmark
+                          : Icons.bookmark_border,
+                      color: _currentProgress != null
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
+                    ),
+              tooltip: _currentProgress != null
+                  ? '当前状态: ${_getProgressLabel(_currentProgress)}'
+                  : '添加到收藏',
+              onPressed: _isUpdatingProgress ? null : _showProgressDialog,
+            ),
+          ],
         ),
         body: _buildBody(),
       ),
@@ -204,62 +392,37 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 标题 + 字幕图标 - 长按标题复制
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onLongPress: () => _copyToClipboard(work.title, '标题'),
-                        child: Text(
-                          work.title,
-                          style:
-                              Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
-                        ),
-                      ),
+                // 标题（可长按复制）+ 内联字幕图标（紧跟标题最后一个字，不换行）
+                GestureDetector(
+                  onLongPress: () => _copyToClipboard(work.title, '标题'),
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(text: work.title),
+                        if (work.hasSubtitle == true)
+                          TextSpan(
+                            text: ' CC', // 前置一个空格，紧跟标题内联显示
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16, // 与标题字号一致，确保基线自然对齐
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                      ],
                     ),
-                    // 字幕图标紧跟标题
-                    if (work.hasSubtitle == true) ...[
-                      const SizedBox(width: 8),
-                      Icon(
-                        Icons.closed_caption,
-                        color: Theme.of(context).colorScheme.primary,
-                        size: 20,
-                      ),
-                    ],
-                  ],
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                    textAlign: TextAlign.start,
+                    softWrap: true,
+                  ),
                 ),
                 const SizedBox(height: 8),
 
                 // 显示加载状态或错误信息
-                if (_isLoading)
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '正在加载详细信息...',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                else if (_errorMessage != null)
+                if (_errorMessage != null)
                   Container(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     child: Row(

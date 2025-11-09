@@ -276,26 +276,57 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
                                       pageBuilder: (context, animation,
                                               secondaryAnimation) =>
                                           const AudioPlayerScreen(),
+                                      transitionDuration:
+                                          const Duration(milliseconds: 400),
+                                      reverseTransitionDuration:
+                                          const Duration(milliseconds: 400),
                                       transitionsBuilder: (context, animation,
                                           secondaryAnimation, child) {
-                                        const begin = Offset(0.0, 1.0);
-                                        const end = Offset.zero;
-                                        const curve = Curves.easeInOut;
-                                        var tween = Tween(
-                                                begin: begin, end: end)
-                                            .chain(CurveTween(curve: curve));
-                                        var offsetAnimation =
-                                            animation.drive(tween);
-                                        return SlideTransition(
-                                          position: offsetAnimation,
-                                          child: FadeTransition(
-                                            opacity: animation,
-                                            child: child,
-                                          ),
+                                        // 前进动画：使用渐变和缩放效果，配合 Hero 动画
+                                        // 返回动画：只保留 Hero 动画，其他元素立即消失
+                                        return AnimatedBuilder(
+                                          animation: animation,
+                                          builder: (context, child) {
+                                            // 检测动画方向：reverse 表示返回
+                                            if (animation.status ==
+                                                    AnimationStatus.reverse ||
+                                                animation.status ==
+                                                    AnimationStatus.dismissed) {
+                                              // 返回时：完全透明（让非 Hero 元素不可见），但仍然渲染 child 以保留 Hero 动画
+                                              return Opacity(
+                                                opacity: 0.0,
+                                                child: child,
+                                              );
+                                            }
+
+                                            // 前进时使用缩放和淡入动画
+                                            const begin = 0.0;
+                                            const end = 1.0;
+                                            const curve = Curves.easeOutCubic;
+
+                                            final scale = Tween<double>(
+                                              begin: begin,
+                                              end: end,
+                                            )
+                                                .chain(CurveTween(curve: curve))
+                                                .evaluate(animation);
+
+                                            final opacity =
+                                                CurveTween(curve: Curves.easeIn)
+                                                    .evaluate(animation);
+
+                                            return Transform.scale(
+                                              scale: scale,
+                                              alignment: Alignment.bottomLeft,
+                                              child: Opacity(
+                                                opacity: opacity,
+                                                child: child,
+                                              ),
+                                            );
+                                          },
+                                          child: child,
                                         );
                                       },
-                                      transitionDuration:
-                                          const Duration(milliseconds: 300),
                                     ),
                                   );
                                 },

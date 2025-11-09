@@ -3,11 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/work.dart';
 import '../providers/auth_provider.dart';
+import '../providers/my_reviews_provider.dart';
 import '../screens/work_detail_screen.dart';
 import 'tag_chip.dart';
 import 'va_chip.dart';
 
-class EnhancedWorkCard extends ConsumerWidget {
+class EnhancedWorkCard extends ConsumerStatefulWidget {
   final Work work;
   final VoidCallback? onTap;
   final int crossAxisCount;
@@ -20,43 +21,198 @@ class EnhancedWorkCard extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<EnhancedWorkCard> createState() => _EnhancedWorkCardState();
+}
+
+class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
+  String? _progress; // 当前收藏状态
+  bool _loadingProgress = false; // 是否在获取状态
+  bool _updating = false; // 是否在更新状态
+
+  @override
+  void initState() {
+    super.initState();
+    _progress = widget.work.progress; // 初始来自传入的work
+  }
+
+  // 长按逻辑：获取最新详情(含 progress)，然后弹出编辑菜单
+  Future<void> _onLongPress() async {
+    if (_loadingProgress || _updating) return;
+    setState(() => _loadingProgress = true);
+    try {
+      final api = ref.read(kikoeruApiServiceProvider);
+      final json = await api.getWork(widget.work.id);
+      final detailed = Work.fromJson(json);
+      setState(() {
+        _progress = detailed.progress; // 更新最新状态
+        _loadingProgress = false;
+      });
+      _showEditSheet();
+    } catch (e) {
+      setState(() => _loadingProgress = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('获取状态失败: $e'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
+  String _labelFor(String? value) {
+    if (value == null) return '未收藏';
+    final found = [
+      MyReviewFilter.marked,
+      MyReviewFilter.listening,
+      MyReviewFilter.listened,
+      MyReviewFilter.replay,
+      MyReviewFilter.postponed,
+    ].firstWhere(
+      (f) => f.value == value,
+      orElse: () => MyReviewFilter.all,
+    );
+    return found.label;
+  }
+
+  void _showEditSheet() {
+    final filters = [
+      MyReviewFilter.marked,
+      MyReviewFilter.listening,
+      MyReviewFilter.listened,
+      MyReviewFilter.replay,
+      MyReviewFilter.postponed,
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    Text(
+                      '编辑收藏状态',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const Spacer(),
+                    if (_updating)
+                      const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              ...filters.map((f) {
+                final selected = _progress == f.value;
+                return ListTile(
+                  leading: Icon(
+                      selected ? Icons.check_circle : Icons.circle_outlined,
+                      color: selected
+                          ? Theme.of(context).colorScheme.primary
+                          : null),
+                  title: Text(f.label),
+                  onTap: _updating ? null : () => _updateProgress(f.value!),
+                  selected: selected,
+                );
+              }),
+              if (_progress != null) ...[
+                const Divider(height: 1),
+                ListTile(
+                  leading: Icon(Icons.delete_outline,
+                      color: Theme.of(context).colorScheme.error),
+                  title: Text('移除收藏',
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.error)),
+                  onTap: _updating ? null : () => _updateProgress(null),
+                ),
+              ],
+              const SizedBox(height: 4),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _updateProgress(String? value) async {
+    if (_updating) return;
+    setState(() => _updating = true);
+    final api = ref.read(kikoeruApiServiceProvider);
+    try {
+      if (value != null) {
+        await api.updateReviewProgress(widget.work.id, progress: value);
+        setState(() => _progress = value);
+        if (mounted) {
+          Navigator.pop(context); // 关闭底部弹窗
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('已设置为：${_labelFor(value)}'),
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        await api.deleteReview(widget.work.id);
+        setState(() => _progress = null);
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('已移除收藏'),
+              behavior: SnackBarBehavior.floating,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('操作失败: $e'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } finally {
+      setState(() => _updating = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final host = authState.host ?? '';
     final token = authState.token ?? '';
 
-    // 如果没有提供自定义onTap，使用默认行为（导航到详情页面）
-    final cardOnTap = onTap ??
+    final cardOnTap = widget.onTap ??
         () {
           Navigator.of(context).push(
-            PageRouteBuilder(
-              pageBuilder: (context, animation, secondaryAnimation) =>
-                  WorkDetailScreen(work: work),
-              transitionsBuilder:
-                  (context, animation, secondaryAnimation, child) {
-                const begin = Offset(0.0, 0.1);
-                const end = Offset.zero;
-                const curve = Curves.easeInOut;
-                var tween = Tween(begin: begin, end: end)
-                    .chain(CurveTween(curve: curve));
-                var offsetAnimation = animation.drive(tween);
-                return SlideTransition(
-                  position: offsetAnimation,
-                  child: FadeTransition(
-                    opacity: animation,
-                    child: child,
-                  ),
-                );
-              },
-              transitionDuration: const Duration(milliseconds: 300),
+            MaterialPageRoute(
+              builder: (context) => WorkDetailScreen(work: widget.work),
             ),
           );
         };
 
-    // 根据列数决定卡片样式
-    if (crossAxisCount == 3) {
+    if (widget.crossAxisCount == 3) {
       return _buildCompactCard(context, host, token, cardOnTap);
-    } else if (crossAxisCount == 2) {
+    } else if (widget.crossAxisCount == 2) {
       return _buildMediumCard(context, host, token, cardOnTap);
     } else {
       return _buildFullCard(context, host, token, cardOnTap);
@@ -72,6 +228,7 @@ class EnhancedWorkCard extends ConsumerWidget {
       elevation: 8,
       child: InkWell(
         onTap: cardOnTap,
+        onLongPress: _onLongPress,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min, // 让 Column 高度自适应
@@ -89,7 +246,7 @@ class EnhancedWorkCard extends ConsumerWidget {
                     child: _buildRjTag(),
                   ),
                   // 日期标签 (右下角)
-                  if (work.release != null)
+                  if (widget.work.release != null)
                     Positioned(
                       bottom: 4,
                       right: 4,
@@ -107,7 +264,7 @@ class EnhancedWorkCard extends ConsumerWidget {
                 children: [
                   // 标题
                   Text(
-                    work.title,
+                    widget.work.title,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                           height: 1.1,
@@ -132,6 +289,7 @@ class EnhancedWorkCard extends ConsumerWidget {
       elevation: 8,
       child: InkWell(
         onTap: cardOnTap,
+        onLongPress: _onLongPress,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -148,13 +306,13 @@ class EnhancedWorkCard extends ConsumerWidget {
                     child: _buildRjTag(),
                   ),
                   // 字幕标签 (左下角)
-                  if (work.hasSubtitle == true)
+                  if (widget.work.hasSubtitle == true)
                     Positioned(
                       bottom: 6,
                       left: 6,
                       child: _buildSubtitleTag(context),
                     ),
-                  if (work.release != null)
+                  if (widget.work.release != null)
                     Positioned(
                       bottom: 6,
                       right: 6,
@@ -172,7 +330,7 @@ class EnhancedWorkCard extends ConsumerWidget {
                 children: [
                   // 标题
                   Text(
-                    work.title,
+                    widget.work.title,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                           height: 1.1,
@@ -182,7 +340,7 @@ class EnhancedWorkCard extends ConsumerWidget {
                   const SizedBox(height: 3),
                   // 社团名称
                   Text(
-                    work.name ?? '',
+                    widget.work.name ?? '',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Colors.grey[600],
                           fontSize: 10,
@@ -190,9 +348,9 @@ class EnhancedWorkCard extends ConsumerWidget {
                   ),
                   const SizedBox(height: 3),
                   // 价格
-                  if (work.price != null)
+                  if (widget.work.price != null)
                     Text(
-                      '${work.price} 日元',
+                      '${widget.work.price} 日元',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Colors.red[700],
                             fontWeight: FontWeight.w600,
@@ -200,9 +358,9 @@ class EnhancedWorkCard extends ConsumerWidget {
                           ),
                     ),
                   // 评分信息
-                  if (work.rateAverage != null &&
-                      work.rateCount != null &&
-                      work.rateCount! > 0) ...[
+                  if (widget.work.rateAverage != null &&
+                      widget.work.rateCount != null &&
+                      widget.work.rateCount! > 0) ...[
                     const SizedBox(height: 3),
                     Row(
                       children: [
@@ -213,7 +371,7 @@ class EnhancedWorkCard extends ConsumerWidget {
                         ),
                         const SizedBox(width: 2),
                         Text(
-                          '${work.rateAverage!.toStringAsFixed(1)} (${work.rateCount})',
+                          '${widget.work.rateAverage!.toStringAsFixed(1)} (${widget.work.rateCount})',
                           style:
                               Theme.of(context).textTheme.bodySmall?.copyWith(
                                     color: Colors.amber[700],
@@ -225,10 +383,10 @@ class EnhancedWorkCard extends ConsumerWidget {
                     ),
                   ],
                   const SizedBox(height: 4),
-                  if (work.tags != null && work.tags!.isNotEmpty)
+                  if (widget.work.tags != null && widget.work.tags!.isNotEmpty)
                     _buildTagsRow(context),
                   const SizedBox(height: 2),
-                  if (work.vas != null && work.vas!.isNotEmpty)
+                  if (widget.work.vas != null && widget.work.vas!.isNotEmpty)
                     _buildVoiceActorsRow(context),
                   const SizedBox(height: 2),
                 ],
@@ -248,6 +406,7 @@ class EnhancedWorkCard extends ConsumerWidget {
       elevation: 4,
       child: InkWell(
         onTap: cardOnTap,
+        onLongPress: _onLongPress,
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Column(
@@ -279,7 +438,7 @@ class EnhancedWorkCard extends ConsumerWidget {
                               borderRadius: BorderRadius.circular(3),
                             ),
                             child: Text(
-                              'RJ${work.id}',
+                              'RJ${widget.work.id}',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 10,
@@ -289,7 +448,7 @@ class EnhancedWorkCard extends ConsumerWidget {
                           ),
                         ),
                         // 字幕标签 (左下角)
-                        if (work.hasSubtitle == true)
+                        if (widget.work.hasSubtitle == true)
                           Positioned(
                             bottom: 2,
                             left: 2,
@@ -302,7 +461,7 @@ class EnhancedWorkCard extends ConsumerWidget {
                   // 标题
                   Expanded(
                     child: Text(
-                      work.title,
+                      widget.work.title,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                             height: 1.3,
@@ -321,16 +480,16 @@ class EnhancedWorkCard extends ConsumerWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          work.name ?? '',
+                          widget.work.name ?? '',
                           style:
                               Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     color: Colors.grey[600],
                                   ),
                         ),
                       ),
-                      if (work.price != null)
+                      if (widget.work.price != null)
                         Text(
-                          '${work.price} 日元',
+                          '${widget.work.price} 日元',
                           style:
                               Theme.of(context).textTheme.bodySmall?.copyWith(
                                     color: Colors.red[700],
@@ -343,19 +502,20 @@ class EnhancedWorkCard extends ConsumerWidget {
                   // 日期和下载数
                   Row(
                     children: [
-                      if (work.release != null)
+                      if (widget.work.release != null)
                         Text(
-                          work.release!,
+                          widget.work.release!,
                           style:
                               Theme.of(context).textTheme.bodySmall?.copyWith(
                                     color: Colors.grey[500],
                                   ),
                         ),
                       // 评分信息
-                      if (work.rateAverage != null &&
-                          work.rateCount != null &&
-                          work.rateCount! > 0) ...[
-                        if (work.release != null) const SizedBox(width: 8),
+                      if (widget.work.rateAverage != null &&
+                          widget.work.rateCount != null &&
+                          widget.work.rateCount! > 0) ...[
+                        if (widget.work.release != null)
+                          const SizedBox(width: 8),
                         Icon(
                           Icons.star,
                           color: Colors.amber[700],
@@ -363,7 +523,7 @@ class EnhancedWorkCard extends ConsumerWidget {
                         ),
                         const SizedBox(width: 2),
                         Text(
-                          '${work.rateAverage!.toStringAsFixed(1)} (${work.rateCount})',
+                          '${widget.work.rateAverage!.toStringAsFixed(1)} (${widget.work.rateCount})',
                           style:
                               Theme.of(context).textTheme.bodySmall?.copyWith(
                                     color: Colors.amber[700],
@@ -372,9 +532,9 @@ class EnhancedWorkCard extends ConsumerWidget {
                         ),
                       ],
                       const Spacer(),
-                      if (work.dlCount != null)
+                      if (widget.work.dlCount != null)
                         Text(
-                          '售出：${work.dlCount}',
+                          '售出：${widget.work.dlCount}',
                           style:
                               Theme.of(context).textTheme.bodySmall?.copyWith(
                                     color: Colors.grey[500],
@@ -384,11 +544,11 @@ class EnhancedWorkCard extends ConsumerWidget {
                   ),
                   const SizedBox(height: 8),
                   // 标签
-                  if (work.tags != null && work.tags!.isNotEmpty)
+                  if (widget.work.tags != null && widget.work.tags!.isNotEmpty)
                     _buildTagsWrap(context),
                   const SizedBox(height: 6),
                   // 声优
-                  if (work.vas != null && work.vas!.isNotEmpty)
+                  if (widget.work.vas != null && widget.work.vas!.isNotEmpty)
                     _buildVoiceActorsWrap(context),
                 ],
               ),
@@ -405,11 +565,11 @@ class EnhancedWorkCard extends ConsumerWidget {
       return _buildPlaceholder(context);
     }
 
-    final url = work.getCoverImageUrl(host, token: token);
+    final url = widget.work.getCoverImageUrl(host, token: token);
     final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
     // 依据不同布局控制图片缓存尺寸，避免加载超大原图导致卡顿
     int targetWidth;
-    switch (crossAxisCount) {
+    switch (widget.crossAxisCount) {
       case 3:
         targetWidth =
             (MediaQuery.of(context).size.width / 3 * devicePixelRatio).round();
@@ -423,11 +583,11 @@ class EnhancedWorkCard extends ConsumerWidget {
     }
 
     return Hero(
-      tag: 'work_cover_${work.id}',
+      tag: 'work_cover_${widget.work.id}',
       child: RepaintBoundary(
         child: CachedNetworkImage(
           imageUrl: url,
-          cacheKey: 'work_cover_${work.id}',
+          cacheKey: 'work_cover_${widget.work.id}',
           memCacheWidth: targetWidth, // 降低解码分辨率，减少 GPU / CPU 压力
           fadeInDuration: const Duration(milliseconds: 120),
           fadeOutDuration: const Duration(milliseconds: 90),
@@ -472,7 +632,7 @@ class EnhancedWorkCard extends ConsumerWidget {
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
-        'RJ${work.id}',
+        'RJ${widget.work.id}',
         style: const TextStyle(
           color: Colors.white,
           fontSize: 11,
@@ -490,7 +650,7 @@ class EnhancedWorkCard extends ConsumerWidget {
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
-        work.release!,
+        widget.work.release!,
         style: const TextStyle(
           color: Colors.white,
           fontSize: 10,
@@ -521,7 +681,7 @@ class EnhancedWorkCard extends ConsumerWidget {
       child: Wrap(
         spacing: 3,
         runSpacing: 2,
-        children: work.tags!.map((tag) {
+        children: widget.work.tags!.map((tag) {
           return TagChip(
             tag: tag,
             fontSize: 10,
@@ -540,7 +700,7 @@ class EnhancedWorkCard extends ConsumerWidget {
       child: Wrap(
         spacing: 3,
         runSpacing: 2,
-        children: work.vas!.map((va) {
+        children: widget.work.vas!.map((va) {
           return VaChip(
             va: va,
             fontSize: 10,
@@ -557,7 +717,7 @@ class EnhancedWorkCard extends ConsumerWidget {
     return Wrap(
       spacing: 4,
       runSpacing: 4,
-      children: work.tags!.map((tag) {
+      children: widget.work.tags!.map((tag) {
         return TagChip(
           tag: tag,
           fontSize: 11,
@@ -573,7 +733,7 @@ class EnhancedWorkCard extends ConsumerWidget {
     return Wrap(
       spacing: 4,
       runSpacing: 4,
-      children: work.vas!.map((va) {
+      children: widget.work.vas!.map((va) {
         return VaChip(
           va: va,
           fontSize: 11,

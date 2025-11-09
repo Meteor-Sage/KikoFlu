@@ -37,14 +37,33 @@ class KikoeruApiService {
               options.headers['Authorization'] = 'Bearer $_token';
             }
           }
-          // Set timeout
-          options.connectTimeout = const Duration(seconds: 10);
-          options.receiveTimeout = const Duration(seconds: 10);
+
+          options.connectTimeout = const Duration(seconds: 15);
+          options.receiveTimeout = const Duration(seconds: 15);
           handler.next(options);
         },
-        onError: (error, handler) {
+        onError: (error, handler) async {
           // Handle errors globally
           print('API Error: ${error.message}');
+
+          // 自动重试连接超时错误（仅重试一次）
+          if (error.type == DioExceptionType.connectionTimeout &&
+              error.requestOptions.extra['retried'] != true) {
+            print('Connection timeout detected, retrying once...');
+
+            // 标记已重试，避免无限循环
+            error.requestOptions.extra['retried'] = true;
+
+            try {
+              // 重试请求
+              final response = await _dio.fetch(error.requestOptions);
+              return handler.resolve(response);
+            } catch (e) {
+              // 重试也失败，返回错误
+              return handler.next(error);
+            }
+          }
+
           handler.next(error);
         },
       ),
@@ -521,6 +540,34 @@ class KikoeruApiService {
     }
   }
 
+  /// 获取当前账户的 Review/收藏状态列表
+  /// 支持的 filter: marked, listening, listened, replay, postponed
+  /// 传入 null 或空字符串时为全部
+  Future<Map<String, dynamic>> getMyReviews({
+    int page = 1,
+    String? filter,
+    String order = 'updated_at',
+    String sort = 'desc',
+  }) async {
+    try {
+      final query = <String, dynamic>{
+        'page': page,
+        'order': order,
+        'sort': sort,
+      };
+      if (filter != null && filter.isNotEmpty) {
+        query['filter'] = filter;
+      }
+      final response = await _dio.get(
+        '/api/review',
+        queryParameters: query,
+      );
+      return response.data;
+    } catch (e) {
+      throw KikoeruApiException('Failed to get my reviews', e);
+    }
+  }
+
   Future<Map<String, dynamic>> submitReview(
     int workId, {
     String? text,
@@ -540,6 +587,43 @@ class KikoeruApiService {
       return response.data;
     } catch (e) {
       throw KikoeruApiException('Failed to submit review', e);
+    }
+  }
+
+  /// 更新作品的收藏/进度状态
+  Future<Map<String, dynamic>> updateReviewProgress(
+    int workId, {
+    required String progress,
+    int? rating,
+    String? reviewText,
+  }) async {
+    try {
+      final data = <String, dynamic>{
+        'work_id': workId,
+        'progress': progress,
+      };
+      if (rating != null) data['rating'] = rating;
+      if (reviewText != null) data['review_text'] = reviewText;
+
+      final response = await _dio.put(
+        '/api/review',
+        data: data,
+      );
+      return response.data;
+    } catch (e) {
+      throw KikoeruApiException('Failed to update review progress', e);
+    }
+  }
+
+  /// 删除作品的评论/收藏状态
+  Future<void> deleteReview(int workId) async {
+    try {
+      await _dio.delete(
+        '/api/review',
+        queryParameters: {'work_id': workId},
+      );
+    } catch (e) {
+      throw KikoeruApiException('Failed to delete review', e);
     }
   }
 

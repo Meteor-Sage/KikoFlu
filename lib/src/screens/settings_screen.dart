@@ -14,7 +14,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('设置')),
+      appBar: AppBar(title: const Text('设置', style: TextStyle(fontSize: 18))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

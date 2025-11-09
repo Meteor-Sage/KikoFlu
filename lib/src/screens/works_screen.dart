@@ -234,7 +234,7 @@ class _WorksScreenState extends ConsumerState<WorksScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           decoration: BoxDecoration(
             color: isSelected
-                ? Theme.of(context).colorScheme.primaryContainer
+                ? Theme.of(context).colorScheme.primary
                 : Colors.grey.shade200,
             borderRadius: borderRadius ?? BorderRadius.zero,
           ),
@@ -245,7 +245,7 @@ class _WorksScreenState extends ConsumerState<WorksScreen> {
                 icon,
                 size: 18,
                 color: isSelected
-                    ? Theme.of(context).colorScheme.primary
+                    ? Theme.of(context).colorScheme.onPrimary
                     : Colors.grey.shade700,
               ),
               const SizedBox(width: 3),
@@ -253,7 +253,7 @@ class _WorksScreenState extends ConsumerState<WorksScreen> {
                 label,
                 style: TextStyle(
                   color: isSelected
-                      ? Theme.of(context).colorScheme.primary
+                      ? Theme.of(context).colorScheme.onPrimary
                       : Colors.grey.shade700,
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
@@ -361,21 +361,19 @@ class _WorksScreenState extends ConsumerState<WorksScreen> {
       controller: _scrollController,
       slivers: [
         SliverPadding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(8), // 统一为8
           sliver: SliverMasonryGrid.count(
             crossAxisCount: crossAxisCount,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
+            crossAxisSpacing: 8, // 统一为8
+            mainAxisSpacing: 8, // 统一为8
             childCount: worksState.works.length +
                 (!isAllMode && worksState.hasMore ? 1 : 0),
             itemBuilder: (context, index) {
               // 热门/推荐模式:在底部显示加载指示器
               if (!isAllMode && index == worksState.works.length) {
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child: CircularProgressIndicator(),
-                  ),
+                return const SizedBox(
+                  height: 100, // 统一加载指示器高度
+                  child: Center(child: CircularProgressIndicator()),
                 );
               }
 
@@ -414,7 +412,7 @@ class _WorksScreenState extends ConsumerState<WorksScreen> {
         // 全部模式:分页控件(集成在瀑布流中)
         if (isAllMode && _showPagination)
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 24), // 统一左右padding为8
             sliver: SliverToBoxAdapter(
               child: _buildPaginationBar(worksState),
             ),
@@ -487,7 +485,7 @@ class _WorksScreenState extends ConsumerState<WorksScreen> {
         // 全部模式:分页控件(集成在列表中)
         if (isAllMode && _showPagination)
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 24), // 统一左右padding为8
             sliver: SliverToBoxAdapter(
               child: _buildPaginationBar(worksState),
             ),

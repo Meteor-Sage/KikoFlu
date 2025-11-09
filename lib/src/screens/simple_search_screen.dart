@@ -250,12 +250,21 @@ class _SimpleSearchScreenState extends ConsumerState<SimpleSearchScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('搜索'),
+          title: const Text('搜索', style: TextStyle(fontSize: 18)),
           actions: [
+            // 筛选按钮移到右上角
             IconButton(
-              icon: Icon(_showAdvancedFilters
-                  ? Icons.filter_alt
-                  : Icons.filter_alt_outlined),
+              icon: Icon(
+                _showAdvancedFilters
+                    ? Icons.filter_alt
+                    : Icons.filter_alt_outlined,
+                color: _showAdvancedFilters
+                    ? Theme.of(context).colorScheme.primary
+                    : null,
+              ),
+              iconSize: 22,
+              padding: const EdgeInsets.all(8),
+              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
               onPressed: () {
                 setState(() {
                   _showAdvancedFilters = !_showAdvancedFilters;
@@ -349,64 +358,72 @@ class _SimpleSearchScreenState extends ConsumerState<SimpleSearchScreen> {
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
-                    children: 
-SearchType.values.map((type) {
-  final supportsExclude = type == SearchType.tag ||
-      type == SearchType.va ||
-      type == SearchType.circle;
-  final isCurrentType = _currentSearchType == type;
+                      children: SearchType.values.map((type) {
+                    final supportsExclude = type == SearchType.tag ||
+                        type == SearchType.va ||
+                        type == SearchType.circle;
+                    final isCurrentType = _currentSearchType == type;
 
-  // 从主题中取按钮文字样式，保证字体大小和粗细一致
-  final buttonTextStyle = Theme.of(context).textTheme.labelLarge!;
+                    // 从主题中取按钮文字样式，保证字体大小和粗细一致
+                    final buttonTextStyle =
+                        Theme.of(context).textTheme.labelLarge!;
 
-  return Padding(
-    padding: const EdgeInsets.only(right: 8),
-    child: Theme(
-      data: Theme.of(context).copyWith(useMaterial3: false),
-      child: ChoiceChip(
-        avatar: isCurrentType && _isExcludeMode && supportsExclude
-            ? Icon(
-                Icons.remove_circle_outline,
-                size: 18,
-                color: Theme.of(context).colorScheme.onErrorContainer,
-              )
-            : null,
-        label: Text(type.label),
-        selected: isCurrentType,
-        showCheckmark: !(isCurrentType && _isExcludeMode && supportsExclude),
-        selectedColor: isCurrentType && _isExcludeMode && supportsExclude
-            ? Theme.of(context).colorScheme.errorContainer
-            : Theme.of(context).colorScheme.primary,
-        labelStyle: buttonTextStyle.copyWith(
-          color: isCurrentType
-              ? (isCurrentType && _isExcludeMode && supportsExclude
-                  ? Theme.of(context).colorScheme.onErrorContainer
-                  : Theme.of(context).colorScheme.onPrimary)
-              : Theme.of(context).colorScheme.onSurface,
-        ),
-        checkmarkColor: Theme.of(context).colorScheme.onPrimary,
-        onSelected: (selected) {
-          setState(() {
-            if (isCurrentType && supportsExclude) {
-              _isExcludeMode = !_isExcludeMode;
-            } else {
-              _currentSearchType = type;
-              _isExcludeMode = false;
-              _searchController.clear();
-              _autocompleteKey = UniqueKey();
-              if (supportsExclude) {
-                _loadSuggestions();
-              }
-            }
-          });
-        },
-      ),
-    ),
-  );
-}).toList()
-
-
-                  ),
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Theme(
+                        data: Theme.of(context).copyWith(useMaterial3: false),
+                        child: ChoiceChip(
+                          avatar:
+                              isCurrentType && _isExcludeMode && supportsExclude
+                                  ? Icon(
+                                      Icons.remove_circle_outline,
+                                      size: 18,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onErrorContainer,
+                                    )
+                                  : null,
+                          label: Text(type.label),
+                          selected: isCurrentType,
+                          showCheckmark: !(isCurrentType &&
+                              _isExcludeMode &&
+                              supportsExclude),
+                          selectedColor:
+                              isCurrentType && _isExcludeMode && supportsExclude
+                                  ? Theme.of(context).colorScheme.errorContainer
+                                  : Theme.of(context).colorScheme.primary,
+                          labelStyle: buttonTextStyle.copyWith(
+                            color: isCurrentType
+                                ? (isCurrentType &&
+                                        _isExcludeMode &&
+                                        supportsExclude
+                                    ? Theme.of(context)
+                                        .colorScheme
+                                        .onErrorContainer
+                                    : Theme.of(context).colorScheme.onPrimary)
+                                : Theme.of(context).colorScheme.onSurface,
+                          ),
+                          checkmarkColor:
+                              Theme.of(context).colorScheme.onPrimary,
+                          onSelected: (selected) {
+                            setState(() {
+                              if (isCurrentType && supportsExclude) {
+                                _isExcludeMode = !_isExcludeMode;
+                              } else {
+                                _currentSearchType = type;
+                                _isExcludeMode = false;
+                                _searchController.clear();
+                                _autocompleteKey = UniqueKey();
+                                if (supportsExclude) {
+                                  _loadSuggestions();
+                                }
+                              }
+                            });
+                          },
+                        ),
+                      ),
+                    );
+                  }).toList()),
                 ),
                 // 提示信息
                 if (_currentSearchType == SearchType.tag ||
