@@ -2,21 +2,29 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dynamic_color/dynamic_color.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 import 'src/screens/launcher_screen.dart';
 import 'src/utils/theme.dart';
 import 'src/services/storage_service.dart';
 import 'src/services/account_database.dart';
+import 'src/services/cache_service.dart';
 import 'src/providers/audio_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize storage service
+  // Initialize Hive for local storage
+  await Hive.initFlutter();
   await StorageService.init();
 
   // Initialize account database
   await AccountDatabase.instance.database;
+
+  // 启动时检查并清理缓存（如果超过上限）
+  CacheService.checkAndCleanCache(force: true).catchError((e) {
+    print('[Cache] 启动时检查缓存失败: $e');
+  });
 
   // Set system UI overlay style
   SystemChrome.setSystemUIOverlayStyle(

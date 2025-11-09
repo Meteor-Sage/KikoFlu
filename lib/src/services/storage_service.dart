@@ -1,42 +1,68 @@
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 class StorageService {
+  static late Box _settingsBox;
+  static late Box _userBox;
+  static late Box _cacheBox;
   static late SharedPreferences _prefs;
 
   static Future<void> init() async {
+    // Initialize Hive boxes
+    _settingsBox = await Hive.openBox('settings');
+    _userBox = await Hive.openBox('users');
+    _cacheBox = await Hive.openBox('cache');
+
     // Initialize SharedPreferences
     _prefs = await SharedPreferences.getInstance();
   }
 
-  // User data - using SharedPreferences with JSON encoding
+  // Settings
+  static Future<void> setSetting(String key, dynamic value) async {
+    await _settingsBox.put(key, value);
+  }
+
+  static T? getSetting<T>(String key, {T? defaultValue}) {
+    return _settingsBox.get(key, defaultValue: defaultValue) as T?;
+  }
+
+  static Future<void> removeSetting(String key) async {
+    await _settingsBox.delete(key);
+  }
+
+  // User data
   static Future<void> setUser(String key, dynamic value) async {
-    if (value is Map<String, dynamic>) {
-      await _prefs.setString(key, jsonEncode(value));
-    } else {
-      await _prefs.setString(key, jsonEncode(value));
-    }
+    await _userBox.put(key, value);
   }
 
   static T? getUser<T>(String key, {T? defaultValue}) {
-    final jsonString = _prefs.getString(key);
-    if (jsonString != null) {
-      try {
-        final decoded = jsonDecode(jsonString);
-        return decoded as T?;
-      } catch (e) {
-        return defaultValue;
-      }
-    }
-    return defaultValue;
+    return _userBox.get(key, defaultValue: defaultValue) as T?;
   }
 
   static Future<void> removeUser(String key) async {
-    await _prefs.remove(key);
+    await _userBox.delete(key);
   }
 
   static List<String> getAllUserKeys() {
-    return _prefs.getKeys().toList();
+    return _userBox.keys.cast<String>().toList();
+  }
+
+  // Cache
+  static Future<void> setCache(String key, dynamic value) async {
+    await _cacheBox.put(key, value);
+  }
+
+  static T? getCache<T>(String key, {T? defaultValue}) {
+    return _cacheBox.get(key, defaultValue: defaultValue) as T?;
+  }
+
+  static Future<void> removeCache(String key) async {
+    await _cacheBox.delete(key);
+  }
+
+  static Future<void> clearCache() async {
+    await _cacheBox.clear();
   }
 
   // SharedPreferences methods
@@ -70,6 +96,11 @@ class StorageService {
 
   static Future<void> clear() async {
     await _prefs.clear();
+  }
+
+  // Get SharedPreferences instance
+  static Future<SharedPreferences> getPrefs() async {
+    return _prefs;
   }
 
   // JSON Map methods for complex objects

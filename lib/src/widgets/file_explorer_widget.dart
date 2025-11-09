@@ -11,6 +11,7 @@ import '../models/audio_track.dart';
 import '../providers/auth_provider.dart';
 import '../providers/audio_provider.dart';
 import '../providers/lyric_provider.dart';
+import '../services/cache_service.dart';
 
 class FileExplorerWidget extends ConsumerStatefulWidget {
   final Work work;
@@ -623,12 +624,16 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
       return;
     }
 
-    // 构建图片URL列表
+    // 构建图片URL列表，包含hash信息用于缓存
     final imageItems = imageFiles.map((f) {
-      final hash = f['hash'];
+      final hash = f['hash'] ?? '';
       final title = f['title'] ?? f['name'] ?? '未知图片';
       final url = '$normalizedUrl/api/media/stream/$hash?token=$token';
-      return <String, String>{'url': url, 'title': title};
+      return <String, String>{
+        'url': url,
+        'title': title,
+        'hash': hash,
+      };
     }).toList();
 
     Navigator.of(context).push(
@@ -636,6 +641,7 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
         builder: (context) => ImageGalleryScreen(
           images: imageItems,
           initialIndex: currentIndex,
+          workId: widget.work.id, // 传递作品ID用于缓存
         ),
       ),
     );
@@ -690,6 +696,8 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
         builder: (context) => TextPreviewScreen(
           textUrl: textUrl,
           title: title,
+          workId: widget.work.id, // 传递作品ID
+          hash: hash, // 传递文件hash
         ),
       ),
     );
@@ -723,6 +731,8 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
         builder: (context) => PdfPreviewScreen(
           pdfUrl: pdfUrl,
           title: title,
+          workId: widget.work.id, // 传递作品ID
+          hash: hash, // 传递文件hash
         ),
       ),
     );
@@ -1045,11 +1055,13 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
 class ImageGalleryScreen extends StatefulWidget {
   final List<Map<String, String>> images;
   final int initialIndex;
+  final int? workId; // 添加作品ID用于缓存
 
   const ImageGalleryScreen({
     super.key,
     required this.images,
     this.initialIndex = 0,
+    this.workId,
   });
 
   @override
@@ -1200,38 +1212,10 @@ class _ImageGalleryScreenState extends State<ImageGalleryScreen> {
                         });
                       },
                       child: Center(
-                        child: Image.network(
-                          widget.images[index]['url']!,
-                          fit: BoxFit.contain,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return Center(
-                              child: CircularProgressIndicator(
-                                value: loadingProgress.expectedTotalBytes !=
-                                        null
-                                    ? loadingProgress.cumulativeBytesLoaded /
-                                        loadingProgress.expectedTotalBytes!
-                                    : null,
-                              ),
-                            );
-                          },
-                          errorBuilder: (context, error, stackTrace) {
-                            return Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.error,
-                                      size: 64, color: Colors.red),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    '加载图片失败\n$error',
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(color: Colors.red),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
+                        child: _CachedNetworkImage(
+                          imageUrl: widget.images[index]['url']!,
+                          hash: widget.images[index]['hash'] ?? '',
+                          workId: widget.workId,
                         ),
                       ),
                     ),
@@ -1271,20 +1255,15 @@ class _ImageGalleryScreenState extends State<ImageGalleryScreen> {
                       children: [
                         ClipRRect(
                           borderRadius: BorderRadius.circular(5),
-                          child: Image.network(
-                            widget.images[index]['url']!,
-                            fit: BoxFit.cover,
+                          child: SizedBox(
                             width: 80,
                             height: 100,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                color: Colors.grey[800],
-                                child: const Icon(
-                                  Icons.broken_image,
-                                  color: Colors.white54,
-                                ),
-                              );
-                            },
+                            child: _CachedNetworkImage(
+                              imageUrl: widget.images[index]['url']!,
+                              hash: widget.images[index]['hash'] ?? '',
+                              workId: widget.workId,
+                              fit: BoxFit.cover, // 缩略图使用cover模式
+                            ),
                           ),
                         ),
                         // 序号标签
@@ -1327,11 +1306,15 @@ class _ImageGalleryScreenState extends State<ImageGalleryScreen> {
 class TextPreviewScreen extends StatefulWidget {
   final String textUrl;
   final String title;
+  final int? workId; // 作品ID用于缓存
+  final String? hash; // 文件hash用于缓存
 
   const TextPreviewScreen({
     super.key,
     required this.textUrl,
     required this.title,
+    this.workId,
+    this.hash,
   });
 
   @override
@@ -1376,6 +1359,25 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
     });
 
     try {
+      // 如果有缓存信息，尝试从缓存加载
+      if (widget.workId != null &&
+          widget.hash != null &&
+          widget.hash!.isNotEmpty) {
+        final cachedContent = await CacheService.getCachedTextContent(
+          workId: widget.workId!,
+          hash: widget.hash!,
+        );
+
+        if (cachedContent != null) {
+          setState(() {
+            _content = cachedContent;
+            _isLoading = false;
+          });
+          return;
+        }
+      }
+
+      // 缓存未命中，从网络加载
       final dio = Dio();
       final response = await dio.get(
         widget.textUrl,
@@ -1386,8 +1388,21 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
       );
 
       if (response.statusCode == 200) {
+        final content = response.data as String;
+
+        // 如果有缓存信息，保存到缓存
+        if (widget.workId != null &&
+            widget.hash != null &&
+            widget.hash!.isNotEmpty) {
+          await CacheService.cacheTextContent(
+            workId: widget.workId!,
+            hash: widget.hash!,
+            content: content,
+          );
+        }
+
         setState(() {
-          _content = response.data as String;
+          _content = content;
           _isLoading = false;
         });
       } else {
@@ -1500,11 +1515,15 @@ class TimeoutException implements Exception {
 class PdfPreviewScreen extends StatefulWidget {
   final String title;
   final String pdfUrl;
+  final int? workId; // 作品ID用于缓存
+  final String? hash; // 文件hash用于缓存
 
   const PdfPreviewScreen({
     super.key,
     required this.title,
     required this.pdfUrl,
+    this.workId,
+    this.hash,
   });
 
   @override
@@ -1544,6 +1563,44 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
     });
 
     try {
+      // 如果有缓存信息，尝试从缓存加载
+      if (widget.workId != null &&
+          widget.hash != null &&
+          widget.hash!.isNotEmpty) {
+        final cachedPath = await CacheService.getCachedFileResource(
+          workId: widget.workId!,
+          hash: widget.hash!,
+          fileType: 'pdf',
+        );
+
+        if (cachedPath != null) {
+          setState(() {
+            _localFilePath = cachedPath;
+            _isLoading = false;
+          });
+          return;
+        }
+
+        // 缓存未命中，下载并缓存
+        final dio = Dio();
+        final newCachedPath = await CacheService.cacheFileResource(
+          workId: widget.workId!,
+          hash: widget.hash!,
+          fileType: 'pdf',
+          url: widget.pdfUrl,
+          dio: dio,
+        );
+
+        if (newCachedPath != null) {
+          setState(() {
+            _localFilePath = newCachedPath;
+            _isLoading = false;
+          });
+          return;
+        }
+      }
+
+      // 无缓存信息或缓存失败，使用临时文件
       final dio = Dio();
       final tempDir = await getTemporaryDirectory();
       final fileName = 'temp_pdf_${DateTime.now().millisecondsSinceEpoch}.pdf';
@@ -1697,6 +1754,154 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
           _errorMessage = '渲染PDF失败: $error';
         });
       },
+    );
+  }
+}
+
+// 支持缓存的网络图片组件
+class _CachedNetworkImage extends StatefulWidget {
+  final String imageUrl;
+  final String hash;
+  final int? workId;
+  final BoxFit fit; // 添加fit参数
+
+  const _CachedNetworkImage({
+    required this.imageUrl,
+    required this.hash,
+    this.workId,
+    this.fit = BoxFit.contain, // 默认为contain
+  });
+
+  @override
+  State<_CachedNetworkImage> createState() => _CachedNetworkImageState();
+}
+
+class _CachedNetworkImageState extends State<_CachedNetworkImage> {
+  String? _cachedFilePath;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadImage();
+  }
+
+  Future<void> _loadImage() async {
+    if (widget.workId == null || widget.hash.isEmpty) {
+      // 没有缓存信息，直接使用网络加载
+      setState(() {
+        _isLoading = false;
+      });
+      return;
+    }
+
+    try {
+      // 尝试从缓存加载
+      final cachedPath = await CacheService.getCachedFileResource(
+        workId: widget.workId!,
+        hash: widget.hash,
+        fileType: 'image',
+      );
+
+      if (cachedPath != null && mounted) {
+        setState(() {
+          _cachedFilePath = cachedPath;
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // 缓存未命中，下载并缓存
+      final dio = Dio();
+      final newCachedPath = await CacheService.cacheFileResource(
+        workId: widget.workId!,
+        hash: widget.hash,
+        fileType: 'image',
+        url: widget.imageUrl,
+        dio: dio,
+      );
+
+      if (newCachedPath != null && mounted) {
+        setState(() {
+          _cachedFilePath = newCachedPath;
+          _isLoading = false;
+        });
+      } else if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('[Cache] 图片缓存加载失败: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    // 如果有缓存文件，使用本地文件
+    if (_cachedFilePath != null) {
+      return Image.file(
+        File(_cachedFilePath!),
+        fit: widget.fit,
+        errorBuilder: (context, error, stackTrace) {
+          // 本地文件加载失败，降级到网络加载
+          return Image.network(
+            widget.imageUrl,
+            fit: widget.fit,
+            errorBuilder: (context, error, stackTrace) {
+              return _buildErrorWidget(error.toString());
+            },
+          );
+        },
+      );
+    }
+
+    // 使用网络加载
+    return Image.network(
+      widget.imageUrl,
+      fit: widget.fit,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return Center(
+          child: CircularProgressIndicator(
+            value: loadingProgress.expectedTotalBytes != null
+                ? loadingProgress.cumulativeBytesLoaded /
+                    loadingProgress.expectedTotalBytes!
+                : null,
+          ),
+        );
+      },
+      errorBuilder: (context, error, stackTrace) {
+        return _buildErrorWidget(error.toString());
+      },
+    );
+  }
+
+  Widget _buildErrorWidget(String error) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error, size: 64, color: Colors.red),
+          const SizedBox(height: 16),
+          Text(
+            '加载图片失败\n$error',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.red),
+          ),
+        ],
+      ),
     );
   }
 }

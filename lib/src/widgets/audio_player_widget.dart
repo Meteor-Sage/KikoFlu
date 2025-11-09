@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../providers/audio_provider.dart';
 import '../providers/auth_provider.dart';
@@ -351,16 +352,21 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
                                             ? ClipRRect(
                                                 borderRadius:
                                                     BorderRadius.circular(8),
-                                                child: Image.network(
-                                                  (workCoverUrl ??
+                                                child: CachedNetworkImage(
+                                                  imageUrl: (workCoverUrl ??
                                                       track.artworkUrl)!,
                                                   fit: BoxFit.cover,
-                                                  errorBuilder: (context, error,
-                                                      stackTrace) {
+                                                  errorWidget:
+                                                      (context, url, error) {
                                                     return const Icon(
                                                         Icons.album,
                                                         size: 32);
                                                   },
+                                                  placeholder: (context, url) =>
+                                                      const Center(
+                                                    child:
+                                                        CircularProgressIndicator(),
+                                                  ),
                                                 ),
                                               )
                                             : const Icon(
@@ -657,12 +663,12 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
                                         ? ClipRRect(
                                             borderRadius:
                                                 BorderRadius.circular(16),
-                                            child: Image.network(
-                                              (workCoverUrl ??
+                                            child: CachedNetworkImage(
+                                              imageUrl: (workCoverUrl ??
                                                   track.artworkUrl)!,
                                               fit: BoxFit.contain,
-                                              errorBuilder:
-                                                  (context, error, stackTrace) {
+                                              errorWidget:
+                                                  (context, url, error) {
                                                 return const Padding(
                                                   padding: EdgeInsets.all(40),
                                                   child: Icon(
@@ -671,11 +677,7 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
                                                   ),
                                                 );
                                               },
-                                              loadingBuilder: (context, child,
-                                                  loadingProgress) {
-                                                if (loadingProgress == null) {
-                                                  return child;
-                                                }
+                                              placeholder: (context, url) {
                                                 return const Padding(
                                                   padding: EdgeInsets.all(40),
                                                   child: Icon(
@@ -1232,14 +1234,18 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
                                         null
                                     ? ClipRRect(
                                         borderRadius: BorderRadius.circular(4),
-                                        child: Image.network(
-                                          (workCoverUrl ?? track.artworkUrl)!,
+                                        child: CachedNetworkImage(
+                                          imageUrl: (workCoverUrl ??
+                                              track.artworkUrl)!,
                                           fit: BoxFit.cover,
-                                          errorBuilder:
-                                              (context, error, stackTrace) {
+                                          errorWidget: (context, url, error) {
                                             return const Icon(Icons.music_note,
                                                 size: 24);
                                           },
+                                          placeholder: (context, url) =>
+                                              const Center(
+                                            child: CircularProgressIndicator(),
+                                          ),
                                         ),
                                       )
                                     : const Icon(Icons.music_note, size: 24),
