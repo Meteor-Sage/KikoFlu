@@ -70,7 +70,6 @@
 - Flutter SDK 3.0 或更高版本
 - Dart SDK 3.0 或更高版本
 - Android Studio / VS Code
-- 可访问的 Kikoeru 服务器
 
 ### 安装步骤
 
@@ -107,46 +106,7 @@ flutter build appbundle --release
 flutter build ios --release
 ```
 
----
 
-## 🛠️ 技术栈
-
-- **框架**: Flutter 3.x
-- **状态管理**: Riverpod
-- **音频播放**: just_audio + audio_service
-- **网络请求**: Dio
-- **本地存储**: Hive + SharedPreferences + SQLite
-- **图片缓存**: cached_network_image
-- **UI组件**: Material Design 3
-
----
-
-## 📦 主要依赖
-
-| 包名 | 用途 |
-|------|------|
-| flutter_riverpod | 状态管理 |
-| just_audio | 音频播放 |
-| audio_service | 后台播放支持 |
-| dio | HTTP 请求 |
-| hive | NoSQL 数据库 |
-| sqflite | SQLite 数据库 |
-| cached_network_image | 图片缓存 |
-| dynamic_color | 动态主题色 |
-| permission_handler | 权限管理 |
-
----
-
-## 📝 功能路线图
-
-- [ ] 音乐可视化效果
-- [ ] 播放列表管理
-- [ ] 社区互动功能
-- [ ] 云端同步播放历史
-- [ ] 桌面端支持（Windows/macOS/Linux）
-- [ ] 更多音频格式支持
-
----
 
 ## 🤝 参与贡献
 
