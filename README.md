@@ -66,42 +66,24 @@
 
 ## 🚀 开始使用
 
-### 前置要求
 - Flutter SDK 3.0 或更高版本
 - Dart SDK 3.0 或更高版本
 - Android Studio / VS Code
 
-### 安装步骤
-
-1. **克隆项目**
    ```bash
    git clone https://github.com/Meteor-Sage/Kikoeru-Flutter.git
    cd Kikoeru-Flutter
    ```
 
-2. **安装依赖**
    ```bash
    flutter pub get
    ```
 
-3. **运行应用**
-   ```bash
-   flutter run
-   ```
 
-### 构建发布版本
-
-**Android APK**
 ```bash
 flutter build apk --release
 ```
 
-**Android App Bundle**
-```bash
-flutter build appbundle --release
-```
-
-**iOS**
 ```bash
 flutter build ios --release
 ```
