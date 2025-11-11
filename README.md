@@ -58,7 +58,7 @@
 
 - Flutter SDK 3.0 或更高版本
 - Dart SDK 3.0 或更高版本
-- Android Studio / VS Code
+- VS Code
 
 ```bash
 git clone https://github.com/Meteor-Sage/Kikoeru-Flutter.git
