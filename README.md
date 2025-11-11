@@ -49,7 +49,7 @@
 
 ---
 
-## Releases发布: [Releases](https://github.com/Meteor-Sage/Kikoeru-Flutter/releases)
+## [Releases](https://github.com/Meteor-Sage/Kikoeru-Flutter/releases)
 
 ---
 
