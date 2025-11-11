@@ -44,15 +44,17 @@ cd ios
 xcodebuild \
     -workspace Runner.xcworkspace \
     -scheme Runner \
+    -sdk iphoneos \
     -configuration Release \
-    -destination 'generic/platform=iOS' \
     -archivePath build/Runner.xcarchive \
+    -arch arm64 \
     archive \
     CODE_SIGN_IDENTITY="" \
     CODE_SIGNING_REQUIRED=NO \
     CODE_SIGNING_ALLOWED=NO \
     CODE_SIGN_ENTITLEMENTS="" \
-    PROVISIONING_PROFILE=""
+    PROVISIONING_PROFILE="" \
+    ONLY_ACTIVE_ARCH=NO
 
 cd ..
 
@@ -62,44 +64,40 @@ if [ ! -d "ios/build/Runner.xcarchive" ]; then
     exit 1
 fi
 
-# 导出 IPA
-echo "📦 导出 IPA..."
-cd ios
+echo "✅ Archive 成功！"
+echo ""
 
-xcodebuild \
-    -exportArchive \
-    -archivePath build/Runner.xcarchive \
-    -exportPath build/unsigned \
-    -exportOptionsPlist ../ios/ExportOptions.plist
+# 手动打包 IPA（跳过 xcodebuild export，避免签名问题）
+echo "� 打包无签名 IPA..."
 
+# 清理之前的打包文件
+rm -rf build/Payload
+rm -f KikoFlu-unsigned.ipa
+
+# 创建 Payload 目录并复制 .app
+mkdir -p build/Payload
+cp -r ios/build/Runner.xcarchive/Products/Applications/Runner.app build/Payload/
+
+# 打包成 IPA
+cd build
+zip -qr KikoFlu-unsigned.ipa Payload
 cd ..
 
-# 查找并复制 IPA
-if [ -f "ios/build/unsigned/Runner.ipa" ]; then
-    cp ios/build/unsigned/Runner.ipa ./KikoFlu-unsigned.ipa
+# 移动到项目根目录
+mv build/KikoFlu-unsigned.ipa ./
+
+# 验证文件
+if [ -f "KikoFlu-unsigned.ipa" ]; then
     echo "✅ 构建完成！"
-    echo "📱 无签名 IPA 文件: KikoFlu-unsigned.ipa"
     echo ""
+    echo "📱 无签名 IPA 文件信息："
     ls -lh KikoFlu-unsigned.ipa
+    echo ""
+    echo "📍 文件位置:"
+    echo "$(pwd)/KikoFlu-unsigned.ipa"
 else
-    echo "❌ IPA 导出失败"
-    echo "尝试手动打包..."
-    
-    # 手动打包
-    mkdir -p build/Payload
-    cp -r ios/build/Runner.xcarchive/Products/Applications/Runner.app build/Payload/
-    cd build
-    zip -r ../KikoFlu-unsigned.ipa Payload
-    cd ..
-    
-    if [ -f "KikoFlu-unsigned.ipa" ]; then
-        echo "✅ 手动打包成功！"
-        echo "📱 无签名 IPA 文件: KikoFlu-unsigned.ipa"
-        ls -lh KikoFlu-unsigned.ipa
-    else
-        echo "❌ 打包失败"
-        exit 1
-    fi
+    echo "❌ 打包失败"
+    exit 1
 fi
 
 echo ""

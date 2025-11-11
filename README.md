@@ -80,7 +80,7 @@ flutter build windows --release
 flutter pub run msix:create
 ```
 ```bash
-flutter build ios --release
+./build_ios_xcode.sh 2>&1 | tee build_ios.log
 ```
 
 

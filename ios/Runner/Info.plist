@@ -55,9 +55,9 @@
 		<true/>
 	</dict>
 	
-	<!-- Audio permissions - This app only plays audio, does not record -->
-	<!-- <key>NSMicrophoneUsageDescription</key>
-	<string>This app needs access to microphone for audio recording features.</string> -->
+	<!-- Audio permissions -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app needs access to microphone for audio recording features.</string>
 	
 	<!-- Background audio -->
 	<key>UIBackgroundModes</key>
@@ -71,20 +71,5 @@
 	<true/>
 	<key>UIFileSharingEnabled</key>
 	<true/>
-	
-	<!-- Local network access (for connecting to Kikoeru server) -->
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>This app needs to access local network to connect to your Kikoeru server.</string>
-	<key>NSBonjourServices</key>
-	<array>
-		<string>_http._tcp</string>
-		<string>_https._tcp</string>
-	</array>
-	
-	<!-- Photo library access (if needed for saving media) -->
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>This app needs to save downloaded media to your photo library.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>This app needs to access your photo library to manage media files.</string>
 </dict>
 </plist>

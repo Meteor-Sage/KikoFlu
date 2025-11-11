@@ -33,6 +33,8 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
   ImageProvider? _hdImageProvider; // 预加载的高清图片
   String? _currentProgress; // 当前收藏状态
   bool _isUpdatingProgress = false; // 是否正在更新状态
+  bool _isOpeningFileSelection = false; // iOS上防止快速重复点击造成对话框立即关闭
+  bool _isOpeningProgressDialog = false; // 防止标记状态对话框重复快速打开
 
   @override
   void initState() {
@@ -91,75 +93,87 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
 
   // 显示文件选择对话框
   Future<void> _showFileSelectionDialog() async {
-    // 显示加载对话框
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => ResponsiveAlertDialog(
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('正在加载文件列表...'),
-          ],
-        ),
-      ),
-    );
+    // 防抖: 避免 iOS 上快速双击导致同一路由被重复创建又立即被关闭
+    if (_isOpeningFileSelection) return;
+    _isOpeningFileSelection = true;
+
+    final preparedWorkFuture = _prepareWorkForFileSelection();
 
     try {
-      // 获取文件树
-      final apiService = ref.read(kikoeruApiServiceProvider);
-      final files = await apiService.getWorkTracks(widget.work.id);
-
-      if (!mounted) return;
-
-      // 关闭加载对话框
-      Navigator.of(context).pop();
-
-      // 将文件列表转换为 AudioFile 对象
-      final audioFiles = _convertToAudioFiles(files);
-
-      // 创建临时的 Work 对象用于文件选择
-      final baseWork = _detailedWork ?? widget.work;
-      final work = Work(
-        id: baseWork.id,
-        title: baseWork.title,
-        circleId: baseWork.circleId,
-        name: baseWork.name,
-        vas: baseWork.vas,
-        tags: baseWork.tags,
-        age: baseWork.age,
-        release: baseWork.release,
-        dlCount: baseWork.dlCount,
-        price: baseWork.price,
-        reviewCount: baseWork.reviewCount,
-        rateCount: baseWork.rateCount,
-        rateAverage: baseWork.rateAverage,
-        hasSubtitle: baseWork.hasSubtitle,
-        duration: baseWork.duration,
-        progress: baseWork.progress,
-        images: baseWork.images,
-        description: baseWork.description,
-        children: audioFiles,
-      );
-
-      // 显示文件选择对话框
-      showDialog(
+      await showDialog<void>(
         context: context,
-        builder: (context) => FileSelectionDialog(work: work),
-      );
-    } catch (e) {
-      if (!mounted) return;
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          return FutureBuilder<Work>(
+            future: preparedWorkFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done) {
+                return const ResponsiveAlertDialog(
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text('正在加载文件列表...'),
+                    ],
+                  ),
+                );
+              }
 
-      // 关闭加载对话框
-      Navigator.of(context).pop();
+              if (snapshot.hasError) {
+                return ResponsiveAlertDialog(
+                  title: const Text('加载失败'),
+                  content: Text('加载文件列表失败: ${snapshot.error}'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('关闭'),
+                    ),
+                  ],
+                );
+              }
 
-      // 显示错误提示
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('加载文件列表失败: $e')),
+              final work = snapshot.data!;
+              return FileSelectionDialog(work: work);
+            },
+          );
+        },
       );
+    } finally {
+      _isOpeningFileSelection = false;
     }
+  }
+
+  Future<Work> _prepareWorkForFileSelection() async {
+    final apiService = ref.read(kikoeruApiServiceProvider);
+    final files = await apiService.getWorkTracks(widget.work.id);
+    final audioFiles = _convertToAudioFiles(files);
+    final baseWork = _detailedWork ?? widget.work;
+    return _cloneWorkWithChildren(baseWork, audioFiles);
+  }
+
+  Work _cloneWorkWithChildren(Work baseWork, List<AudioFile> audioFiles) {
+    return Work(
+      id: baseWork.id,
+      title: baseWork.title,
+      circleId: baseWork.circleId,
+      name: baseWork.name,
+      vas: baseWork.vas,
+      tags: baseWork.tags,
+      age: baseWork.age,
+      release: baseWork.release,
+      dlCount: baseWork.dlCount,
+      price: baseWork.price,
+      reviewCount: baseWork.reviewCount,
+      rateCount: baseWork.rateCount,
+      rateAverage: baseWork.rateAverage,
+      hasSubtitle: baseWork.hasSubtitle,
+      duration: baseWork.duration,
+      progress: baseWork.progress,
+      images: baseWork.images,
+      description: baseWork.description,
+      children: audioFiles,
+    );
   }
 
   // 将 API 返回的文件列表转换为 AudioFile 对象
@@ -289,6 +303,8 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
 
   // 显示收藏状态选择对话框
   Future<void> _showProgressDialog() async {
+    if (_isOpeningProgressDialog) return; // 防抖避免 iOS 双击导致立即关闭
+    _isOpeningProgressDialog = true;
     final filters = [
       MyReviewFilter.marked,
       MyReviewFilter.listening,
@@ -300,9 +316,11 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
 
+    String? selectedValue;
+
     if (isLandscape) {
       // 横屏模式：使用对话框形式，3+3两列布局
-      await showDialog(
+      selectedValue = await showDialog<String>(
         context: context,
         builder: (dialogContext) {
           return Dialog(
@@ -356,8 +374,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                                     value: filter.value!,
                                     groupValue: _currentProgress,
                                     onChanged: (value) {
-                                      Navigator.of(dialogContext).pop();
-                                      _updateProgress(value);
+                                      Navigator.of(dialogContext).pop(value);
                                     },
                                     selected: isSelected,
                                     contentPadding: const EdgeInsets.symmetric(
@@ -380,8 +397,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                                       value: filter.value!,
                                       groupValue: _currentProgress,
                                       onChanged: (value) {
-                                        Navigator.of(dialogContext).pop();
-                                        _updateProgress(value);
+                                        Navigator.of(dialogContext).pop(value);
                                       },
                                       selected: isSelected,
                                       contentPadding:
@@ -406,8 +422,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                                         ),
                                       ),
                                       onTap: () {
-                                        Navigator.of(dialogContext).pop();
-                                        _updateProgress(null);
+                                        Navigator.of(dialogContext).pop('__REMOVE__');
                                       },
                                       contentPadding:
                                           const EdgeInsets.symmetric(
@@ -428,69 +443,77 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
           );
         },
       );
-      return;
-    }
-
-    // 竖屏模式：使用底部弹窗
-    await showResponsiveBottomSheet(
-      context: context,
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Text(
-                  '选择收藏状态',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+    } else {
+      // 竖屏模式：使用底部弹窗
+      selectedValue = await showResponsiveBottomSheet<String>(
+        context: context,
+        builder: (context) {
+          return Container(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Text(
+                    '选择收藏状态',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
                 ),
-              ),
-              const Divider(),
-              ...filters.map((filter) {
-                final isSelected = _currentProgress == filter.value;
-                return ListTile(
-                  leading: Icon(
-                    isSelected ? Icons.check_circle : Icons.circle_outlined,
-                    color: isSelected
-                        ? Theme.of(context).colorScheme.primary
-                        : null,
-                  ),
-                  title: Text(filter.label),
-                  selected: isSelected,
-                  onTap: () {
-                    Navigator.pop(context);
-                    _updateProgress(filter.value!);
-                  },
-                );
-              }).toList(),
-              const SizedBox(height: 8),
-              if (_currentProgress != null)
-                ListTile(
-                  leading: Icon(
-                    Icons.delete_outline,
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                  title: Text(
-                    '移除',
-                    style: TextStyle(
+                const Divider(),
+                ...filters.map((filter) {
+                  final isSelected = _currentProgress == filter.value;
+                  return ListTile(
+                    leading: Icon(
+                      isSelected ? Icons.check_circle : Icons.circle_outlined,
+                      color: isSelected
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
+                    ),
+                    title: Text(filter.label),
+                    selected: isSelected,
+                    onTap: () {
+                      Navigator.pop(context, filter.value);
+                    },
+                  );
+                }).toList(),
+                const SizedBox(height: 8),
+                if (_currentProgress != null)
+                  ListTile(
+                    leading: Icon(
+                      Icons.delete_outline,
                       color: Theme.of(context).colorScheme.error,
                     ),
+                    title: Text(
+                      '移除',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context, '__REMOVE__');
+                    },
                   ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _updateProgress(null);
-                  },
-                ),
-            ],
-          ),
-        );
-      },
-    );
+              ],
+            ),
+          );
+        },
+      );
+    }
+
+    _isOpeningProgressDialog = false;
+
+    // 等待对话框完全关闭后再执行状态更新，避免 iOS 上的闪退
+    if (selectedValue != null) {
+      if (selectedValue == '__REMOVE__') {
+        await _updateProgress(null);
+      } else {
+        await _updateProgress(selectedValue);
+      }
+    }
   }
 
   // 更新收藏状态

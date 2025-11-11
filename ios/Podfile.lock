@@ -80,7 +80,7 @@ SPEC CHECKSUMS:
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   flutter_pdfview: 32bf27bda6fd85b9dd2c09628a824df5081246cf
   just_audio: 4e391f57b79cad2b0674030a00453ca5ce817eed
-  package_info_plus: 566e1b7a2f3900e4b0020914ad3fc051dcc95596
+  package_info_plus: af8e2ca6888548050f16fa2f1938db7b5a5df499
   path_provider_foundation: bb55f6dbba17d0dccd6737fe6f7f34fbd0376880
   permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
   ReachabilitySwift: 32793e867593cfc1177f5d16491e3a197d2fccda
@@ -88,6 +88,6 @@ SPEC CHECKSUMS:
   sqflite_darwin: 20b2a3a3b70e43edae938624ce550a3cbf66a3d0
   url_launcher_ios: 7a95fa5b60cc718a708b8f2966718e93db0cef1b
 
-PODFILE CHECKSUM: 3872bc2bb3ee31841a3c3728f41385274d895ccc
+PODFILE CHECKSUM: baffce209ec3c5686894f9f62fce43b1818cf100
 
 COCOAPODS: 1.16.2
