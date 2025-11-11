@@ -12,12 +12,10 @@
 </div>
 
 
----
+<div align="center">
+  <img src="screenshots/8.png" width="900" alt="">
+</div>
 
-
-
-
----
 
 
 ## 特性
