@@ -83,10 +83,9 @@ flutter:
   #         weight: 700
 
 flutter_launcher_icons:
-  android: true
+  android: false
   ios: true
-  image_path: "assets/icons/app_icon_black.png"
-  adaptive_icon_background: "#FFFFFF"
+  image_path: "assets/icons/app_icon.png"
 
 msix_config:
   display_name: KikoFlu
