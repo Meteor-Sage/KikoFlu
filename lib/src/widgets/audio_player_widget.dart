@@ -604,6 +604,7 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        scrolledUnderElevation: 0,
         leading: Padding(
           padding: const EdgeInsets.only(left: 8.0),
           child: IconButton(

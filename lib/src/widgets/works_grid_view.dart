@@ -3,6 +3,7 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
 import '../models/work.dart';
 import '../providers/works_provider.dart';
+import '../utils/responsive_grid_helper.dart';
 import 'enhanced_work_card.dart';
 
 class WorksGridView extends StatelessWidget {
@@ -25,19 +26,16 @@ class WorksGridView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
-
     switch (layoutType) {
       case LayoutType.bigGrid:
         return _buildGridView(
           context,
-          crossAxisCount: isLandscape ? 3 : 2,
+          crossAxisCount: ResponsiveGridHelper.getBigGridCrossAxisCount(context),
         );
       case LayoutType.smallGrid:
         return _buildGridView(
           context,
-          crossAxisCount: isLandscape ? 5 : 3,
+          crossAxisCount: ResponsiveGridHelper.getSmallGridCrossAxisCount(context),
         );
       case LayoutType.list:
         return _buildListView(context);

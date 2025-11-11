@@ -7,6 +7,7 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import '../providers/my_reviews_provider.dart';
 import '../widgets/enhanced_work_card.dart';
 import '../widgets/responsive_dialog.dart';
+import '../utils/responsive_grid_helper.dart';
 import 'downloads_screen.dart';
 export '../providers/my_reviews_provider.dart' show MyReviewLayoutType;
 
@@ -550,19 +551,16 @@ class _MyScreenState extends ConsumerState<MyScreen>
       return const Center(child: CircularProgressIndicator());
     }
 
-    final isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
-
     switch (state.layoutType) {
       case MyReviewLayoutType.bigGrid:
         return _buildGridView(
           state,
-          crossAxisCount: isLandscape ? 3 : 2,
+          crossAxisCount: ResponsiveGridHelper.getBigGridCrossAxisCount(context),
         );
       case MyReviewLayoutType.smallGrid:
         return _buildGridView(
           state,
-          crossAxisCount: isLandscape ? 5 : 3,
+          crossAxisCount: ResponsiveGridHelper.getSmallGridCrossAxisCount(context),
         );
       case MyReviewLayoutType.list:
         return _buildListView(state);

@@ -16,5 +16,8 @@
 	<true/>
 	<key>com.apple.security.files.downloads.read-write</key>
 	<true/>
+	<!-- 允许音频输出 -->
+	<key>com.apple.security.device.audio-output</key>
+	<true/>
 </dict>
 </plist>

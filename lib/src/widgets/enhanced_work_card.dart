@@ -380,7 +380,7 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
 
-    // 横屏模式：3列显示中等卡片，5列显示紧凑卡片
+    // 横屏模式：4列显示中等卡片，5列显示紧凑卡片
     // 竖屏模式：2列显示中等卡片，3列显示紧凑卡片
     if (widget.crossAxisCount >= 5 ||
         (widget.crossAxisCount == 3 && !isLandscape)) {
@@ -397,7 +397,7 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
       BuildContext context, String host, String token, VoidCallback cardOnTap) {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
-    final titleFontSize = isLandscape ? 13.0 : 11.0;
+    final titleFontSize = isLandscape ? 13.5 : 11.0;
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -462,10 +462,10 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
       BuildContext context, String host, String token, VoidCallback cardOnTap) {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
-    final titleFontSize = isLandscape ? 14.0 : 12.0;
-    final bodyFontSize = isLandscape ? 12.0 : 10.0;
-    final priceFontSize = isLandscape ? 12.0 : 10.0;
-    final ratingFontSize = isLandscape ? 11.0 : 9.0;
+    final titleFontSize = isLandscape ? 14.5 : 12.0;
+    final bodyFontSize = isLandscape ? 13.5 : 10.0;
+    final priceFontSize = isLandscape ? 13.5 : 10.0;
+    final ratingFontSize = isLandscape ? 13.0 : 9.0;
     final iconSize = isLandscape ? 14.0 : 12.0;
 
     return Card(
@@ -588,7 +588,7 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
       BuildContext context, String host, String token, VoidCallback cardOnTap) {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
-    final rjFontSize = isLandscape ? 12.0 : 10.0;
+    final rjFontSize = isLandscape ? 11.0 : 10.0;
     final titleFontSize = isLandscape ? 16.0 : 14.0;
 
     return Card(
@@ -816,6 +816,10 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
   }
 
   Widget _buildRjTag() {
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+    final fontSize = isLandscape ? 13.0 : 11.0;
+    
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
@@ -824,9 +828,9 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
       ),
       child: Text(
         'RJ${widget.work.id}',
-        style: const TextStyle(
+        style: TextStyle(
           color: Colors.white,
-          fontSize: 11,
+          fontSize: fontSize,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -834,6 +838,10 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
   }
 
   Widget _buildDateTag() {
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+    final fontSize = isLandscape ? 13.0 : 10.0;
+    
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
@@ -842,9 +850,9 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
       ),
       child: Text(
         widget.work.release!,
-        style: const TextStyle(
+        style: TextStyle(
           color: Colors.white,
-          fontSize: 10,
+          fontSize: fontSize,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -852,21 +860,29 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
   }
 
   Widget _buildSubtitleTag(BuildContext context) {
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+    final iconSize = isLandscape ? 16.0 : 14.0;
+    
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.7),
         borderRadius: BorderRadius.circular(4),
       ),
-      child: const Icon(
+      child: Icon(
         Icons.closed_caption,
         color: Colors.white,
-        size: 14,
+        size: iconSize,
       ),
     );
   }
 
   Widget _buildTagsRow(BuildContext context) {
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+    final fontSize = isLandscape ? 13.0 : 10.0;
+    
     return Container(
       constraints: const BoxConstraints(minHeight: 14),
       child: Wrap(
@@ -875,7 +891,7 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
         children: widget.work.tags!.map((tag) {
           return TagChip(
             tag: tag,
-            fontSize: 10,
+            fontSize: fontSize,
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
             borderRadius: 6,
             fontWeight: FontWeight.w500,
@@ -886,6 +902,10 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
   }
 
   Widget _buildVoiceActorsRow(BuildContext context) {
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+    final fontSize = isLandscape ? 13.0 : 10.0;
+    
     return Container(
       constraints: const BoxConstraints(minHeight: 14),
       child: Wrap(
@@ -894,7 +914,7 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
         children: widget.work.vas!.map((va) {
           return VaChip(
             va: va,
-            fontSize: 10,
+            fontSize: fontSize,
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
             borderRadius: 6,
             fontWeight: FontWeight.w500,
@@ -905,13 +925,17 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
   }
 
   Widget _buildTagsWrap(BuildContext context) {
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+    final fontSize = isLandscape ? 13.0 : 11.0;
+    
     return Wrap(
       spacing: 4,
       runSpacing: 4,
       children: widget.work.tags!.map((tag) {
         return TagChip(
           tag: tag,
-          fontSize: 11,
+          fontSize: fontSize,
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
           borderRadius: 12,
           fontWeight: FontWeight.w500,
@@ -921,13 +945,17 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
   }
 
   Widget _buildVoiceActorsWrap(BuildContext context) {
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+    final fontSize = isLandscape ? 13.0 : 11.0;
+    
     return Wrap(
       spacing: 4,
       runSpacing: 4,
       children: widget.work.vas!.map((va) {
         return VaChip(
           va: va,
-          fontSize: 11,
+          fontSize: fontSize,
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
           borderRadius: 12,
           fontWeight: FontWeight.w500,

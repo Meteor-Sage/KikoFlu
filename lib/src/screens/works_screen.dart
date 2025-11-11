@@ -8,6 +8,7 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import '../providers/works_provider.dart';
 import '../widgets/enhanced_work_card.dart';
 import '../widgets/sort_dialog.dart';
+import '../utils/responsive_grid_helper.dart';
 import '../widgets/responsive_dialog.dart';
 
 class WorksScreen extends ConsumerStatefulWidget {
@@ -406,19 +407,16 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
   }
 
   Widget _buildLayoutView(WorksState worksState) {
-    final isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
-
     switch (worksState.layoutType) {
       case LayoutType.bigGrid:
         return _buildGridView(
           worksState,
-          crossAxisCount: isLandscape ? 3 : 2,
+          crossAxisCount: ResponsiveGridHelper.getBigGridCrossAxisCount(context),
         );
       case LayoutType.smallGrid:
         return _buildGridView(
           worksState,
-          crossAxisCount: isLandscape ? 5 : 3,
+          crossAxisCount: ResponsiveGridHelper.getSmallGridCrossAxisCount(context),
         );
       case LayoutType.list:
         return _buildListView(worksState);
