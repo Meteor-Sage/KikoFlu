@@ -153,6 +153,10 @@ class _MyScreenState extends ConsumerState<MyScreen>
     super.build(context); // 必须调用以保持状态
     final state = ref.watch(myReviewsProvider);
 
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+    final horizontalPadding = isLandscape ? 24.0 : 8.0;
+
     return Scaffold(
       appBar: ScrollableAppBar(
         toolbarHeight: 48, // 设置工具栏高度
@@ -163,8 +167,8 @@ class _MyScreenState extends ConsumerState<MyScreen>
               Expanded(
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: horizontalPadding, vertical: 6),
                   child: Row(
                     children: [
                       for (int i = 0; i < MyReviewFilter.values.length; i++)
@@ -197,14 +201,18 @@ class _MyScreenState extends ConsumerState<MyScreen>
                 tooltip: '下载管理',
               ),
               // 第二列：布局切换按钮
-              IconButton(
-                icon: _getLayoutIcon(state.layoutType),
-                iconSize: 22,
-                padding: const EdgeInsets.all(8),
-                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                onPressed: () =>
-                    ref.read(myReviewsProvider.notifier).toggleLayoutType(),
-                tooltip: _getLayoutTooltip(state.layoutType),
+              Padding(
+                padding: EdgeInsets.only(right: horizontalPadding - 8),
+                child: IconButton(
+                  icon: _getLayoutIcon(state.layoutType),
+                  iconSize: 22,
+                  padding: const EdgeInsets.all(8),
+                  constraints:
+                      const BoxConstraints(minWidth: 40, minHeight: 40),
+                  onPressed: () =>
+                      ref.read(myReviewsProvider.notifier).toggleLayoutType(),
+                  tooltip: _getLayoutTooltip(state.layoutType),
+                ),
               ),
             ],
           ),

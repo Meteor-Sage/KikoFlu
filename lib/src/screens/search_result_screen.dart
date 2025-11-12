@@ -99,6 +99,10 @@ class _SearchResultScreenState extends ConsumerState<SearchResultScreen> {
   Widget build(BuildContext context) {
     final searchState = ref.watch(searchResultProvider);
 
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+    final horizontalPadding = isLandscape ? 24.0 : 0.0;
+
     return GlobalAudioPlayerWrapper(
       child: Scaffold(
         appBar: AppBar(
@@ -106,6 +110,7 @@ class _SearchResultScreenState extends ConsumerState<SearchResultScreen> {
           elevation: 0,
           titleSpacing: 0,
           actions: [
+            if (horizontalPadding > 0) SizedBox(width: horizontalPadding - 8),
             IconButton(
               icon: _getLayoutIcon(searchState.layoutType),
               iconSize: 22,
@@ -132,13 +137,17 @@ class _SearchResultScreenState extends ConsumerState<SearchResultScreen> {
                   .toggleSubtitleFilter(),
               tooltip: searchState.subtitleFilter == 1 ? '显示全部作品' : '仅显示带字幕作品',
             ),
-            IconButton(
-              icon: const Icon(Icons.sort),
-              iconSize: 22,
-              padding: const EdgeInsets.all(8),
-              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-              onPressed: () => _showSortDialog(context),
-              tooltip: '排序',
+            Padding(
+              padding: EdgeInsets.only(
+                  right: horizontalPadding > 0 ? horizontalPadding - 8 : 0),
+              child: IconButton(
+                icon: const Icon(Icons.sort),
+                iconSize: 22,
+                padding: const EdgeInsets.all(8),
+                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                onPressed: () => _showSortDialog(context),
+                tooltip: '排序',
+              ),
             ),
           ],
         ),
@@ -147,7 +156,10 @@ class _SearchResultScreenState extends ConsumerState<SearchResultScreen> {
             // 搜索信息行
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: EdgeInsets.symmetric(
+                horizontal: isLandscape ? 24.0 : 8.0,
+                vertical: 8,
+              ),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
                 border: Border(

@@ -159,6 +159,10 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
     final isRecommendMode = worksState.displayMode == DisplayMode.popular ||
         worksState.displayMode == DisplayMode.recommended;
 
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+    final horizontalPadding = isLandscape ? 24.0 : 8.0;
+
     return Scaffold(
       appBar: ScrollableAppBar(
         toolbarHeight: 48,
@@ -169,8 +173,8 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
               Expanded(
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: horizontalPadding, vertical: 6),
                   child: _buildModeButtons(context, worksState),
                 ),
               ),
@@ -202,17 +206,21 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
                 tooltip: worksState.subtitleFilter == 1 ? '显示全部作品' : '仅显示带字幕作品',
               ),
               // 第四列：排序按钮
-              IconButton(
-                icon: Icon(
-                  Icons.sort,
-                  color: isRecommendMode ? Colors.grey : null,
+              Padding(
+                padding: EdgeInsets.only(right: horizontalPadding - 8),
+                child: IconButton(
+                  icon: Icon(
+                    Icons.sort,
+                    color: isRecommendMode ? Colors.grey : null,
+                  ),
+                  iconSize: 22,
+                  padding: const EdgeInsets.all(8),
+                  constraints:
+                      const BoxConstraints(minWidth: 40, minHeight: 40),
+                  onPressed:
+                      isRecommendMode ? null : () => _showSortDialog(context),
+                  tooltip: isRecommendMode ? '推荐模式不支持排序' : '排序',
                 ),
-                iconSize: 22,
-                padding: const EdgeInsets.all(8),
-                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                onPressed:
-                    isRecommendMode ? null : () => _showSortDialog(context),
-                tooltip: isRecommendMode ? '推荐模式不支持排序' : '排序',
               ),
             ],
           ),
