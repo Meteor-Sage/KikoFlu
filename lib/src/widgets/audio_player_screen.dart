@@ -14,7 +14,6 @@ import '../providers/audio_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/lyric_provider.dart';
 import '../screens/work_detail_screen.dart';
-import 'lyric_player_screen.dart';
 import 'responsive_dialog.dart';
 import 'volume_control.dart';
 import 'work_bookmark_manager.dart';
@@ -32,6 +31,8 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
   bool _showLyricHint = false;
   String? _currentProgress; // 跟踪当前作品的标记状态
   int? _currentWorkId; // 跟踪当前作品ID
+  Duration? _seekingPosition; // 进度条拖动时的预览位置
+  bool _showLyricView = false; // 竖屏模式下是否显示歌词视图
 
   @override
   void initState() {
@@ -233,9 +234,117 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
                           horizontal: 24, vertical: 16),
                       child: Column(
                         children: [
-                          // Album art (clickable to open lyrics if available)
-                          Flexible(
-                            child: Consumer(
+                          // Album art or lyrics view (entire top section)
+                          if (_showLyricView)
+                            // 歌词视图：占据全部可用空间
+                            Expanded(
+                              child: _buildPortraitLyricView(),
+                            )
+                          else
+                            // 封面视图：包含封面、标题、作者和小歌词
+                            ...[
+                            // Album art (clickable to open lyrics if available)
+                            Flexible(
+                              child: Consumer(
+                                builder: (context, ref, child) {
+                                  final lyricState =
+                                      ref.watch(lyricControllerProvider);
+                                  final hasLyrics =
+                                      lyricState.lyrics.isNotEmpty;
+
+                                  return GestureDetector(
+                                    onTap: hasLyrics
+                                        ? () {
+                                            setState(() {
+                                              _showLyricView = true;
+                                            });
+                                          }
+                                        : null,
+                                    child: Center(
+                                      child: Hero(
+                                        tag: 'audio_player_artwork_${track.id}',
+                                        child: ConstrainedBox(
+                                          constraints: BoxConstraints(
+                                            maxWidth: MediaQuery.of(context)
+                                                    .size
+                                                    .width -
+                                                48,
+                                            maxHeight: MediaQuery.of(context)
+                                                    .size
+                                                    .height *
+                                                0.4, // 最大高度为屏幕的40%
+                                          ),
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .surfaceContainerHighest,
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black
+                                                      .withOpacity(0.1),
+                                                  blurRadius: 20,
+                                                  offset: const Offset(0, 10),
+                                                ),
+                                              ],
+                                            ),
+                                            child: (workCoverUrl ??
+                                                        track.artworkUrl) !=
+                                                    null
+                                                ? ClipRRect(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            16),
+                                                    child: CachedNetworkImage(
+                                                      imageUrl: (workCoverUrl ??
+                                                          track.artworkUrl)!,
+                                                      fit: BoxFit.contain,
+                                                      errorWidget: (context,
+                                                          url, error) {
+                                                        return const Padding(
+                                                          padding:
+                                                              EdgeInsets.all(
+                                                                  40),
+                                                          child: Icon(
+                                                            Icons.album,
+                                                            size: 120,
+                                                          ),
+                                                        );
+                                                      },
+                                                      placeholder:
+                                                          (context, url) {
+                                                        return const Padding(
+                                                          padding:
+                                                              EdgeInsets.all(
+                                                                  40),
+                                                          child: Icon(
+                                                            Icons.album,
+                                                            size: 120,
+                                                          ),
+                                                        );
+                                                      },
+                                                    ),
+                                                  )
+                                                : const Padding(
+                                                    padding: EdgeInsets.all(40),
+                                                    child: Icon(
+                                                      Icons.album,
+                                                      size: 120,
+                                                    ),
+                                                  ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            // Track info (clickable to open lyrics if available)
+                            Consumer(
                               builder: (context, ref, child) {
                                 final lyricState =
                                     ref.watch(lyricControllerProvider);
@@ -244,153 +353,53 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
                                 return GestureDetector(
                                   onTap: hasLyrics
                                       ? () {
-                                          Navigator.of(context).push(
-                                            MaterialPageRoute(
-                                              builder: (context) =>
-                                                  const LyricPlayerScreen(),
-                                            ),
-                                          );
+                                          setState(() {
+                                            _showLyricView = true;
+                                          });
                                         }
                                       : null,
-                                  child: Center(
-                                    child: Hero(
-                                      tag: 'audio_player_artwork_${track.id}',
-                                      child: ConstrainedBox(
-                                        constraints: BoxConstraints(
-                                          maxWidth: MediaQuery.of(context)
-                                                  .size
-                                                  .width -
-                                              48,
-                                          maxHeight: MediaQuery.of(context)
-                                                  .size
-                                                  .height *
-                                              0.4, // 最大高度为屏幕的40%
-                                        ),
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            borderRadius:
-                                                BorderRadius.circular(16),
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .surfaceContainerHighest,
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: Colors.black
-                                                    .withOpacity(0.1),
-                                                blurRadius: 20,
-                                                offset: const Offset(0, 10),
+                                  child: SingleChildScrollView(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          track.title,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .headlineSmall
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.bold,
                                               ),
-                                            ],
-                                          ),
-                                          child: (workCoverUrl ??
-                                                      track.artworkUrl) !=
-                                                  null
-                                              ? ClipRRect(
-                                                  borderRadius:
-                                                      BorderRadius.circular(16),
-                                                  child: CachedNetworkImage(
-                                                    imageUrl: (workCoverUrl ??
-                                                        track.artworkUrl)!,
-                                                    fit: BoxFit.contain,
-                                                    errorWidget:
-                                                        (context, url, error) {
-                                                      return const Padding(
-                                                        padding:
-                                                            EdgeInsets.all(40),
-                                                        child: Icon(
-                                                          Icons.album,
-                                                          size: 120,
-                                                        ),
-                                                      );
-                                                    },
-                                                    placeholder:
-                                                        (context, url) {
-                                                      return const Padding(
-                                                        padding:
-                                                            EdgeInsets.all(40),
-                                                        child: Icon(
-                                                          Icons.album,
-                                                          size: 120,
-                                                        ),
-                                                      );
-                                                    },
-                                                  ),
-                                                )
-                                              : const Padding(
-                                                  padding: EdgeInsets.all(40),
-                                                  child: Icon(
-                                                    Icons.album,
-                                                    size: 120,
-                                                  ),
-                                                ),
+                                          textAlign: TextAlign.center,
+                                          maxLines: 3,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
-                                      ),
+                                        const SizedBox(height: 2),
+                                        if (track.artist != null)
+                                          Text(
+                                            track.artist!,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodyLarge
+                                                ?.copyWith(
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurfaceVariant,
+                                                ),
+                                            textAlign: TextAlign.center,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        // 歌词显示区域（如果有歌词则显示歌词，否则显示专辑名）
+                                        _LyricDisplay(albumName: track.album),
+                                      ],
                                     ),
                                   ),
                                 );
                               },
                             ),
-                          ),
-                          const SizedBox(height: 16),
-                          // Track info (clickable to open lyrics if available)
-                          Consumer(
-                            builder: (context, ref, child) {
-                              final lyricState =
-                                  ref.watch(lyricControllerProvider);
-                              final hasLyrics = lyricState.lyrics.isNotEmpty;
-
-                              return GestureDetector(
-                                onTap: hasLyrics
-                                    ? () {
-                                        Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                const LyricPlayerScreen(),
-                                          ),
-                                        );
-                                      }
-                                    : null,
-                                child: SingleChildScrollView(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        track.title,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .headlineSmall
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                        textAlign: TextAlign.center,
-                                        maxLines: 3,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      const SizedBox(height: 2),
-                                      if (track.artist != null)
-                                        Text(
-                                          track.artist!,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodyLarge
-                                              ?.copyWith(
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .onSurfaceVariant,
-                                              ),
-                                          textAlign: TextAlign.center,
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      // 歌词显示区域（如果有歌词则显示歌词，否则显示专辑名）
-                                      _LyricDisplay(albumName: track.album),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 4),
+                            const SizedBox(height: 4),
+                          ],
                           // Progress slider
                           Column(
                             children: [
@@ -411,6 +420,12 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
                                       setState(() {
                                         _isSeekingManually = true;
                                         _seekValue = value;
+                                        // 更新拖动预览位置（用于歌词同步滚动）
+                                        _seekingPosition = Duration(
+                                          milliseconds:
+                                              (value * dur.inMilliseconds)
+                                                  .round(),
+                                        );
                                       });
                                     },
                                     onChangeEnd: (value) {
@@ -419,12 +434,28 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
                                             (value * dur.inMilliseconds)
                                                 .round(),
                                       );
+
+                                      // 先设置目标位置以触发歌词快速滚动
+                                      setState(() {
+                                        _seekingPosition = newPosition;
+                                      });
+
+                                      // 执行 seek
                                       ref
                                           .read(audioPlayerControllerProvider
                                               .notifier)
                                           .seek(newPosition);
-                                      setState(() {
-                                        _isSeekingManually = false;
+
+                                      // 延迟清除拖动状态，让歌词有时间响应
+                                      Future.delayed(
+                                          const Duration(milliseconds: 100),
+                                          () {
+                                        if (mounted) {
+                                          setState(() {
+                                            _isSeekingManually = false;
+                                            _seekingPosition = null;
+                                          });
+                                        }
                                       });
                                     },
                                   );
@@ -749,6 +780,33 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
     );
   }
 
+  /// 构建竖屏模式的歌词视图（带返回按钮）
+  Widget _buildPortraitLyricView() {
+    return Stack(
+      children: [
+        // 复用横屏的歌词显示组件，但使用竖屏模式的宽度计算
+        _LandscapeLyricDisplay(
+          seekingPosition: _seekingPosition,
+          isPortrait: true,
+        ),
+        // 右下角的返回封面按钮
+        Positioned(
+          right: 16,
+          bottom: 16,
+          child: FloatingActionButton(
+            onPressed: () {
+              setState(() {
+                _showLyricView = false;
+              });
+            },
+            tooltip: '返回封面',
+            child: const Icon(Icons.album),
+          ),
+        ),
+      ],
+    );
+  }
+
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
     final hours = duration.inHours;
@@ -948,6 +1006,11 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
                                   setState(() {
                                     _isSeekingManually = true;
                                     _seekValue = value;
+                                    // 更新拖动预览位置
+                                    _seekingPosition = Duration(
+                                      milliseconds:
+                                          (value * dur.inMilliseconds).round(),
+                                    );
                                   });
                                 },
                                 onChangeEnd: (value) {
@@ -955,12 +1018,27 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
                                     milliseconds:
                                         (value * dur.inMilliseconds).round(),
                                   );
+
+                                  // 先设置目标位置以触发歌词快速滚动
+                                  setState(() {
+                                    _seekingPosition = newPosition;
+                                  });
+
+                                  // 执行 seek
                                   ref
                                       .read(audioPlayerControllerProvider
                                           .notifier)
                                       .seek(newPosition);
-                                  setState(() {
-                                    _isSeekingManually = false;
+
+                                  // 延迟清除拖动状态，让歌词有时间响应
+                                  Future.delayed(
+                                      const Duration(milliseconds: 100), () {
+                                    if (mounted) {
+                                      setState(() {
+                                        _isSeekingManually = false;
+                                        _seekingPosition = null;
+                                      });
+                                    }
                                   });
                                 },
                               );
@@ -1189,7 +1267,9 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
                     );
                   }
 
-                  return const _LandscapeLyricDisplay();
+                  return _LandscapeLyricDisplay(
+                    seekingPosition: _seekingPosition,
+                  );
                 },
               ),
             ),
@@ -1498,7 +1578,13 @@ class _LyricDisplay extends ConsumerWidget {
 
 // 横屏歌词显示组件 - 显示更多上下文，可点击跳转
 class _LandscapeLyricDisplay extends ConsumerStatefulWidget {
-  const _LandscapeLyricDisplay();
+  final Duration? seekingPosition; // 进度条拖动时的预览位置
+  final bool isPortrait; // 是否为竖屏模式
+
+  const _LandscapeLyricDisplay({
+    this.seekingPosition,
+    this.isPortrait = false,
+  });
 
   @override
   ConsumerState<_LandscapeLyricDisplay> createState() =>
@@ -1535,19 +1621,108 @@ class _LandscapeLyricDisplayState
     return -1;
   }
 
-  void _scrollToLyric(int index) {
+  /// 估算单个歌词 item 的高度
+  double _estimateItemHeight(String text, BuildContext context, bool isActive) {
+    // 基础组件高度
+    const double verticalPadding = 24.0; // Container padding: 12 * 2
+    const double verticalMargin = 8.0; // Container margin: 4 * 2
+    const double lineHeight = 1.5; // Text height multiplier
+
+    // 文本样式参数
+    final double fontSize = isActive ? 18.0 : 16.0;
+
+    // 可用文本宽度计算
+    final screenWidth = MediaQuery.of(context).size.width;
+    final double lyricAreaWidth;
+    final double outerPadding; // 外层容器的 padding
+
+    if (widget.isPortrait) {
+      // 竖屏模式：使用全屏宽度，但有外层 padding
+      lyricAreaWidth = screenWidth;
+      outerPadding = 48.0; // 外层 Padding: 24 * 2
+    } else {
+      // 横屏模式：使用右侧区域宽度（flex: 3 占约 60%），无外层 padding
+      lyricAreaWidth = screenWidth * 0.6;
+      outerPadding = 0.0;
+    }
+
+    const double listViewPadding = 48.0; // ListView padding: 24 * 2
+    const double containerHorizontalPadding = 32.0; // Container padding: 16 * 2
+    final availableTextWidth = lyricAreaWidth -
+        outerPadding -
+        listViewPadding -
+        containerHorizontalPadding;
+
+    // 使用 TextPainter 计算实际文本高度
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          fontSize: fontSize,
+          fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+          height: lineHeight,
+        ),
+      ),
+      maxLines: null,
+      textDirection: TextDirection.ltr,
+    );
+
+    textPainter.layout(maxWidth: availableTextWidth);
+    final textHeight = textPainter.height;
+
+    return verticalPadding + textHeight + verticalMargin;
+  }
+
+  /// 计算到目标索引的累积偏移量
+  double _calculateOffsetToIndex(
+      int targetIndex, List<LyricLine> lyrics, BuildContext context) {
+    double offset = 20.0; // ListView 顶部 padding
+
+    for (int i = 0; i < targetIndex && i < lyrics.length; i++) {
+      // 对于未渲染的 item，预测它是否会是激活状态（通常不会，用普通样式估算）
+      offset += _estimateItemHeight(lyrics[i].text, context, false);
+    }
+
+    return offset;
+  }
+
+  void _scrollToLyric(int index, {bool animate = true, bool force = false}) {
     if (!_autoScroll || !_scrollController.hasClients) return;
 
     final key = _getKeyForIndex(index);
-    final context = key.currentContext;
+    final itemContext = key.currentContext;
 
-    if (context != null) {
+    if (itemContext != null) {
+      // context 存在，直接滚动到精确位置
       Scrollable.ensureVisible(
-        context,
+        itemContext,
         alignment: 0.5,
-        duration: const Duration(milliseconds: 300),
+        duration: animate ? const Duration(milliseconds: 300) : Duration.zero,
         curve: Curves.easeOut,
       );
+    } else if (force && mounted) {
+      // context 不存在（item 未渲染），使用精确估算跳到大致位置
+      final lyricState = ref.read(lyricControllerProvider);
+      final targetOffset =
+          _calculateOffsetToIndex(index, lyricState.lyrics, context);
+      final maxScroll = _scrollController.position.maxScrollExtent;
+      final clampedOffset = targetOffset.clamp(0.0, maxScroll);
+
+      // 立即跳转到估算位置
+      _scrollController.jumpTo(clampedOffset);
+
+      // 等待下一帧渲染完成后再精确定位
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final newContext = key.currentContext;
+        if (newContext != null && mounted) {
+          Scrollable.ensureVisible(
+            newContext,
+            alignment: 0.5,
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeOut,
+          );
+        }
+      });
     }
   }
 
@@ -1580,13 +1755,25 @@ class _LandscapeLyricDisplayState
 
     return position.when(
       data: (pos) {
-        final currentIndex = _getCurrentLyricIndex(pos, lyricState.lyrics);
+        // 如果正在拖动进度条，使用拖动位置；否则使用实际播放位置
+        final displayPosition = widget.seekingPosition ?? pos;
+        final currentIndex =
+            _getCurrentLyricIndex(displayPosition, lyricState.lyrics);
 
         // 当歌词索引变化时滚动
         if (currentIndex != _currentLyricIndex && currentIndex >= 0) {
+          final previousIndex = _currentLyricIndex;
           _currentLyricIndex = currentIndex;
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            _scrollToLyric(currentIndex);
+            // 检测是否是大跳转（索引差距超过 5 行）
+            final isLargeJump = previousIndex == null ||
+                (currentIndex - previousIndex).abs() > 5;
+
+            // 如果是拖动/点击跳转导致的变化，不使用动画
+            final animate = widget.seekingPosition == null;
+
+            // 大跳转时强制刷新（触发懒加载）
+            _scrollToLyric(currentIndex, animate: animate, force: isLargeJump);
           });
         }
 

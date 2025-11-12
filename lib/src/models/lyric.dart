@@ -99,8 +99,8 @@ class LyricParser {
 
       // 匹配时间戳行（支持 hh:mm:ss.mmm 或 mm:ss.mmm）
       final timeMatch = RegExp(
-        r'(?:(\d{2}):)?(\d{2}):(\d{2}\.\d{3})\s*-->\s*(?:(\d{2}):)?(\d{2}):(\d{2}\.\d{3})'
-      ).firstMatch(line);
+              r'(?:(\d{2}):)?(\d{2}):(\d{2}\.\d{3})\s*-->\s*(?:(\d{2}):)?(\d{2}):(\d{2}\.\d{3})')
+          .firstMatch(line);
 
       if (timeMatch != null) {
         final startTime = _parseTime(
@@ -139,7 +139,7 @@ class LyricParser {
     return _finalizeLyrics(lyrics);
   }
 
-  // 公共的后处理逻辑（排序 + 插入占位符 + 结束时间计算）
+  // 公共的后处理逻辑（排序 + 结束时间计算，让歌词时间无缝衔接）
   static List<LyricLine> _finalizeLyrics(List<LyricLine> lyrics) {
     if (lyrics.isEmpty) return [];
 
@@ -147,23 +147,15 @@ class LyricParser {
     lyrics.sort((a, b) => a.startTime.compareTo(b.startTime));
 
     final List<LyricLine> finalLyrics = [];
+
+    // 处理每一行歌词，让它们无缝衔接
     for (int i = 0; i < lyrics.length - 1; i++) {
-      final currentLyric = LyricLine(
+      // 当前歌词的结束时间直接设置为下一行的开始时间
+      finalLyrics.add(LyricLine(
         startTime: lyrics[i].startTime,
         endTime: lyrics[i + 1].startTime,
         text: lyrics[i].text,
-      );
-      finalLyrics.add(currentLyric);
-
-      // 间隙 > 1 秒插入占位符
-      final gap = lyrics[i + 1].startTime - currentLyric.endTime;
-      if (gap >= const Duration(seconds: 1)) {
-        finalLyrics.add(LyricLine(
-          startTime: currentLyric.endTime,
-          endTime: lyrics[i + 1].startTime,
-          text: '',
-        ));
-      }
+      ));
     }
 
     // 最后一行
