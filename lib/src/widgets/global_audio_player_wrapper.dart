@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/audio_provider.dart';
-import 'audio_player_widget.dart';
+import 'mini_player.dart';
 
 /// Global wrapper that shows the mini player on all screens except login
 class GlobalAudioPlayerWrapper extends ConsumerWidget {
