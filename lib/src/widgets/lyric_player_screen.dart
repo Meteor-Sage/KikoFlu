@@ -145,13 +145,16 @@ class _LyricPlayerScreenState extends ConsumerState<LyricPlayerScreen> {
       {bool immediate = false}) async {
     if (!_scrollController.hasClients) return;
 
-    // 估算位置：使用平均高度
-    const estimatedItemHeight = 60.0;
+    final lyricState = ref.read(lyricControllerProvider);
     final screenHeight = MediaQuery.of(context).size.height;
-    final targetOffset = index * estimatedItemHeight -
-        screenHeight / 2 +
-        estimatedItemHeight / 2;
-    final clampedOffset = targetOffset.clamp(
+
+    // 使用精确估算计算目标位置
+    final targetOffset = _calculateOffsetToIndex(index, lyricState.lyrics);
+
+    // 减去半个屏幕高度，让目标歌词居中
+    final centeredOffset = targetOffset - screenHeight / 2;
+
+    final clampedOffset = centeredOffset.clamp(
       0.0,
       _scrollController.position.maxScrollExtent,
     );
@@ -176,6 +179,59 @@ class _LyricPlayerScreenState extends ConsumerState<LyricPlayerScreen> {
       }
     }
     return -1;
+  }
+
+  /// 估算单个歌词 item 的高度
+  double _estimateItemHeight(String text, bool isActive, bool isPlaceholder) {
+    // 基础组件高度
+    const double verticalPadding = 24.0; // Container padding: 12 * 2
+    const double lineHeight = 1.5; // Text height multiplier
+
+    // 占位符固定高度
+    if (isPlaceholder) {
+      const double placeholderFontSize = 16.0;
+      return verticalPadding + (placeholderFontSize * lineHeight);
+    }
+
+    // 文本样式参数
+    final double fontSize = isActive ? 20.0 : 16.0;
+
+    // 可用文本宽度 = 屏幕宽度 - 左右 padding
+    final screenWidth = MediaQuery.of(context).size.width;
+    const double horizontalPadding = 48.0; // ListView padding: 24 * 2
+    final availableTextWidth = screenWidth - horizontalPadding;
+
+    // 使用 TextPainter 计算实际文本高度
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          fontSize: fontSize,
+          fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+          height: lineHeight,
+        ),
+      ),
+      maxLines: null,
+      textDirection: TextDirection.ltr,
+    );
+
+    textPainter.layout(maxWidth: availableTextWidth);
+    final textHeight = textPainter.height;
+
+    return verticalPadding + textHeight;
+  }
+
+  /// 计算到目标索引的累积偏移量
+  double _calculateOffsetToIndex(int targetIndex, List<LyricLine> lyrics) {
+    double offset = 40.0; // ListView 顶部 padding
+
+    for (int i = 0; i < targetIndex && i < lyrics.length; i++) {
+      final isPlaceholder = lyrics[i].text.isEmpty;
+      // 对于未渲染的 item，预测它是否会是激活状态（通常不会，用普通样式估算）
+      offset += _estimateItemHeight(lyrics[i].text, false, isPlaceholder);
+    }
+
+    return offset;
   }
 
   @override
