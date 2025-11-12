@@ -95,3 +95,8 @@ app.*.map.json
 KikoFlu-macOS.dmg
 /android/build/reports
 on_process.md
+windows/flutter/generated_plugins.cmake
+windows/flutter/generated_plugin_registrant.cc
+windows/flutter/generated_plugin_registrant.h
+windows/flutter/generated_plugins.cmake
+macos/Flutter/GeneratedPluginRegistrant.swift
