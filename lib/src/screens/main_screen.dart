@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/audio_provider.dart';
-import '../widgets/audio_player_widget.dart';
+import '../widgets/mini_player.dart';
 import 'works_screen.dart';
 import 'search_screen.dart';
 import 'my_screen.dart';
