@@ -94,3 +94,4 @@ app.*.map.json
 !**/ios/**/default.perspectivev3
 KikoFlu-macOS.dmg
 /android/build/reports
+on_process.md

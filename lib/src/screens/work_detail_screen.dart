@@ -1,5 +1,3 @@
-import 'dart:io' show Platform;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +14,7 @@ import '../widgets/global_audio_player_wrapper.dart';
 import '../widgets/tag_chip.dart';
 import '../widgets/va_chip.dart';
 import '../widgets/responsive_dialog.dart';
+import '../widgets/review_progress_dialog.dart';
 
 class WorkDetailScreen extends ConsumerStatefulWidget {
   final Work work;
@@ -308,220 +307,12 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
   Future<void> _showProgressDialog() async {
     if (_isOpeningProgressDialog) return; // 防抖避免 iOS 双击导致立即关闭
     _isOpeningProgressDialog = true;
-    final filters = [
-      MyReviewFilter.marked,
-      MyReviewFilter.listening,
-      MyReviewFilter.listened,
-      MyReviewFilter.replay,
-      MyReviewFilter.postponed,
-    ];
 
-    final isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
-
-    String? selectedValue;
-
-    if (isLandscape) {
-      // 横屏模式：使用对话框形式，3+3两列布局
-      selectedValue = await showDialog<String>(
-        context: context,
-        barrierDismissible: !Platform.isIOS, // iOS 上防止点击外部区域意外关闭
-        builder: (dialogContext) {
-          return Dialog(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.6,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 标题栏
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 20, 16, 16),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '选择收藏状态',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () => Navigator.of(dialogContext).pop(),
-                          tooltip: '关闭',
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Divider(height: 1),
-                  // 内容区域 - 3+3两列布局，支持滚动
-                  Flexible(
-                    child: SingleChildScrollView(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // 左列：前3个选项
-                            Expanded(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: filters.take(3).map((filter) {
-                                  final isSelected =
-                                      _currentProgress == filter.value;
-                                  return RadioListTile<String>(
-                                    title: Text(filter.label),
-                                    value: filter.value!,
-                                    groupValue: _currentProgress,
-                                    onChanged: (value) {
-                                      Navigator.of(dialogContext).pop(value);
-                                    },
-                                    selected: isSelected,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 8),
-                                  );
-                                }).toList(),
-                              ),
-                            ),
-                            const VerticalDivider(width: 1),
-                            // 右列：后2个选项 + 移除按钮
-                            Expanded(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  ...filters.skip(3).map((filter) {
-                                    final isSelected =
-                                        _currentProgress == filter.value;
-                                    return RadioListTile<String>(
-                                      title: Text(filter.label),
-                                      value: filter.value!,
-                                      groupValue: _currentProgress,
-                                      onChanged: (value) {
-                                        Navigator.of(dialogContext).pop(value);
-                                      },
-                                      selected: isSelected,
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                              horizontal: 8),
-                                    );
-                                  }),
-                                  if (_currentProgress != null) ...[
-                                    const Divider(height: 1),
-                                    ListTile(
-                                      leading: Icon(
-                                        Icons.delete_outline,
-                                        color:
-                                            Theme.of(context).colorScheme.error,
-                                      ),
-                                      title: Text(
-                                        '移除',
-                                        style: TextStyle(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .error,
-                                        ),
-                                      ),
-                                      onTap: () {
-                                        Navigator.of(dialogContext).pop('__REMOVE__');
-                                      },
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                              horizontal: 8),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      );
-    } else {
-      // 竖屏模式：使用底部弹窗
-      selectedValue = await showResponsiveBottomSheet<String>(
-        context: context,
-        isDismissible: !Platform.isIOS, // iOS 上防止点击外部区域或下拉意外关闭
-        enableDrag: !Platform.isIOS, // iOS 上禁止下拉关闭
-        builder: (context) {
-          return Container(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Text(
-                    '选择收藏状态',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                ),
-                const Divider(),
-                ...filters.map((filter) {
-                  final isSelected = _currentProgress == filter.value;
-                  return ListTile(
-                    leading: Icon(
-                      isSelected ? Icons.check_circle : Icons.circle_outlined,
-                      color: isSelected
-                          ? Theme.of(context).colorScheme.primary
-                          : null,
-                    ),
-                    title: Text(filter.label),
-                    selected: isSelected,
-                    onTap: () {
-                      Navigator.pop(context, filter.value);
-                    },
-                  );
-                }).toList(),
-                const SizedBox(height: 8),
-                if (_currentProgress != null)
-                  ListTile(
-                    leading: Icon(
-                      Icons.delete_outline,
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                    title: Text(
-                      '移除',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context, '__REMOVE__');
-                    },
-                  ),
-                const Divider(),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: TextButton(
-                      onPressed: () {
-                        Navigator.pop(context); // 取消，不返回任何值
-                      },
-                      child: const Text('取消'),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      );
-    }
+    final selectedValue = await ReviewProgressDialog.show(
+      context: context,
+      currentProgress: _currentProgress,
+      title: '选择收藏状态',
+    );
 
     _isOpeningProgressDialog = false;
 

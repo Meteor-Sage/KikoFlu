@@ -1,15 +1,12 @@
-import 'dart:io' show Platform;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/work.dart';
 import '../providers/auth_provider.dart';
-import '../providers/my_reviews_provider.dart';
 import '../screens/work_detail_screen.dart';
 import 'tag_chip.dart';
 import 'va_chip.dart';
-import 'responsive_dialog.dart';
+import 'review_progress_dialog.dart';
 
 class EnhancedWorkCard extends ConsumerStatefulWidget {
   final Work work;
@@ -65,248 +62,21 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
     }
   }
 
-  String _labelFor(String? value) {
-    if (value == null) return '未收藏';
-    final found = [
-      MyReviewFilter.marked,
-      MyReviewFilter.listening,
-      MyReviewFilter.listened,
-      MyReviewFilter.replay,
-      MyReviewFilter.postponed,
-    ].firstWhere(
-      (f) => f.value == value,
-      orElse: () => MyReviewFilter.all,
-    );
-    return found.label;
-  }
-
-  void _showEditSheet() {
-    final filters = [
-      MyReviewFilter.marked,
-      MyReviewFilter.listening,
-      MyReviewFilter.listened,
-      MyReviewFilter.replay,
-      MyReviewFilter.postponed,
-    ];
-
-    final isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
-
-    if (isLandscape) {
-      // 横屏模式：使用对话框形式，3+3两列布局
-      showDialog(
-        context: context,
-        barrierDismissible: !Platform.isIOS, // iOS 上防止点击外部区域意外关闭
-        builder: (dialogContext) {
-          return Dialog(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.6,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 标题栏
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 20, 16, 16),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '编辑收藏状态',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        if (_updating)
-                          const Padding(
-                            padding: EdgeInsets.only(right: 8),
-                            child: SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          ),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () => Navigator.of(dialogContext).pop(),
-                          tooltip: '关闭',
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Divider(height: 1),
-                  // 内容区域 - 3+3两列布局，支持滚动
-                  Flexible(
-                    child: SingleChildScrollView(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // 左列：前3个选项
-                            Expanded(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: filters.take(3).map((f) {
-                                  final selected = _progress == f.value;
-                                  return RadioListTile<String>(
-                                    title: Text(f.label),
-                                    value: f.value!,
-                                    groupValue: _progress,
-                                    onChanged: _updating
-                                        ? null
-                                        : (value) {
-                                            Navigator.of(dialogContext).pop();
-                                            _updateProgress(value);
-                                          },
-                                    selected: selected,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 8),
-                                  );
-                                }).toList(),
-                              ),
-                            ),
-                            const VerticalDivider(width: 1),
-                            // 右列：后2个选项 + 移除按钮
-                            Expanded(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  ...filters.skip(3).map((f) {
-                                    final selected = _progress == f.value;
-                                    return RadioListTile<String>(
-                                      title: Text(f.label),
-                                      value: f.value!,
-                                      groupValue: _progress,
-                                      onChanged: _updating
-                                          ? null
-                                          : (value) {
-                                              Navigator.of(dialogContext).pop();
-                                              _updateProgress(value);
-                                            },
-                                      selected: selected,
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                              horizontal: 8),
-                                    );
-                                  }),
-                                  if (_progress != null) ...[
-                                    const Divider(height: 1),
-                                    ListTile(
-                                      leading: Icon(Icons.delete_outline,
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .error),
-                                      title: Text('移除',
-                                          style: TextStyle(
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .error)),
-                                      onTap: _updating
-                                          ? null
-                                          : () {
-                                              Navigator.of(dialogContext).pop();
-                                              _updateProgress(null);
-                                            },
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                              horizontal: 8),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      );
-      return;
-    }
-
-    // 竖屏模式：使用底部弹窗
-    showResponsiveBottomSheet(
+  // 显示编辑收藏状态对话框
+  Future<void> _showEditSheet() async {
+    final selectedValue = await ReviewProgressDialog.show(
       context: context,
-      isDismissible: !Platform.isIOS, // iOS 上防止点击外部区域或下拉意外关闭
-      enableDrag: !Platform.isIOS, // iOS 上禁止下拉关闭
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Row(
-                  children: [
-                    Text(
-                      '编辑收藏状态',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    const Spacer(),
-                    if (_updating)
-                      const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              ...filters.map((f) {
-                final selected = _progress == f.value;
-                return ListTile(
-                  leading: Icon(
-                      selected ? Icons.check_circle : Icons.circle_outlined,
-                      color: selected
-                          ? Theme.of(context).colorScheme.primary
-                          : null),
-                  title: Text(f.label),
-                  onTap: _updating ? null : () => _updateProgress(f.value!),
-                  selected: selected,
-                );
-              }),
-              if (_progress != null) ...[
-                const Divider(height: 1),
-                ListTile(
-                  leading: Icon(Icons.delete_outline,
-                      color: Theme.of(context).colorScheme.error),
-                  title: Text('移除',
-                      style: TextStyle(
-                          color: Theme.of(context).colorScheme.error)),
-                  onTap: _updating ? null : () => _updateProgress(null),
-                ),
-              ],
-              const Divider(),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: TextButton(
-                    onPressed: _updating ? null : () => Navigator.pop(context),
-                    child: const Text('取消'),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 4),
-            ],
-          ),
-        );
-      },
+      currentProgress: _progress,
+      title: '编辑收藏状态',
     );
+
+    if (selectedValue != null) {
+      if (selectedValue == '__REMOVE__') {
+        await _updateProgress(null);
+      } else {
+        await _updateProgress(selectedValue);
+      }
+    }
   }
 
   Future<void> _updateProgress(String? value) async {
@@ -318,13 +88,10 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
         await api.updateReviewProgress(widget.work.id, progress: value);
         setState(() => _progress = value);
         if (mounted) {
-          // 只在竖屏模式关闭底部弹窗，横屏模式已在点击时关闭对话框
-          if (MediaQuery.of(context).orientation == Orientation.portrait) {
-            Navigator.pop(context);
-          }
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('已设置为：${_labelFor(value)}'),
+              content: Text(
+                  '已设置为：${ReviewProgressDialog.getLabelForProgress(value)}'),
               behavior: SnackBarBehavior.floating,
               duration: const Duration(seconds: 2),
             ),
@@ -334,10 +101,6 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
         await api.deleteReview(widget.work.id);
         setState(() => _progress = null);
         if (mounted) {
-          // 只在竖屏模式关闭底部弹窗，横屏模式已在点击时关闭对话框
-          if (MediaQuery.of(context).orientation == Orientation.portrait) {
-            Navigator.pop(context);
-          }
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('已移除标记'),
@@ -819,7 +582,7 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
     final fontSize = isLandscape ? 13.0 : 11.0;
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
@@ -841,7 +604,7 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
     final fontSize = isLandscape ? 13.0 : 10.0;
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
@@ -863,7 +626,7 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
     final iconSize = isLandscape ? 16.0 : 14.0;
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
@@ -882,7 +645,7 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
     final fontSize = isLandscape ? 13.0 : 10.0;
-    
+
     return Container(
       constraints: const BoxConstraints(minHeight: 14),
       child: Wrap(
@@ -905,7 +668,7 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
     final fontSize = isLandscape ? 13.0 : 10.0;
-    
+
     return Container(
       constraints: const BoxConstraints(minHeight: 14),
       child: Wrap(
@@ -928,7 +691,7 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
     final fontSize = isLandscape ? 13.0 : 11.0;
-    
+
     return Wrap(
       spacing: 4,
       runSpacing: 4,
@@ -948,7 +711,7 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
     final fontSize = isLandscape ? 13.0 : 11.0;
-    
+
     return Wrap(
       spacing: 4,
       runSpacing: 4,

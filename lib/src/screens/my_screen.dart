@@ -1,12 +1,9 @@
-import 'dart:async';
-import 'dart:io' show Platform;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import '../providers/my_reviews_provider.dart';
 import '../widgets/enhanced_work_card.dart';
-import '../widgets/responsive_dialog.dart';
+import '../widgets/pagination_bar.dart';
 import '../utils/responsive_grid_helper.dart';
 import '../widgets/scrollable_appbar.dart';
 import 'downloads_screen.dart';
@@ -22,10 +19,6 @@ class MyScreen extends ConsumerStatefulWidget {
 class _MyScreenState extends ConsumerState<MyScreen>
     with AutomaticKeepAliveClientMixin {
   final ScrollController _scrollController = ScrollController();
-  final TextEditingController _pageController = TextEditingController();
-  bool _showPagination = false;
-  Timer? _scrollDebouncer;
-  double _lastScrollPosition = 0.0;
 
   @override
   bool get wantKeepAlive => true; // 保持状态不被销毁
@@ -40,42 +33,11 @@ class _MyScreenState extends ConsumerState<MyScreen>
         ref.read(myReviewsProvider.notifier).load(refresh: true);
       }
     });
-    _scrollController.addListener(_onScroll);
-  }
-
-  void _onScroll() {
-    if (!_scrollController.hasClients) return;
-
-    final scrollPosition = _scrollController.position.pixels;
-    final scrollDelta = (scrollPosition - _lastScrollPosition).abs();
-
-    // 过滤小幅度滚动，减少不必要的处理
-    if (scrollDelta < 10) return;
-
-    _lastScrollPosition = scrollPosition;
-
-    // 使用防抖处理滚动事件
-    _scrollDebouncer?.cancel();
-    _scrollDebouncer = Timer(const Duration(milliseconds: 150), () {
-      if (!mounted || !_scrollController.hasClients) return;
-
-      final isNearBottom = _scrollController.position.pixels >=
-          _scrollController.position.maxScrollExtent - 200;
-
-      // 显示/隐藏分页控件
-      if (isNearBottom != _showPagination) {
-        setState(() {
-          _showPagination = isNearBottom;
-        });
-      }
-    });
   }
 
   @override
   void dispose() {
-    _scrollDebouncer?.cancel();
     _scrollController.dispose();
-    _pageController.dispose();
     super.dispose();
   }
 
@@ -95,269 +57,6 @@ class _MyScreenState extends ConsumerState<MyScreen>
         builder: (context) => const DownloadsScreen(),
       ),
     );
-  }
-
-  // 分页控制栏
-  Widget _buildPaginationBar(MyReviewsState state) {
-    final maxPage =
-        state.totalCount > 0 ? (state.totalCount / state.pageSize).ceil() : 1;
-
-    // 如果总数小于等于20，显示到底提示
-    if (state.totalCount <= 20) {
-      return Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.check_circle_outline,
-              size: 16,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              '已经到底啦~杂库~',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // 页码和总数信息
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                '第 ${state.currentPage} / $maxPage 页',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  '共 ${state.totalCount} 条',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    fontSize: 11,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // 按钮组
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // 上一页
-              _buildPageButton(
-                icon: Icons.chevron_left,
-                label: '上一页',
-                enabled: state.currentPage > 1 && !state.isLoading,
-                onPressed: () {
-                  ref.read(myReviewsProvider.notifier).previousPage();
-                  _scrollToTop();
-                },
-              ),
-              const SizedBox(width: 8),
-
-              // 跳转输入
-              _buildPageJumpButton(state, maxPage),
-              const SizedBox(width: 8),
-
-              // 下一页
-              _buildPageButton(
-                label: '下一页',
-                icon: Icons.chevron_right,
-                enabled: state.hasMore && !state.isLoading,
-                iconOnRight: true,
-                onPressed: () {
-                  ref.read(myReviewsProvider.notifier).nextPage();
-                  _scrollToTop();
-                },
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // 分页按钮
-  Widget _buildPageButton({
-    required IconData icon,
-    required String label,
-    required bool enabled,
-    required VoidCallback onPressed,
-    bool iconOnRight = false,
-  }) {
-    final iconWidget = Icon(
-      icon,
-      size: 18,
-      color: enabled
-          ? Theme.of(context).colorScheme.onPrimaryContainer
-          : Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
-    );
-
-    final textWidget = Text(
-      label,
-      style: TextStyle(
-        fontSize: 13,
-        color: enabled
-            ? Theme.of(context).colorScheme.onPrimaryContainer
-            : Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
-      ),
-    );
-
-    return Material(
-      color: enabled
-          ? Theme.of(context).colorScheme.primaryContainer
-          : Theme.of(context).colorScheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(8),
-      child: InkWell(
-        onTap: enabled ? onPressed : null,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: iconOnRight
-                ? [textWidget, const SizedBox(width: 4), iconWidget]
-                : [iconWidget, const SizedBox(width: 4), textWidget],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // 页码跳转按钮
-  Widget _buildPageJumpButton(MyReviewsState state, int maxPage) {
-    return Material(
-      color: Theme.of(context).colorScheme.secondaryContainer,
-      borderRadius: BorderRadius.circular(8),
-      child: InkWell(
-        onTap: () => _showPageJumpDialog(state, maxPage),
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.edit_location_alt,
-                size: 18,
-                color: Theme.of(context).colorScheme.onSecondaryContainer,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                '跳转',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Theme.of(context).colorScheme.onSecondaryContainer,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // 显示页码跳转对话框
-  void _showPageJumpDialog(MyReviewsState state, int maxPage) {
-    final isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
-
-    showDialog(
-      context: context,
-      barrierDismissible: !Platform.isIOS, // iOS 上防止点击外部区域意外关闭
-      builder: (context) {
-        final dialog = ResponsiveAlertDialog(
-          title: const Text('跳转到指定页'),
-          content: TextField(
-            controller: _pageController,
-            keyboardType: TextInputType.number,
-            autofocus: true,
-            decoration: InputDecoration(
-              labelText: '页码',
-              hintText: '输入 1-$maxPage',
-              border: const OutlineInputBorder(),
-              prefixIcon: const Icon(Icons.tag),
-            ),
-            onSubmitted: (value) {
-              Navigator.of(context).pop();
-              _handlePageJump(value, maxPage);
-            },
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('取消'),
-            ),
-            FilledButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _handlePageJump(_pageController.text, maxPage);
-              },
-              child: const Text('跳转'),
-            ),
-          ],
-        );
-
-        // 横屏时移除底部视图插入（键盘），让对话框保持固定位置
-        return isLandscape
-            ? MediaQuery.removeViewInsets(
-                removeBottom: true,
-                context: context,
-                child: dialog,
-              )
-            : dialog;
-      },
-    );
-  }
-
-  // 处理页码跳转
-  void _handlePageJump(String value, int maxPage) {
-    final page = int.tryParse(value);
-    if (page != null && page > 0 && page <= maxPage) {
-      ref.read(myReviewsProvider.notifier).goToPage(page);
-      _pageController.clear();
-      _scrollToTop();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('请输入 1-$maxPage 之间的页码'),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-      _pageController.clear();
-    }
   }
 
   Icon _getLayoutIcon(MyReviewLayoutType layoutType) {
@@ -556,12 +255,14 @@ class _MyScreenState extends ConsumerState<MyScreen>
       case MyReviewLayoutType.bigGrid:
         return _buildGridView(
           state,
-          crossAxisCount: ResponsiveGridHelper.getBigGridCrossAxisCount(context),
+          crossAxisCount:
+              ResponsiveGridHelper.getBigGridCrossAxisCount(context),
         );
       case MyReviewLayoutType.smallGrid:
         return _buildGridView(
           state,
-          crossAxisCount: ResponsiveGridHelper.getSmallGridCrossAxisCount(context),
+          crossAxisCount:
+              ResponsiveGridHelper.getSmallGridCrossAxisCount(context),
         );
       case MyReviewLayoutType.list:
         return _buildListView(state);
@@ -602,14 +303,31 @@ class _MyScreenState extends ConsumerState<MyScreen>
             ),
           ),
 
-          // 分页控件
-          if (_showPagination)
-            SliverPadding(
-              padding: EdgeInsets.fromLTRB(padding, spacing, padding, 24),
-              sliver: SliverToBoxAdapter(
-                child: _buildPaginationBar(state),
+          // 分页控件 - 始终显示
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(padding, spacing, padding, 24),
+            sliver: SliverToBoxAdapter(
+              child: PaginationBar(
+                currentPage: state.currentPage,
+                totalCount: state.totalCount,
+                pageSize: state.pageSize,
+                hasMore: state.hasMore,
+                isLoading: state.isLoading,
+                onPreviousPage: () {
+                  ref.read(myReviewsProvider.notifier).previousPage();
+                  _scrollToTop();
+                },
+                onNextPage: () {
+                  ref.read(myReviewsProvider.notifier).nextPage();
+                  _scrollToTop();
+                },
+                onGoToPage: (page) {
+                  ref.read(myReviewsProvider.notifier).goToPage(page);
+                  _scrollToTop();
+                },
               ),
             ),
+          ),
         ],
       ),
     );
@@ -640,14 +358,31 @@ class _MyScreenState extends ConsumerState<MyScreen>
             ),
           ),
 
-          // 分页控件
-          if (_showPagination)
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(8, 8, 8, 24),
-              sliver: SliverToBoxAdapter(
-                child: _buildPaginationBar(state),
+          // 分页控件 - 始终显示
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 24),
+            sliver: SliverToBoxAdapter(
+              child: PaginationBar(
+                currentPage: state.currentPage,
+                totalCount: state.totalCount,
+                pageSize: state.pageSize,
+                hasMore: state.hasMore,
+                isLoading: state.isLoading,
+                onPreviousPage: () {
+                  ref.read(myReviewsProvider.notifier).previousPage();
+                  _scrollToTop();
+                },
+                onNextPage: () {
+                  ref.read(myReviewsProvider.notifier).nextPage();
+                  _scrollToTop();
+                },
+                onGoToPage: (page) {
+                  ref.read(myReviewsProvider.notifier).goToPage(page);
+                  _scrollToTop();
+                },
               ),
             ),
+          ),
         ],
       ),
     );

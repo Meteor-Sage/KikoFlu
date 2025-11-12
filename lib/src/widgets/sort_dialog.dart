@@ -1,17 +1,31 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../providers/works_provider.dart';
 import '../models/sort_options.dart';
 import 'responsive_dialog.dart';
 
-class SortDialog extends ConsumerWidget {
-  const SortDialog({super.key});
+/// 通用排序对话框
+///
+/// 提供 currentOption, currentDirection 和 onSort 回调
+/// 选择后自动关闭对话框并触发回调
+///
+/// 自动适配横屏/竖屏布局：
+/// - 横屏：两列布局（左：排序字段，右：排序方向）
+/// - 竖屏：单列布局
+class CommonSortDialog extends StatelessWidget {
+  final SortOrder currentOption;
+  final SortDirection currentDirection;
+  final Function(SortOrder, SortDirection) onSort;
+  final String title;
+
+  const CommonSortDialog({
+    super.key,
+    required this.currentOption,
+    required this.currentDirection,
+    required this.onSort,
+    this.title = '排序选项',
+  });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final worksState = ref.watch(worksProvider);
-    final worksNotifier = ref.read(worksProvider.notifier);
+  Widget build(BuildContext context) {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
 
@@ -20,8 +34,8 @@ class SortDialog extends ConsumerWidget {
       return ResponsiveAlertDialog(
         title: Row(
           children: [
-            const Expanded(
-              child: Text('排序选项'),
+            Expanded(
+              child: Text(title),
             ),
             IconButton(
               icon: const Icon(Icons.close),
@@ -59,10 +73,11 @@ class SortDialog extends ConsumerWidget {
                             return RadioListTile<SortOrder>(
                               title: Text(option.label),
                               value: option,
-                              groupValue: worksState.sortOption,
+                              groupValue: currentOption,
                               onChanged: (value) {
                                 if (value != null) {
-                                  worksNotifier.setSortOption(value);
+                                  onSort(value, currentDirection);
+                                  Navigator.pop(context);
                                 }
                               },
                               dense: true,
@@ -101,10 +116,11 @@ class SortDialog extends ConsumerWidget {
                             return RadioListTile<SortDirection>(
                               title: Text(direction.label),
                               value: direction,
-                              groupValue: worksState.sortDirection,
+                              groupValue: currentDirection,
                               onChanged: (value) {
                                 if (value != null) {
-                                  worksNotifier.setSortDirection(value);
+                                  onSort(currentOption, value);
+                                  Navigator.pop(context);
                                 }
                               },
                               dense: true,
@@ -126,7 +142,7 @@ class SortDialog extends ConsumerWidget {
 
     // 竖屏时使用单列布局
     return ResponsiveAlertDialog(
-      title: const Text('排序选项'),
+      title: Text(title),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -141,10 +157,11 @@ class SortDialog extends ConsumerWidget {
               return RadioListTile<SortOrder>(
                 title: Text(option.label),
                 value: option,
-                groupValue: worksState.sortOption,
+                groupValue: currentOption,
                 onChanged: (value) {
                   if (value != null) {
-                    worksNotifier.setSortOption(value);
+                    onSort(value, currentDirection);
+                    Navigator.pop(context);
                   }
                 },
                 dense: true,
@@ -161,10 +178,11 @@ class SortDialog extends ConsumerWidget {
               return RadioListTile<SortDirection>(
                 title: Text(direction.label),
                 value: direction,
-                groupValue: worksState.sortDirection,
+                groupValue: currentDirection,
                 onChanged: (value) {
                   if (value != null) {
-                    worksNotifier.setSortDirection(value);
+                    onSort(currentOption, value);
+                    Navigator.pop(context);
                   }
                 },
                 dense: true,
@@ -176,7 +194,7 @@ class SortDialog extends ConsumerWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('关闭'),
+          child: const Text('取消'),
         ),
       ],
     );
