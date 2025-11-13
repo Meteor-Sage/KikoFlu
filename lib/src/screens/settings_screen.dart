@@ -16,27 +16,23 @@ class SettingsScreen extends ConsumerStatefulWidget {
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends ConsumerState<SettingsScreen>
-    with AutomaticKeepAliveClientMixin {
-  @override
-  bool get wantKeepAlive => true; // 保持状态不被销毁
-
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   String _cacheSize = '计算中...';
   bool _isUpdatingCacheSize = false;
-  late final ProviderSubscription<int> _cacheRefreshSubscription;
 
   @override
   void initState() {
     super.initState();
-    _cacheRefreshSubscription = ref.listen<int>(
-      settingsCacheRefreshTriggerProvider,
-      (_, __) => _updateCacheSize(),
-    );
+    // 延迟执行，确保 ref 可用
+    Future.microtask(() {
+      if (mounted) {
+        _updateCacheSize();
+      }
+    });
   }
 
   @override
   void dispose() {
-    _cacheRefreshSubscription.close();
     super.dispose();
   }
 
@@ -70,7 +66,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); // 必须调用以保持状态
+    // 监听缓存刷新触发器（只在 build 中设置一次监听）
+    ref.listen<int>(
+      settingsCacheRefreshTriggerProvider,
+      (_, __) {
+        _updateCacheSize();
+      },
+    );
+
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
     final cards = [
@@ -224,8 +227,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
 
   // 显示缓存管理对话框
   Future<void> _showCacheManagementDialog() async {
+    // 直接使用已经获取的 _cacheSize，避免重复调用
     final currentSize = await CacheService.getCacheSize();
-    final formattedSize = await CacheService.getFormattedCacheSize();
+    final formattedSize = _cacheSize; // 使用已缓存的格式化字符串
     int currentLimit = await CacheService.getCacheSizeLimit();
 
     if (!mounted) return;

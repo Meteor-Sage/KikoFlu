@@ -532,6 +532,7 @@ class CacheService {
   // 获取缓存大小
   static Future<int> getCacheSize() async {
     try {
+      print('[Cache] 获取缓存大小');
       int totalSize = 0;
 
       // 1. 获取 Kikoeru 自定义缓存大小（PDF、文本等）
