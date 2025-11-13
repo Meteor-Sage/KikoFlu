@@ -9,7 +9,6 @@ import '../widgets/works_grid_view.dart';
 import '../widgets/sort_dialog.dart';
 import '../widgets/pagination_bar.dart';
 import '../widgets/global_audio_player_wrapper.dart';
-import '../widgets/responsive_dialog.dart';
 
 class SearchResultScreen extends ConsumerStatefulWidget {
   final String keyword;
