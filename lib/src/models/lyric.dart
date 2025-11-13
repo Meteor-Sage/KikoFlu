@@ -1,4 +1,3 @@
-// 歌词行模型
 class LyricLine {
   final Duration startTime;
   final Duration endTime;
@@ -11,9 +10,7 @@ class LyricLine {
   });
 }
 
-// 歌词解析器
 class LyricParser {
-  // 自动检测格式并解析
   static List<LyricLine> parse(String content) {
     List<LyricLine> result = [];
 
@@ -25,7 +22,6 @@ class LyricParser {
       result = parseWebVTT(content);
     }
 
-    // 如果解析结果为空，提示失败
     if (result.isEmpty) {
       throw const FormatException("解析失败，格式不支持");
     }
@@ -33,7 +29,6 @@ class LyricParser {
     return result;
   }
 
-  // 解析 LRC 格式
   static List<LyricLine> parseLRC(String content) {
     final lines = content.split('\n');
     final List<LyricLine> lyrics = [];
@@ -42,18 +37,15 @@ class LyricParser {
       final trimmedLine = line.trim();
       if (trimmedLine.isEmpty) continue;
 
-      // 跳过元数据标签
       if (RegExp(r'^\[[a-z]{2}:').hasMatch(trimmedLine)) {
         continue;
       }
 
-      // 匹配时间戳
       final timeMatches =
           RegExp(r'\[(\d{2}):(\d{2})\.(\d{2})\]').allMatches(trimmedLine);
 
       if (timeMatches.isEmpty) continue;
 
-      // 提取所有时间戳
       final timestamps = <Duration>[];
       for (final match in timeMatches) {
         final minutes = int.parse(match.group(1)!);
@@ -65,15 +57,13 @@ class LyricParser {
         ));
       }
 
-      // 提取歌词文本
       String text =
           trimmedLine.replaceAll(RegExp(r'\[\d{2}:\d{2}\.\d{2}\]'), '').trim();
 
-      // 每个时间戳创建一行
       for (final timestamp in timestamps) {
         lyrics.add(LyricLine(
           startTime: timestamp,
-          endTime: timestamp, // 后面计算
+          endTime: timestamp,
           text: text,
         ));
       }
@@ -82,7 +72,7 @@ class LyricParser {
     return _finalizeLyrics(lyrics);
   }
 
-  // 解析 WebVTT 格式（不依赖序号行）
+
   static List<LyricLine> parseWebVTT(String content) {
     final lines = content.split('\n');
     final List<LyricLine> lyrics = [];
@@ -91,13 +81,11 @@ class LyricParser {
     while (i < lines.length) {
       final line = lines[i].trim();
 
-      // 跳过 WEBVTT 标记、NOTE 和空行
       if (line.isEmpty || line.startsWith('WEBVTT') || line == 'NOTE') {
         i++;
         continue;
       }
 
-      // 匹配时间戳行（支持 hh:mm:ss.mmm 或 mm:ss.mmm）
       final timeMatch = RegExp(
               r'(?:(\d{2}):)?(\d{2}):(\d{2}\.\d{3})\s*-->\s*(?:(\d{2}):)?(\d{2}):(\d{2}\.\d{3})')
           .firstMatch(line);
@@ -117,7 +105,6 @@ class LyricParser {
 
         i++;
 
-        // 读取歌词文本（可能多行）
         final textLines = <String>[];
         while (i < lines.length && lines[i].trim().isNotEmpty) {
           textLines.add(lines[i].trim());
@@ -139,16 +126,13 @@ class LyricParser {
     return _finalizeLyrics(lyrics);
   }
 
-  // 公共的后处理逻辑（排序 + 结束时间计算，让歌词时间无缝衔接）
   static List<LyricLine> _finalizeLyrics(List<LyricLine> lyrics) {
     if (lyrics.isEmpty) return [];
 
-    // 按时间排序
     lyrics.sort((a, b) => a.startTime.compareTo(b.startTime));
 
     final List<LyricLine> finalLyrics = [];
 
-    // 处理每一行歌词，让它们无缝衔接
     for (int i = 0; i < lyrics.length - 1; i++) {
       // 当前歌词的结束时间直接设置为下一行的开始时间
       finalLyrics.add(LyricLine(
@@ -176,7 +160,6 @@ class LyricParser {
     return Duration(milliseconds: (totalSeconds * 1000).round());
   }
 
-  // 根据当前播放时间获取当前歌词
   static String? getCurrentLyric(List<LyricLine> lyrics, Duration position) {
     for (int i = 0; i < lyrics.length; i++) {
       final lyric = lyrics[i];

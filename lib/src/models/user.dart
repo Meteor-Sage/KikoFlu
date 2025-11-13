@@ -49,7 +49,6 @@ class User extends Equatable {
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
-    // Handle the nested 'user' object from API response
     final userJson = json['user'] ?? json;
 
     return User(
@@ -58,7 +57,6 @@ class User extends Equatable {
       group: userJson['group'] as String?,
       email: userJson['email'] as String?,
       recommenderUuid: userJson['recommenderUuid'] as String?,
-      // These fields are not from API response, they're set separately
       password: json['password'] as String?,
       host: json['host'] as String?,
       token: json['token'] as String?,

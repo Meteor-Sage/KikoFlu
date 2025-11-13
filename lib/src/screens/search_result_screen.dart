@@ -62,13 +62,14 @@ class _SearchResultScreenState extends ConsumerState<SearchResultScreen> {
     final state = ref.read(searchResultProvider);
     showDialog(
       context: context,
+      barrierDismissible: !Platform.isIOS, // iOS 上防止点击外部区域意外关闭
       builder: (context) => CommonSortDialog(
         currentOption: state.sortOption,
         currentDirection: state.sortDirection,
         onSort: (option, direction) {
           ref.read(searchResultProvider.notifier).updateSort(option, direction);
         },
-        autoClose: true, // 搜索结果页自动关闭
+        autoClose: true,
       ),
     );
   }
