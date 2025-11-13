@@ -9,6 +9,7 @@ import 'works_screen.dart';
 import 'search_screen.dart';
 import 'my_screen.dart';
 import 'settings_screen.dart';
+import '../providers/settings_provider.dart';
 
 class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key});
@@ -19,6 +20,7 @@ class MainScreen extends ConsumerStatefulWidget {
 
 class _MainScreenState extends ConsumerState<MainScreen> {
   int _currentIndex = 0;
+  static const int _settingsTabIndex = 3;
 
   // 使用 PageStorageBucket 来保存页面状态
   final PageStorageBucket _bucket = PageStorageBucket();
@@ -59,6 +61,20 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     ),
   ];
 
+  void _handleDestinationSelected(int index) {
+    if (_currentIndex == index) {
+      return;
+    }
+
+    setState(() {
+      _currentIndex = index;
+    });
+
+    if (index == _settingsTabIndex) {
+      ref.read(settingsCacheRefreshTriggerProvider.notifier).state++;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isLandscape =
@@ -78,11 +94,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                 child: IntrinsicHeight(
                   child: NavigationRail(
                     selectedIndex: _currentIndex,
-                    onDestinationSelected: (index) {
-                      setState(() {
-                        _currentIndex = index;
-                      });
-                    },
+                      onDestinationSelected: _handleDestinationSelected,
                     labelType: NavigationRailLabelType.selected,
                     destinations: _destinations
                         .map((dest) => NavigationRailDestination(
@@ -178,11 +190,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                 labelBehavior:
                     NavigationDestinationLabelBehavior.alwaysShow,
                 selectedIndex: _currentIndex,
-                onDestinationSelected: (index) {
-                  setState(() {
-                    _currentIndex = index;
-                  });
-                },
+                onDestinationSelected: _handleDestinationSelected,
                 destinations: _destinations,
               );
 

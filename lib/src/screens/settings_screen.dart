@@ -5,6 +5,7 @@ import 'account_management_screen.dart';
 import 'downloads_screen.dart';
 import 'theme_settings_screen.dart';
 import 'about_screen.dart';
+import '../providers/settings_provider.dart';
 import '../services/cache_service.dart';
 import '../widgets/scrollable_appbar.dart';
 
@@ -21,26 +22,55 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
   bool get wantKeepAlive => true; // 保持状态不被销毁
 
   String _cacheSize = '计算中...';
+  bool _isUpdatingCacheSize = false;
+  late final ProviderSubscription<int> _cacheRefreshSubscription;
 
   @override
   void initState() {
     super.initState();
-    _updateCacheSize();
+    _cacheRefreshSubscription = ref.listen<int>(
+      settingsCacheRefreshTriggerProvider,
+      (_, __) => _updateCacheSize(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _cacheRefreshSubscription.close();
+    super.dispose();
   }
 
   Future<void> _updateCacheSize() async {
-    final size = await CacheService.getFormattedCacheSize();
+    if (_isUpdatingCacheSize) return;
+    _isUpdatingCacheSize = true;
+
     if (mounted) {
       setState(() {
-        _cacheSize = size;
+        _cacheSize = '计算中...';
       });
+    }
+
+    try {
+      final size = await CacheService.getFormattedCacheSize();
+      if (mounted) {
+        setState(() {
+          _cacheSize = size;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _cacheSize = '获取失败';
+        });
+      }
+    } finally {
+      _isUpdatingCacheSize = false;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     super.build(context); // 必须调用以保持状态
-    _updateCacheSize(); // 每次 build 时更新缓存大小
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
     final cards = [
