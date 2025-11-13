@@ -1187,11 +1187,11 @@ class _ImageGalleryScreenState extends State<ImageGalleryScreen> {
       );
       final imageBytes = response.data as List<int>;
 
-      if (Platform.isAndroid || Platform.isIOS) {
-        // 移动端：保存到相册
+      if (Platform.isAndroid) {
+        // Android：保存到相册
         await _saveToGallery(imageBytes, imageName);
-      } else if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
-        // 桌面端：选择保存位置
+      } else {
+        // iOS/桌面端：选择保存位置
         await _saveToFile(imageBytes, imageName);
       }
     } catch (e) {
@@ -1212,98 +1212,58 @@ class _ImageGalleryScreenState extends State<ImageGalleryScreen> {
     }
   }
 
-  // 保存到相册（移动端）
+  // 保存到相册（Android）
   Future<void> _saveToGallery(List<int> imageBytes, String imageName) async {
     // 请求存储权限
-    if (Platform.isAndroid) {
-      // Android 13 (API 33) 及以上使用新的权限系统
-      PermissionStatus status;
+    // Android 13 (API 33) 及以上使用新的权限系统
+    PermissionStatus status;
 
-      // 检查 Android 版本，使用对应的权限
-      // Android 13+ 使用 photos 权限，之前版本使用 storage 权限
+    // 检查 Android 版本，使用对应的权限
+    // Android 13+ 使用 photos 权限，之前版本使用 storage 权限
 
-      // 尝试请求 photos 权限（Android 13+）
-      status = await Permission.photos.request();
+    // 尝试请求 photos 权限（Android 13+）
+    status = await Permission.photos.request();
 
-      // 如果 photos 权限被永久拒绝或不支持，尝试 storage 权限（Android 12 及以下）
-      if (status.isPermanentlyDenied || status == PermissionStatus.restricted) {
-        status = await Permission.storage.request();
-      }
+    // 如果 photos 权限被永久拒绝或不支持，尝试 storage 权限（Android 12 及以下）
+    if (status.isPermanentlyDenied || status == PermissionStatus.restricted) {
+      status = await Permission.storage.request();
+    }
 
-      if (!status.isGranted) {
-        if (mounted) {
-          // 如果权限被永久拒绝，引导用户去设置
-          if (status.isPermanentlyDenied) {
-            final shouldOpenSettings = await showDialog<bool>(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('需要存储权限'),
-                content: const Text('保存图片需要访问相册的权限。请在设置中授予权限。'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: const Text('取消'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    child: const Text('去设置'),
-                  ),
-                ],
-              ),
-            );
+    if (!status.isGranted) {
+      if (mounted) {
+        // 如果权限被永久拒绝，引导用户去设置
+        if (status.isPermanentlyDenied) {
+          final shouldOpenSettings = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('需要存储权限'),
+              content: const Text('保存图片需要访问相册的权限。请在设置中授予权限。'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('取消'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('去设置'),
+                ),
+              ],
+            ),
+          );
 
-            if (shouldOpenSettings == true) {
-              await openAppSettings();
-            }
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('需要存储权限才能保存图片'),
-                backgroundColor: Colors.orange,
-              ),
-            );
+          if (shouldOpenSettings == true) {
+            await openAppSettings();
           }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('需要存储权限才能保存图片'),
+              backgroundColor: Colors.orange,
+            ),
+          );
         }
-        return;
       }
-    } else if (Platform.isIOS) {
-      final status = await Permission.photos.request();
-      if (!status.isGranted) {
-        if (mounted) {
-          // 如果权限被永久拒绝，引导用户去设置
-          if (status.isPermanentlyDenied) {
-            final shouldOpenSettings = await showDialog<bool>(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('需要相册权限'),
-                content: const Text('保存图片需要访问相册的权限。请在设置中授予权限。'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: const Text('取消'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    child: const Text('去设置'),
-                  ),
-                ],
-              ),
-            );
-
-            if (shouldOpenSettings == true) {
-              await openAppSettings();
-            }
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('需要相册权限才能保存图片'),
-                backgroundColor: Colors.orange,
-              ),
-            );
-          }
-        }
-        return;
-      }
+      return;
     }
 
     // 保存图片
@@ -1333,7 +1293,7 @@ class _ImageGalleryScreenState extends State<ImageGalleryScreen> {
     }
   }
 
-  // 保存到文件（桌面端）
+  // 保存到文件（iOS/桌面端）
   Future<void> _saveToFile(List<int> imageBytes, String imageName) async {
     // 获取文件扩展名
     String fileName = imageName;
@@ -1344,24 +1304,64 @@ class _ImageGalleryScreenState extends State<ImageGalleryScreen> {
       fileName += '.jpg';
     }
 
-    // 选择保存位置
-    final outputFile = await FilePicker.platform.saveFile(
-      dialogTitle: '保存图片',
-      fileName: fileName,
-      type: FileType.image,
-    );
+    if (Platform.isIOS) {
+      // iOS: 需要先写入临时文件，然后通过系统分享面板保存
+      try {
+        final tempDir = await getTemporaryDirectory();
+        final tempFile = File('${tempDir.path}/$fileName');
+        await tempFile.writeAsBytes(imageBytes);
 
-    if (outputFile != null) {
-      final file = File(outputFile);
-      await file.writeAsBytes(imageBytes);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('图片已保存到: $outputFile'),
-            backgroundColor: Colors.green,
-          ),
+        // 使用文件选择器保存
+        final outputFile = await FilePicker.platform.saveFile(
+          dialogTitle: '保存图片',
+          fileName: fileName,
+          type: FileType.image,
+          bytes: Uint8List.fromList(imageBytes),
         );
+
+        if (outputFile != null && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('图片已保存'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+
+        // 清理临时文件
+        if (await tempFile.exists()) {
+          await tempFile.delete();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('保存失败: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } else {
+      // 桌面端：选择保存位置
+      final outputFile = await FilePicker.platform.saveFile(
+        dialogTitle: '保存图片',
+        fileName: fileName,
+        type: FileType.image,
+      );
+
+      if (outputFile != null) {
+        final file = File(outputFile);
+        await file.writeAsBytes(imageBytes);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('图片已保存到: $outputFile'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       }
     }
   }
