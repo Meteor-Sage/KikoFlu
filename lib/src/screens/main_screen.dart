@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -165,14 +167,42 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             },
           ),
           // NavigationBar
-          NavigationBar(
-            selectedIndex: _currentIndex,
-            onDestinationSelected: (index) {
-              setState(() {
-                _currentIndex = index;
-              });
+          Builder(
+            builder: (context) {
+              final mediaQuery = MediaQuery.of(context);
+              final bottomPadding = mediaQuery.padding.bottom;
+              final isIOS = Platform.isIOS;
+
+              Widget navBar = NavigationBar(
+                height: 58,
+                labelBehavior:
+                    NavigationDestinationLabelBehavior.alwaysShow,
+                selectedIndex: _currentIndex,
+                onDestinationSelected: (index) {
+                  setState(() {
+                    _currentIndex = index;
+                  });
+                },
+                destinations: _destinations,
+              );
+
+              if (isIOS) {
+                navBar = MediaQuery.removePadding(
+                  context: context,
+                  removeBottom: true,
+                  child: navBar,
+                );
+              }
+
+              final navBottomPadding = isIOS
+                  ? (bottomPadding > 0 ? 6.0 : 0.0)
+                  : bottomPadding;
+
+              return Padding(
+                padding: EdgeInsets.only(bottom: navBottomPadding),
+                child: navBar,
+              );
             },
-            destinations: _destinations,
           ),
         ],
       ),
