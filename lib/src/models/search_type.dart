@@ -1,4 +1,3 @@
-// 搜索类型枚举
 enum SearchType {
   keyword('keyword', '关键词', '输入作品名称或关键词...'),
   tag('tag', '标签', '输入标签名...'),
@@ -21,7 +20,6 @@ enum SearchType {
   }
 }
 
-// 年龄分级
 enum AgeRating {
   all('', '全部'),
   general('general', '全年龄'),
@@ -35,7 +33,6 @@ enum AgeRating {
   final String label;
 }
 
-// 销量范围
 enum SalesRange {
   all(0, '全部'),
   over100(100, '100+'),
@@ -52,7 +49,6 @@ enum SalesRange {
   final String label;
 }
 
-// 搜索条件类
 class SearchCriteria {
   final String? keyword;
   final String? rjNumber;
@@ -74,18 +70,15 @@ class SearchCriteria {
     this.salesRange,
   });
 
-  // 构建搜索关键词字符串
   String buildSearchKeyword() {
     List<String> parts = [];
 
-    // 关键词和RJ号不需要$$包裹
     if (keyword != null && keyword!.isNotEmpty) {
       parts.add(keyword!);
     }
     if (rjNumber != null && rjNumber!.isNotEmpty) {
       parts.add(rjNumber!);
     }
-    // 其他类型需要特定格式
     if (tag != null && tag!.isNotEmpty) {
       parts.add('\$tag:$tag\$');
     }

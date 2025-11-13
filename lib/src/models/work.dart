@@ -8,11 +8,10 @@ class Work extends Equatable {
   final int id;
   final String title;
 
-  // API返回的是 circle_id 和 name，不是嵌套的circle对象
   @JsonKey(name: 'circle_id')
   final int? circleId;
 
-  final String? name; // 这是circle的名称
+  final String? name; // circle名称
 
   final List<Va>? vas;
   final List<Tag>? tags;
@@ -22,7 +21,7 @@ class Work extends Equatable {
   @JsonKey(name: 'dl_count')
   final int? dlCount;
 
-  final int? price; // price是int不是String
+  final int? price;
 
   @JsonKey(name: 'review_count')
   final int? reviewCount;
@@ -36,7 +35,7 @@ class Work extends Equatable {
   @JsonKey(name: 'has_subtitle')
   final bool? hasSubtitle;
 
-  final int? duration; // 总时长(秒)
+  final int? duration;
 
   final String?
       progress; // 收藏状态: marked, listening, listened, replay, postponed
@@ -72,7 +71,6 @@ class Work extends Equatable {
   Map<String, dynamic> toJson() => _$WorkToJson(this);
 
   String getCoverImageUrl(String baseUrl, {String? token}) {
-    // 确保baseUrl包含协议前缀
     String normalizedUrl = baseUrl;
     if (baseUrl.isNotEmpty &&
         !baseUrl.startsWith('http://') &&
@@ -80,7 +78,6 @@ class Work extends Equatable {
       normalizedUrl = 'https://$baseUrl';
     }
 
-    // 根据原始Java代码，封面图片URL格式为: /api/cover/{id}?token={token}
     if (token != null && token.isNotEmpty) {
       return '$normalizedUrl/api/cover/$id?token=$token';
     }
@@ -132,7 +129,7 @@ class Circle extends Equatable {
 
 @JsonSerializable()
 class Va extends Equatable {
-  final String id; // Va的id是UUID字符串，不是int
+  final String id;
   final String name;
 
   const Va({required this.id, required this.name});

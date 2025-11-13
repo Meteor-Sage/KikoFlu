@@ -125,7 +125,7 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
           ref.read(worksProvider.notifier).setSortOption(option);
           ref.read(worksProvider.notifier).setSortDirection(direction);
         },
-        autoClose: true, // 保持原有行为：不自动关闭
+        autoClose: true,
       ),
     );
   }
