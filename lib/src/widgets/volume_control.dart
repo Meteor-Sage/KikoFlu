@@ -54,7 +54,10 @@ class _VolumeControlState extends State<VolumeControl> {
     super.didUpdateWidget(oldWidget);
     // 当音量变化时，更新 Overlay
     if (oldWidget.volume != widget.volume && _overlayEntry != null) {
-      _overlayEntry!.markNeedsBuild();
+      // 延迟到当前构建周期完成后再更新 Overlay，避免在构建期间调用 markNeedsBuild
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _overlayEntry?.markNeedsBuild();
+      });
     }
   }
 
