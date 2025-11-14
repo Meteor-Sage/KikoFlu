@@ -28,6 +28,9 @@ Work _$WorkFromJson(Map<String, dynamic> json) => Work(
       duration: (json['duration'] as num?)?.toInt(),
       progress: json['progress'] as String?,
       userRating: (json['userRating'] as num?)?.toInt(),
+      rateCountDetail: (json['rate_count_detail'] as List<dynamic>?)
+          ?.map((e) => RatingDetail.fromJson(e as Map<String, dynamic>))
+          .toList(),
       images:
           (json['images'] as List<dynamic>?)?.map((e) => e as String).toList(),
       description: json['description'] as String?,
@@ -54,9 +57,23 @@ Map<String, dynamic> _$WorkToJson(Work instance) => <String, dynamic>{
       'duration': instance.duration,
       'progress': instance.progress,
       'userRating': instance.userRating,
+      'rate_count_detail': instance.rateCountDetail,
       'images': instance.images,
       'description': instance.description,
       'children': instance.children,
+    };
+
+RatingDetail _$RatingDetailFromJson(Map<String, dynamic> json) => RatingDetail(
+      reviewPoint: (json['review_point'] as num).toInt(),
+      count: (json['count'] as num).toInt(),
+      ratio: (json['ratio'] as num).toInt(),
+    );
+
+Map<String, dynamic> _$RatingDetailToJson(RatingDetail instance) =>
+    <String, dynamic>{
+      'review_point': instance.reviewPoint,
+      'count': instance.count,
+      'ratio': instance.ratio,
     };
 
 Circle _$CircleFromJson(Map<String, dynamic> json) => Circle(

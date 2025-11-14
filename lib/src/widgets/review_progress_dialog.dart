@@ -178,7 +178,8 @@ class ReviewProgressDialog {
                                                       horizontal: 8),
                                             );
                                           }),
-                                          if (currentProgress != null) ...[
+                                          if (currentProgress != null ||
+                                              currentRating != null) ...[
                                             const Divider(height: 1),
                                             ListTile(
                                               leading: Icon(
@@ -338,7 +339,7 @@ class ReviewProgressDialog {
                       );
                     }).toList(),
                     const SizedBox(height: 8),
-                    if (currentProgress != null)
+                    if (currentProgress != null || currentRating != null)
                       ListTile(
                         leading: Icon(
                           Icons.delete_outline,
