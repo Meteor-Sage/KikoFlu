@@ -77,10 +77,21 @@ class _VolumeControlState extends State<VolumeControl> {
             borderRadius: BorderRadius.circular(24),
             color: Theme.of(context).colorScheme.surfaceContainerHighest,
             child: MouseRegion(
-              onEnter: (_) => setState(() => _isHovering = true),
+              onEnter: (_) {
+                if (mounted) {
+                  setState(() => _isHovering = true);
+                }
+              },
               onExit: (_) {
-                setState(() => _isHovering = false);
-                _removeOverlay();
+                if (mounted) {
+                  setState(() => _isHovering = false);
+                  // 延迟移除，给用户时间移回按钮
+                  Future.delayed(const Duration(milliseconds: 100), () {
+                    if (!_isHovering && mounted) {
+                      _removeOverlay();
+                    }
+                  });
+                }
               },
               child: Container(
                 height: 160,
@@ -187,6 +198,7 @@ class _VolumeControlState extends State<VolumeControl> {
           _showOverlay();
         },
         onExit: (_) {
+          setState(() => _isHovering = false);
           // 延迟检查，给用户时间移动到滑动条上
           Future.delayed(const Duration(milliseconds: 100), () {
             if (!_isHovering && mounted) {
