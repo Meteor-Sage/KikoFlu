@@ -20,6 +20,10 @@ class AudioPlayerService {
   int _currentIndex = 0;
   AudioHandler? _audioHandler;
   LoopMode _appLoopMode = LoopMode.off; // Track loop mode at app level
+  
+  // macOS specific: Track completion state to prevent duplicate triggers
+  bool _completionHandled = false;
+  Timer? _completionCheckTimer; // macOS workaround for StreamAudioSource completion bug
 
   // Windows SMTC support
   SMTCWindows? _smtc;
@@ -89,20 +93,15 @@ class AudioPlayerService {
     // Listen to player state changes
     _player.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
-        // Handle track completion based on app-level loop mode
-        if (_appLoopMode == LoopMode.one) {
-          // Single track repeat - replay current track
-          seek(Duration.zero);
-          play();
-        } else if (_currentIndex < _queue.length - 1) {
-          // Has next track - play it
-          skipToNext();
-        } else if (_appLoopMode == LoopMode.all && _queue.isNotEmpty) {
-          // List repeat - go back to first track
-          skipToIndex(0);
+        if (Platform.isMacOS) {
+          // macOS: Use dedicated handler to prevent duplicate triggers
+          if (!_completionHandled) {
+            _completionHandled = true;
+            _handleTrackCompletion();
+          }
         } else {
-          // Reached the end of the queue with no repeat, pause
-          pause();
+          // Other platforms: Use simple direct handling
+          _handleTrackCompletion();
         }
       }
 
@@ -110,10 +109,44 @@ class AudioPlayerService {
       _updatePlaybackState();
     });
 
-    // Listen to position changes
-    _player.positionStream.listen((position) {
-      _updatePlaybackState();
-    });
+    // macOS specific: Additional position-based completion detection
+    if (Platform.isMacOS) {
+      Duration lastPosition = Duration.zero;
+      _player.positionStream.listen((position) {
+        final duration = _player.duration;
+        final processingState = _player.processingState;
+        
+        // Reset completion flag when track changes or seeks backward
+        if (position < lastPosition - const Duration(seconds: 1)) {
+          _completionHandled = false;
+        }
+        
+        // Fallback: detect completion when position reaches duration
+        if (duration != null && 
+            position >= duration - const Duration(milliseconds: 100) &&
+            _player.playing &&
+            !_completionHandled) {
+          // Check if position is stuck at the end
+          if (lastPosition != Duration.zero && 
+              (position - lastPosition).inMilliseconds.abs() < 50 &&
+              position >= duration - const Duration(milliseconds: 100)) {
+            _completionHandled = true;
+            _handleTrackCompletion();
+          }
+        }
+        
+        lastPosition = position;
+        _updatePlaybackState();
+      });
+      
+      // Start periodic completion check timer as final fallback
+      _startCompletionCheckTimer();
+    } else {
+      // Other platforms: Simple position stream for playback state updates
+      _player.positionStream.listen((position) {
+        _updatePlaybackState();
+      });
+    }
   }
 
   // Update audio service playback state for system controls
@@ -173,6 +206,11 @@ class AudioPlayerService {
   }
 
   Future<void> _loadTrack(AudioTrack track) async {
+    // Reset completion flag for new track (macOS specific)
+    if (Platform.isMacOS) {
+      _completionHandled = false;
+    }
+    
     try {
       String? audioFilePath;
       bool loaded = false;
@@ -245,10 +283,70 @@ class AudioPlayerService {
     _updatePlaybackState();
   }
 
+  // Handle track completion logic
+  void _handleTrackCompletion() {
+    if (_appLoopMode == LoopMode.one) {
+      // Single track repeat - replay current track
+      seek(Duration.zero);
+      play();
+    } else if (_currentIndex < _queue.length - 1) {
+      // Has next track - play it
+      skipToNext();
+    } else if (_appLoopMode == LoopMode.all && _queue.isNotEmpty) {
+      // List repeat - go back to first track
+      skipToIndex(0);
+    } else {
+      // Reached the end of the queue with no repeat, pause
+      pause();
+    }
+  }
+
+  // macOS specific: Start periodic timer to check for track completion
+  // This is needed because StreamAudioSource on macOS doesn't properly fire completion events
+  void _startCompletionCheckTimer() {
+    if (!Platform.isMacOS) return;
+    
+    _completionCheckTimer?.cancel();
+    _completionCheckTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
+      final position = _player.position;
+      final duration = _player.duration;
+      final processingState = _player.processingState;
+      final playing = _player.playing;
+      
+      if (playing && !_completionHandled) {
+        // Check if track is completed
+        if (processingState == ProcessingState.completed) {
+          _completionHandled = true;
+          _handleTrackCompletion();
+        } else if (duration != null && 
+                   duration > Duration.zero &&
+                   position >= duration - const Duration(milliseconds: 50)) {
+          _completionHandled = true;
+          _handleTrackCompletion();
+        }
+      }
+    });
+  }
+
   // Playback controls
   Future<void> play() async {
+    // macOS specific: Ensure completion check timer is running
+    if (Platform.isMacOS && (_completionCheckTimer == null || !_completionCheckTimer!.isActive)) {
+      _startCompletionCheckTimer();
+    }
+    
     await _player.play();
     _updatePlaybackState();
+    
+    // macOS specific: Check if track completed immediately (workaround for immediate completion bug)
+    if (Platform.isMacOS && _player.processingState == ProcessingState.completed) {
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (!_completionHandled) {
+          _completionHandled = true;
+          _handleTrackCompletion();
+        }
+      });
+    }
   }
 
   Future<void> pause() async {
@@ -361,6 +459,7 @@ class AudioPlayerService {
 
   // Cleanup
   Future<void> dispose() async {
+    _completionCheckTimer?.cancel();
     await _queueController.close();
     await _currentTrackController.close();
     await _player.dispose();
