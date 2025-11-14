@@ -6,7 +6,7 @@ import '../../providers/audio_provider.dart';
 import '../responsive_dialog.dart';
 
 /// 睡眠定时器对话框
-class SleepTimerDialog extends ConsumerWidget {
+class SleepTimerDialog extends ConsumerStatefulWidget {
   const SleepTimerDialog({super.key});
 
   static void show(BuildContext context) {
@@ -18,7 +18,15 @@ class SleepTimerDialog extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SleepTimerDialog> createState() => _SleepTimerDialogState();
+}
+
+class _SleepTimerDialogState extends ConsumerState<SleepTimerDialog> {
+  bool _isTimeMode = false; // false: 时长模式, true: 指定时间模式
+  TimeOfDay _selectedTime = TimeOfDay.now();
+
+  @override
+  Widget build(BuildContext context) {
     final timerState = ref.watch(sleepTimerProvider);
 
     return ResponsiveAlertDialog(
@@ -108,12 +116,39 @@ class SleepTimerDialog extends ConsumerWidget {
               ),
             ] else ...[
               // 设置新定时器
-              Text(
-                '选择定时时长',
-                style: Theme.of(context).textTheme.titleMedium,
+              // 模式切换
+              SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment(
+                    value: false,
+                    icon: Icon(Icons.timer_outlined),
+                    label: Text('时长'),
+                  ),
+                  ButtonSegment(
+                    value: true,
+                    icon: Icon(Icons.schedule),
+                    label: Text('指定时间'),
+                  ),
+                ],
+                selected: {_isTimeMode},
+                onSelectionChanged: (Set<bool> selected) {
+                  setState(() {
+                    _isTimeMode = selected.first;
+                  });
+                },
               ),
-              const SizedBox(height: 16),
-              _buildTimeGrid(context, ref),
+              const SizedBox(height: 20),
+              // 根据模式显示不同的UI
+              if (_isTimeMode) ...[
+                _buildTimePickerSection(context, ref),
+              ] else ...[
+                Text(
+                  '选择定时时长',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 16),
+                _buildTimeGrid(context, ref),
+              ],
             ],
           ],
         ),
@@ -127,16 +162,99 @@ class SleepTimerDialog extends ConsumerWidget {
     );
   }
 
+  Widget _buildTimePickerSection(BuildContext context, WidgetRef ref) {
+    return Column(
+      children: [
+        Text(
+          '选择停止播放的时间',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 16),
+        InkWell(
+          onTap: () async {
+            final TimeOfDay? picked = await showTimePicker(
+              context: context,
+              initialTime: _selectedTime,
+              builder: (context, child) {
+                return MediaQuery(
+                  data: MediaQuery.of(context).copyWith(
+                    alwaysUse24HourFormat: true,
+                  ),
+                  child: child!,
+                );
+              },
+            );
+            if (picked != null) {
+              setState(() {
+                _selectedTime = picked;
+              });
+            }
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.secondaryContainer,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.access_time,
+                  size: 48,
+                  color: Theme.of(context).colorScheme.onSecondaryContainer,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  _selectedTime.format(context),
+                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color:
+                            Theme.of(context).colorScheme.onSecondaryContainer,
+                        fontSize: 40,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        FilledButton.icon(
+          onPressed: () {
+            final now = DateTime.now();
+            final targetTime = DateTime(
+              now.year,
+              now.month,
+              now.day,
+              _selectedTime.hour,
+              _selectedTime.minute,
+            );
+
+            // 如果选择的时间已经过了，则设置为明天的这个时间
+            final finalTime = targetTime.isBefore(now)
+                ? targetTime.add(const Duration(days: 1))
+                : targetTime;
+
+            ref.read(sleepTimerProvider.notifier).setTimerUntil(finalTime);
+            Navigator.of(context).pop();
+          },
+          icon: const Icon(Icons.check),
+          label: const Text('确定'),
+        ),
+      ],
+    );
+  }
+
   Widget _buildTimeGrid(BuildContext context, WidgetRef ref) {
     final presetTimes = [
       (const Duration(minutes: 5), '5分钟', Icons.timer),
       (const Duration(minutes: 10), '10分钟', Icons.timer),
-      (const Duration(minutes: 15), '15分钟', Icons.timer_outlined),
-      (const Duration(minutes: 20), '20分钟', Icons.timer_outlined),
-      (const Duration(minutes: 30), '30分钟', Icons.bedtime),
-      (const Duration(minutes: 45), '45分钟', Icons.bedtime),
-      (const Duration(hours: 1), '1小时', Icons.bedtime_outlined),
-      (const Duration(hours: 2), '2小时', Icons.bedtime_outlined),
+      (const Duration(minutes: 15), '15分钟', Icons.bedtime_outlined),
+      (const Duration(minutes: 30), '30分钟', Icons.bedtime_outlined),
+      (const Duration(hours: 1), '1小时', Icons.bedtime),
+      (const Duration(hours: 2), '2小时', Icons.bedtime),
     ];
 
     return Wrap(
