@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/audio_provider.dart';
 import '../responsive_dialog.dart';
 
-/// 睡眠定时器对话框
+/// 定时器对话框
 class SleepTimerDialog extends ConsumerStatefulWidget {
   const SleepTimerDialog({super.key});
 
@@ -30,7 +30,7 @@ class _SleepTimerDialogState extends ConsumerState<SleepTimerDialog> {
     final timerState = ref.watch(sleepTimerProvider);
 
     return ResponsiveAlertDialog(
-      title: const Text('睡眠定时器'),
+      title: const Text('定时器'),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,

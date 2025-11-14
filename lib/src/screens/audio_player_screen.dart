@@ -197,65 +197,6 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
             tooltip: '播放列表',
           ),
         ),
-        currentTrack.when(
-          data: (track) {
-            if (track?.workId != null) {
-              if (_currentWorkId != track!.workId) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) {
-                    setState(() {
-                      _currentWorkId = track.workId;
-                      _currentProgress = null;
-                    });
-                    _loadCurrentProgress(track.workId!);
-                  }
-                });
-              }
-
-              return Padding(
-                padding: const EdgeInsets.only(right: 8.0),
-                child: PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert),
-                  tooltip: '更多选项',
-                  onSelected: (value) async {
-                    if (value == 'mark') {
-                      await _showMarkDialog(context, track.workId!);
-                    } else if (value == 'detail') {
-                      _navigateToWorkDetail(context, track.workId!);
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    PopupMenuItem(
-                      value: 'mark',
-                      child: Row(
-                        children: [
-                          Icon(WorkBookmarkManager.getProgressIcon(
-                              _currentProgress)),
-                          const SizedBox(width: 12),
-                          Text(WorkBookmarkManager.getProgressLabel(
-                              _currentProgress)),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'detail',
-                      child: Row(
-                        children: [
-                          Icon(Icons.info_outline),
-                          SizedBox(width: 12),
-                          Text('查看详情'),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-            return const SizedBox.shrink();
-          },
-          loading: () => const SizedBox.shrink(),
-          error: (_, __) => const SizedBox.shrink(),
-        ),
       ],
       automaticallyImplyLeading: false,
     );
@@ -275,6 +216,19 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
           data: (track) {
             if (track == null) {
               return const Center(child: Text('没有正在播放的音频'));
+            }
+
+            // 加载进度信息
+            if (track.workId != null && _currentWorkId != track.workId) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  setState(() {
+                    _currentWorkId = track.workId;
+                    _currentProgress = null;
+                  });
+                  _loadCurrentProgress(track.workId!);
+                }
+              });
             }
 
             final workCoverUrl = _buildWorkCoverUrl(track.workId);
@@ -374,6 +328,14 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
                     onSeekChanged: _handleSeekChanged,
                     onSeekEnd: _handleSeekEnd,
                     seekingPosition: _seekingPosition,
+                    workId: track.workId,
+                    currentProgress: _currentProgress,
+                    onMarkPressed: track.workId != null
+                        ? () => _showMarkDialog(context, track.workId!)
+                        : null,
+                    onDetailPressed: track.workId != null
+                        ? () => _navigateToWorkDetail(context, track.workId!)
+                        : null,
                   ),
                 ],
               ),
@@ -399,6 +361,19 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
       data: (track) {
         if (track == null) {
           return const Center(child: Text('没有正在播放的音频'));
+        }
+
+        // 加载进度信息
+        if (track.workId != null && _currentWorkId != track.workId) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                _currentWorkId = track.workId;
+                _currentProgress = null;
+              });
+              _loadCurrentProgress(track.workId!);
+            }
+          });
         }
 
         final workCoverUrl = _buildWorkCoverUrl(track.workId);
@@ -517,6 +492,15 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
                           onSeekChanged: _handleSeekChanged,
                           onSeekEnd: _handleSeekEnd,
                           seekingPosition: _seekingPosition,
+                          workId: track.workId,
+                          currentProgress: _currentProgress,
+                          onMarkPressed: track.workId != null
+                              ? () => _showMarkDialog(context, track.workId!)
+                              : null,
+                          onDetailPressed: track.workId != null
+                              ? () =>
+                                  _navigateToWorkDetail(context, track.workId!)
+                              : null,
                         ),
                       ],
                     ),

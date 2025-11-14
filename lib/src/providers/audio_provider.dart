@@ -222,13 +222,13 @@ class SleepTimerController extends StateNotifier<SleepTimerState> {
 
   SleepTimerController(this._ref) : super(const SleepTimerState());
 
-  /// 设置睡眠定时器（按时长）
+  /// 设置定时器（按时长）
   void setTimer(Duration duration) {
     final endTime = DateTime.now().add(duration);
     _setTimerInternal(endTime);
   }
 
-  /// 设置睡眠定时器（按指定时间）
+  /// 设置定时器（按指定时间）
   void setTimerUntil(DateTime targetTime) {
     _setTimerInternal(targetTime);
   }
@@ -277,7 +277,7 @@ class SleepTimerController extends StateNotifier<SleepTimerState> {
     );
   }
 
-  /// 取消睡眠定时器
+  /// 取消定时器
   void cancelTimer() {
     _timer?.cancel();
     _timer = null;

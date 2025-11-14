@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'account_management_screen.dart';
 import 'downloads_screen.dart';
 import 'theme_settings_screen.dart';
+import 'player_buttons_settings_screen.dart';
 import 'about_screen.dart';
 import '../providers/settings_provider.dart';
 import '../services/cache_service.dart';
@@ -202,6 +203,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (context) => const ThemeSettingsScreen(),
+                ),
+              );
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.tune),
+            title: const Text('播放器按钮'),
+            subtitle: const Text('自定义播放器控制按钮顺序'),
+            trailing: const Icon(Icons.arrow_forward_ios),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const PlayerButtonsSettingsScreen(),
                 ),
               );
             },
