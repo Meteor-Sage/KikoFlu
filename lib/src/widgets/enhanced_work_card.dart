@@ -67,7 +67,7 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
     final selectedValue = await ReviewProgressDialog.show(
       context: context,
       currentProgress: _progress,
-      title: '编辑收藏状态',
+      title: '标记作品',
     );
 
     if (selectedValue != null) {
