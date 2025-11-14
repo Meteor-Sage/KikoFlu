@@ -27,6 +27,7 @@ Work _$WorkFromJson(Map<String, dynamic> json) => Work(
       hasSubtitle: json['has_subtitle'] as bool?,
       duration: (json['duration'] as num?)?.toInt(),
       progress: json['progress'] as String?,
+      userRating: (json['userRating'] as num?)?.toInt(),
       images:
           (json['images'] as List<dynamic>?)?.map((e) => e as String).toList(),
       description: json['description'] as String?,
@@ -52,6 +53,7 @@ Map<String, dynamic> _$WorkToJson(Work instance) => <String, dynamic>{
       'has_subtitle': instance.hasSubtitle,
       'duration': instance.duration,
       'progress': instance.progress,
+      'userRating': instance.userRating,
       'images': instance.images,
       'description': instance.description,
       'children': instance.children,

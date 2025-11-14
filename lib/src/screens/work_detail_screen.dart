@@ -35,6 +35,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
   bool _showHDImage = false; // 控制是否显示高清图片
   ImageProvider? _hdImageProvider; // 预加载的高清图片
   String? _currentProgress; // 当前收藏状态
+  int? _currentRating; // 当前评分
   bool _isUpdatingProgress = false; // 是否正在更新状态
   bool _isOpeningFileSelection = false; // iOS上防止快速重复点击造成对话框立即关闭
   bool _isOpeningProgressDialog = false; // 防止标记状态对话框重复快速打开
@@ -44,6 +45,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
     super.initState();
     // 初始化收藏状态（从传入的work中获取）
     _currentProgress = widget.work.progress;
+    _currentRating = widget.work.userRating;
     _loadWorkDetail();
     // Hero 动画结束后开始预加载高清图
     Future.delayed(const Duration(milliseconds: 400), () {
@@ -240,8 +242,9 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
       if (mounted) {
         setState(() {
           _detailedWork = detailedWork;
-          // 更新收藏状态（从详情API响应中获取最新状态）
+          // 更新收藏状态（从API响应中获取最新状态）
           _currentProgress = detailedWork.progress;
+          _currentRating = detailedWork.userRating;
         });
       }
     } catch (e) {
@@ -275,6 +278,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
         setState(() {
           _detailedWork = detailedWork;
           _currentProgress = detailedWork.progress;
+          _currentRating = detailedWork.userRating;
         });
 
         // 显示刷新成功提示
@@ -314,11 +318,13 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
     await manager.showMarkDialog(
       workId: widget.work.id,
       currentProgress: _currentProgress,
-      onProgressChanged: (newProgress) {
+      currentRating: _currentRating,
+      onChanged: (newProgress, newRating) {
         // 更新本地状态
         if (mounted) {
           setState(() {
             _currentProgress = newProgress;
+            _currentRating = newRating;
             _isUpdatingProgress = false;
           });
         }
@@ -602,6 +608,51 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                   ),
                 ],
               ),
+
+              // 我的评分 - 仅当有评分时显示
+              if (_currentRating != null)
+                InkWell(
+                  onTap: _showProgressDialog,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.person,
+                          color:
+                              Theme.of(context).colorScheme.onPrimaryContainer,
+                          size: 14,
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.star,
+                          color: Colors.amber,
+                          size: 14,
+                        ),
+                        const SizedBox(width: 2),
+                        Text(
+                          '$_currentRating',
+                          style: TextStyle(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onPrimaryContainer,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
 
               // 时长信息
               if (work.duration != null && work.duration! > 0)

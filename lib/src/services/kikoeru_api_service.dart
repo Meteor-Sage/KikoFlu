@@ -623,15 +623,15 @@ class KikoeruApiService {
   /// 更新作品的收藏/进度状态
   Future<Map<String, dynamic>> updateReviewProgress(
     int workId, {
-    required String progress,
+    String? progress,
     int? rating,
     String? reviewText,
   }) async {
     try {
       final data = <String, dynamic>{
         'work_id': workId,
-        'progress': progress,
       };
+      if (progress != null) data['progress'] = progress;
       if (rating != null) data['rating'] = rating;
       if (reviewText != null) data['review_text'] = reviewText;
 
