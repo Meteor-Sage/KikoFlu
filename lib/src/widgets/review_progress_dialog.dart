@@ -18,12 +18,12 @@ class ReviewProgressDialog {
   ///
   /// [context] - 上下文
   /// [currentProgress] - 当前的进度状态值
-  /// [title] - 对话框标题，默认为"编辑收藏状态"
+  /// [title] - 对话框标题，默认为"标记作品"
   /// [showLoading] - 是否显示加载指示器（用于更新状态时）
   static Future<String?> show({
     required BuildContext context,
     String? currentProgress,
-    String title = '编辑收藏状态',
+    String title = '标记作品',
     bool showLoading = false,
   }) async {
     final filters = [
