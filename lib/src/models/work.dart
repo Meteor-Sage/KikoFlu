@@ -43,6 +43,9 @@ class Work extends Equatable {
   @JsonKey(name: 'userRating')
   final int? userRating; // 用户评分: 1-5星
 
+  @JsonKey(name: 'rate_count_detail')
+  final List<RatingDetail>? rateCountDetail; // 评分详情
+
   final List<String>? images;
   final String? description;
   final List<AudioFile>? children;
@@ -65,6 +68,7 @@ class Work extends Equatable {
     this.duration,
     this.progress,
     this.userRating,
+    this.rateCountDetail,
     this.images,
     this.description,
     this.children,
@@ -109,10 +113,34 @@ class Work extends Equatable {
         duration,
         progress,
         userRating,
+        rateCountDetail,
         images,
         description,
         children,
       ];
+}
+
+@JsonSerializable()
+class RatingDetail extends Equatable {
+  @JsonKey(name: 'review_point')
+  final int reviewPoint;
+
+  final int count;
+  final int ratio;
+
+  const RatingDetail({
+    required this.reviewPoint,
+    required this.count,
+    required this.ratio,
+  });
+
+  factory RatingDetail.fromJson(Map<String, dynamic> json) =>
+      _$RatingDetailFromJson(json);
+
+  Map<String, dynamic> toJson() => _$RatingDetailToJson(this);
+
+  @override
+  List<Object?> get props => [reviewPoint, count, ratio];
 }
 
 @JsonSerializable()

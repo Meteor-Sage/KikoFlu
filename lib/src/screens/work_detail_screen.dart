@@ -16,6 +16,7 @@ import '../widgets/circle_chip.dart';
 import '../widgets/responsive_dialog.dart';
 import '../widgets/work_bookmark_manager.dart';
 import '../widgets/review_progress_dialog.dart';
+import '../widgets/rating_detail_popup.dart';
 
 class WorkDetailScreen extends ConsumerStatefulWidget {
   final Work work;
@@ -334,6 +335,24 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
     _isOpeningProgressDialog = false;
   }
 
+  // 显示评分详情弹窗
+  Future<void> _showRatingDetailDialog(Work work) async {
+    if (work.rateCountDetail == null || work.rateCountDetail!.isEmpty) return;
+    if (work.rateAverage == null || work.rateCount == null) return;
+
+    await showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: RatingDetailPopup(
+          ratingDetails: work.rateCountDetail!,
+          averageRating: work.rateAverage!,
+          totalCount: work.rateCount!,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // 根据主题亮度设置状态栏图标颜色
@@ -581,32 +600,81 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
             runSpacing: 8,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              // 评分信息 - 总是显示
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.star, color: Colors.amber, size: 20),
-                  const SizedBox(width: 4),
-                  Text(
-                    (work.rateAverage != null &&
-                            work.rateCount != null &&
-                            work.rateCount! > 0)
-                        ? work.rateAverage!.toStringAsFixed(1)
-                        : '-',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
+              // 评分信息 - 总是显示，支持悬浮显示详情
+              MouseRegion(
+                cursor: work.rateCountDetail != null &&
+                        work.rateCountDetail!.isNotEmpty
+                    ? SystemMouseCursors.click
+                    : SystemMouseCursors.basic,
+                child: GestureDetector(
+                  onTap: () {
+                    if (work.rateCountDetail != null &&
+                        work.rateCountDetail!.isNotEmpty) {
+                      _showRatingDetailDialog(work);
+                    }
+                  },
+                  child: Tooltip(
+                    message: work.rateCountDetail != null &&
+                            work.rateCountDetail!.isNotEmpty
+                        ? '点击查看评分详情'
+                        : '',
+                    preferBelow: false,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.star, color: Colors.amber, size: 20),
+                        const SizedBox(width: 4),
+                        Text(
+                          (work.rateAverage != null &&
+                                  work.rateCount != null &&
+                                  work.rateCount! > 0)
+                              ? work.rateAverage!.toStringAsFixed(1)
+                              : '-',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // 括号内包含数字和感叹号图标
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '(',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 12,
+                              ),
+                            ),
+                            Text(
+                              '${work.rateCount ?? 0}',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 12,
+                              ),
+                            ),
+                            // 如果有详情数据，显示信息图标
+                            if (work.rateCountDetail != null &&
+                                work.rateCountDetail!.isNotEmpty)
+                              Icon(
+                                Icons.info_outline,
+                                size: 14,
+                                color: Colors.grey[600],
+                              ),
+                            Text(
+                              ')',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '(${work.rateCount ?? 0})',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
+                ),
               ),
 
               // 我的评分 - 仅当有评分时显示
@@ -654,6 +722,17 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                   ),
                 ),
 
+              // 价格信息
+              if (work.price != null)
+                Text(
+                  '${work.price} 日元',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.red[700],
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                ),
+
               // 时长信息
               if (work.duration != null && work.duration! > 0)
                 Row(
@@ -670,17 +749,6 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                           ),
                     ),
                   ],
-                ),
-
-              // 价格信息
-              if (work.price != null)
-                Text(
-                  '${work.price} 日元',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.red[700],
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                      ),
                 ),
 
               // 销售数量信息
