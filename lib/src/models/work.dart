@@ -40,6 +40,9 @@ class Work extends Equatable {
   final String?
       progress; // 收藏状态: marked, listening, listened, replay, postponed
 
+  @JsonKey(name: 'userRating')
+  final int? userRating; // 用户评分: 1-5星
+
   final List<String>? images;
   final String? description;
   final List<AudioFile>? children;
@@ -61,6 +64,7 @@ class Work extends Equatable {
     this.hasSubtitle,
     this.duration,
     this.progress,
+    this.userRating,
     this.images,
     this.description,
     this.children,
@@ -104,6 +108,7 @@ class Work extends Equatable {
         hasSubtitle,
         duration,
         progress,
+        userRating,
         images,
         description,
         children,

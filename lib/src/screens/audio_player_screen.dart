@@ -27,6 +27,7 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
   double _seekValue = 0.0;
   bool _showLyricHint = false;
   String? _currentProgress;
+  int? _currentRating;
   int? _currentWorkId;
   Duration? _seekingPosition;
   bool _showLyricView = false;
@@ -67,6 +68,7 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
       if (mounted && _currentWorkId == workId) {
         setState(() {
           _currentProgress = work.progress;
+          _currentRating = work.userRating;
         });
       }
     } catch (e) {
@@ -664,10 +666,12 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
     await manager.showMarkDialog(
       workId: workId,
       currentProgress: _currentProgress,
-      onProgressChanged: (newProgress) {
+      currentRating: _currentRating,
+      onChanged: (newProgress, newRating) {
         if (mounted) {
           setState(() {
             _currentProgress = newProgress;
+            _currentRating = newRating;
           });
         }
       },

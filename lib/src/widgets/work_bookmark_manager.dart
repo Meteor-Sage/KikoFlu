@@ -17,15 +17,17 @@ class WorkBookmarkManager {
   });
 
   /// 显示标记对话框并处理更新
-  /// 返回更新后的进度值（如果有变化）
-  Future<String?> showMarkDialog({
+  /// 返回包含进度和评分的Map（如果有变化）
+  Future<Map<String, dynamic>?> showMarkDialog({
     required int workId,
     required String? currentProgress,
-    required Function(String? newProgress) onProgressChanged,
+    required int? currentRating,
+    required Function(String? newProgress, int? newRating) onChanged,
   }) async {
     final result = await ReviewProgressDialog.show(
       context: context,
       currentProgress: currentProgress,
+      currentRating: currentRating,
       title: '标记作品',
     );
 
@@ -33,7 +35,7 @@ class WorkBookmarkManager {
       try {
         final apiService = ref.read(kikoeruApiServiceProvider);
 
-        if (result == '__REMOVE__') {
+        if (result['progress'] == '__REMOVE__') {
           // 删除标记
           await apiService.deleteReview(workId);
 
@@ -48,26 +50,47 @@ class WorkBookmarkManager {
           }
 
           // 更新状态
-          onProgressChanged(null);
+          onChanged(null, null);
 
           // 刷新我的评论列表
           ref.read(myReviewsProvider.notifier).load(refresh: true);
 
-          return null;
+          return {'progress': null, 'rating': null};
         } else {
-          // 更新标记
+          // 更新标记（包括进度和评分）
           await apiService.updateReviewProgress(
             workId,
-            progress: result,
+            progress: result['progress'],
+            rating: result['rating'],
           );
 
-          // 获取标记的显示名称
-          final filterLabel = ReviewProgressDialog.getProgressLabel(result);
+          // 构建提示消息
+          final newProgress = result['progress'];
+          final newRating = result['rating'];
+          String message;
+
+          if (newProgress != null && newRating != null) {
+            // 同时设置了进度和评分
+            final filterLabel =
+                ReviewProgressDialog.getProgressLabel(newProgress);
+            message = '已设置为：$filterLabel，评分：$newRating 星';
+          } else if (newProgress != null) {
+            // 只设置了进度
+            final filterLabel =
+                ReviewProgressDialog.getProgressLabel(newProgress);
+            message = '已设置为：$filterLabel';
+          } else if (newRating != null) {
+            // 只设置了评分
+            message = '评分已设置为：$newRating 星';
+          } else {
+            // 都没设置（理论上不应该到这里）
+            message = '已更新';
+          }
 
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('已设置为：$filterLabel'),
+                content: Text(message),
                 duration: const Duration(seconds: 2),
                 behavior: SnackBarBehavior.floating,
               ),
@@ -75,7 +98,7 @@ class WorkBookmarkManager {
           }
 
           // 更新状态
-          onProgressChanged(result);
+          onChanged(result['progress'], result['rating']);
 
           // 刷新我的评论列表
           ref.read(myReviewsProvider.notifier).load(refresh: true);

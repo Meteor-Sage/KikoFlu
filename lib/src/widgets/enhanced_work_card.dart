@@ -6,7 +6,7 @@ import '../providers/auth_provider.dart';
 import '../screens/work_detail_screen.dart';
 import 'tag_chip.dart';
 import 'va_chip.dart';
-import 'review_progress_dialog.dart';
+import 'work_bookmark_manager.dart';
 
 class EnhancedWorkCard extends ConsumerStatefulWidget {
   final Work work;
@@ -26,6 +26,7 @@ class EnhancedWorkCard extends ConsumerStatefulWidget {
 
 class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
   String? _progress; // 当前收藏状态
+  int? _rating; // 当前评分
   bool _loadingProgress = false; // 是否在获取状态
   bool _updating = false; // 是否在更新状态
 
@@ -33,6 +34,7 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
   void initState() {
     super.initState();
     _progress = widget.work.progress; // 初始来自传入的work
+    _rating = widget.work.userRating; // 初始评分
   }
 
   // 长按逻辑：获取最新详情(含 progress)，然后弹出编辑菜单
@@ -45,6 +47,7 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
       final detailed = Work.fromJson(json);
       setState(() {
         _progress = detailed.progress; // 更新最新状态
+        _rating = detailed.userRating; // 更新评分
         _loadingProgress = false;
       });
       _showEditSheet();
@@ -64,65 +67,26 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
 
   // 显示编辑收藏状态对话框
   Future<void> _showEditSheet() async {
-    final selectedValue = await ReviewProgressDialog.show(
-      context: context,
+    if (_updating) return; // 防止重复操作
+
+    final manager = WorkBookmarkManager(ref: ref, context: context);
+
+    await manager.showMarkDialog(
+      workId: widget.work.id,
       currentProgress: _progress,
-      title: '标记作品',
+      currentRating: _rating,
+      onChanged: (newProgress, newRating) {
+        // 更新本地状态
+        if (mounted) {
+          setState(() {
+            _progress = newProgress;
+            _rating = newRating;
+          });
+        }
+      },
     );
 
-    if (selectedValue != null) {
-      if (selectedValue == '__REMOVE__') {
-        await _updateProgress(null);
-      } else {
-        await _updateProgress(selectedValue);
-      }
-    }
-  }
-
-  Future<void> _updateProgress(String? value) async {
-    if (_updating) return;
-    setState(() => _updating = true);
-    final api = ref.read(kikoeruApiServiceProvider);
-    try {
-      if (value != null) {
-        await api.updateReviewProgress(widget.work.id, progress: value);
-        setState(() => _progress = value);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content:
-                  Text('已设置为：${ReviewProgressDialog.getProgressLabel(value)}'),
-              behavior: SnackBarBehavior.floating,
-              duration: const Duration(seconds: 2),
-            ),
-          );
-        }
-      } else {
-        await api.deleteReview(widget.work.id);
-        setState(() => _progress = null);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('已移除标记'),
-              behavior: SnackBarBehavior.floating,
-              duration: Duration(seconds: 2),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('操作失败: $e'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
-    } finally {
-      setState(() => _updating = false);
-    }
+    setState(() => _updating = false);
   }
 
   @override
