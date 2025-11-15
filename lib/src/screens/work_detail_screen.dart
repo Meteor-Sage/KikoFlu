@@ -98,6 +98,58 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
     }
   }
 
+  // 显示标签投票信息
+  void _showTagInfo(Tag tag) {
+    showDialog(
+      context: context,
+      builder: (context) => _TagVoteDialog(
+        tag: tag,
+        workId: widget.work.id,
+        onVoteChanged: (updatedTag) {
+          // 投票成功后更新本地状态
+          if (mounted) {
+            setState(() {
+              // 更新 _detailedWork 中的 tag
+              if (_detailedWork != null && _detailedWork!.tags != null) {
+                final tagIndex = _detailedWork!.tags!
+                    .indexWhere((t) => t.id == updatedTag.id);
+                if (tagIndex != -1) {
+                  final updatedTags = List<Tag>.from(_detailedWork!.tags!);
+                  updatedTags[tagIndex] = updatedTag;
+                  _detailedWork = Work(
+                    id: _detailedWork!.id,
+                    title: _detailedWork!.title,
+                    circleId: _detailedWork!.circleId,
+                    name: _detailedWork!.name,
+                    vas: _detailedWork!.vas,
+                    tags: updatedTags,
+                    age: _detailedWork!.age,
+                    release: _detailedWork!.release,
+                    dlCount: _detailedWork!.dlCount,
+                    price: _detailedWork!.price,
+                    reviewCount: _detailedWork!.reviewCount,
+                    rateCount: _detailedWork!.rateCount,
+                    rateAverage: _detailedWork!.rateAverage,
+                    hasSubtitle: _detailedWork!.hasSubtitle,
+                    duration: _detailedWork!.duration,
+                    progress: _detailedWork!.progress,
+                    userRating: _detailedWork!.userRating,
+                    rateCountDetail: _detailedWork!.rateCountDetail,
+                    images: _detailedWork!.images,
+                    description: _detailedWork!.description,
+                    children: _detailedWork!.children,
+                    sourceUrl: _detailedWork!.sourceUrl,
+                  );
+                }
+              }
+            });
+          }
+        },
+        onCopyTag: () => _copyToClipboard(tag.name, '标签'),
+      ),
+    );
+  }
+
   // 在外部浏览器打开原始链接
   Future<void> _openSourceUrl(String url) async {
     try {
@@ -879,26 +931,24 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
 
           // 标签信息
           if (work.tags != null && work.tags!.isNotEmpty) ...[
-            Text(
-              '标签',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-            ),
-            const SizedBox(height: 8),
             Wrap(
               spacing: 4,
               runSpacing: 4,
               children: work.tags!
-                  .map((tag) => TagChip(
-                        tag: tag,
-                        fontSize: 12,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        borderRadius: 6,
-                        fontWeight: FontWeight.w500,
-                        onLongPress: () => _copyToClipboard(tag.name, '标签'),
+                  .map((tag) => GestureDetector(
+                        onSecondaryTapDown: (details) {
+                          // 桌面端右键支持
+                          _showTagInfo(tag);
+                        },
+                        child: TagChip(
+                          tag: tag,
+                          fontSize: 11,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 3),
+                          borderRadius: 6,
+                          fontWeight: FontWeight.w500,
+                          onLongPress: () => _showTagInfo(tag),
+                        ),
                       ))
                   .toList(),
             ),
@@ -1007,5 +1057,282 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
     } else {
       return '$minutes:${secs.toString().padLeft(2, '0')}';
     }
+  }
+}
+
+// 标签投票对话框组件
+class _TagVoteDialog extends ConsumerStatefulWidget {
+  final Tag tag;
+  final int workId;
+  final Function(Tag) onVoteChanged;
+  final VoidCallback onCopyTag;
+
+  const _TagVoteDialog({
+    required this.tag,
+    required this.workId,
+    required this.onVoteChanged,
+    required this.onCopyTag,
+  });
+
+  @override
+  ConsumerState<_TagVoteDialog> createState() => _TagVoteDialogState();
+}
+
+class _TagVoteDialogState extends ConsumerState<_TagVoteDialog> {
+  late Tag _currentTag;
+  bool _isVoting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentTag = widget.tag;
+  }
+
+  Future<void> _handleVote(int targetStatus) async {
+    if (_isVoting) return;
+
+    setState(() {
+      _isVoting = true;
+    });
+
+    try {
+      // 如果点击已投的票，则取消投票
+      final newStatus = _currentTag.myVote == targetStatus ? 0 : targetStatus;
+
+      final apiService = ref.read(kikoeruApiServiceProvider);
+      await apiService.voteWorkTag(
+        workId: widget.workId,
+        tagId: _currentTag.id,
+        status: newStatus,
+      );
+
+      // 投票成功，更新本地状态
+      if (mounted) {
+        setState(() {
+          final oldUpvote = _currentTag.upvote ?? 0;
+          final oldDownvote = _currentTag.downvote ?? 0;
+          int newUpvote = oldUpvote;
+          int newDownvote = oldDownvote;
+
+          // 先移除旧投票的影响
+          if (_currentTag.myVote == 1) {
+            newUpvote = oldUpvote - 1;
+          } else if (_currentTag.myVote == 2) {
+            newDownvote = oldDownvote - 1;
+          }
+
+          // 再添加新投票的影响
+          if (newStatus == 1) {
+            newUpvote = newUpvote + 1;
+          } else if (newStatus == 2) {
+            newDownvote = newDownvote + 1;
+          }
+
+          _currentTag = Tag(
+            id: _currentTag.id,
+            name: _currentTag.name,
+            upvote: newUpvote,
+            downvote: newDownvote,
+            myVote: newStatus == 0 ? null : newStatus,
+          );
+
+          _isVoting = false;
+        });
+
+        // 通知父组件更新
+        widget.onVoteChanged(_currentTag);
+
+        // 显示提示
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              newStatus == 0
+                  ? '已取消投票'
+                  : newStatus == 1
+                      ? '已投支持票'
+                      : '已投反对票',
+            ),
+            duration: const Duration(seconds: 1),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isVoting = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('投票失败: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ResponsiveAlertDialog(
+      title: Text(
+        _currentTag.name,
+        style: const TextStyle(fontSize: 16),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // 投票支持按钮
+          InkWell(
+            onTap: _isVoting ? null : () => _handleVote(1),
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: _currentTag.myVote == 1
+                    ? Colors.green.withOpacity(0.1)
+                    : Colors.grey.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: _currentTag.myVote == 1
+                      ? Colors.green
+                      : Colors.grey.withOpacity(0.3),
+                  width: _currentTag.myVote == 1 ? 2 : 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.thumb_up,
+                    color: _currentTag.myVote == 1 ? Colors.green : Colors.grey,
+                    size: 22,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      '支持：${_currentTag.upvote ?? 0}',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: _currentTag.myVote == 1
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                        color: _currentTag.myVote == 1 ? Colors.green : null,
+                      ),
+                    ),
+                  ),
+                  if (_currentTag.myVote == 1)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        '已投票',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  if (_isVoting && _currentTag.myVote != 1)
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // 投票反对按钮
+          InkWell(
+            onTap: _isVoting ? null : () => _handleVote(2),
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: _currentTag.myVote == 2
+                    ? Colors.red.withOpacity(0.1)
+                    : Colors.grey.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: _currentTag.myVote == 2
+                      ? Colors.red
+                      : Colors.grey.withOpacity(0.3),
+                  width: _currentTag.myVote == 2 ? 2 : 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.thumb_down,
+                    color: _currentTag.myVote == 2 ? Colors.red : Colors.grey,
+                    size: 22,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      '反对：${_currentTag.downvote ?? 0}',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: _currentTag.myVote == 2
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                        color: _currentTag.myVote == 2 ? Colors.red : null,
+                      ),
+                    ),
+                  ),
+                  if (_currentTag.myVote == 2)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        '已投票',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.red,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  if (_isVoting && _currentTag.myVote != 2)
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('关闭'),
+        ),
+        ElevatedButton.icon(
+          onPressed: () {
+            Navigator.pop(context);
+            widget.onCopyTag();
+          },
+          icon: const Icon(Icons.copy, size: 18),
+          label: const Text('复制标签'),
+        ),
+      ],
+    );
   }
 }

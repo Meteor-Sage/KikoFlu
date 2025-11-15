@@ -664,6 +664,32 @@ class KikoeruApiService {
     }
   }
 
+  /// 投票作品标签
+  /// status: 0=取消投票, 1=支持, 2=反对
+  Future<Map<String, dynamic>> voteWorkTag({
+    required int workId,
+    required int tagId,
+    required int status,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/vote/vote-work-tag',
+        data: {
+          'workID': workId,
+          'tagID': tagId,
+          'status': status,
+        },
+      );
+
+      // 投票成功后清除该作品的详情缓存，确保下次获取最新状态
+      await CacheService.invalidateWorkDetailCache(workId);
+
+      return response.data;
+    } catch (e) {
+      throw KikoeruApiException('Failed to vote work tag', e);
+    }
+  }
+
   // Favorites API
   Future<Map<String, dynamic>> getFavorites({int page = 1}) async {
     try {

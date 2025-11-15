@@ -184,15 +184,26 @@ class Va extends Equatable {
 class Tag extends Equatable {
   final int id;
   final String name;
+  final int? upvote; // 支持投票数量
+  final int? downvote; // 反对投票数量
 
-  const Tag({required this.id, required this.name});
+  @JsonKey(name: 'myVote')
+  final int? myVote; // 我的投票状态：0=未投票，1=支持，2=反对
+
+  const Tag({
+    required this.id,
+    required this.name,
+    this.upvote,
+    this.downvote,
+    this.myVote,
+  });
 
   factory Tag.fromJson(Map<String, dynamic> json) => _$TagFromJson(json);
 
   Map<String, dynamic> toJson() => _$TagToJson(this);
 
   @override
-  List<Object?> get props => [id, name];
+  List<Object?> get props => [id, name, upvote, downvote, myVote];
 }
 
 @JsonSerializable()

@@ -101,11 +101,17 @@ Map<String, dynamic> _$VaToJson(Va instance) => <String, dynamic>{
 Tag _$TagFromJson(Map<String, dynamic> json) => Tag(
       id: (json['id'] as num).toInt(),
       name: json['name'] as String,
+      upvote: (json['upvote'] as num?)?.toInt(),
+      downvote: (json['downvote'] as num?)?.toInt(),
+      myVote: (json['myVote'] as num?)?.toInt(),
     );
 
 Map<String, dynamic> _$TagToJson(Tag instance) => <String, dynamic>{
       'id': instance.id,
       'name': instance.name,
+      'upvote': instance.upvote,
+      'downvote': instance.downvote,
+      'myVote': instance.myVote,
     };
 
 AudioFile _$AudioFileFromJson(Map<String, dynamic> json) => AudioFile(
