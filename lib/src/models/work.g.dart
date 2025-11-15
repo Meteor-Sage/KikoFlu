@@ -37,6 +37,7 @@ Work _$WorkFromJson(Map<String, dynamic> json) => Work(
       children: (json['children'] as List<dynamic>?)
           ?.map((e) => AudioFile.fromJson(e as Map<String, dynamic>))
           .toList(),
+      sourceUrl: json['source_url'] as String?,
     );
 
 Map<String, dynamic> _$WorkToJson(Work instance) => <String, dynamic>{
@@ -61,6 +62,7 @@ Map<String, dynamic> _$WorkToJson(Work instance) => <String, dynamic>{
       'images': instance.images,
       'description': instance.description,
       'children': instance.children,
+      'source_url': instance.sourceUrl,
     };
 
 RatingDetail _$RatingDetailFromJson(Map<String, dynamic> json) => RatingDetail(

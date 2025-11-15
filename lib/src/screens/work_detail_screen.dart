@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/work.dart';
 import '../providers/auth_provider.dart';
@@ -94,6 +95,47 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
           behavior: SnackBarBehavior.floating,
         ),
       );
+    }
+  }
+
+  // 在外部浏览器打开原始链接
+  Future<void> _openSourceUrl(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      // 直接尝试在外部浏览器打开，不依赖 canLaunchUrl 检查
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+
+      if (!launched && mounted) {
+        // 如果外部应用模式失败，尝试平台默认方式
+        final fallbackLaunched = await launchUrl(
+          uri,
+          mode: LaunchMode.platformDefault,
+        );
+
+        if (!fallbackLaunched && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('无法打开链接'),
+              duration: Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('打开链接失败: $e'),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -508,6 +550,39 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                       return const SizedBox.shrink(); // 出错时不显示，保持底层缓存图
                     },
                   ),
+                // 字幕标签 - 浮动在右下角
+                if (work.hasSubtitle == true)
+                  Positioned(
+                    right: 12,
+                    bottom: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primary,
+                        borderRadius: BorderRadius.circular(6),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        'CC',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onPrimary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          height: 1.1,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -528,30 +603,17 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
               TextSpan(
                 children: [
                   TextSpan(text: work.title),
-                  if (work.hasSubtitle == true)
+                  if (work.sourceUrl != null)
                     WidgetSpan(
-                      alignment: PlaceholderAlignment.baseline,
-                      baseline: TextBaseline.alphabetic,
+                      alignment: PlaceholderAlignment.middle,
                       child: Padding(
                         padding: const EdgeInsets.only(left: 6),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
+                        child: GestureDetector(
+                          onTap: () => _openSourceUrl(work.sourceUrl!),
+                          child: Icon(
+                            Icons.open_in_new,
+                            size: 18,
                             color: Theme.of(context).colorScheme.primary,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            'CC',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.onPrimary,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              height: 1.1,
-                              letterSpacing: 0.5,
-                            ),
                           ),
                         ),
                       ),

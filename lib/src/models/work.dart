@@ -50,6 +50,9 @@ class Work extends Equatable {
   final String? description;
   final List<AudioFile>? children;
 
+  @JsonKey(name: 'source_url')
+  final String? sourceUrl; // 作品原始链接
+
   const Work({
     required this.id,
     required this.title,
@@ -72,6 +75,7 @@ class Work extends Equatable {
     this.images,
     this.description,
     this.children,
+    this.sourceUrl,
   });
 
   factory Work.fromJson(Map<String, dynamic> json) => _$WorkFromJson(json);
@@ -117,6 +121,7 @@ class Work extends Equatable {
         images,
         description,
         children,
+        sourceUrl,
       ];
 }
 
