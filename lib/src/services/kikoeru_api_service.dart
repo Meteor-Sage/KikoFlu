@@ -690,6 +690,43 @@ class KikoeruApiService {
     }
   }
 
+  /// 添加标签到作品
+  /// tagIds: 要添加的标签ID数组
+  Future<Map<String, dynamic>> attachTagsToWork({
+    required int workId,
+    required List<int> tagIds,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/vote/attach-tags-to-work',
+        data: {
+          'workID': workId,
+          'tagIDs': tagIds,
+        },
+      );
+
+      // 添加成功后清除该作品的详情缓存，确保下次获取最新状态
+      await CacheService.invalidateWorkDetailCache(workId);
+
+      return response.data;
+    } on DioException catch (e) {
+      // 检查是否是需要绑定邮箱的错误
+      if (e.response?.statusCode == 400) {
+        final errorData = e.response?.data;
+        if (errorData is Map &&
+            errorData['error'] == 'vote.mustBindEmailFirst') {
+          throw KikoeruApiException(
+            'Must bind email first',
+            'vote.mustBindEmailFirst',
+          );
+        }
+      }
+      throw KikoeruApiException('Failed to attach tags to work', e);
+    } catch (e) {
+      throw KikoeruApiException('Failed to attach tags to work', e);
+    }
+  }
+
   // Favorites API
   Future<Map<String, dynamic>> getFavorites({int page = 1}) async {
     try {
