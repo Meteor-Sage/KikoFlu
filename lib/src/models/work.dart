@@ -53,6 +53,9 @@ class Work extends Equatable {
   @JsonKey(name: 'source_url')
   final String? sourceUrl; // 作品原始链接
 
+  @JsonKey(name: 'other_language_editions_in_db')
+  final List<OtherLanguageEdition>? otherLanguageEditions; // 其他语言版本
+
   const Work({
     required this.id,
     required this.title,
@@ -76,6 +79,7 @@ class Work extends Equatable {
     this.description,
     this.children,
     this.sourceUrl,
+    this.otherLanguageEditions,
   });
 
   factory Work.fromJson(Map<String, dynamic> json) => _$WorkFromJson(json);
@@ -122,7 +126,42 @@ class Work extends Equatable {
         description,
         children,
         sourceUrl,
+        otherLanguageEditions,
       ];
+}
+
+@JsonSerializable()
+class OtherLanguageEdition extends Equatable {
+  final int id;
+  final String lang;
+  final String title;
+
+  @JsonKey(name: 'source_id')
+  final String sourceId;
+
+  @JsonKey(name: 'is_original')
+  final bool isOriginal;
+
+  @JsonKey(name: 'source_type')
+  final String sourceType;
+
+  const OtherLanguageEdition({
+    required this.id,
+    required this.lang,
+    required this.title,
+    required this.sourceId,
+    required this.isOriginal,
+    required this.sourceType,
+  });
+
+  factory OtherLanguageEdition.fromJson(Map<String, dynamic> json) =>
+      _$OtherLanguageEditionFromJson(json);
+
+  Map<String, dynamic> toJson() => _$OtherLanguageEditionToJson(this);
+
+  @override
+  List<Object?> get props =>
+      [id, lang, title, sourceId, isOriginal, sourceType];
 }
 
 @JsonSerializable()

@@ -1,0 +1,190 @@
+import 'package:translator/translator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+
+class TranslationService {
+  static final TranslationService _instance = TranslationService._internal();
+  factory TranslationService() => _instance;
+  TranslationService._internal();
+
+  final GoogleTranslator _translator = GoogleTranslator();
+  static const String _cachePrefix = 'translation_cache_';
+  static const String _targetLang = 'zh-cn'; // 目标语言：简体中文
+
+  /// 翻译文本到中文
+  Future<String> translate(String text, {String? sourceLang}) async {
+    if (text.isEmpty) return text;
+
+    // 检查缓存
+    final cachedTranslation = await _getCachedTranslation(text, sourceLang);
+    if (cachedTranslation != null) {
+      return cachedTranslation;
+    }
+
+    try {
+      // 执行翻译
+      final translation = await _translator.translate(
+        text,
+        from: sourceLang ?? 'auto',
+        to: _targetLang,
+      );
+
+      final result = translation.text;
+
+      // 缓存结果
+      await _cacheTranslation(text, result, sourceLang);
+
+      return result;
+    } catch (e) {
+      print('Translation error: $e');
+      return text; // 翻译失败返回原文
+    }
+  }
+
+  /// 批量翻译
+  Future<List<String>> translateBatch(List<String> texts,
+      {String? sourceLang}) async {
+    final results = <String>[];
+    for (final text in texts) {
+      final translated = await translate(text, sourceLang: sourceLang);
+      results.add(translated);
+    }
+    return results;
+  }
+
+  /// 分块翻译长文本
+  /// 每块最多 1500 字符，避免超过翻译 API 的 URL 长度限制
+  Future<String> translateLongText(
+    String text, {
+    String? sourceLang,
+    Function(int current, int total)? onProgress,
+  }) async {
+    if (text.isEmpty) return text;
+
+    // Google Translate 通过 URL 传参，URL 长度有限制
+    // 考虑到 URL 编码后长度会增加，保守设置为 1500 字符
+    const maxChunkSize = 1500;
+    final chunks = <String>[];
+    final lines = text.split('\n');
+
+    String currentChunk = '';
+    for (final line in lines) {
+      // 预估加上换行符后的长度
+      final estimatedLength = currentChunk.length + line.length + 1;
+
+      if (estimatedLength > maxChunkSize && currentChunk.isNotEmpty) {
+        // 当前块已满，保存并开始新块
+        chunks.add(currentChunk);
+        currentChunk = '';
+      }
+
+      // 如果单行就超过限制，按字符强制分割
+      if (line.length > maxChunkSize) {
+        if (currentChunk.isNotEmpty) {
+          chunks.add(currentChunk);
+          currentChunk = '';
+        }
+
+        for (int i = 0; i < line.length; i += maxChunkSize) {
+          final endIndex =
+              (i + maxChunkSize > line.length) ? line.length : i + maxChunkSize;
+          chunks.add(line.substring(i, endIndex));
+        }
+      } else {
+        // 正常情况，添加到当前块
+        if (currentChunk.isNotEmpty) currentChunk += '\n';
+        currentChunk += line;
+      }
+    }
+
+    // 添加最后一块
+    if (currentChunk.isNotEmpty) {
+      chunks.add(currentChunk);
+    }
+
+    // 分块翻译
+    final translatedChunks = <String>[];
+    for (int i = 0; i < chunks.length; i++) {
+      onProgress?.call(i + 1, chunks.length);
+      try {
+        final translated = await translate(chunks[i], sourceLang: sourceLang);
+        translatedChunks.add(translated);
+      } catch (e) {
+        print('Translation chunk $i failed: $e');
+        // 翻译失败时保留原文
+        translatedChunks.add(chunks[i]);
+      }
+    }
+
+    return translatedChunks.join('\n');
+  }
+
+  /// 获取缓存的翻译
+  Future<String?> _getCachedTranslation(String text, String? sourceLang) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final key = _getCacheKey(text, sourceLang);
+      final cached = prefs.getString(key);
+      if (cached != null) {
+        final data = json.decode(cached);
+        // 缓存7天有效
+        final timestamp = data['timestamp'] as int;
+        if (DateTime.now().millisecondsSinceEpoch - timestamp <
+            7 * 24 * 60 * 60 * 1000) {
+          return data['translation'] as String;
+        }
+      }
+    } catch (e) {
+      print('Cache read error: $e');
+    }
+    return null;
+  }
+
+  /// 缓存翻译结果
+  Future<void> _cacheTranslation(
+      String text, String translation, String? sourceLang) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final key = _getCacheKey(text, sourceLang);
+      final data = json.encode({
+        'translation': translation,
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+      });
+      await prefs.setString(key, data);
+    } catch (e) {
+      print('Cache write error: $e');
+    }
+  }
+
+  /// 生成缓存键
+  String _getCacheKey(String text, String? sourceLang) {
+    final lang = sourceLang ?? 'auto';
+    return '$_cachePrefix${lang}_${text.hashCode}';
+  }
+
+  /// 清除所有翻译缓存
+  Future<void> clearCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final keys = prefs.getKeys();
+      for (final key in keys) {
+        if (key.startsWith(_cachePrefix)) {
+          await prefs.remove(key);
+        }
+      }
+    } catch (e) {
+      print('Cache clear error: $e');
+    }
+  }
+
+  /// 检测语言
+  Future<String> detectLanguage(String text) async {
+    try {
+      final translation = await _translator.translate(text, from: 'auto');
+      return translation.sourceLanguage.code;
+    } catch (e) {
+      print('Language detection error: $e');
+      return 'unknown';
+    }
+  }
+}

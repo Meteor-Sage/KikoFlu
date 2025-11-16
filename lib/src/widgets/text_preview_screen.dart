@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 
 import '../services/cache_service.dart';
+import '../services/translation_service.dart';
 import 'scrollable_appbar.dart';
 
 /// 文本预览屏幕
@@ -26,9 +27,13 @@ class TextPreviewScreen extends StatefulWidget {
 class _TextPreviewScreenState extends State<TextPreviewScreen> {
   bool _isLoading = true;
   String? _content;
+  String? _translatedContent;
   String? _errorMessage;
   final ScrollController _scrollController = ScrollController();
   double _scrollProgress = 0.0;
+  bool _showTranslation = false;
+  bool _isTranslating = false;
+  String _translationProgress = '';
 
   @override
   void initState() {
@@ -116,12 +121,83 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
     }
   }
 
+  Future<void> _translateContent() async {
+    if (_content == null || _content!.isEmpty) return;
+
+    setState(() {
+      _isTranslating = true;
+      _translationProgress = '准备翻译...';
+    });
+
+    try {
+      final translationService = TranslationService();
+      final translated = await translationService.translateLongText(
+        _content!,
+        onProgress: (current, total) {
+          setState(() {
+            _translationProgress = '翻译中 $current/$total';
+          });
+        },
+      );
+
+      setState(() {
+        _translatedContent = translated;
+        _showTranslation = true;
+        _isTranslating = false;
+        _translationProgress = '';
+      });
+    } catch (e) {
+      setState(() {
+        _isTranslating = false;
+        _translationProgress = '';
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('翻译失败: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: ScrollableAppBar(
         title: Text(widget.title),
         actions: [
+          if (_content != null && _content!.isNotEmpty)
+            IconButton(
+              icon: _isTranslating
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    )
+                  : Icon(
+                      Icons.g_translate,
+                      color: _showTranslation
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
+                    ),
+              onPressed: _isTranslating
+                  ? null
+                  : () {
+                      if (_translatedContent != null) {
+                        setState(() {
+                          _showTranslation = !_showTranslation;
+                        });
+                      } else {
+                        _translateContent();
+                      }
+                    },
+              tooltip: _showTranslation ? '显示原文' : '翻译内容',
+            ),
           IconButton(
             icon: const Icon(Icons.download),
             onPressed: () {
@@ -176,6 +252,23 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
           ),
           minHeight: 3,
         ),
+        if (_isTranslating)
+          Container(
+            padding: const EdgeInsets.all(8),
+            color: Theme.of(context).colorScheme.primaryContainer,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(width: 8),
+                Text(_translationProgress),
+              ],
+            ),
+          ),
         Expanded(
           child: Scrollbar(
             controller: _scrollController,
@@ -184,7 +277,9 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
               controller: _scrollController,
               padding: const EdgeInsets.all(16),
               child: SelectableText(
-                _content ?? '',
+                _showTranslation && _translatedContent != null
+                    ? _translatedContent!
+                    : _content ?? '',
                 style: const TextStyle(
                   fontFamily: 'monospace',
                   fontSize: 14,

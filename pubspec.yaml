@@ -23,6 +23,7 @@ dependencies:
   # Network & API
   dio: ^5.4.0
   connectivity_plus: ^5.0.2
+  translator: ^1.0.0
   
   # Audio & Video & Pdf
   just_audio: ^0.9.36
