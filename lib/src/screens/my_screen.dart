@@ -106,9 +106,28 @@ class _MyScreenState extends ConsumerState<MyScreen>
     required String label,
     required bool isSelected,
     required VoidCallback onTap,
-    BorderRadius? borderRadius,
+    required int index,
+    required int total,
   }) {
     final theme = Theme.of(context);
+
+    // 第一个按钮：左侧圆角，右侧方角
+    // 最后一个按钮：左侧方角，右侧圆角
+    // 中间按钮：两侧方角
+    BorderRadius buttonBorderRadius;
+    if (index == 0) {
+      buttonBorderRadius = const BorderRadius.only(
+        topLeft: Radius.circular(20),
+        bottomLeft: Radius.circular(20),
+      );
+    } else if (index == total - 1) {
+      buttonBorderRadius = const BorderRadius.only(
+        topRight: Radius.circular(20),
+        bottomRight: Radius.circular(20),
+      );
+    } else {
+      buttonBorderRadius = BorderRadius.zero;
+    }
 
     return Padding(
       padding: const EdgeInsets.only(right: 8),
@@ -116,7 +135,7 @@ class _MyScreenState extends ConsumerState<MyScreen>
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: buttonBorderRadius,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -124,13 +143,7 @@ class _MyScreenState extends ConsumerState<MyScreen>
               color: isSelected
                   ? theme.colorScheme.primaryContainer
                   : theme.colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(20),
-              border: isSelected
-                  ? Border.all(
-                      color: theme.colorScheme.primary,
-                      width: 1.5,
-                    )
-                  : null,
+              borderRadius: buttonBorderRadius,
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -216,15 +229,16 @@ class _MyScreenState extends ConsumerState<MyScreen>
                       horizontal: horizontalPadding, vertical: 6),
                   child: Row(
                     children: [
-                      for (final filter in MyReviewFilter.values)
+                      for (int i = 0; i < MyReviewFilter.values.length; i++)
                         _buildFilterButton(
-                          icon: _getFilterIcon(filter),
-                          label: filter.label,
-                          isSelected: state.filter == filter,
+                          icon: _getFilterIcon(MyReviewFilter.values[i]),
+                          label: MyReviewFilter.values[i].label,
+                          isSelected: state.filter == MyReviewFilter.values[i],
                           onTap: () => ref
                               .read(myReviewsProvider.notifier)
-                              .changeFilter(filter),
-                          borderRadius: null,
+                              .changeFilter(MyReviewFilter.values[i]),
+                          index: i,
+                          total: MyReviewFilter.values.length,
                         ),
                     ],
                   ),

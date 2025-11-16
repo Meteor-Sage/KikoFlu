@@ -356,6 +356,10 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
                                                 child: CachedNetworkImage(
                                                   imageUrl: (workCoverUrl ??
                                                       track.artworkUrl)!,
+                                                  // 使用workId作为cacheKey，与作品详情页保持一致
+                                                  cacheKey: track.workId != null
+                                                      ? 'work_cover_${track.workId}'
+                                                      : null,
                                                   fit: BoxFit.cover,
                                                   errorWidget:
                                                       (context, url, error) {

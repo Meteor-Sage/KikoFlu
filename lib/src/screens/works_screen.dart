@@ -242,7 +242,8 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
           icon: Icons.grid_view,
           label: '全部',
           isSelected: worksState.displayMode == DisplayMode.all,
-          borderRadius: null,
+          index: 0,
+          total: 3,
           onTap: () {
             notifier.setDisplayMode(DisplayMode.all);
             _scrollToTop();
@@ -253,7 +254,8 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
           icon: Icons.local_fire_department,
           label: '热门',
           isSelected: worksState.displayMode == DisplayMode.popular,
-          borderRadius: null,
+          index: 1,
+          total: 3,
           onTap: () {
             notifier.setDisplayMode(DisplayMode.popular);
             _scrollToTop();
@@ -264,7 +266,8 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
           icon: Icons.auto_awesome,
           label: '推荐',
           isSelected: worksState.displayMode == DisplayMode.recommended,
-          borderRadius: null,
+          index: 2,
+          total: 3,
           onTap: () {
             notifier.setDisplayMode(DisplayMode.recommended);
             _scrollToTop();
@@ -281,16 +284,35 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
     required String label,
     required bool isSelected,
     required VoidCallback onTap,
-    BorderRadius? borderRadius,
+    required int index,
+    required int total,
   }) {
     final theme = Theme.of(context);
+
+    // 第一个按钮：左侧圆角，右侧方角
+    // 最后一个按钮：左侧方角，右侧圆角
+    // 中间按钮：两侧方角
+    BorderRadius buttonBorderRadius;
+    if (index == 0) {
+      buttonBorderRadius = const BorderRadius.only(
+        topLeft: Radius.circular(20),
+        bottomLeft: Radius.circular(20),
+      );
+    } else if (index == total - 1) {
+      buttonBorderRadius = const BorderRadius.only(
+        topRight: Radius.circular(20),
+        bottomRight: Radius.circular(20),
+      );
+    } else {
+      buttonBorderRadius = BorderRadius.zero;
+    }
 
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: buttonBorderRadius,
           onTap: onTap,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
@@ -299,13 +321,7 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
               color: isSelected
                   ? theme.colorScheme.primaryContainer
                   : theme.colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(20),
-              border: isSelected
-                  ? Border.all(
-                      color: theme.colorScheme.primary,
-                      width: 1.5,
-                    )
-                  : null,
+              borderRadius: buttonBorderRadius,
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,

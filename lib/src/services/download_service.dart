@@ -223,11 +223,16 @@ class DownloadService {
           await File(cachedFile).copy(targetPath);
         }
 
+        // 使用完整的文件名（包含相对路径），以便后续检测
+        final fullFileName = relativePath != null && relativePath.isNotEmpty
+            ? '$relativePath/$fileName'
+            : fileName;
+
         final task = DownloadTask(
           id: hash,
           workId: workId,
           workTitle: workTitle,
-          fileName: fileName,
+          fileName: fullFileName, // 使用包含路径的完整文件名
           downloadUrl: downloadUrl,
           hash: hash,
           totalBytes: totalBytes ?? await targetFile.length(),

@@ -51,6 +51,10 @@ class PlayerCoverWidget extends StatelessWidget {
                       borderRadius: BorderRadius.circular(16),
                       child: CachedNetworkImage(
                         imageUrl: (workCoverUrl ?? track.artworkUrl)!,
+                        // 使用workId作为cacheKey，与作品详情页保持一致，避免token变化导致重新下载
+                        cacheKey: track.workId != null
+                            ? 'work_cover_${track.workId}'
+                            : null,
                         fit: BoxFit.contain,
                         errorWidget: (context, url, error) {
                           return Padding(
