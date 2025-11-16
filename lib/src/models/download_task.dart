@@ -21,6 +21,7 @@ class DownloadTask extends Equatable {
   final String? error;
   final DateTime createdAt;
   final DateTime? completedAt;
+  final Map<String, dynamic>? workMetadata; // 作品详情元数据，用于离线预览
 
   const DownloadTask({
     required this.id,
@@ -35,6 +36,7 @@ class DownloadTask extends Equatable {
     this.error,
     required this.createdAt,
     this.completedAt,
+    this.workMetadata,
   });
 
   double get progress {
@@ -55,6 +57,7 @@ class DownloadTask extends Equatable {
     String? error,
     DateTime? createdAt,
     DateTime? completedAt,
+    Map<String, dynamic>? workMetadata,
   }) {
     return DownloadTask(
       id: id ?? this.id,
@@ -69,6 +72,7 @@ class DownloadTask extends Equatable {
       error: error ?? this.error,
       createdAt: createdAt ?? this.createdAt,
       completedAt: completedAt ?? this.completedAt,
+      workMetadata: workMetadata ?? this.workMetadata,
     );
   }
 
@@ -86,6 +90,7 @@ class DownloadTask extends Equatable {
       'error': error,
       'createdAt': createdAt.toIso8601String(),
       'completedAt': completedAt?.toIso8601String(),
+      // workMetadata 不序列化到 SharedPreferences，会从硬盘的 work_metadata.json 加载
     };
   }
 
@@ -108,6 +113,8 @@ class DownloadTask extends Equatable {
       completedAt: json['completedAt'] != null
           ? DateTime.parse(json['completedAt'] as String)
           : null,
+      // workMetadata 不从 SharedPreferences 加载，会在启动时从硬盘同步
+      workMetadata: null,
     );
   }
 
@@ -125,5 +132,6 @@ class DownloadTask extends Equatable {
         error,
         createdAt,
         completedAt,
+        workMetadata,
       ];
 }

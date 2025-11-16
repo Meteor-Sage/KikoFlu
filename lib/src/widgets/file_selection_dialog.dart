@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/work.dart';
 import '../services/download_service.dart';
 import '../utils/string_utils.dart';
 import '../utils/file_icon_utils.dart';
+import '../providers/auth_provider.dart';
 
-class FileSelectionDialog extends StatefulWidget {
+class FileSelectionDialog extends ConsumerStatefulWidget {
   final Work work;
 
   const FileSelectionDialog({
@@ -13,10 +15,11 @@ class FileSelectionDialog extends StatefulWidget {
   });
 
   @override
-  State<FileSelectionDialog> createState() => _FileSelectionDialogState();
+  ConsumerState<FileSelectionDialog> createState() =>
+      _FileSelectionDialogState();
 }
 
-class _FileSelectionDialogState extends State<FileSelectionDialog> {
+class _FileSelectionDialogState extends ConsumerState<FileSelectionDialog> {
   final Map<String, bool> _selectedFiles = {}; // hash -> selected
   final Map<String, bool> _downloadedFiles = {}; // hash -> downloaded
   final Set<String> _expandedFolders = {}; // 展开的文件夹路径
@@ -224,6 +227,18 @@ class _FileSelectionDialogState extends State<FileSelectionDialog> {
 
     final downloadService = DownloadService.instance;
 
+    // 获取封面URL
+    final authState = ref.read(authProvider);
+    final host = authState.host ?? '';
+    final token = authState.token ?? '';
+    final coverUrl = widget.work.getCoverImageUrl(host, token: token);
+
+    // 保存作品元数据用于离线预览
+    // 移除 children 字段避免存储大量文件列表数据
+    final workJson = widget.work.toJson();
+    workJson.remove('children'); // 不保存文件列表，节省空间
+    final workMetadata = Map<String, dynamic>.from(workJson);
+
     for (final file in selectedFiles) {
       await downloadService.addTask(
         workId: widget.work.id,
@@ -232,6 +247,8 @@ class _FileSelectionDialogState extends State<FileSelectionDialog> {
         downloadUrl: file.mediaDownloadUrl ?? '',
         hash: file.hash,
         totalBytes: file.size,
+        workMetadata: workMetadata,
+        coverUrl: coverUrl,
       );
     }
 
