@@ -179,6 +179,7 @@ class FileIconUtils {
     return title.endsWith('.txt') ||
         title.endsWith('.vtt') ||
         title.endsWith('.srt') ||
+        title.endsWith('.lrc') ||
         title.endsWith('.md') ||
         title.endsWith('.log') ||
         title.endsWith('.json') ||
