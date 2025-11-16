@@ -292,7 +292,7 @@ class CacheService {
   }) async {
     try {
       // 1. 先检查下载文件
-      final downloadedFile = await _getDownloadedFile(workId, hash);
+      final downloadedFile = await _getDownloadedFile(workId, hash, null);
       if (downloadedFile != null) {
         print('[Cache] 使用已下载的文件: $hash');
         return downloadedFile;
@@ -403,10 +403,11 @@ class CacheService {
   static Future<String?> getCachedTextContent({
     required int workId,
     required String hash,
+    String? fileName, // 添加可选的文件名参数，用于查找手动复制的文件
   }) async {
     try {
       // 1. 先检查下载文件
-      final downloadedFile = await _getDownloadedFile(workId, hash);
+      final downloadedFile = await _getDownloadedFile(workId, hash, fileName);
       if (downloadedFile != null) {
         final file = File(downloadedFile);
         if (await file.exists()) {
@@ -418,8 +419,8 @@ class CacheService {
       // 2. 检查缓存文件
       final cacheDir = await _getCacheDirectory();
       final safeHash = hash.replaceAll('/', '_');
-      final fileName = '${workId}_${safeHash}_text.txt';
-      final filePath = '${cacheDir.path}/$fileName';
+      final cacheFileName = '${workId}_${safeHash}_text.txt';
+      final filePath = '${cacheDir.path}/$cacheFileName';
 
       final file = File(filePath);
       if (await file.exists()) {
@@ -1004,15 +1005,55 @@ class CacheService {
   }
 
   // 从下载服务中获取已下载的文件（通用）
-  static Future<String?> _getDownloadedFile(int workId, String hash) async {
+  static Future<String?> _getDownloadedFile(
+    int workId,
+    String hash,
+    String? fileName,
+  ) async {
     try {
       final downloadService = DownloadService.instance;
+
+      // 处理可能的 workId/hash 格式
+      String actualHash = hash;
+      if (hash.contains('/')) {
+        final parts = hash.split('/');
+        if (parts.length == 2) {
+          actualHash = parts[1]; // 使用文件hash部分
+        }
+      }
+
+      // 1. 先检查 DownloadService 管理的下载任务
       final filePath =
-          await downloadService.getDownloadedFilePath(workId, hash);
+          await downloadService.getDownloadedFilePath(workId, actualHash);
       if (filePath != null) {
         final file = File(filePath);
         if (await file.exists()) {
           return filePath;
+        }
+      }
+
+      // 2. 如果提供了文件名，检查手动复制的文件
+      if (fileName != null && fileName.isNotEmpty) {
+        try {
+          final downloadDir = await downloadService.getDownloadDirectory();
+          final workDir = Directory('${downloadDir.path}/$workId');
+
+          if (await workDir.exists()) {
+            // 递归查找匹配文件名的文件
+            await for (final entity in workDir.list(recursive: true)) {
+              if (entity is File) {
+                final entityFileName =
+                    entity.path.split(Platform.pathSeparator).last;
+                // 精确匹配文件名
+                if (entityFileName == fileName) {
+                  print('[Cache] 找到手动复制的文件: ${entity.path}');
+                  return entity.path;
+                }
+              }
+            }
+          }
+        } catch (e) {
+          print('[Cache] 检查手动复制文件失败: $e');
         }
       }
 

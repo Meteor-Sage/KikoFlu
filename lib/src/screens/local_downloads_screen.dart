@@ -27,13 +27,26 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
   final ScrollController _scrollController = ScrollController();
   int _currentPage = 1;
   final int _pageSize = 30;
+  ScaffoldMessengerState? _scaffoldMessenger;
+
+  void _showSnackBarSafe(SnackBar snackBar) {
+    if (!mounted) return;
+    _scaffoldMessenger?.showSnackBar(snackBar);
+  }
 
   @override
   bool get wantKeepAlive => true;
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _scaffoldMessenger = ScaffoldMessenger.maybeOf(context);
+  }
+
+  @override
   void dispose() {
     _scrollController.dispose();
+    _scaffoldMessenger = null;
     super.dispose();
   }
 
@@ -102,7 +115,7 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
   Future<void> _refreshMetadata() async {
     try {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        _showSnackBarSafe(
           const SnackBar(
             content: Row(
               children: [
@@ -126,7 +139,7 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
       await DownloadService.instance.reloadMetadataFromDisk();
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        _showSnackBarSafe(
           const SnackBar(
             content: Row(
               children: [
@@ -141,7 +154,7 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        _showSnackBarSafe(
           SnackBar(
             content: Text('刷新失败: $e'),
             duration: const Duration(seconds: 3),
@@ -193,13 +206,13 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        _showSnackBarSafe(
           const SnackBar(content: Text('删除成功')),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        _showSnackBarSafe(
           SnackBar(content: Text('删除失败: $e')),
         );
       }
@@ -212,7 +225,7 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
 
     if (task.workMetadata == null) {
       print('[LocalDownloads] 错误：任务没有元数据');
-      ScaffoldMessenger.of(context).showSnackBar(
+      _showSnackBarSafe(
         const SnackBar(
           content: Text('该下载任务没有保存作品详情，无法离线查看'),
           duration: Duration(seconds: 2),
@@ -245,7 +258,7 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        _showSnackBarSafe(
           SnackBar(
             content: Text('打开作品详情失败: $e'),
             duration: const Duration(seconds: 2),
@@ -362,7 +375,7 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
                       controller: _scrollController,
                       slivers: [
                         SliverPadding(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                           sliver: SliverGrid(
                             gridDelegate:
                                 const SliverGridDelegateWithMaxCrossAxisExtent(
@@ -421,7 +434,8 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
     final horizontalPadding = isLandscape ? 24.0 : 8.0;
 
     return Container(
-      height: 48,
+      height: 56,
+      padding: const EdgeInsets.symmetric(vertical: 4),
       color: Theme.of(context)
           .colorScheme
           .surfaceContainerHighest
@@ -483,33 +497,41 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
             )
           : Row(
               children: [
-                Expanded(child: Container()),
                 // 选择按钮
                 Padding(
-                  padding: EdgeInsets.only(right: 4),
-                  child: IconButton(
-                    icon: const Icon(Icons.checklist),
-                    iconSize: 22,
-                    padding: const EdgeInsets.all(8),
-                    constraints:
-                        const BoxConstraints(minWidth: 40, minHeight: 40),
+                  padding: const EdgeInsets.only(left: 20, right: 8),
+                  child: TextButton.icon(
+                    icon: const Icon(Icons.checklist, size: 20),
+                    label: const Text('选择'),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
+                      backgroundColor: Theme.of(context)
+                          .colorScheme
+                          .primaryContainer
+                          .withOpacity(0.5),
+                    ),
                     onPressed: _toggleSelectionMode,
-                    tooltip: '选择',
                   ),
                 ),
                 // 刷新按钮
                 Padding(
-                  padding: EdgeInsets.only(right: horizontalPadding - 8),
-                  child: IconButton(
-                    icon: const Icon(Icons.refresh),
-                    iconSize: 22,
-                    padding: const EdgeInsets.all(8),
-                    constraints:
-                        const BoxConstraints(minWidth: 40, minHeight: 40),
+                  padding: const EdgeInsets.only(right: 8),
+                  child: TextButton.icon(
+                    icon: const Icon(Icons.refresh, size: 20),
+                    label: const Text('本地重载'),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
+                      backgroundColor: Theme.of(context)
+                          .colorScheme
+                          .primaryContainer
+                          .withOpacity(0.5),
+                    ),
                     onPressed: _refreshMetadata,
-                    tooltip: '刷新',
                   ),
                 ),
+                const Spacer(),
               ],
             ),
     );
@@ -748,10 +770,13 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
                   '${snapshot.data!.path}/$workId/$relativeCoverPath';
               final coverFile = File(localCoverPath);
               if (coverFile.existsSync()) {
-                return Image.file(
-                  coverFile,
-                  fit: BoxFit.cover,
-                  width: double.infinity,
+                return Hero(
+                  tag: 'offline_work_cover_$workId',
+                  child: Image.file(
+                    coverFile,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                  ),
                 );
               }
             }
@@ -763,10 +788,13 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
 
     // 降级使用网络封面
     if (work != null && host.isNotEmpty) {
-      return CachedNetworkImage(
-        imageUrl: work.getCoverImageUrl(host, token: token),
-        fit: BoxFit.cover,
-        errorWidget: (context, url, error) => _buildPlaceholder(),
+      return Hero(
+        tag: 'offline_work_cover_$workId',
+        child: CachedNetworkImage(
+          imageUrl: work.getCoverImageUrl(host, token: token),
+          fit: BoxFit.cover,
+          errorWidget: (context, url, error) => _buildPlaceholder(),
+        ),
       );
     }
 

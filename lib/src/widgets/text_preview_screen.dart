@@ -94,6 +94,7 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
         final cachedContent = await CacheService.getCachedTextContent(
           workId: widget.workId!,
           hash: widget.hash!,
+          fileName: null, // TextPreviewScreen doesn't track fileName
         );
 
         if (cachedContent != null) {

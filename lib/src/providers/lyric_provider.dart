@@ -67,6 +67,7 @@ class LyricController extends StateNotifier<LyricState> {
       final host = authState.host ?? '';
       final token = authState.token ?? '';
       final hash = lyricFile['hash'];
+      final fileName = lyricFile['title'] ?? lyricFile['name'];
       final workId = track.workId;
 
       if (hash == null || host.isEmpty || workId == null) {
@@ -87,6 +88,7 @@ class LyricController extends StateNotifier<LyricState> {
       final cachedContent = await CacheService.getCachedTextContent(
         workId: workId,
         hash: hash,
+        fileName: fileName,
       );
 
       if (cachedContent != null) {
@@ -249,10 +251,12 @@ class LyricController extends StateNotifier<LyricState> {
 
       // 1. 先尝试从缓存加载（包括下载文件和缓存文件）
       final workId = lyricFile['workId'] as int?;
+      final fileName = lyricFile['title'] ?? lyricFile['name'];
       final cachedContent = workId != null
           ? await CacheService.getCachedTextContent(
               workId: workId,
               hash: hash,
+              fileName: fileName,
             )
           : null;
 

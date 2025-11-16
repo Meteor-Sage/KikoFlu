@@ -39,17 +39,19 @@ class _OfflineFileExplorerWidgetState
   bool _isLoading = true;
   String? _errorMessage;
   String? _mainFolderPath; // 主文件夹路径
+  late final FileListController _fileListController;
 
   @override
   void initState() {
     super.initState();
+    _fileListController = ref.read(fileListControllerProvider.notifier);
     _loadLocalFiles();
   }
 
   @override
   void dispose() {
     // 离线页面关闭时清空文件列表，避免影响其他作品
-    ref.read(fileListControllerProvider.notifier).clear();
+    _fileListController.clear();
     super.dispose();
   }
 
@@ -83,9 +85,7 @@ class _OfflineFileExplorerWidgetState
       // 递归检查并过滤本地存在的文件
       _localFiles = await _filterLocalFiles(widget.fileTree!, workDir.path, '');
       // 更新全局文件列表供歌词自动加载使用
-      ref
-          .read(fileListControllerProvider.notifier)
-          .updateFiles(List<dynamic>.from(_localFiles));
+      _fileListController.updateFiles(List<dynamic>.from(_localFiles));
 
       // 识别主文件夹并自动展开
       _identifyAndExpandMainFolder();

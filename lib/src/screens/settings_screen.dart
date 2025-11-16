@@ -21,6 +21,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   String _cacheSize = '计算中...';
   bool _isUpdatingCacheSize = false;
+  ScaffoldMessengerState? _scaffoldMessenger;
 
   @override
   void initState() {
@@ -34,8 +35,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 缓存 ScaffoldMessenger 以避免在 dispose 后访问
+    _scaffoldMessenger = ScaffoldMessenger.of(context);
+  }
+
+  @override
   void dispose() {
     super.dispose();
+  }
+
+  // 安全显示 SnackBar 的辅助方法
+  void _showSnackBar(SnackBar snackBar) {
+    if (!mounted) return;
+    final messenger = _scaffoldMessenger ?? ScaffoldMessenger.of(context);
+    messenger.showSnackBar(snackBar);
   }
 
   Future<void> _updateCacheSize() async {
@@ -767,7 +782,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         Navigator.of(context).pop(); // 关闭缓存管理对话框
                         await _updateCacheSize(); // 更新缓存大小
 
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        _showSnackBar(
                           const SnackBar(
                             content: Text('缓存已清除'),
                             backgroundColor: Colors.green,
@@ -777,7 +792,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     } catch (e) {
                       if (mounted) {
                         Navigator.of(context).pop(); // 关闭加载指示器
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        _showSnackBar(
                           SnackBar(
                             content: Text('清除缓存失败: $e'),
                             backgroundColor: Colors.red,

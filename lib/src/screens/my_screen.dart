@@ -138,7 +138,7 @@ class _MyScreenState extends ConsumerState<MyScreen>
           borderRadius: buttonBorderRadius,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
               color: isSelected
                   ? theme.colorScheme.primaryContainer
@@ -214,7 +214,8 @@ class _MyScreenState extends ConsumerState<MyScreen>
       children: [
         // 筛选和布局切换工具栏
         Container(
-          height: 48,
+          height: 56,
+          padding: const EdgeInsets.symmetric(vertical: 4),
           color: Theme.of(context)
               .colorScheme
               .surfaceContainerHighest
@@ -226,7 +227,7 @@ class _MyScreenState extends ConsumerState<MyScreen>
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   padding: EdgeInsets.symmetric(
-                      horizontal: horizontalPadding, vertical: 6),
+                      horizontal: horizontalPadding, vertical: 4),
                   child: Row(
                     children: [
                       for (int i = 0; i < MyReviewFilter.values.length; i++)
@@ -342,7 +343,7 @@ class _MyScreenState extends ConsumerState<MyScreen>
         ),
         slivers: [
           SliverPadding(
-            padding: EdgeInsets.all(padding),
+            padding: EdgeInsets.fromLTRB(padding, 8, padding, padding),
             sliver: SliverMasonryGrid.count(
               crossAxisCount: crossAxisCount,
               mainAxisSpacing: spacing,

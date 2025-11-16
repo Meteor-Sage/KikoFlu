@@ -165,7 +165,7 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
 
     return Scaffold(
       appBar: ScrollableAppBar(
-        toolbarHeight: 48,
+        toolbarHeight: 56,
         flexibleSpace: SafeArea(
           child: Row(
             children: [
@@ -174,7 +174,7 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   padding: EdgeInsets.symmetric(
-                      horizontal: horizontalPadding, vertical: 6),
+                      horizontal: horizontalPadding, vertical: 8),
                   child: _buildModeButtons(context, worksState),
                 ),
               ),
@@ -316,7 +316,7 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
           onTap: onTap,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
               color: isSelected
                   ? theme.colorScheme.primaryContainer

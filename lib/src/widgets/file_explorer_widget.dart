@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -32,9 +33,11 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
   List<dynamic> _rootFiles = [];
   final Set<String> _expandedFolders = {}; // 记录展开的文件夹路径
   final Map<String, bool> _downloadedFiles = {}; // hash -> downloaded
+  final Map<String, String> _fileRelativePaths = {}; // hash -> relative path
   bool _isLoading = false;
   String? _errorMessage;
   String? _mainFolderPath; // 主文件夹路径
+  ScaffoldMessengerState? _scaffoldMessenger;
   StreamSubscription<List<DownloadTask>>? _downloadTasksSubscription;
 
   @override
@@ -46,8 +49,15 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _scaffoldMessenger = ScaffoldMessenger.maybeOf(context);
+  }
+
+  @override
   void dispose() {
     _downloadTasksSubscription?.cancel();
+    _scaffoldMessenger = null;
     super.dispose();
   }
 
@@ -98,28 +108,50 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
   // 检查已下载的文件
   Future<void> _checkDownloadedFiles() async {
     final downloadService = DownloadService.instance;
+    _downloadedFiles.clear();
+    _fileRelativePaths.clear();
 
-    void collectHashes(List<dynamic> items) {
+    void collectHashes(List<dynamic> items, String parentPath) {
       for (final item in items) {
         final type = item['type'] ?? '';
         // 收集所有文件类型的hash（除了文件夹）
         if (type != 'folder' && item['hash'] != null) {
           _downloadedFiles[item['hash']] = false;
+          final title = item['title'] ?? item['name'] ?? 'unknown';
+          final relativePath =
+              parentPath.isEmpty ? title : '$parentPath/$title';
+          _fileRelativePaths[item['hash']] = relativePath;
         }
         final children = item['children'] as List<dynamic>?;
-        if (children != null) {
-          collectHashes(children);
+        if (children != null && type == 'folder') {
+          final folderName = item['title'] ?? item['name'] ?? '';
+          final nextPath =
+              parentPath.isEmpty ? folderName : '$parentPath/$folderName';
+          collectHashes(children, nextPath);
+        } else if (children != null) {
+          collectHashes(children, parentPath);
         }
       }
     }
 
-    collectHashes(_rootFiles);
+    collectHashes(_rootFiles, '');
 
     for (final hash in _downloadedFiles.keys) {
       final filePath =
           await downloadService.getDownloadedFilePath(widget.work.id, hash);
       if (filePath != null) {
         _downloadedFiles[hash] = true;
+        continue;
+      }
+
+      final relativePath = _fileRelativePaths[hash];
+      if (relativePath != null) {
+        final downloadDir = await downloadService.getDownloadDirectory();
+        final localFile =
+            File('${downloadDir.path}/${widget.work.id}/$relativePath');
+        if (await localFile.exists()) {
+          _downloadedFiles[hash] = true;
+        }
       }
     }
 
@@ -278,6 +310,12 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
     }
   }
 
+  void _showSnackBar(SnackBar snackBar) {
+    if (!mounted) return;
+    final messenger = _scaffoldMessenger ?? ScaffoldMessenger.maybeOf(context);
+    messenger?.showSnackBar(snackBar);
+  }
+
   void _playAudioFile(dynamic audioFile, String parentPath) async {
     final authState = ref.read(authProvider);
     final host = authState.host ?? '';
@@ -315,7 +353,7 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
     final currentIndex = audioFiles.indexWhere((file) => file['hash'] == hash);
 
     if (currentIndex == -1) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      _showSnackBar(
         SnackBar(
           content: Text('无法找到音频文件: $title'),
           backgroundColor: Colors.red,
@@ -326,47 +364,76 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
     }
 
     // 构建播放队列
-    final List<AudioTrack> audioTracks = audioFiles
-        .map((file) {
-          final fileHash = file['hash'];
-          final fileTitle = file['title'] ?? file['name'] ?? '未知';
+    final downloadService = DownloadService.instance;
+    final List<AudioTrack> audioTracks = [];
 
-          // 优先使用API返回的mediaStreamUrl，如果没有则构建URL
-          String audioUrl = '';
-          if (file['mediaStreamUrl'] != null &&
-              file['mediaStreamUrl'].toString().isNotEmpty) {
-            audioUrl = file['mediaStreamUrl'];
-          } else if (host.isNotEmpty && fileHash != null) {
-            String normalizedUrl = host;
-            if (!host.startsWith('http://') && !host.startsWith('https://')) {
-              normalizedUrl = 'https://$host';
+    for (final file in audioFiles) {
+      final fileHash = file['hash'];
+      final fileTitle = file['title'] ?? file['name'] ?? '未知';
+
+      // 优先使用本地下载的文件
+      String audioUrl = '';
+      if (fileHash != null) {
+        // 检查是否有本地下载的文件
+        final localPath = await downloadService.getDownloadedFilePath(
+          widget.work.id,
+          fileHash,
+        );
+
+        if (localPath != null) {
+          // 使用本地文件（file:// 协议）
+          audioUrl = 'file://$localPath';
+        } else if (_downloadedFiles[fileHash] == true) {
+          // 检查是否是手动复制的本地文件
+          final relativePath = _fileRelativePaths[fileHash];
+          if (relativePath != null) {
+            final downloadDir = await downloadService.getDownloadDirectory();
+            final localFile =
+                File('${downloadDir.path}/${widget.work.id}/$relativePath');
+            if (await localFile.exists()) {
+              audioUrl = 'file://${localFile.path}';
             }
-            audioUrl = '$normalizedUrl/api/media/stream/$fileHash?token=$token';
           }
+        }
+      }
 
-          // 获取声优信息
-          final vaNames = widget.work.vas?.map((va) => va.name).toList() ?? [];
-          final artistInfo = vaNames.isNotEmpty ? vaNames.join(', ') : null;
+      // 如果没有本地文件，使用网络URL
+      if (audioUrl.isEmpty) {
+        if (file['mediaStreamUrl'] != null &&
+            file['mediaStreamUrl'].toString().isNotEmpty) {
+          audioUrl = file['mediaStreamUrl'];
+        } else if (host.isNotEmpty && fileHash != null) {
+          String normalizedUrl = host;
+          if (!host.startsWith('http://') && !host.startsWith('https://')) {
+            normalizedUrl = 'https://$host';
+          }
+          audioUrl = '$normalizedUrl/api/media/stream/$fileHash?token=$token';
+        }
+      }
 
-          return AudioTrack(
-            id: fileHash ?? fileTitle,
-            url: audioUrl,
-            title: fileTitle,
-            artist: artistInfo,
-            album: widget.work.title,
-            artworkUrl: coverUrl,
-            duration: file['duration'] != null
-                ? Duration(milliseconds: (file['duration'] * 1000).round())
-                : null,
-            workId: widget.work.id,
-            hash: fileHash,
-          );
-        })
-        .where((track) => track.url.isNotEmpty)
-        .toList();
+      if (audioUrl.isNotEmpty) {
+        // 获取声优信息
+        final vaNames = widget.work.vas?.map((va) => va.name).toList() ?? [];
+        final artistInfo = vaNames.isNotEmpty ? vaNames.join(', ') : null;
+
+        audioTracks.add(AudioTrack(
+          id: fileHash ?? fileTitle,
+          url: audioUrl,
+          title: fileTitle,
+          artist: artistInfo,
+          album: widget.work.title,
+          artworkUrl: coverUrl,
+          duration: file['duration'] != null
+              ? Duration(milliseconds: (file['duration'] * 1000).round())
+              : null,
+          workId: widget.work.id,
+          hash: fileHash,
+        ));
+      }
+    }
 
     if (audioTracks.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      _showSnackBar(
         const SnackBar(
           content: Text('没有找到可播放的音频文件'),
           backgroundColor: Colors.red,
@@ -393,7 +460,7 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
     // 不需要手动调用 loadLyricForTrack
 
     // 显示提示
-    ScaffoldMessenger.of(context).showSnackBar(
+    _showSnackBar(
       SnackBar(
         content: Text('正在播放: $title (${startIndex + 1}/${audioTracks.length})'),
         duration: const Duration(seconds: 2),
@@ -458,7 +525,7 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
 
     if (currentTrack == null) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        _showSnackBar(
           const SnackBar(
             content: Text('当前没有播放的音频，无法加载字幕'),
             backgroundColor: Colors.orange,
@@ -547,7 +614,7 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
     if (confirmed != true || !mounted) return;
 
     // 显示加载中提示
-    ScaffoldMessenger.of(context).showSnackBar(
+    _showSnackBar(
       const SnackBar(
         content: Row(
           children: [
@@ -572,7 +639,7 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
       await ref.read(lyricControllerProvider.notifier).loadLyricManually(file);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        _showSnackBar(
           SnackBar(
             content: Row(
               children: [
@@ -590,7 +657,7 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        _showSnackBar(
           SnackBar(
             content: Row(
               children: [
@@ -615,7 +682,7 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
     final token = authState.token ?? '';
 
     if (host.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      _showSnackBar(
         const SnackBar(
           content: Text('无法预览图片：缺少必要信息'),
           backgroundColor: Colors.red,
@@ -635,7 +702,7 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
         imageFiles.indexWhere((f) => f['hash'] == file['hash']);
 
     if (currentIndex == -1) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      _showSnackBar(
         const SnackBar(
           content: Text('无法找到图片文件'),
           backgroundColor: Colors.red,
@@ -696,7 +763,7 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
     final title = file['title'] ?? file['name'] ?? '未知文本';
 
     if (hash == null || host.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      _showSnackBar(
         const SnackBar(
           content: Text('无法预览文本：缺少必要信息'),
           backgroundColor: Colors.red,
@@ -731,7 +798,7 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
     final title = file['title'] ?? file['name'] ?? '未知PDF';
 
     if (hash == null || host.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      _showSnackBar(
         const SnackBar(
           content: Text('无法预览PDF：缺少必要信息'),
           backgroundColor: Colors.red,
@@ -767,7 +834,7 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
 
     if (host.isEmpty || token.isEmpty || hash.isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        _showSnackBar(
           const SnackBar(
             content: Text('无法播放视频：缺少必要参数'),
             backgroundColor: Colors.red,
@@ -848,7 +915,7 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        _showSnackBar(
           SnackBar(
             content: Text('播放视频时出错: $e'),
             backgroundColor: Colors.red,
@@ -1117,7 +1184,7 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
     } else if (FileIconUtils.isTextFile(file)) {
       _previewTextFile(file);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
+      _showSnackBar(
         SnackBar(
           content: Text('暂不支持打开此类型文件: $title'),
           duration: const Duration(seconds: 2),

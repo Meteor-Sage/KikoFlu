@@ -11,6 +11,7 @@ import '../widgets/tag_chip.dart';
 import '../widgets/va_chip.dart';
 import '../widgets/circle_chip.dart';
 import '../widgets/offline_file_explorer_widget.dart';
+import '../widgets/global_audio_player_wrapper.dart';
 
 /// 离线作品详情页 - 使用下载时保存的元数据展示作品信息
 /// 不依赖网络请求，完全离线可用
@@ -76,56 +77,58 @@ class _OfflineWorkDetailScreenState
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: systemOverlayStyle,
-      child: Scaffold(
-        appBar: ScrollableAppBar(
-          systemOverlayStyle: systemOverlayStyle,
-          title: GestureDetector(
-            onLongPress: () => _copyToClipboard('RJ${widget.work.id}', 'RJ号'),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'RJ${widget.work.id}',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
-                ),
-                if (widget.isOffline) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: Colors.orange, width: 1),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.offline_bolt,
-                            size: 12, color: Colors.orange),
-                        SizedBox(width: 2),
-                        Text(
-                          '离线',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.orange,
-                            fontWeight: FontWeight.bold,
-                          ),
+      child: GlobalAudioPlayerWrapper(
+        child: Scaffold(
+          appBar: ScrollableAppBar(
+            systemOverlayStyle: systemOverlayStyle,
+            title: GestureDetector(
+              onLongPress: () => _copyToClipboard('RJ${widget.work.id}', 'RJ号'),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'RJ${widget.work.id}',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
                         ),
-                      ],
-                    ),
                   ),
+                  if (widget.isOffline) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.orange, width: 1),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.offline_bolt,
+                              size: 12, color: Colors.orange),
+                          SizedBox(width: 2),
+                          Text(
+                            '离线',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.orange,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
           ),
-          backgroundColor: Colors.transparent,
-          elevation: 0,
+          body: _buildBody(),
         ),
-        body: _buildBody(),
       ),
     );
   }
