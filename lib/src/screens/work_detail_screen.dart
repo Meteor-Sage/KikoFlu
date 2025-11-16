@@ -18,6 +18,7 @@ import '../widgets/responsive_dialog.dart';
 import '../widgets/work_bookmark_manager.dart';
 import '../widgets/review_progress_dialog.dart';
 import '../widgets/rating_detail_popup.dart';
+import '../services/translation_service.dart';
 
 class WorkDetailScreen extends ConsumerStatefulWidget {
   final Work work;
@@ -41,6 +42,11 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
   bool _isUpdatingProgress = false; // 是否正在更新状态
   bool _isOpeningFileSelection = false; // iOS上防止快速重复点击造成对话框立即关闭
   bool _isOpeningProgressDialog = false; // 防止标记状态对话框重复快速打开
+
+  // 翻译相关状态
+  String? _translatedTitle; // 翻译后的标题
+  bool _showTranslation = false; // 是否显示翻译
+  bool _isTranslating = false; // 是否正在翻译
 
   @override
   void initState() {
@@ -81,6 +87,53 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
     } catch (e) {
       // 预加载失败，保持使用缓存图片
       debugPrint('HD image preload failed: $e');
+    }
+  }
+
+  // 翻译标题
+  Future<void> _translateTitle() async {
+    if (_isTranslating) return;
+
+    final work = _detailedWork ?? widget.work;
+
+    // 如果已有翻译，直接切换显示
+    if (_translatedTitle != null) {
+      setState(() {
+        _showTranslation = !_showTranslation;
+      });
+      return;
+    }
+
+    setState(() {
+      _isTranslating = true;
+    });
+
+    try {
+      final translationService = TranslationService();
+      final translated =
+          await translationService.translate(work.title, sourceLang: 'ja');
+
+      if (mounted) {
+        setState(() {
+          _translatedTitle = translated;
+          _showTranslation = true;
+          _isTranslating = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isTranslating = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('翻译失败: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
     }
   }
 
@@ -139,6 +192,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                     description: _detailedWork!.description,
                     children: _detailedWork!.children,
                     sourceUrl: _detailedWork!.sourceUrl,
+                    otherLanguageEditions: _detailedWork!.otherLanguageEditions,
                   );
                 }
               }
@@ -288,6 +342,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
       images: baseWork.images,
       description: baseWork.description,
       children: audioFiles,
+      otherLanguageEditions: baseWork.otherLanguageEditions,
     );
   }
 
@@ -639,7 +694,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                         ],
                       ),
                       child: Text(
-                        'CC',
+                        '字幕',
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onPrimary,
                           fontSize: 11,
@@ -665,26 +720,73 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
         children: [
           // 标题（可长按复制）+ 内联字幕图标（紧跟标题最后一个字，不换行）
           GestureDetector(
-            onLongPress: () => _copyToClipboard(work.title, '标题'),
+            onLongPress: () => _copyToClipboard(
+              _showTranslation && _translatedTitle != null
+                  ? _translatedTitle!
+                  : work.title,
+              '标题',
+            ),
             child: Text.rich(
               TextSpan(
                 children: [
-                  TextSpan(text: work.title),
+                  TextSpan(
+                    text: _showTranslation && _translatedTitle != null
+                        ? _translatedTitle
+                        : work.title,
+                  ),
                   if (work.sourceUrl != null)
                     WidgetSpan(
                       alignment: PlaceholderAlignment.middle,
                       child: Padding(
                         padding: const EdgeInsets.only(left: 6),
-                        child: GestureDetector(
-                          onTap: () => _openSourceUrl(work.sourceUrl!),
-                          child: Icon(
-                            Icons.open_in_new,
-                            size: 18,
-                            color: Theme.of(context).colorScheme.primary,
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: GestureDetector(
+                            onTap: () => _openSourceUrl(work.sourceUrl!),
+                            child: Icon(
+                              Icons.open_in_new,
+                              size: 18,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
                           ),
                         ),
                       ),
                     ),
+                  // 翻译按钮
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.middle,
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 6),
+                      child: MouseRegion(
+                        cursor: _isTranslating
+                            ? SystemMouseCursors.basic
+                            : SystemMouseCursors.click,
+                        child: GestureDetector(
+                          onTap: _isTranslating ? null : _translateTitle,
+                          child: _isTranslating
+                              ? SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.g_translate,
+                                  size: 18,
+                                  color: _showTranslation
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withOpacity(0.6),
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -915,28 +1017,34 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                 if (work.name != null &&
                     work.name!.isNotEmpty &&
                     work.circleId != null)
-                  CircleChip(
-                    circleId: work.circleId!,
-                    circleName: work.name!,
-                    fontSize: 12,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    borderRadius: 6,
-                    fontWeight: FontWeight.w500,
-                    onLongPress: () => _copyToClipboard(work.name!, '社团'),
-                  ),
-
-                // 声优列表
-                if (work.vas != null && work.vas!.isNotEmpty)
-                  ...work.vas!.map((va) {
-                    return VaChip(
-                      va: va,
+                  MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: CircleChip(
+                      circleId: work.circleId!,
+                      circleName: work.name!,
                       fontSize: 12,
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 4),
                       borderRadius: 6,
                       fontWeight: FontWeight.w500,
-                      onLongPress: () => _copyToClipboard(va.name, '声优'),
+                      onLongPress: () => _copyToClipboard(work.name!, '社团'),
+                    ),
+                  ),
+
+                // 声优列表
+                if (work.vas != null && work.vas!.isNotEmpty)
+                  ...work.vas!.map((va) {
+                    return MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: VaChip(
+                        va: va,
+                        fontSize: 12,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        borderRadius: 6,
+                        fontWeight: FontWeight.w500,
+                        onLongPress: () => _copyToClipboard(va.name, '声优'),
+                      ),
                     );
                   }).toList(),
               ],
@@ -946,44 +1054,58 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
 
           // 标签信息
           if (work.tags != null && work.tags!.isNotEmpty) ...[
+            Text(
+              '标签',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+            ),
+            const SizedBox(height: 8),
             Wrap(
               spacing: 4,
               runSpacing: 4,
               children: [
                 ...work.tags!
-                    .map((tag) => GestureDetector(
-                          onSecondaryTapDown: (details) {
-                            // 桌面端右键支持
-                            _showTagInfo(tag);
-                          },
-                          child: TagChip(
-                            tag: tag,
-                            fontSize: 11,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 3),
-                            borderRadius: 6,
-                            fontWeight: FontWeight.w500,
-                            onLongPress: () => _showTagInfo(tag),
+                    .map((tag) => MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: GestureDetector(
+                            onSecondaryTapDown: (details) {
+                              // 桌面端右键支持
+                              _showTagInfo(tag);
+                            },
+                            child: TagChip(
+                              tag: tag,
+                              fontSize: 12,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              borderRadius: 6,
+                              fontWeight: FontWeight.w500,
+                              onLongPress: () => _showTagInfo(tag),
+                            ),
                           ),
                         ))
                     .toList(),
                 // 添加标签按钮
-                GestureDetector(
-                  onTap: _showAddTagDialog,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .primaryContainer
-                          .withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Icon(
-                      Icons.add,
-                      size: 16,
-                      color: Theme.of(context).colorScheme.primary,
+                MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                    onTap: _showAddTagDialog,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primaryContainer
+                            .withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Icon(
+                        Icons.add,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                     ),
                   ),
                 ),
@@ -1042,7 +1164,79 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                     fontSize: 14,
                   ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
+          ],
+
+          // 其他语言版本
+          if (work.otherLanguageEditions != null &&
+              work.otherLanguageEditions!.isNotEmpty) ...[
+            Text(
+              '其他版本',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 4,
+              runSpacing: 4,
+              children: work.otherLanguageEditions!.map((edition) {
+                return InkWell(
+                  onTap: () {
+                    // 导航到其他语言版本的作品详情页
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => WorkDetailScreen(
+                          work: Work(
+                            id: edition.id,
+                            title: edition.title,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(6),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .secondaryContainer
+                          .withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.translate,
+                          size: 14,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSecondaryContainer,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '「${edition.lang}」',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSecondaryContainer,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
           ],
 
           // 播放按钮 - 替换为文件浏览器

@@ -231,6 +231,28 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
     return parentPath.isEmpty ? title : '$parentPath/$title';
   }
 
+  // 格式化持续时间（秒 -> 时:分:秒 或 分:秒）
+  String _formatDuration(dynamic durationValue) {
+    if (durationValue == null) return '';
+
+    // duration 可能是整数（秒）或浮点数（秒）
+    final totalSeconds = durationValue is int
+        ? durationValue
+        : (durationValue is double ? durationValue.toInt() : 0);
+
+    if (totalSeconds <= 0) return '';
+
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
+    final seconds = totalSeconds % 60;
+
+    if (hours > 0) {
+      return '$hours:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    } else {
+      return '$minutes:${seconds.toString().padLeft(2, '0')}';
+    }
+  }
+
   void _playAudioFile(dynamic audioFile, String parentPath) async {
     final authState = ref.read(authProvider);
     final host = authState.host ?? '';
@@ -950,7 +972,7 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                // 文件名（已下载文件带遮罩）
+                // 文件名（已下载文件带遮罩）+ 持续时间
                 Expanded(
                   child: Opacity(
                     opacity: type != 'folder' &&
@@ -958,12 +980,28 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
                             (_downloadedFiles[item['hash']] ?? false)
                         ? 0.5
                         : 1.0,
-                    child: Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w400,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        // 显示持续时间（仅音频和视频）
+                        if ((type == 'audio' ||
+                                FileIconUtils.isVideoFile(item)) &&
+                            item['duration'] != null)
+                          Text(
+                            _formatDuration(item['duration']),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ),
