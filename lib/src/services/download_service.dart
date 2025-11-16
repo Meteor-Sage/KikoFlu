@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import '../models/download_task.dart';
 import 'cache_service.dart';
 import 'storage_service.dart';
+import 'kikoeru_api_service.dart';
 
 class DownloadService {
   static DownloadService? _instance;
@@ -463,6 +464,147 @@ class DownloadService {
     });
   }
 
+  // 升级旧版本的作品文件夹（尝试从 API 获取元数据）
+  Future<void> _upgradeOldWorkFolders(Map<int, Directory> workFolders) async {
+    for (final entry in workFolders.entries) {
+      final workId = entry.key;
+      final workDir = entry.value;
+
+      // 检查是否已有元数据文件
+      final metadataFile = File('${workDir.path}/work_metadata.json');
+      if (await metadataFile.exists()) {
+        continue; // 已有元数据，跳过
+      }
+
+      print('[Download] 发现旧版本作品文件夹，尝试升级: RJ$workId');
+
+      try {
+        // 创建 API 服务实例尝试获取元数据
+        final apiService = KikoeruApiService();
+
+        // 获取作品详情
+        final workData = await apiService.getWork(workId);
+
+        // 获取文件树
+        final tracks = await apiService.getWorkTracks(workId);
+
+        // 将 tracks 转换为 children 格式并添加到 workData
+        workData['children'] = tracks;
+
+        // 保存元数据（使用相对路径）
+        workData['localCoverPath'] = 'cover.jpg';
+        await metadataFile.writeAsString(jsonEncode(workData));
+        print('[Download] 已保存作品元数据: RJ$workId');
+
+        // 下载封面（使用高清封面 URL）
+        final host = StorageService.getString('server_host') ?? '';
+        final token = StorageService.getString('auth_token') ?? '';
+
+        if (host.isNotEmpty) {
+          String normalizedHost = host;
+          if (!host.startsWith('http://') && !host.startsWith('https://')) {
+            normalizedHost = 'https://$host';
+          }
+
+          final coverUrl = token.isNotEmpty
+              ? '$normalizedHost/api/cover/$workId?token=$token'
+              : '$normalizedHost/api/cover/$workId';
+
+          await _downloadCoverImage(workId, coverUrl);
+          print('[Download] 已下载作品封面: RJ$workId');
+        }
+
+        // 尝试组织文件树结构
+        await _organizeFilesIntoTree(workId, workDir, tracks);
+
+        print('[Download] 作品升级成功: RJ$workId');
+      } catch (e) {
+        print('[Download] 升级作品失败 RJ$workId: $e');
+        // 升级失败不影响继续运行，保持原有文件不变
+      }
+    }
+  }
+
+  // 将扁平的文件结构组织成树形结构
+  Future<void> _organizeFilesIntoTree(
+      int workId, Directory workDir, List<dynamic> tracks) async {
+    try {
+      // 构建文件树映射：hash -> 相对路径
+      final Map<String, String> hashToPath = {};
+
+      void buildPathMap(List<dynamic> items, String parentPath) {
+        for (final item in items) {
+          final type = item['type'] as String?;
+          final title =
+              item['title'] as String? ?? item['name'] as String? ?? '';
+          final hash = item['hash'] as String?;
+
+          if (type == 'folder') {
+            // 文件夹，递归处理子项
+            final folderPath =
+                parentPath.isEmpty ? title : '$parentPath/$title';
+            final children = item['children'] as List<dynamic>?;
+            if (children != null) {
+              buildPathMap(children, folderPath);
+            }
+          } else if (hash != null) {
+            // 文件，记录路径映射
+            final filePath = parentPath.isEmpty ? title : '$parentPath/$title';
+            hashToPath[hash] = filePath;
+          }
+        }
+      }
+
+      buildPathMap(tracks, '');
+
+      // 扫描工作目录中的所有文件
+      await for (final entity in workDir.list()) {
+        if (entity is File) {
+          final fileName = entity.path.split(Platform.pathSeparator).last;
+
+          // 跳过元数据和封面文件
+          if (fileName == 'work_metadata.json' || fileName == 'cover.jpg') {
+            continue;
+          }
+
+          // 尝试从文件树中找到对应的路径
+          String? targetPath;
+          for (final entry in hashToPath.entries) {
+            final expectedFileName = entry.value.split('/').last;
+            if (expectedFileName == fileName) {
+              targetPath = entry.value;
+              break;
+            }
+          }
+
+          // 如果找到了对应路径且包含目录，则移动文件
+          if (targetPath != null && targetPath.contains('/')) {
+            final targetFile = File('${workDir.path}/$targetPath');
+
+            // 创建目标目录
+            await targetFile.parent.create(recursive: true);
+
+            // 移动文件
+            try {
+              await entity.rename(targetFile.path);
+              print('[Download] 文件已重新组织: $fileName -> $targetPath');
+            } catch (e) {
+              // 如果 rename 失败（跨文件系统），尝试复制后删除
+              await entity.copy(targetFile.path);
+              await entity.delete();
+              print('[Download] 文件已复制并重新组织: $fileName -> $targetPath');
+            }
+          }
+        }
+      }
+
+      print('[Download] 文件树结构组织完成: RJ$workId');
+    } catch (e) {
+      print('[Download] 组织文件树失败 RJ$workId: $e');
+      // 失败不影响继续运行
+    }
+  }
+
   Future<void> _loadTasks() async {
     try {
       final prefs = await StorageService.getPrefs();
@@ -537,13 +679,16 @@ class DownloadService {
         print('[Download] 删除了 ${tasksToRemove.length} 个不存在的任务');
       }
 
-      // 第二步：扫描硬盘上的所有文件，添加新发现的任务
+      // 第二步：检查并升级旧版本文件（没有元数据的文件）
+      await _upgradeOldWorkFolders(workFolders);
+
+      // 第三步：扫描硬盘上的所有文件，添加新发现的任务
       final newTasks = <DownloadTask>[];
       for (final entry in workFolders.entries) {
         final workId = entry.key;
         final workDir = entry.value;
 
-        // 加载元数据
+        // 加载元数据（现在可能已经通过升级创建了）
         final metadata = await _loadWorkMetadata(workId);
         final workTitle = metadata?['title'] as String? ?? 'RJ$workId';
 
