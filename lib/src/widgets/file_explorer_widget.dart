@@ -12,6 +12,7 @@ import '../providers/auth_provider.dart';
 import '../providers/audio_provider.dart';
 import '../providers/lyric_provider.dart';
 import '../services/download_service.dart';
+import '../services/cache_service.dart';
 import '../utils/file_icon_utils.dart';
 import 'responsive_dialog.dart';
 import 'image_gallery_screen.dart';
@@ -372,10 +373,10 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
       final fileHash = file['hash'];
       final fileTitle = file['title'] ?? file['name'] ?? '未知';
 
-      // 优先使用本地下载的文件
+      // 优先级: 本地下载文件 → 缓存文件 → 网络URL
       String audioUrl = '';
       if (fileHash != null) {
-        // 检查是否有本地下载的文件
+        // 1. 检查是否有本地下载的文件
         final localPath = await downloadService.getDownloadedFilePath(
           widget.work.id,
           fileHash,
@@ -384,6 +385,7 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
         if (localPath != null) {
           // 使用本地文件（file:// 协议）
           audioUrl = 'file://$localPath';
+          print('[FileExplorer] 使用本地下载的音频: $fileHash');
         } else if (_downloadedFiles[fileHash] == true) {
           // 检查是否是手动复制的本地文件
           final relativePath = _fileRelativePaths[fileHash];
@@ -393,12 +395,22 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
                 File('${downloadDir.path}/${widget.work.id}/$relativePath');
             if (await localFile.exists()) {
               audioUrl = 'file://${localFile.path}';
+              print('[FileExplorer] 使用手动复制的音频: $fileHash');
             }
+          }
+        }
+
+        // 2. 如果没有本地文件，检查缓存
+        if (audioUrl.isEmpty) {
+          final cachedPath = await CacheService.getCachedAudioFile(fileHash);
+          if (cachedPath != null) {
+            audioUrl = 'file://$cachedPath';
+            print('[FileExplorer] 使用缓存的音频: $fileHash');
           }
         }
       }
 
-      // 如果没有本地文件，使用网络URL
+      // 3. 如果缓存也没有，使用网络URL
       if (audioUrl.isEmpty) {
         if (file['mediaStreamUrl'] != null &&
             file['mediaStreamUrl'].toString().isNotEmpty) {
