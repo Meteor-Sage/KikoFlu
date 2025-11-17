@@ -303,11 +303,41 @@ class DownloadService {
     final cancelToken = CancelToken();
     _cancelTokens[task.id] = cancelToken;
 
-    // 节流：限制进度更新频率
-    int lastUpdateTime = 0;
-    const updateInterval = 500; // 500ms 更新一次
-
     try {
+      // 先检查缓存中是否已有此文件
+      if (task.hash != null && task.hash!.isNotEmpty) {
+        final fileType = task.fileName.split('.').last.toLowerCase();
+        final cachedPath = await CacheService.getCachedFileResource(
+          workId: task.workId,
+          hash: task.hash!,
+          fileType: fileType,
+        );
+
+        if (cachedPath != null) {
+          // 缓存存在,直接复制文件
+          print('[Download] 从缓存复制文件: $cachedPath -> $filePath');
+          final cachedFile = File(cachedPath);
+          if (await cachedFile.exists()) {
+            await cachedFile.copy(filePath);
+
+            final completedTask = task.copyWith(
+              status: DownloadStatus.completed,
+              completedAt: DateTime.now(),
+              downloadedBytes: await file.length(),
+              totalBytes: await file.length(),
+            );
+            _updateTask(completedTask, immediate: true);
+            _cancelTokens.remove(task.id);
+            return;
+          }
+        }
+      }
+
+      // 缓存不存在,从网络下载
+      // 节流：限制进度更新频率
+      int lastUpdateTime = 0;
+      const updateInterval = 500; // 500ms 更新一次
+
       await _dio.download(
         task.downloadUrl,
         filePath,

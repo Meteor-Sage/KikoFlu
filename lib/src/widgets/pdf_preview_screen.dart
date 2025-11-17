@@ -43,12 +43,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
 
   @override
   void dispose() {
-    if (_localFilePath != null) {
-      final file = File(_localFilePath!);
-      if (file.existsSync()) {
-        file.deleteSync();
-      }
-    }
+    // 不删除任何文件,让临时文件作为缓存使用
     super.dispose();
   }
 
