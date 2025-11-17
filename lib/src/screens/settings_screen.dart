@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'account_management_screen.dart';
-import 'downloads_screen.dart';
 import 'download_path_settings_screen.dart';
 import 'theme_settings_screen.dart';
 import 'player_buttons_settings_screen.dart';
+import 'audio_format_settings_screen.dart';
 import 'about_screen.dart';
 import '../providers/settings_provider.dart';
 import '../providers/update_provider.dart';
@@ -160,7 +160,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget _buildAccountCard(BuildContext context) {
     return Card(
       child: ListTile(
-        leading: const Icon(Icons.manage_accounts),
+        leading: Icon(Icons.manage_accounts,
+            color: Theme.of(context).colorScheme.primary),
         title: const Text('账户管理'),
         subtitle: const Text('多账户管理,切换账户'),
         trailing: const Icon(Icons.arrow_forward_ios),
@@ -180,21 +181,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       child: Column(
         children: [
           ListTile(
-            leading: const Icon(Icons.download),
-            title: const Text('下载管理'),
-            subtitle: const Text('查看和管理下载任务'),
-            trailing: const Icon(Icons.arrow_forward_ios),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const DownloadsScreen(),
-                ),
-              );
-            },
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.folder_outlined),
+            leading: Icon(Icons.folder_outlined,
+                color: Theme.of(context).colorScheme.primary),
             title: const Text('下载路径'),
             subtitle: const Text('自定义下载文件保存位置'),
             trailing: const Icon(Icons.arrow_forward_ios),
@@ -206,9 +194,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               );
             },
           ),
-          const Divider(),
+          Divider(color: Theme.of(context).colorScheme.outlineVariant),
           ListTile(
-            leading: const Icon(Icons.storage),
+            leading: Icon(Icons.storage,
+                color: Theme.of(context).colorScheme.primary),
             title: const Text('缓存管理'),
             subtitle: Text('当前缓存: $_cacheSize'),
             trailing: const Icon(Icons.arrow_forward_ios),
@@ -226,7 +215,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       child: Column(
         children: [
           ListTile(
-            leading: const Icon(Icons.palette),
+            leading: Icon(Icons.palette,
+                color: Theme.of(context).colorScheme.primary),
             title: const Text('主题设置'),
             subtitle: const Text('深色模式、主题色等'),
             trailing: const Icon(Icons.arrow_forward_ios),
@@ -238,9 +228,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               );
             },
           ),
-          const Divider(),
+          Divider(color: Theme.of(context).colorScheme.outlineVariant),
           ListTile(
-            leading: const Icon(Icons.tune),
+            leading:
+                Icon(Icons.tune, color: Theme.of(context).colorScheme.primary),
             title: const Text('播放器按钮'),
             subtitle: const Text('自定义播放器控制按钮顺序'),
             trailing: const Icon(Icons.arrow_forward_ios),
@@ -252,45 +243,110 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               );
             },
           ),
-          const Divider(),
+          Divider(color: Theme.of(context).colorScheme.outlineVariant),
           ListTile(
-            leading: Stack(
-              children: [
-                const Icon(Icons.info_outline),
-                // Red dot indicator for updates
-                Consumer(
-                  builder: (context, ref, _) {
-                    final showRedDot = ref.watch(showUpdateRedDotProvider);
-                    if (!showRedDot) return const SizedBox.shrink();
-
-                    return Positioned(
-                      right: 0,
-                      top: 0,
-                      child: Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Theme.of(context).colorScheme.surface,
-                            width: 1,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-            title: const Text('关于'),
-            subtitle: const Text('检查更新、许可证等'),
+            leading: Icon(Icons.audio_file,
+                color: Theme.of(context).colorScheme.primary),
+            title: const Text('音频格式偏好'),
+            subtitle: const Text('设置音频格式的优先级顺序'),
             trailing: const Icon(Icons.arrow_forward_ios),
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => const AboutScreen(),
+                  builder: (context) => const AudioFormatSettingsScreen(),
                 ),
+              );
+            },
+          ),
+          Divider(color: Theme.of(context).colorScheme.outlineVariant),
+          Consumer(
+            builder: (context, ref, _) {
+              final showRedDot = ref.watch(showUpdateRedDotProvider);
+              final hasNewVersion = ref.watch(hasNewVersionProvider);
+
+              return ListTile(
+                leading: Stack(
+                  children: [
+                    Icon(Icons.info_outline,
+                        color: Theme.of(context).colorScheme.primary),
+                    // Red dot indicator for updates (only when not notified)
+                    if (showRedDot)
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Theme.of(context).colorScheme.surface,
+                              width: 1,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                title: const Text('关于'),
+                subtitle: const Text('检查更新、许可证等'),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (hasNewVersion)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Theme.of(context).colorScheme.primaryContainer,
+                              Theme.of(context).colorScheme.secondaryContainer,
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.new_releases,
+                              size: 14,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '有新版本',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.arrow_forward_ios),
+                  ],
+                ),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const AboutScreen(),
+                    ),
+                  );
+                },
               );
             },
           ),

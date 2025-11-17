@@ -85,42 +85,156 @@ class ThemeSettingsScreen extends ConsumerWidget {
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Text(
-                    '颜色方案',
+                    '颜色主题',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                   ),
                 ),
-                RadioListTile<ColorSchemeType>(
-                  title: const Text('默认主题'),
-                  subtitle: const Text('使用应用内置的默认配色'),
-                  value: ColorSchemeType.defaultTheme,
-                  groupValue: themeSettings.colorSchemeType,
-                  onChanged: (value) {
-                    if (value != null) {
-                      ref
-                          .read(themeSettingsProvider.notifier)
-                          .setColorSchemeType(value);
-                    }
-                  },
+                _buildColorSchemeOption(
+                  context,
+                  ref,
+                  themeSettings,
+                  ColorSchemeType.oceanBlue,
+                  '胖次蓝',
+                  '蓝蓝路，蓝蓝路！',
+                  const Color(0xFF146683),
                 ),
-                RadioListTile<ColorSchemeType>(
-                  title: const Text('系统动态取色'),
-                  subtitle: const Text('使用系统壁纸的颜色 (Android 12+)'),
-                  value: ColorSchemeType.dynamic,
-                  groupValue: themeSettings.colorSchemeType,
-                  onChanged: (value) {
-                    if (value != null) {
-                      ref
-                          .read(themeSettingsProvider.notifier)
-                          .setColorSchemeType(value);
-                    }
+                _buildColorSchemeOption(
+                  context,
+                  ref,
+                  themeSettings,
+                  ColorSchemeType.sakuraPink,
+                  '哔哩粉',
+                  '( ゜- ゜)つロ 乾杯~',
+                  const Color(0xFFB4276E),
+                ),
+                _buildColorSchemeOption(
+                  context,
+                  ref,
+                  themeSettings,
+                  ColorSchemeType.sunsetOrange,
+                  '今日橙',
+                  '软件一定要能换主题✍🏻✍🏻✍🏻',
+                  const Color(0xFF904D00),
+                ),
+                _buildColorSchemeOption(
+                  context,
+                  ref,
+                  themeSettings,
+                  ColorSchemeType.lavenderPurple,
+                  '基佬紫',
+                  '兄弟，兄弟...',
+                  const Color(0xFF6750A4),
+                ),
+                _buildColorSchemeOption(
+                  context,
+                  ref,
+                  themeSettings,
+                  ColorSchemeType.forestGreen,
+                  '青草绿',
+                  '艹艹艹',
+                  const Color(0xFF3A6F41),
+                ),
+                const Divider(),
+                InkWell(
+                  onTap: () {
+                    ref
+                        .read(themeSettingsProvider.notifier)
+                        .setColorSchemeType(ColorSchemeType.dynamic);
                   },
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Row(
+                      children: [
+                        // 彩色渐变圆圈
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [
+                                Color(0xFFE91E63), // Pink
+                                Color(0xFF9C27B0), // Purple
+                                Color(0xFF2196F3), // Blue
+                                Color(0xFF4CAF50), // Green
+                                Color(0xFFFFEB3B), // Yellow
+                                Color(0xFFFF5722), // Orange
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: themeSettings.colorSchemeType ==
+                                      ColorSchemeType.dynamic
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Colors.transparent,
+                              width: 2.5,
+                            ),
+                          ),
+                          child: themeSettings.colorSchemeType ==
+                                  ColorSchemeType.dynamic
+                              ? const Icon(
+                                  Icons.check,
+                                  color: Colors.white,
+                                  size: 16,
+                                )
+                              : null,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '系统动态取色',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(
+                                      fontWeight:
+                                          themeSettings.colorSchemeType ==
+                                                  ColorSchemeType.dynamic
+                                              ? FontWeight.bold
+                                              : FontWeight.normal,
+                                    ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '使用系统壁纸的颜色 (Android 12+)',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Radio<ColorSchemeType>(
+                          value: ColorSchemeType.dynamic,
+                          groupValue: themeSettings.colorSchemeType,
+                          onChanged: (value) {
+                            if (value != null) {
+                              ref
+                                  .read(themeSettingsProvider.notifier)
+                                  .setColorSchemeType(value);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
                 const Padding(
-                  padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  padding: EdgeInsets.fromLTRB(16, 8, 16, 16),
                   child: Text(
-                    '提示：系统动态取色功能需要 Android 12 或更高版本。在不支持的设备上会自动使用默认主题。',
+                    '提示：系统动态取色功能需要 Android 12 或更高版本',
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.grey,
@@ -244,6 +358,95 @@ class ThemeSettingsScreen extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildColorSchemeOption(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeSettings themeSettings,
+    ColorSchemeType type,
+    String title,
+    String subtitle,
+    Color previewColor,
+  ) {
+    final isSelected = themeSettings.colorSchemeType == type;
+
+    return InkWell(
+      onTap: () {
+        ref.read(themeSettingsProvider.notifier).setColorSchemeType(type);
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          children: [
+            // 颜色预览圆圈
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: previewColor,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isSelected
+                      ? Theme.of(context).colorScheme.primary
+                      : Colors.transparent,
+                  width: 2.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: previewColor.withOpacity(0.3),
+                    blurRadius: 6,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+              child: isSelected
+                  ? Icon(
+                      Icons.check,
+                      color: Colors.white,
+                      size: 16,
+                    )
+                  : null,
+            ),
+            const SizedBox(width: 12),
+            // 标题和副标题
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            // 选中的单选按钮
+            Radio<ColorSchemeType>(
+              value: type,
+              groupValue: themeSettings.colorSchemeType,
+              onChanged: (value) {
+                if (value != null) {
+                  ref
+                      .read(themeSettingsProvider.notifier)
+                      .setColorSchemeType(value);
+                }
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

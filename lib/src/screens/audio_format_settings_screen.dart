@@ -1,69 +1,37 @@
-import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../providers/player_buttons_provider.dart';
+import '../providers/settings_provider.dart';
 import '../widgets/scrollable_appbar.dart';
 
-/// 播放器按钮设置页面
-class PlayerButtonsSettingsScreen extends ConsumerStatefulWidget {
-  const PlayerButtonsSettingsScreen({super.key});
+class AudioFormatSettingsScreen extends ConsumerStatefulWidget {
+  const AudioFormatSettingsScreen({super.key});
 
   @override
-  ConsumerState<PlayerButtonsSettingsScreen> createState() =>
-      _PlayerButtonsSettingsScreenState();
+  ConsumerState<AudioFormatSettingsScreen> createState() =>
+      _AudioFormatSettingsScreenState();
 }
 
-class _PlayerButtonsSettingsScreenState
-    extends ConsumerState<PlayerButtonsSettingsScreen> {
-  final bool _isDesktop = !Platform.isAndroid && !Platform.isIOS;
-  late List<PlayerButtonType> _buttonOrder;
+class _AudioFormatSettingsScreenState
+    extends ConsumerState<AudioFormatSettingsScreen> {
+  late List<AudioFormat> _formatOrder;
 
   @override
   void initState() {
     super.initState();
     // 延迟初始化以确保provider已经加载
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final config = _isDesktop
-          ? ref.read(playerButtonsConfigDesktopProvider)
-          : ref.read(playerButtonsConfigMobileProvider);
+      final preference = ref.read(audioFormatPreferenceProvider);
       setState(() {
-        _buttonOrder = List.from(config.buttonOrder);
+        _formatOrder = List.from(preference.priority);
       });
     });
   }
 
-  IconData _getButtonIcon(PlayerButtonType type) {
-    switch (type) {
-      case PlayerButtonType.seekBackward:
-        return Icons.replay_10;
-      case PlayerButtonType.seekForward:
-        return Icons.forward_10;
-      case PlayerButtonType.sleepTimer:
-        return Icons.timer;
-      case PlayerButtonType.volume:
-        return Icons.volume_up;
-      case PlayerButtonType.mark:
-        return Icons.bookmark_border;
-      case PlayerButtonType.detail:
-        return Icons.info_outline;
-      case PlayerButtonType.speed:
-        return Icons.speed;
-      case PlayerButtonType.repeat:
-        return Icons.repeat;
-    }
-  }
-
   Future<void> _saveSettings() async {
-    if (_isDesktop) {
-      await ref
-          .read(playerButtonsConfigDesktopProvider.notifier)
-          .updateButtonOrder(_buttonOrder);
-    } else {
-      await ref
-          .read(playerButtonsConfigMobileProvider.notifier)
-          .updateButtonOrder(_buttonOrder);
-    }
+    await ref
+        .read(audioFormatPreferenceProvider.notifier)
+        .updatePriority(_formatOrder);
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -78,7 +46,7 @@ class _PlayerButtonsSettingsScreenState
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('恢复默认设置'),
-        content: const Text('确定要恢复默认的按钮顺序吗？'),
+        content: const Text('确定要恢复默认的音频格式优先级吗？'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -93,23 +61,11 @@ class _PlayerButtonsSettingsScreenState
     );
 
     if (confirmed == true && mounted) {
-      if (_isDesktop) {
-        await ref
-            .read(playerButtonsConfigDesktopProvider.notifier)
-            .resetToDefault();
-        final config = ref.read(playerButtonsConfigDesktopProvider);
-        setState(() {
-          _buttonOrder = List.from(config.buttonOrder);
-        });
-      } else {
-        await ref
-            .read(playerButtonsConfigMobileProvider.notifier)
-            .resetToDefault();
-        final config = ref.read(playerButtonsConfigMobileProvider);
-        setState(() {
-          _buttonOrder = List.from(config.buttonOrder);
-        });
-      }
+      await ref.read(audioFormatPreferenceProvider.notifier).resetToDefault();
+      final preference = ref.read(audioFormatPreferenceProvider);
+      setState(() {
+        _formatOrder = List.from(preference.priority);
+      });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -121,11 +77,9 @@ class _PlayerButtonsSettingsScreenState
 
   @override
   Widget build(BuildContext context) {
-    final maxVisible = _isDesktop ? 5 : 4;
-
     return Scaffold(
       appBar: ScrollableAppBar(
-        title: const Text('播放器按钮设置', style: TextStyle(fontSize: 18)),
+        title: const Text('音频格式优先级', style: TextStyle(fontSize: 18)),
         actions: [
           TextButton.icon(
             onPressed: _resetToDefault,
@@ -135,7 +89,7 @@ class _PlayerButtonsSettingsScreenState
           const SizedBox(width: 8),
         ],
       ),
-      body: _buttonOrder.isEmpty
+      body: _formatOrder.isEmpty
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
@@ -151,65 +105,89 @@ class _PlayerButtonsSettingsScreenState
                           children: [
                             Icon(
                               Icons.info_outline,
+                              size: 20,
                               color: Theme.of(context).colorScheme.primary,
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              '按钮显示规则',
-                              style: Theme.of(context).textTheme.titleMedium,
+                              '优先级说明',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleSmall
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 12),
-                        Text(
-                          '• 前 $maxVisible 个按钮会显示在播放器底部\n'
-                          '• 其余按钮会收纳在"更多"菜单中\n'
-                          '• 长按拖动可调整按钮顺序',
-                          style: Theme.of(context).textTheme.bodyMedium,
+                        const Text(
+                          '• 打开作品详情页时，会优先展开包含优先级更高格式音频的文件夹\n'
+                          '• 拖动格式卡片可以调整优先级顺序\n'
+                          '• 靠前的格式优先级更高',
+                          style: TextStyle(fontSize: 12, height: 1.5),
                         ),
                       ],
                     ),
                   ),
                 ),
-                // 按钮列表
+
+                // 格式列表
                 Expanded(
                   child: ReorderableListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: _buttonOrder.length,
+                    itemCount: _formatOrder.length,
                     onReorder: (oldIndex, newIndex) {
                       setState(() {
                         if (newIndex > oldIndex) {
                           newIndex -= 1;
                         }
-                        final item = _buttonOrder.removeAt(oldIndex);
-                        _buttonOrder.insert(newIndex, item);
+                        final item = _formatOrder.removeAt(oldIndex);
+                        _formatOrder.insert(newIndex, item);
                       });
                     },
                     itemBuilder: (context, index) {
-                      final button = _buttonOrder[index];
-                      final isVisible = index < maxVisible;
-
+                      final format = _formatOrder[index];
                       return Card(
-                        key: ValueKey(button),
+                        key: ValueKey(format),
                         margin: const EdgeInsets.only(bottom: 8),
                         child: ListTile(
-                          leading: Icon(
-                            _getButtonIcon(button),
-                            color: isVisible
-                                ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
-                          ),
-                          title: Text(button.label),
-                          subtitle: Text(
-                            isVisible ? '显示在播放器' : '显示在更多菜单',
-                            style: TextStyle(
-                              color: isVisible
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Theme.of(context)
+                          leading: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primaryContainer,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Text(
+                                '${index + 1}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: Theme.of(context)
                                       .colorScheme
-                                      .onSurfaceVariant,
+                                      .onPrimaryContainer,
+                                ),
+                              ),
+                            ),
+                          ),
+                          title: Text(
+                            format.displayName,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                          ),
+                          subtitle: Text(
+                            '.${format.extension}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
                             ),
                           ),
                           trailing: ReorderableDragStartListener(
@@ -226,6 +204,7 @@ class _PlayerButtonsSettingsScreenState
                     },
                   ),
                 ),
+
                 // 保存按钮
                 SafeArea(
                   child: Padding(

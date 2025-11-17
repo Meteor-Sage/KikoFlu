@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../providers/theme_provider.dart';
 
 class AppTheme {
   // Windows 平台的字体配置
@@ -43,8 +44,15 @@ class AppTheme {
     return null;
   }
 
-  static ThemeData lightTheme(ColorScheme? lightDynamic) {
-    final colorScheme = lightDynamic ?? _defaultLightColorScheme;
+  static ThemeData lightTheme(ColorScheme? lightDynamic,
+      [ColorSchemeType? themeType]) {
+    final ColorScheme colorScheme;
+    if (lightDynamic != null) {
+      colorScheme = lightDynamic;
+    } else {
+      colorScheme =
+          _getColorScheme(themeType ?? ColorSchemeType.oceanBlue, false);
+    }
 
     return ThemeData(
       useMaterial3: true,
@@ -85,8 +93,15 @@ class AppTheme {
     );
   }
 
-  static ThemeData darkTheme(ColorScheme? darkDynamic) {
-    final colorScheme = darkDynamic ?? _defaultDarkColorScheme;
+  static ThemeData darkTheme(ColorScheme? darkDynamic,
+      [ColorSchemeType? themeType]) {
+    final ColorScheme colorScheme;
+    if (darkDynamic != null) {
+      colorScheme = darkDynamic;
+    } else {
+      colorScheme =
+          _getColorScheme(themeType ?? ColorSchemeType.oceanBlue, true);
+    }
 
     return ThemeData(
       useMaterial3: true,
@@ -127,7 +142,26 @@ class AppTheme {
     );
   }
 
-  static const _defaultLightColorScheme = ColorScheme(
+  // 根据主题类型获取对应的颜色方案
+  static ColorScheme _getColorScheme(ColorSchemeType type, bool isDark) {
+    switch (type) {
+      case ColorSchemeType.oceanBlue:
+        return isDark ? _oceanBlueDark : _oceanBlueLight;
+      case ColorSchemeType.forestGreen:
+        return isDark ? _forestGreenDark : _forestGreenLight;
+      case ColorSchemeType.sunsetOrange:
+        return isDark ? _sunsetOrangeDark : _sunsetOrangeLight;
+      case ColorSchemeType.lavenderPurple:
+        return isDark ? _lavenderPurpleDark : _lavenderPurpleLight;
+      case ColorSchemeType.sakuraPink:
+        return isDark ? _sakuraPinkDark : _sakuraPinkLight;
+      case ColorSchemeType.dynamic:
+        return isDark ? _oceanBlueDark : _oceanBlueLight; // 动态主题的后备方案
+    }
+  }
+
+  // ========== 海洋蓝主题 ==========
+  static const _oceanBlueLight = ColorScheme(
     brightness: Brightness.light,
     primary: Color(0xFF146683),
     onPrimary: Color(0xFFFFFFFF),
@@ -147,17 +181,10 @@ class AppTheme {
     onErrorContainer: Color(0xFF410002),
     surface: Color(0xFFFAFCFF),
     onSurface: Color(0xFF171C1F),
-    surfaceDim: Color(0xFFFAFCFF),
-    surfaceBright: Color(0xFFFAFCFF),
-    surfaceContainerLowest: Color(0xFFFAFCFF),
-    surfaceContainerLow: Color(0xFFFAFCFF),
-    surfaceContainer: Color(0xFFFAFCFF),
-    surfaceContainerHigh: Color(0xFFFAFCFF),
-    surfaceContainerHighest: Color(0xFFFAFCFF),
     onSurfaceVariant: Color(0xFF40484C),
   );
 
-  static const _defaultDarkColorScheme = ColorScheme(
+  static const _oceanBlueDark = ColorScheme(
     brightness: Brightness.dark,
     primary: Color(0xFF8CCFF0),
     onPrimary: Color(0xFF003547),
@@ -175,15 +202,196 @@ class AppTheme {
     onError: Color(0xFF690005),
     errorContainer: Color(0xFF93000A),
     onErrorContainer: Color(0xFFFFB4AB),
-    surface: Color(0xFF171C1F),
+    surface: Color(0xFF0F1417),
     onSurface: Color(0xFFDFE3E7),
-    surfaceDim: Color(0xFF171C1F),
-    surfaceBright: Color(0xFF171C1F),
-    surfaceContainerLowest: Color(0xFF171C1F),
-    surfaceContainerLow: Color(0xFF171C1F),
-    surfaceContainer: Color(0xFF171C1F),
-    surfaceContainerHigh: Color(0xFF171C1F),
-    surfaceContainerHighest: Color(0xFF171C1F),
     onSurfaceVariant: Color(0xFFC0C8CD),
+  );
+
+  // ========== 森林绿主题 ==========
+  static const _forestGreenLight = ColorScheme(
+    brightness: Brightness.light,
+    primary: Color(0xFF3A6F41),
+    onPrimary: Color(0xFFFFFFFF),
+    primaryContainer: Color(0xFFBBF6BD),
+    onPrimaryContainer: Color(0xFF00210A),
+    secondary: Color(0xFF52634F),
+    onSecondary: Color(0xFFFFFFFF),
+    secondaryContainer: Color(0xFFD5E8CF),
+    onSecondaryContainer: Color(0xFF101F10),
+    tertiary: Color(0xFF38656A),
+    onTertiary: Color(0xFFFFFFFF),
+    tertiaryContainer: Color(0xFFBCEBF0),
+    onTertiaryContainer: Color(0xFF002023),
+    error: Color(0xFFBA1A1A),
+    onError: Color(0xFFFFFFFF),
+    errorContainer: Color(0xFFFFDAD6),
+    onErrorContainer: Color(0xFF410002),
+    surface: Color(0xFFFFFBFF),
+    onSurface: Color(0xFF1A1C19),
+    onSurfaceVariant: Color(0xFF424940),
+  );
+
+  static const _forestGreenDark = ColorScheme(
+    brightness: Brightness.dark,
+    primary: Color(0xFFA0D9A3),
+    onPrimary: Color(0xFF0A3917),
+    primaryContainer: Color(0xFF22522A),
+    onPrimaryContainer: Color(0xFFBBF6BD),
+    secondary: Color(0xFFB9CCB4),
+    onSecondary: Color(0xFF243423),
+    secondaryContainer: Color(0xFF3A4B38),
+    onSecondaryContainer: Color(0xFFD5E8CF),
+    tertiary: Color(0xFFA0CFD4),
+    onTertiary: Color(0xFF00363B),
+    tertiaryContainer: Color(0xFF1F4D52),
+    onTertiaryContainer: Color(0xFFBCEBF0),
+    error: Color(0xFFFFB4AB),
+    onError: Color(0xFF690005),
+    errorContainer: Color(0xFF93000A),
+    onErrorContainer: Color(0xFFFFB4AB),
+    surface: Color(0xFF1A1C19),
+    onSurface: Color(0xFFE1E3DF),
+    onSurfaceVariant: Color(0xFFC1C9BF),
+  );
+
+  // ========== 日落橙主题 ==========
+  static const _sunsetOrangeLight = ColorScheme(
+    brightness: Brightness.light,
+    primary: Color(0xFF904D00),
+    onPrimary: Color(0xFFFFFFFF),
+    primaryContainer: Color(0xFFFFDCC2),
+    onPrimaryContainer: Color(0xFF2E1500),
+    secondary: Color(0xFF735A48),
+    onSecondary: Color(0xFFFFFFFF),
+    secondaryContainer: Color(0xFFFFDCC2),
+    onSecondaryContainer: Color(0xFF2A150A),
+    tertiary: Color(0xFF5D5F2E),
+    onTertiary: Color(0xFFFFFFFF),
+    tertiaryContainer: Color(0xFFE2E4A6),
+    onTertiaryContainer: Color(0xFF1A1C00),
+    error: Color(0xFFBA1A1A),
+    onError: Color(0xFFFFFFFF),
+    errorContainer: Color(0xFFFFDAD6),
+    onErrorContainer: Color(0xFF410002),
+    surface: Color(0xFFFFFBFF),
+    onSurface: Color(0xFF201B16),
+    onSurfaceVariant: Color(0xFF50453A),
+  );
+
+  static const _sunsetOrangeDark = ColorScheme(
+    brightness: Brightness.dark,
+    primary: Color(0xFFFFB871),
+    onPrimary: Color(0xFF4D2700),
+    primaryContainer: Color(0xFF6E3900),
+    onPrimaryContainer: Color(0xFFFFDCC2),
+    secondary: Color(0xFFE3C1A8),
+    onSecondary: Color(0xFF42291C),
+    secondaryContainer: Color(0xFF5A3F31),
+    onSecondaryContainer: Color(0xFFFFDCC2),
+    tertiary: Color(0xFFC6C88C),
+    onTertiary: Color(0xFF2F3104),
+    tertiaryContainer: Color(0xFF454819),
+    onTertiaryContainer: Color(0xFFE2E4A6),
+    error: Color(0xFFFFB4AB),
+    onError: Color(0xFF690005),
+    errorContainer: Color(0xFF93000A),
+    onErrorContainer: Color(0xFFFFB4AB),
+    surface: Color(0xFF18130E),
+    onSurface: Color(0xFFEDE0D8),
+    onSurfaceVariant: Color(0xFFD3C4B8),
+  );
+
+  // ========== 薰衣草紫主题 ==========
+  static const _lavenderPurpleLight = ColorScheme(
+    brightness: Brightness.light,
+    primary: Color(0xFF6750A4),
+    onPrimary: Color(0xFFFFFFFF),
+    primaryContainer: Color(0xFFE9DDFF),
+    onPrimaryContainer: Color(0xFF22005D),
+    secondary: Color(0xFF625B71),
+    onSecondary: Color(0xFFFFFFFF),
+    secondaryContainer: Color(0xFFE8DEF8),
+    onSecondaryContainer: Color(0xFF1E192B),
+    tertiary: Color(0xFF7E5260),
+    onTertiary: Color(0xFFFFFFFF),
+    tertiaryContainer: Color(0xFFFFD9E3),
+    onTertiaryContainer: Color(0xFF31101D),
+    error: Color(0xFFBA1A1A),
+    onError: Color(0xFFFFFFFF),
+    errorContainer: Color(0xFFFFDAD6),
+    onErrorContainer: Color(0xFF410002),
+    surface: Color(0xFFFFFBFF),
+    onSurface: Color(0xFF1C1B1E),
+    onSurfaceVariant: Color(0xFF49454E),
+  );
+
+  static const _lavenderPurpleDark = ColorScheme(
+    brightness: Brightness.dark,
+    primary: Color(0xFFCFBCFF),
+    onPrimary: Color(0xFF381E72),
+    primaryContainer: Color(0xFF4F378A),
+    onPrimaryContainer: Color(0xFFE9DDFF),
+    secondary: Color(0xFFCCC2DC),
+    onSecondary: Color(0xFF332D41),
+    secondaryContainer: Color(0xFF4A4458),
+    onSecondaryContainer: Color(0xFFE8DEF8),
+    tertiary: Color(0xFFEFB8C8),
+    onTertiary: Color(0xFF4A2532),
+    tertiaryContainer: Color(0xFF633B48),
+    onTertiaryContainer: Color(0xFFFFD9E3),
+    error: Color(0xFFFFB4AB),
+    onError: Color(0xFF690005),
+    errorContainer: Color(0xFF93000A),
+    onErrorContainer: Color(0xFFFFB4AB),
+    surface: Color(0xFF141218),
+    onSurface: Color(0xFFE6E1E6),
+    onSurfaceVariant: Color(0xFFCAC4CF),
+  );
+
+  // ========== 樱花粉主题 ==========
+  static const _sakuraPinkLight = ColorScheme(
+    brightness: Brightness.light,
+    primary: Color(0xFFB4276E),
+    onPrimary: Color(0xFFFFFFFF),
+    primaryContainer: Color(0xFFFFD8E8),
+    onPrimaryContainer: Color(0xFF3E0025),
+    secondary: Color(0xFF73565E),
+    onSecondary: Color(0xFFFFFFFF),
+    secondaryContainer: Color(0xFFFFD8E1),
+    onSecondaryContainer: Color(0xFF2A151C),
+    tertiary: Color(0xFF7C5635),
+    onTertiary: Color(0xFFFFFFFF),
+    tertiaryContainer: Color(0xFFFFDCC1),
+    onTertiaryContainer: Color(0xFF2E1500),
+    error: Color(0xFFBA1A1A),
+    onError: Color(0xFFFFFFFF),
+    errorContainer: Color(0xFFFFDAD6),
+    onErrorContainer: Color(0xFF410002),
+    surface: Color(0xFFFFFBFF),
+    onSurface: Color(0xFF201A1B),
+    onSurfaceVariant: Color(0xFF514347),
+  );
+
+  static const _sakuraPinkDark = ColorScheme(
+    brightness: Brightness.dark,
+    primary: Color(0xFFFFB0CB),
+    onPrimary: Color(0xFF64003E),
+    primaryContainer: Color(0xFF8E0056),
+    onPrimaryContainer: Color(0xFFFFD8E8),
+    secondary: Color(0xFFE3BDC6),
+    onSecondary: Color(0xFF422930),
+    secondaryContainer: Color(0xFF5A3F47),
+    onSecondaryContainer: Color(0xFFFFD8E1),
+    tertiary: Color(0xFFEDBD94),
+    onTertiary: Color(0xFF48290C),
+    tertiaryContainer: Color(0xFF623F20),
+    onTertiaryContainer: Color(0xFFFFDCC1),
+    error: Color(0xFFFFB4AB),
+    onError: Color(0xFF690005),
+    errorContainer: Color(0xFF93000A),
+    onErrorContainer: Color(0xFFFFB4AB),
+    surface: Color(0xFF1A1A1A),
+    onSurface: Color(0xFFEBE0E1),
+    onSurfaceVariant: Color(0xFFD5C2C6),
   );
 }

@@ -11,6 +11,7 @@ import '../models/download_task.dart';
 import '../providers/auth_provider.dart';
 import '../providers/audio_provider.dart';
 import '../providers/lyric_provider.dart';
+import '../providers/settings_provider.dart';
 import '../services/download_service.dart';
 import '../services/cache_service.dart';
 import '../services/translation_service.dart';
@@ -220,19 +221,30 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
       }
     }
 
-    // 在音频数量最多的文件夹中，选择文本文件最多的
-    // 如果文本数量相同，优先选择第一个遇到的（Map保持了插入顺序）
+    // 在音频数量最多的文件夹中，先选择文本文件最多的
     String? mainFolder;
     int maxTextCount = -1;
+    List<String> candidateFolders = [];
+
     for (final entry in folderStats.entries) {
       if (entry.value['audioCount'] == maxAudioCount) {
         final textCount = entry.value['textCount'] as int;
-        // 使用 > 而不是 >= 确保文本数量相同时选择第一个遇到的
         if (textCount > maxTextCount) {
           maxTextCount = textCount;
-          mainFolder = entry.key;
+          candidateFolders = [entry.key];
+        } else if (textCount == maxTextCount) {
+          candidateFolders.add(entry.key);
         }
       }
+    }
+
+    // 如果有多个文件夹的音频和文本数量都相同，按照音频格式偏好选择
+    if (candidateFolders.length > 1) {
+      final formatPreference = ref.read(audioFormatPreferenceProvider);
+      mainFolder = _selectByAudioFormatPreference(
+          candidateFolders, formatPreference.priority);
+    } else if (candidateFolders.isNotEmpty) {
+      mainFolder = candidateFolders.first;
     }
 
     if (mainFolder != null) {
@@ -259,6 +271,76 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
     }
 
     return {'audioCount': audioCount, 'textCount': textCount};
+  }
+
+  // 根据音频格式偏好选择文件夹
+  // 返回包含最高优先级音频格式的文件夹
+  String _selectByAudioFormatPreference(
+      List<String> folderPaths, List<AudioFormat> priorityOrder) {
+    // 为每个候选文件夹找到其包含的最高优先级格式
+    Map<String, int> folderPriorities = {};
+
+    for (final folderPath in folderPaths) {
+      // 找到该文件夹下的所有音频文件
+      final folderChildren = _findFolderChildren(folderPath);
+      int highestPriority = priorityOrder.length; // 初始化为最低优先级（越大越低优先级）
+
+      for (final child in folderChildren) {
+        if (child['type'] == 'audio') {
+          final fileName =
+              (child['title'] ?? child['name'] ?? '').toLowerCase();
+          // 检查文件扩展名
+          for (int i = 0; i < priorityOrder.length; i++) {
+            final format = priorityOrder[i];
+            if (fileName.endsWith('.${format.extension}')) {
+              if (i < highestPriority) {
+                highestPriority = i;
+              }
+              break; // 找到格式后跳出循环
+            }
+          }
+        }
+      }
+
+      folderPriorities[folderPath] = highestPriority;
+    }
+
+    // 选择优先级最高（数值最小）的文件夹
+    String selectedFolder = folderPaths.first;
+    int bestPriority = folderPriorities[selectedFolder]!;
+
+    for (final folderPath in folderPaths) {
+      final priority = folderPriorities[folderPath]!;
+      if (priority < bestPriority) {
+        bestPriority = priority;
+        selectedFolder = folderPath;
+      }
+    }
+
+    return selectedFolder;
+  }
+
+  // 查找指定路径的文件夹中的子项
+  List<dynamic> _findFolderChildren(String targetPath) {
+    final segments = targetPath.split('/');
+    List<dynamic> currentItems = _rootFiles;
+
+    for (final segment in segments) {
+      bool found = false;
+      for (final item in currentItems) {
+        final title = item['title'] ?? item['name'] ?? '';
+        if (title == segment && item['type'] == 'folder') {
+          currentItems = item['children'] ?? [];
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        return []; // 路径不存在
+      }
+    }
+
+    return currentItems;
   }
 
   // 展开到指定文件夹的路径

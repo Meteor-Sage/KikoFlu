@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/audio_provider.dart';
+import '../providers/update_provider.dart';
 import '../widgets/mini_player.dart';
 import 'works_screen.dart';
 import 'search_screen.dart';
@@ -38,28 +39,36 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     ];
   }
 
-  final List<NavigationDestination> _destinations = [
-    const NavigationDestination(
-      icon: Icon(Icons.home_outlined),
-      selectedIcon: Icon(Icons.home),
-      label: '主页',
-    ),
-    const NavigationDestination(
-      icon: Icon(Icons.search_outlined),
-      selectedIcon: Icon(Icons.search),
-      label: '搜索',
-    ),
-    const NavigationDestination(
-      icon: Icon(Icons.favorite_border),
-      selectedIcon: Icon(Icons.favorite),
-      label: '我的',
-    ),
-    const NavigationDestination(
-      icon: Icon(Icons.settings_outlined),
-      selectedIcon: Icon(Icons.settings),
-      label: '设置',
-    ),
-  ];
+  List<NavigationDestination> _buildDestinations(bool showUpdateBadge) {
+    return [
+      const NavigationDestination(
+        icon: Icon(Icons.home_outlined),
+        selectedIcon: Icon(Icons.home),
+        label: '主页',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.search_outlined),
+        selectedIcon: Icon(Icons.search),
+        label: '搜索',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.favorite_border),
+        selectedIcon: Icon(Icons.favorite),
+        label: '我的',
+      ),
+      NavigationDestination(
+        icon: Badge(
+          isLabelVisible: showUpdateBadge,
+          child: const Icon(Icons.settings_outlined),
+        ),
+        selectedIcon: Badge(
+          isLabelVisible: showUpdateBadge,
+          child: const Icon(Icons.settings),
+        ),
+        label: '设置',
+      ),
+    ];
+  }
 
   void _handleDestinationSelected(int index) {
     if (_currentIndex == index) {
@@ -79,6 +88,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   Widget build(BuildContext context) {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
+    final showUpdateBadge = ref.watch(showUpdateRedDotProvider);
+    final destinations = _buildDestinations(showUpdateBadge);
 
     if (isLandscape) {
       // 横屏布局：使用 NavigationRail
@@ -94,9 +105,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                 child: IntrinsicHeight(
                   child: NavigationRail(
                     selectedIndex: _currentIndex,
-                      onDestinationSelected: _handleDestinationSelected,
+                    onDestinationSelected: _handleDestinationSelected,
                     labelType: NavigationRailLabelType.selected,
-                    destinations: _destinations
+                    destinations: destinations
                         .map((dest) => NavigationRailDestination(
                               icon: dest.icon,
                               selectedIcon: dest.selectedIcon,
@@ -187,11 +198,10 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
               Widget navBar = NavigationBar(
                 height: 58,
-                labelBehavior:
-                    NavigationDestinationLabelBehavior.alwaysShow,
+                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
                 selectedIndex: _currentIndex,
                 onDestinationSelected: _handleDestinationSelected,
-                destinations: _destinations,
+                destinations: destinations,
               );
 
               if (isIOS) {
@@ -202,9 +212,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                 );
               }
 
-              final navBottomPadding = isIOS
-                  ? (bottomPadding > 0 ? 6.0 : 0.0)
-                  : bottomPadding;
+              final navBottomPadding =
+                  isIOS ? (bottomPadding > 0 ? 6.0 : 0.0) : bottomPadding;
 
               return Padding(
                 padding: EdgeInsets.only(bottom: navBottomPadding),

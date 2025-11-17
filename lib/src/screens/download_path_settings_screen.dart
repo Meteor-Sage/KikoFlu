@@ -49,6 +49,13 @@ class _DownloadPathSettingsScreenState
       return;
     }
 
+    // 检查是否有下载任务正在进行
+    if (DownloadService.instance.hasActiveDownloads) {
+      final count = DownloadService.instance.activeDownloadCount;
+      _showSnackBar('有 $count 个下载任务正在进行中，请先取消或完成下载后再切换路径', isError: true);
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
@@ -168,6 +175,13 @@ class _DownloadPathSettingsScreenState
   }
 
   Future<void> _resetToDefault() async {
+    // 检查是否有下载任务正在进行
+    if (DownloadService.instance.hasActiveDownloads) {
+      final count = DownloadService.instance.activeDownloadCount;
+      _showSnackBar('有 $count 个下载任务正在进行中，请先取消或完成下载后再切换路径', isError: true);
+      return;
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(

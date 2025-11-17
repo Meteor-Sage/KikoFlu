@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 
 import '../models/work.dart';
 import '../providers/auth_provider.dart';
+import '../services/translation_service.dart';
 import '../widgets/scrollable_appbar.dart';
 import '../widgets/tag_chip.dart';
 import '../widgets/va_chip.dart';
@@ -34,6 +35,58 @@ class OfflineWorkDetailScreen extends ConsumerStatefulWidget {
 
 class _OfflineWorkDetailScreenState
     extends ConsumerState<OfflineWorkDetailScreen> {
+  // 翻译相关状态
+  String? _translatedTitle; // 翻译后的标题
+  bool _showTranslation = false; // 是否显示翻译
+  bool _isTranslating = false; // 是否正在翻译
+
+  // 翻译标题
+  Future<void> _translateTitle() async {
+    if (_isTranslating) return;
+
+    final work = widget.work;
+
+    // 如果已有翻译，直接切换显示
+    if (_translatedTitle != null) {
+      setState(() {
+        _showTranslation = !_showTranslation;
+      });
+      return;
+    }
+
+    setState(() {
+      _isTranslating = true;
+    });
+
+    try {
+      final translationService = TranslationService();
+      final translated =
+          await translationService.translate(work.title, sourceLang: 'ja');
+
+      if (mounted) {
+        setState(() {
+          _translatedTitle = translated;
+          _showTranslation = true;
+          _isTranslating = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isTranslating = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('翻译失败: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
   // 复制标题到剪贴板
   void _copyToClipboard(String text, String label) {
     Clipboard.setData(ClipboardData(text: text));
@@ -221,11 +274,59 @@ class _OfflineWorkDetailScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 标题
+          // 标题（可长按复制）+ 翻译按钮
           GestureDetector(
-            onLongPress: () => _copyToClipboard(work.title, '标题'),
-            child: Text(
-              work.title,
+            onLongPress: () => _copyToClipboard(
+              _showTranslation && _translatedTitle != null
+                  ? _translatedTitle!
+                  : work.title,
+              '标题',
+            ),
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: _showTranslation && _translatedTitle != null
+                        ? _translatedTitle
+                        : work.title,
+                  ),
+                  // 翻译按钮
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.middle,
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 6),
+                      child: MouseRegion(
+                        cursor: _isTranslating
+                            ? SystemMouseCursors.basic
+                            : SystemMouseCursors.click,
+                        child: GestureDetector(
+                          onTap: _isTranslating ? null : _translateTitle,
+                          child: _isTranslating
+                              ? SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.g_translate,
+                                  size: 18,
+                                  color: _showTranslation
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withOpacity(0.6),
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,

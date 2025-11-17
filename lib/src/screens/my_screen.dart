@@ -5,6 +5,8 @@ import '../providers/my_reviews_provider.dart';
 import '../widgets/enhanced_work_card.dart';
 import '../widgets/pagination_bar.dart';
 import '../utils/responsive_grid_helper.dart';
+import '../services/download_service.dart';
+import '../models/download_task.dart';
 import 'downloads_screen.dart';
 import 'local_downloads_screen.dart';
 export '../providers/my_reviews_provider.dart' show MyReviewLayoutType;
@@ -189,10 +191,20 @@ class _MyScreenState extends ConsumerState<MyScreen>
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _navigateToDownloads,
-        tooltip: '下载任务',
-        child: const Icon(Icons.download),
+      floatingActionButton: StreamBuilder<List<DownloadTask>>(
+        stream: DownloadService.instance.tasksStream,
+        builder: (context, snapshot) {
+          final activeCount = DownloadService.instance.activeDownloadCount;
+          return Badge(
+            isLabelVisible: activeCount > 0,
+            label: Text('$activeCount'),
+            child: FloatingActionButton(
+              onPressed: _navigateToDownloads,
+              tooltip: '下载任务',
+              child: const Icon(Icons.download),
+            ),
+          );
+        },
       ),
       body: TabBarView(
         controller: _tabController,

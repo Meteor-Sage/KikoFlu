@@ -28,6 +28,16 @@ class DownloadService {
   Stream<List<DownloadTask>> get tasksStream => _tasksController.stream;
   List<DownloadTask> get tasks => List.unmodifiable(_tasks);
 
+  // 获取正在下载或等待下载的任务数量
+  int get activeDownloadCount => _tasks
+      .where((task) =>
+          task.status == DownloadStatus.downloading ||
+          task.status == DownloadStatus.pending)
+      .length;
+
+  // 检查是否有任务正在下载
+  bool get hasActiveDownloads => activeDownloadCount > 0;
+
   static const String _tasksKey = 'download_tasks';
 
   Future<void> initialize() async {

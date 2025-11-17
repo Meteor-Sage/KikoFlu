@@ -25,10 +25,11 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
     super.initState();
     _aboutFuture = _loadAboutData();
 
-    // Mark update as notified when entering this screen
+    // Mark update as notified when entering this screen (hide red dot only)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final updateService = ref.read(updateServiceProvider);
       updateService.markAsNotified();
+      // Only hide red dot, keep the "New Version" badge visible
       ref.read(showUpdateRedDotProvider.notifier).state = false;
     });
   }

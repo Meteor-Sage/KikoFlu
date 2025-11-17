@@ -11,7 +11,11 @@ enum AppThemeMode {
 
 // 颜色方案类型枚举
 enum ColorSchemeType {
-  defaultTheme, // 默认主题（默认）
+  oceanBlue, // 海洋蓝（默认）
+  forestGreen, // 森林绿
+  sunsetOrange, // 日落橙
+  lavenderPurple, // 薰衣草紫
+  sakuraPink, // 樱花粉
   dynamic, // 系统动态取色
 }
 
@@ -22,7 +26,7 @@ class ThemeSettings {
 
   const ThemeSettings({
     this.themeMode = AppThemeMode.system,
-    this.colorSchemeType = ColorSchemeType.defaultTheme,
+    this.colorSchemeType = ColorSchemeType.oceanBlue,
   });
 
   ThemeSettings copyWith({

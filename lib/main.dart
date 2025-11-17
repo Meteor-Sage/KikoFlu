@@ -116,6 +116,7 @@ class _KikoeruAppState extends ConsumerState<KikoeruApp> {
 
       if (updateInfo != null && updateInfo.hasNewVersion) {
         ref.read(updateInfoProvider.notifier).state = updateInfo;
+        ref.read(hasNewVersionProvider.notifier).state = true;
 
         // Check if red dot should be shown
         final shouldShow = await updateService.shouldShowRedDot();
@@ -152,8 +153,10 @@ class _KikoeruAppState extends ConsumerState<KikoeruApp> {
         return MaterialApp(
           title: 'Kikoeru',
           debugShowCheckedModeBanner: false,
-          theme: AppTheme.lightTheme(lightScheme),
-          darkTheme: AppTheme.darkTheme(darkScheme),
+          theme:
+              AppTheme.lightTheme(lightScheme, themeSettings.colorSchemeType),
+          darkTheme:
+              AppTheme.darkTheme(darkScheme, themeSettings.colorSchemeType),
           themeMode: mode,
           home: _buildHomeScreen(),
         );

@@ -202,13 +202,20 @@ class FileIconUtils {
   }
 
   /// 判断是否是字幕文件
-  static bool isLyricFile(String title) {
-    final lowerTitle = title.toLowerCase();
-    return lowerTitle.endsWith('.vtt') ||
-        lowerTitle.endsWith('.srt') ||
-        lowerTitle.endsWith('.lrc') ||
-        lowerTitle.endsWith('.txt');
-  }
+static bool isLyricFile(String title) {
+  final lowerTitle = title.toLowerCase();
+  return lowerTitle.endsWith('.vtt') ||
+      lowerTitle.endsWith('.srt') ||
+      lowerTitle.endsWith('.lrc') ||
+      lowerTitle.endsWith('.txt') ||
+      lowerTitle.endsWith('.ass') ||
+      lowerTitle.endsWith('.ssa') ||
+      lowerTitle.endsWith('.sub') ||
+      lowerTitle.endsWith('.idx') ||
+      lowerTitle.endsWith('.sbv') ||
+      lowerTitle.endsWith('.dfxp') ||
+      lowerTitle.endsWith('.ttml');
+}
 
   /// 判断是否是图片文件（公开方法 - 用于 file_explorer_widget）
   static bool isImageFile(Map<String, dynamic> file) {
