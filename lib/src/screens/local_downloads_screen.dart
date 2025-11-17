@@ -28,26 +28,29 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
   final ScrollController _scrollController = ScrollController();
   int _currentPage = 1;
   final int _pageSize = 30;
-  ScaffoldMessengerState? _scaffoldMessenger;
 
   void _showSnackBarSafe(SnackBar snackBar) {
     if (!mounted) return;
-    _scaffoldMessenger?.showSnackBar(snackBar);
+
+    // Use try-catch to safely handle any context issues
+    try {
+      // Get ScaffoldMessenger at the time of showing, not cached
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      if (messenger != null && messenger.mounted) {
+        messenger.showSnackBar(snackBar);
+      }
+    } catch (e) {
+      // Silently ignore - widget is being disposed
+      print('[LocalDownloads] 无法显示 SnackBar: $e');
+    }
   }
 
   @override
   bool get wantKeepAlive => true;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _scaffoldMessenger = ScaffoldMessenger.maybeOf(context);
-  }
-
-  @override
   void dispose() {
     _scrollController.dispose();
-    _scaffoldMessenger = null;
     super.dispose();
   }
 
@@ -150,54 +153,87 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
 
   // 刷新元数据
   Future<void> _refreshMetadata() async {
+    if (!mounted) return;
+
+    ScaffoldMessengerState? messenger;
+
     try {
+      // 显示加载提示
       if (mounted) {
-        _showSnackBarSafe(
-          const SnackBar(
-            content: Row(
-              children: [
-                SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+        try {
+          messenger = ScaffoldMessenger.maybeOf(context);
+          messenger?.showSnackBar(
+            const SnackBar(
+              content: Row(
+                children: [
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
                   ),
-                ),
-                SizedBox(width: 12),
-                Text('正在从硬盘重新加载...'),
-              ],
+                  SizedBox(width: 12),
+                  Text('正在从硬盘重新加载...'),
+                ],
+              ),
+              duration: Duration(seconds: 30), // 设置较长时间，手动清除
             ),
-            duration: Duration(seconds: 1),
-          ),
-        );
+          );
+        } catch (e) {
+          print('[LocalDownloads] 无法显示加载提示: $e');
+        }
       }
 
       await DownloadService.instance.reloadMetadataFromDisk();
 
-      if (mounted) {
-        _showSnackBarSafe(
-          const SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 12),
-                Text('刷新完成'),
-              ],
-            ),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
+      // 清除加载提示并显示成功消息
+      if (!mounted) return;
+
+      Future.microtask(() {
+        if (mounted) {
+          try {
+            // 清除之前的 SnackBar
+            ScaffoldMessenger.maybeOf(context)?.clearSnackBars();
+            // 显示完成消息
+            _showSnackBarSafe(
+              const SnackBar(
+                content: Row(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.white),
+                    SizedBox(width: 12),
+                    Text('刷新完成'),
+                  ],
+                ),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          } catch (e) {
+            print('[LocalDownloads] 无法显示完成提示: $e');
+          }
+        }
+      });
     } catch (e) {
-      if (mounted) {
-        _showSnackBarSafe(
-          SnackBar(
-            content: Text('刷新失败: $e'),
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
+      if (!mounted) return;
+
+      Future.microtask(() {
+        if (mounted) {
+          try {
+            // 清除加载提示
+            ScaffoldMessenger.maybeOf(context)?.clearSnackBars();
+            // 显示错误消息
+            _showSnackBarSafe(
+              SnackBar(
+                content: Text('刷新失败: $e'),
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          } catch (e) {
+            print('[LocalDownloads] 无法显示错误提示: $e');
+          }
+        }
+      });
     }
   }
 
@@ -229,29 +265,65 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
 
     if (confirmed != true) return;
 
+    // 保存 mounted 状态和 context，避免异步后使用失效的引用
+    if (!mounted) return;
+
+    String? errorMessage;
+    int successCount = 0;
+    int totalCount = 0;
+
     try {
       for (final workId in _selectedWorkIds) {
         final tasks = groupedTasks[workId] ?? [];
         for (final task in tasks) {
-          await DownloadService.instance.deleteTask(task.id);
+          totalCount++;
+          try {
+            await DownloadService.instance.deleteTask(task.id);
+            successCount++;
+          } catch (e) {
+            errorMessage ??= '部分删除失败: $e';
+            print('[LocalDownloads] 删除任务 ${task.id} 失败: $e');
+          }
         }
       }
+
+      // 只在 widget 仍然 mounted 时更新状态
+      if (!mounted) return;
 
       setState(() {
         _isSelectionMode = false;
         _selectedWorkIds.clear();
       });
 
+      // 使用 Future.microtask 延迟到下一帧显示 SnackBar
       if (mounted) {
-        _showSnackBarSafe(
-          const SnackBar(content: Text('删除成功')),
-        );
+        Future.microtask(() {
+          if (mounted) {
+            if (errorMessage != null && successCount > 0) {
+              _showSnackBarSafe(
+                SnackBar(content: Text('已删除 $successCount/$totalCount 个任务')),
+              );
+            } else if (errorMessage != null) {
+              _showSnackBarSafe(
+                SnackBar(content: Text(errorMessage)),
+              );
+            } else {
+              _showSnackBarSafe(
+                const SnackBar(content: Text('删除成功')),
+              );
+            }
+          }
+        });
       }
     } catch (e) {
       if (mounted) {
-        _showSnackBarSafe(
-          SnackBar(content: Text('删除失败: $e')),
-        );
+        Future.microtask(() {
+          if (mounted) {
+            _showSnackBarSafe(
+              SnackBar(content: Text('删除失败: $e')),
+            );
+          }
+        });
       }
     }
   }

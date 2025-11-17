@@ -76,6 +76,7 @@ class _DownloadPathSettingsScreenState
 
       final result = await DownloadPathService.setCustomPath(selectedPath);
 
+      if (!mounted) return;
       setState(() => _isMigrating = false);
 
       if (result.success) {
@@ -84,23 +85,37 @@ class _DownloadPathSettingsScreenState
         // 触发 DownloadService 重新加载
         await DownloadService.instance.reloadMetadataFromDisk();
 
+        // 延迟显示成功消息
         if (mounted) {
-          _showSnackBar(result.message);
+          Future.microtask(() {
+            if (mounted) {
+              _showSnackBar(result.message);
+            }
+          });
         }
       } else {
+        // 延迟显示错误消息
         if (mounted) {
-          _showSnackBar(result.message, isError: true);
+          Future.microtask(() {
+            if (mounted) {
+              _showSnackBar(result.message, isError: true);
+            }
+          });
         }
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
         _isMigrating = false;
       });
 
-      if (mounted) {
-        _showSnackBar('设置路径失败: $e', isError: true);
-      }
+      // 延迟显示错误消息
+      Future.microtask(() {
+        if (mounted) {
+          _showSnackBar('设置路径失败: $e', isError: true);
+        }
+      });
     }
   }
 
@@ -190,29 +205,51 @@ class _DownloadPathSettingsScreenState
       // 触发重新加载
       await DownloadService.instance.reloadMetadataFromDisk();
 
+      // 延迟显示成功消息
       if (mounted) {
         final message = result.message.isNotEmpty ? result.message : '已恢复默认路径';
-        _showSnackBar(message);
+        Future.microtask(() {
+          if (mounted) {
+            _showSnackBar(message);
+          }
+        });
       }
     } catch (e) {
+      // 延迟显示错误消息
       if (mounted) {
-        _showSnackBar('恢复默认路径失败: $e', isError: true);
+        Future.microtask(() {
+          if (mounted) {
+            _showSnackBar('恢复默认路径失败: $e', isError: true);
+          }
+        });
       }
     } finally {
-      setState(() => _isMigrating = false);
+      if (mounted) {
+        setState(() => _isMigrating = false);
+      }
     }
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Theme.of(context).colorScheme.error : null,
-        duration: Duration(seconds: isError ? 4 : 2),
-      ),
-    );
+    try {
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      if (messenger == null) {
+        print('[DownloadPathSettings] 无法显示 SnackBar: $message');
+        return;
+      }
+
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: isError ? Theme.of(context).colorScheme.error : null,
+          duration: Duration(seconds: isError ? 4 : 2),
+        ),
+      );
+    } catch (e) {
+      print('[DownloadPathSettings] 无法显示 SnackBar: $e');
+    }
   }
 
   @override

@@ -181,6 +181,8 @@ class DownloadPathService {
   }
 
   /// 迁移文件从旧目录到新目录
+  /// 只迁移符合下载结构的文件（以数字命名的 workId 文件夹）
+  /// 保护用户可能存放在下载目录中的其他文件
   static Future<MigrationResult> _migrateFiles(
     Directory oldDir,
     Directory newDir,
@@ -195,46 +197,116 @@ class DownloadPathService {
       }
 
       int fileCount = 0;
-      int folderCount = 0;
+      int workFolderCount = 0;
+      int skippedCount = 0;
       int errorCount = 0;
+      final List<String> skippedItems = [];
 
-      // 遍历旧目录中的所有文件和文件夹
-      await for (final entity in oldDir.list(recursive: true)) {
-        try {
-          final relativePath = entity.path.substring(oldDir.path.length + 1);
-          final newPath = '${newDir.path}/$relativePath';
+      // 只遍历旧目录的第一层（不递归）
+      await for (final entity in oldDir.list(followLinks: false)) {
+        if (entity is Directory) {
+          // 获取文件夹名称
+          final folderName = entity.path.split(Platform.pathSeparator).last;
+          final workId = int.tryParse(folderName);
 
-          if (entity is File) {
-            // 创建目标目录
-            final newFile = File(newPath);
-            await newFile.parent.create(recursive: true);
+          // 只迁移以数字命名的文件夹（这些是下载的作品文件夹）
+          if (workId != null) {
+            try {
+              final newWorkDir = Directory('${newDir.path}/$folderName');
+              await newWorkDir.create(recursive: true);
 
-            // 复制文件
-            await entity.copy(newPath);
-            fileCount++;
-          } else if (entity is Directory) {
-            // 创建目录
-            await Directory(newPath).create(recursive: true);
-            folderCount++;
+              // 递归复制该作品文件夹的所有内容
+              int folderFileCount = 0;
+              await for (final fileEntity
+                  in entity.list(recursive: true, followLinks: false)) {
+                try {
+                  final relativePath =
+                      fileEntity.path.substring(entity.path.length + 1);
+                  final newPath = '${newWorkDir.path}/$relativePath';
+
+                  if (fileEntity is File) {
+                    final newFile = File(newPath);
+                    await newFile.parent.create(recursive: true);
+                    await fileEntity.copy(newPath);
+                    folderFileCount++;
+                  } else if (fileEntity is Directory) {
+                    await Directory(newPath).create(recursive: true);
+                  }
+                } catch (e) {
+                  print('[DownloadPath] 复制文件失败: ${fileEntity.path}, 错误: $e');
+                  errorCount++;
+                }
+              }
+
+              fileCount += folderFileCount;
+              workFolderCount++;
+              print(
+                  '[DownloadPath] 已迁移作品文件夹 $folderName: $folderFileCount 个文件');
+
+              // 迁移成功后删除原文件夹
+              try {
+                await entity.delete(recursive: true);
+              } catch (e) {
+                print('[DownloadPath] 删除原作品文件夹失败: $folderName, 错误: $e');
+                errorCount++;
+              }
+            } catch (e) {
+              print('[DownloadPath] 迁移作品文件夹失败: $folderName, 错误: $e');
+              errorCount++;
+            }
+          } else {
+            // 跳过非数字命名的文件夹（可能是用户的其他文件）
+            skippedCount++;
+            skippedItems.add(folderName);
+            print('[DownloadPath] 跳过非下载文件夹: $folderName');
           }
-        } catch (e) {
-          print('[DownloadPath] 迁移失败: ${entity.path}, 错误: $e');
-          errorCount++;
+        } else if (entity is File) {
+          // 跳过下载目录根目录下的文件（可能是用户的其他文件）
+          final fileName = entity.path.split(Platform.pathSeparator).last;
+          skippedCount++;
+          skippedItems.add(fileName);
+          print('[DownloadPath] 跳过根目录文件: $fileName');
         }
       }
 
-      // 迁移完成后删除旧目录
+      // 检查旧目录是否为空，只有为空时才删除
+      bool isOldDirEmpty = true;
       try {
-        await oldDir.delete(recursive: true);
+        final remainingEntities = await oldDir.list().toList();
+        isOldDirEmpty = remainingEntities.isEmpty;
+
+        if (isOldDirEmpty) {
+          try {
+            await oldDir.delete(recursive: false);
+            print('[DownloadPath] 已删除空的旧目录');
+          } catch (e) {
+            print('[DownloadPath] 删除空目录失败: $e');
+            // 不影响迁移结果
+          }
+        } else {
+          print('[DownloadPath] 旧目录中还有 ${remainingEntities.length} 个项目，保留目录');
+        }
       } catch (e) {
-        print('[DownloadPath] 删除旧目录失败: $e');
-        // 不影响迁移结果
+        print('[DownloadPath] 检查旧目录是否为空时出错: $e');
+      }
+
+      String resultMessage = '迁移完成: $workFolderCount 个作品文件夹, $fileCount 个文件';
+      if (skippedCount > 0) {
+        resultMessage += '\n跳过 $skippedCount 个非下载项目（已保留）';
+        if (skippedItems.length <= 5) {
+          resultMessage += ': ${skippedItems.join(", ")}';
+        }
+      }
+      if (errorCount > 0) {
+        resultMessage += '\n$errorCount 个错误';
+      }
+      if (!isOldDirEmpty) {
+        resultMessage += '\n原目录保留（包含其他文件）';
       }
 
       return MigrationResult(
         success: true,
-        message: '迁移完成: $fileCount 个文件, $folderCount 个文件夹'
-            '${errorCount > 0 ? ', $errorCount 个错误' : ''}',
+        message: resultMessage,
         fileCount: fileCount,
         errorCount: errorCount,
       );
