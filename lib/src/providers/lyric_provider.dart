@@ -8,6 +8,7 @@ import '../services/cache_service.dart';
 import '../services/subtitle_library_service.dart';
 import 'auth_provider.dart';
 import 'audio_provider.dart';
+import 'settings_provider.dart';
 
 // 歌词状态
 class LyricState {
@@ -52,18 +53,38 @@ class LyricController extends StateNotifier<LyricState> {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      // 优先级1：从字幕库查找匹配的字幕文件
-      final libraryLyricPath = await _findLyricInLibrary(track);
-      if (libraryLyricPath != null) {
-        print('[Lyric] 从字幕库加载: $libraryLyricPath');
-        await loadLyricFromLocalFile(libraryLyricPath);
-        return;
+      // 获取字幕库优先级设置
+      final libraryPriority = ref.read(subtitleLibraryPriorityProvider);
+      final isLibraryFirst = libraryPriority == SubtitleLibraryPriority.highest;
+
+      print('[Lyric] 字幕库优先级: ${libraryPriority.displayName}');
+
+      // 根据设置决定查找顺序
+      if (isLibraryFirst) {
+        // 优先级1：从字幕库查找匹配的字幕文件
+        final libraryLyricPath = await _findLyricInLibrary(track);
+        if (libraryLyricPath != null) {
+          print('[Lyric] 从字幕库加载: $libraryLyricPath');
+          await loadLyricFromLocalFile(libraryLyricPath);
+          return;
+        }
       }
 
-      // 优先级2：从完整文件树查找歌词文件
+      // 从完整文件树查找歌词文件
       final lyricFile = _findLyricFile(track, allFiles);
 
       if (lyricFile == null) {
+        // 如果文件树未找到且优先级为最后，尝试字幕库
+        if (!isLibraryFirst) {
+          print('[Lyric] 文件树未找到，尝试字幕库');
+          final libraryLyricPath = await _findLyricInLibrary(track);
+          if (libraryLyricPath != null) {
+            print('[Lyric] 从字幕库加载: $libraryLyricPath');
+            await loadLyricFromLocalFile(libraryLyricPath);
+            return;
+          }
+        }
+
         print('[Lyric] 未找到匹配歌词: track="${track.title}"');
         state = LyricState(lyrics: [], isLoading: false);
         return;

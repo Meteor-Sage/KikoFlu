@@ -7,6 +7,67 @@ final settingsCacheRefreshTriggerProvider = StateProvider<int>((ref) => 0);
 /// Triggers when Subtitle Library screen should refresh (e.g., after path change).
 final subtitleLibraryRefreshTriggerProvider = StateProvider<int>((ref) => 0);
 
+/// 字幕库匹配优先级
+enum SubtitleLibraryPriority {
+  /// 最优先 - 字幕库优先于文件树匹配
+  highest('最优先', 'highest'),
+
+  /// 最后 - 字幕库在文件树匹配之后
+  lowest('最后', 'lowest');
+
+  final String displayName;
+  final String value;
+  const SubtitleLibraryPriority(this.displayName, this.value);
+}
+
+/// 字幕库优先级设置
+class SubtitleLibraryPriorityNotifier
+    extends StateNotifier<SubtitleLibraryPriority> {
+  static const String _preferenceKey = 'subtitle_library_priority';
+
+  SubtitleLibraryPriorityNotifier() : super(SubtitleLibraryPriority.highest) {
+    _loadPreference();
+  }
+
+  Future<void> _loadPreference() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedValue = prefs.getString(_preferenceKey);
+
+      if (savedValue != null) {
+        final priority = SubtitleLibraryPriority.values.firstWhere(
+          (p) => p.value == savedValue,
+          orElse: () => SubtitleLibraryPriority.highest,
+        );
+        state = priority;
+      }
+    } catch (e) {
+      // 加载失败，使用默认值
+      state = SubtitleLibraryPriority.highest;
+    }
+  }
+
+  Future<void> updatePriority(SubtitleLibraryPriority priority) async {
+    state = priority;
+    await _savePreference();
+  }
+
+  Future<void> _savePreference() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_preferenceKey, state.value);
+    } catch (e) {
+      // 保存失败时静默处理
+    }
+  }
+}
+
+/// 字幕库优先级提供者
+final subtitleLibraryPriorityProvider = StateNotifierProvider<
+    SubtitleLibraryPriorityNotifier, SubtitleLibraryPriority>((ref) {
+  return SubtitleLibraryPriorityNotifier();
+});
+
 /// 音频格式类型
 enum AudioFormat {
   mp3('MP3', 'mp3'),

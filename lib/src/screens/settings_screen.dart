@@ -82,6 +82,64 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
+  void _showSubtitleLibraryPriorityDialog() {
+    final currentPriority = ref.read(subtitleLibraryPriorityProvider);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('字幕库匹配优先级'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '选择字幕库在自动字幕加载流程中的优先级：',
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            ...SubtitleLibraryPriority.values.map((priority) {
+              return RadioListTile<SubtitleLibraryPriority>(
+                title: Text(priority.displayName),
+                subtitle: Text(
+                  priority == SubtitleLibraryPriority.highest
+                      ? '优先查找字幕库，再查找文件树'
+                      : '优先查找文件树，再查找字幕库',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                value: priority,
+                groupValue: currentPriority,
+                onChanged: (value) {
+                  if (value != null) {
+                    ref
+                        .read(subtitleLibraryPriorityProvider.notifier)
+                        .updatePriority(value);
+                    Navigator.pop(context);
+                    _showSnackBar(
+                      SnackBar(
+                        content: Text('已设置为: ${value.displayName}'),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                },
+              );
+            }),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('关闭'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // 监听缓存刷新触发器（只在 build 中设置一次监听）
@@ -240,6 +298,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 MaterialPageRoute(
                   builder: (context) => const PlayerButtonsSettingsScreen(),
                 ),
+              );
+            },
+          ),
+          Divider(color: Theme.of(context).colorScheme.outlineVariant),
+          Consumer(
+            builder: (context, ref, _) {
+              final priority = ref.watch(subtitleLibraryPriorityProvider);
+              return ListTile(
+                leading: Icon(Icons.library_books,
+                    color: Theme.of(context).colorScheme.primary),
+                title: const Text('字幕库匹配优先级'),
+                subtitle: Text('当前: ${priority.displayName}'),
+                trailing: const Icon(Icons.arrow_forward_ios),
+                onTap: () {
+                  _showSubtitleLibraryPriorityDialog();
+                },
               );
             },
           ),
