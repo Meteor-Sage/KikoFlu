@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:open_filex/open_filex.dart';
 
 import '../models/work.dart';
 import '../services/download_path_service.dart';
@@ -808,29 +808,28 @@ class _OfflineFileExplorerWidgetState
     }
 
     try {
-      final uri = Uri.file(localPath);
-      final canLaunch = await canLaunchUrl(uri);
+      // 使用 OpenFilex 打开本地视频文件（支持 iOS/Android 沙盒路径）
+      final result = await OpenFilex.open(localPath);
 
-      if (canLaunch) {
-        final launched =
-            await launchUrl(uri, mode: LaunchMode.externalApplication);
-        if (!launched && mounted) {
-          await launchUrl(uri, mode: LaunchMode.externalNonBrowserApplication);
-        }
-      } else {
+      if (result.type != ResultType.done) {
+        // 打开失败，显示错误信息
         if (mounted) {
           showDialog(
             context: context,
             builder: (context) => ResponsiveAlertDialog(
-              title: const Text('无法直接播放'),
+              title: const Text('无法打开视频'),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('系统无法找到支持的视频播放器。'),
+                    Text('错误信息: ${result.message}'),
                     const SizedBox(height: 12),
-                    const Text('视频文件路径：'),
+                    const Text('系统无法找到支持的视频播放器。'),
+                    const SizedBox(height: 8),
+                    const Text('请安装视频播放器应用（如 VLC、MX Player 等）'),
+                    const SizedBox(height: 12),
+                    const Text('文件路径：'),
                     SelectableText(localPath,
                         style: const TextStyle(fontSize: 12)),
                   ],
@@ -847,7 +846,7 @@ class _OfflineFileExplorerWidgetState
         }
       }
     } catch (e) {
-      _showSnackBar('播放视频时出错: $e', isError: true);
+      _showSnackBar('打开视频文件时出错: $e', isError: true);
     }
   }
 

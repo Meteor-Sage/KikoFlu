@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:open_filex/open_filex.dart';
 
 import '../models/work.dart';
 import '../models/audio_track.dart';
@@ -676,7 +677,7 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
     }
   }
 
-  void _previewImageFile(dynamic file) {
+  Future<void> _previewImageFile(dynamic file) async {
     final authState = ref.read(authProvider);
     final host = authState.host ?? '';
     final token = authState.token ?? '';
@@ -711,18 +712,47 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
       return;
     }
 
-    // 构建图片URL列表，包含hash信息用于缓存
-    final imageItems = imageFiles.map((f) {
+    // 构建图片URL列表，优先使用本地文件，否则使用网络URL
+    final imageItems = <Map<String, String>>[];
+
+    for (final f in imageFiles) {
       final hash = f['hash'] ?? '';
       final title = f['title'] ?? f['name'] ?? '未知图片';
-      final url = '$normalizedUrl/api/media/stream/$hash?token=$token';
-      return <String, String>{
-        'url': url,
+      String imageUrl;
+
+      // 1. 先检查是否已下载到本地
+      final relativePath = _fileRelativePaths[hash];
+      if (relativePath != null && _downloadedFiles[hash] == true) {
+        try {
+          final downloadService = DownloadService.instance;
+          final downloadDir = await downloadService.getDownloadDirectory();
+          final localPath =
+              '${downloadDir.path}/${widget.work.id}/$relativePath';
+          final localFile = File(localPath);
+
+          if (await localFile.exists()) {
+            imageUrl = 'file://$localPath';
+          } else {
+            // 本地文件不存在，使用网络URL
+            imageUrl = '$normalizedUrl/api/media/stream/$hash?token=$token';
+          }
+        } catch (e) {
+          print('[FileExplorer] 检查本地图片文件失败: $e');
+          imageUrl = '$normalizedUrl/api/media/stream/$hash?token=$token';
+        }
+      } else {
+        // 2. 本地文件不存在，使用网络URL (CachedImageWidget会检查缓存)
+        imageUrl = '$normalizedUrl/api/media/stream/$hash?token=$token';
+      }
+
+      imageItems.add({
+        'url': imageUrl,
         'title': title,
         'hash': hash,
-      };
-    }).toList();
+      });
+    }
 
+    if (!mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => ImageGalleryScreen(
@@ -755,7 +785,7 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
     return imageFiles;
   }
 
-  void _previewTextFile(dynamic file) {
+  Future<void> _previewTextFile(dynamic file) async {
     final authState = ref.read(authProvider);
     final host = authState.host ?? '';
     final token = authState.token ?? '';
@@ -772,12 +802,45 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
       return;
     }
 
-    String normalizedUrl = host;
-    if (!host.startsWith('http://') && !host.startsWith('https://')) {
-      normalizedUrl = 'https://$host';
-    }
-    final textUrl = '$normalizedUrl/api/media/stream/$hash?token=$token';
+    String textUrl;
 
+    // 1. 先检查是否已下载到本地
+    final relativePath = _fileRelativePaths[hash];
+    if (relativePath != null && _downloadedFiles[hash] == true) {
+      try {
+        final downloadService = DownloadService.instance;
+        final downloadDir = await downloadService.getDownloadDirectory();
+        final localPath = '${downloadDir.path}/${widget.work.id}/$relativePath';
+        final localFile = File(localPath);
+
+        if (await localFile.exists()) {
+          textUrl = 'file://$localPath';
+        } else {
+          // 本地文件不存在，使用网络URL
+          String normalizedUrl = host;
+          if (!host.startsWith('http://') && !host.startsWith('https://')) {
+            normalizedUrl = 'https://$host';
+          }
+          textUrl = '$normalizedUrl/api/media/stream/$hash?token=$token';
+        }
+      } catch (e) {
+        print('[FileExplorer] 检查本地文本文件失败: $e');
+        String normalizedUrl = host;
+        if (!host.startsWith('http://') && !host.startsWith('https://')) {
+          normalizedUrl = 'https://$host';
+        }
+        textUrl = '$normalizedUrl/api/media/stream/$hash?token=$token';
+      }
+    } else {
+      // 2. 本地文件不存在，使用网络URL (TextPreviewScreen会检查缓存)
+      String normalizedUrl = host;
+      if (!host.startsWith('http://') && !host.startsWith('https://')) {
+        normalizedUrl = 'https://$host';
+      }
+      textUrl = '$normalizedUrl/api/media/stream/$hash?token=$token';
+    }
+
+    if (!mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => TextPreviewScreen(
@@ -790,7 +853,7 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
     );
   }
 
-  void _previewPdfFile(dynamic file) {
+  Future<void> _previewPdfFile(dynamic file) async {
     final authState = ref.read(authProvider);
     final host = authState.host ?? '';
     final token = authState.token ?? '';
@@ -807,19 +870,50 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
       return;
     }
 
+    // 1. 先检查是否已下载到本地
+    final relativePath = _fileRelativePaths[hash];
+    if (relativePath != null && _downloadedFiles[hash] == true) {
+      try {
+        final downloadService = DownloadService.instance;
+        final downloadDir = await downloadService.getDownloadDirectory();
+        final localPath = '${downloadDir.path}/${widget.work.id}/$relativePath';
+        final localFile = File(localPath);
+
+        if (await localFile.exists()) {
+          // 使用本地文件
+          if (!mounted) return;
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => PdfPreviewScreen(
+                pdfUrl: 'file://$localPath',
+                title: title,
+                workId: widget.work.id,
+                hash: hash,
+              ),
+            ),
+          );
+          return;
+        }
+      } catch (e) {
+        print('[FileExplorer] 检查本地PDF文件失败: $e');
+      }
+    }
+
+    // 2. 本地文件不存在,构造网络URL(PdfPreviewScreen会检查缓存)
     String normalizedUrl = host;
     if (!host.startsWith('http://') && !host.startsWith('https://')) {
       normalizedUrl = 'https://$host';
     }
     final pdfUrl = '$normalizedUrl/api/media/stream/$hash?token=$token';
 
+    if (!mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => PdfPreviewScreen(
           pdfUrl: pdfUrl,
           title: title,
-          workId: widget.work.id, // 传递作品ID
-          hash: hash, // 传递文件hash
+          workId: widget.work.id,
+          hash: hash,
         ),
       ),
     );
@@ -832,11 +926,11 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
     final token = authState.token ?? '';
     final hash = videoFile['hash'] ?? '';
 
-    if (host.isEmpty || token.isEmpty || hash.isEmpty) {
+    if (hash.isEmpty) {
       if (mounted) {
         _showSnackBar(
           const SnackBar(
-            content: Text('无法播放视频：缺少必要参数'),
+            content: Text('无法播放视频：缺少文件标识'),
             backgroundColor: Colors.red,
           ),
         );
@@ -844,15 +938,112 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
       return;
     }
 
-    String normalizedUrl = host;
-    if (!host.startsWith('http://') && !host.startsWith('https://')) {
-      normalizedUrl = 'https://$host';
-    }
-    final videoUrl = '$normalizedUrl/api/media/stream/$hash?token=$token';
+    Uri uri;
+    String uriString; // 用于错误信息显示
 
+    // 1. 先检查是否已下载到本地
+    final relativePath = _fileRelativePaths[hash];
+    if (relativePath != null && _downloadedFiles[hash] == true) {
+      try {
+        final downloadService = DownloadService.instance;
+        final downloadDir = await downloadService.getDownloadDirectory();
+        final localPath = '${downloadDir.path}/${widget.work.id}/$relativePath';
+        final localFile = File(localPath);
+
+        if (await localFile.exists()) {
+          // 使用本地文件 - 通过 open_filex 打开
+          uriString = localPath;
+          print('[FileExplorer] 使用本地视频文件: $localPath');
+
+          try {
+            final result = await OpenFilex.open(localPath);
+            if (result.type != ResultType.done) {
+              if (mounted) {
+                _showSnackBar(
+                  SnackBar(
+                    content: Text('无法打开视频文件: ${result.message}'),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+              }
+            }
+          } catch (e) {
+            if (mounted) {
+              _showSnackBar(
+                SnackBar(
+                  content: Text('打开视频文件时出错: $e'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
+          return;
+        } else {
+          // 本地文件不存在，使用网络URL
+          if (host.isEmpty || token.isEmpty) {
+            if (mounted) {
+              _showSnackBar(
+                const SnackBar(
+                  content: Text('无法播放视频：缺少必要参数'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+            return;
+          }
+          String normalizedUrl = host;
+          if (!host.startsWith('http://') && !host.startsWith('https://')) {
+            normalizedUrl = 'https://$host';
+          }
+          final videoUrl = '$normalizedUrl/api/media/stream/$hash?token=$token';
+          uri = Uri.parse(videoUrl);
+          uriString = videoUrl;
+        }
+      } catch (e) {
+        print('[FileExplorer] 检查本地视频文件失败: $e');
+        if (host.isEmpty || token.isEmpty) {
+          if (mounted) {
+            _showSnackBar(
+              const SnackBar(
+                content: Text('无法播放视频：缺少必要参数'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
+        }
+        String normalizedUrl = host;
+        if (!host.startsWith('http://') && !host.startsWith('https://')) {
+          normalizedUrl = 'https://$host';
+        }
+        final videoUrl = '$normalizedUrl/api/media/stream/$hash?token=$token';
+        uri = Uri.parse(videoUrl);
+        uriString = videoUrl;
+      }
+    } else {
+      // 2. 本地文件不存在，使用网络URL
+      if (host.isEmpty || token.isEmpty) {
+        if (mounted) {
+          _showSnackBar(
+            const SnackBar(
+              content: Text('无法播放视频：缺少必要参数'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+      String normalizedUrl = host;
+      if (!host.startsWith('http://') && !host.startsWith('https://')) {
+        normalizedUrl = 'https://$host';
+      }
+      final videoUrl = '$normalizedUrl/api/media/stream/$hash?token=$token';
+      uri = Uri.parse(videoUrl);
+      uriString = videoUrl;
+    }
+
+    // 使用 url_launcher 打开网络视频URL
     try {
-      final uri = Uri.parse(videoUrl);
-      // 尝试使用系统默认方式打开
       final canLaunch = await canLaunchUrl(uri);
 
       if (canLaunch) {
@@ -889,7 +1080,7 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
                     const Text('2. 在浏览器中打开'),
                     const SizedBox(height: 12),
                     SelectableText(
-                      videoUrl,
+                      uriString,
                       style: const TextStyle(fontSize: 12),
                     ),
                   ],

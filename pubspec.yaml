@@ -59,6 +59,7 @@ dependencies:
   
   # System Integration
   url_launcher: ^6.2.2
+  open_filex: ^4.5.0
   package_info_plus: ^9.0.0
   msix: ^3.16.12
   window_manager: ^0.4.3
