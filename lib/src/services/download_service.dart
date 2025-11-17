@@ -2,12 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
-import 'package:path_provider/path_provider.dart';
 
 import '../models/download_task.dart';
 import 'cache_service.dart';
 import 'storage_service.dart';
 import 'kikoeru_api_service.dart';
+import 'download_path_service.dart';
 
 class DownloadService {
   static DownloadService? _instance;
@@ -49,12 +49,8 @@ class DownloadService {
   }
 
   Future<Directory> _getDownloadDirectory() async {
-    final appDir = await getApplicationDocumentsDirectory();
-    final downloadDir = Directory('${appDir.path}/downloads');
-    if (!await downloadDir.exists()) {
-      await downloadDir.create(recursive: true);
-    }
-    return downloadDir;
+    // 使用 DownloadPathService 获取下载目录（支持自定义路径）
+    return await DownloadPathService.getDownloadDirectory();
   }
 
   // 公开方法，用于获取下载根目录

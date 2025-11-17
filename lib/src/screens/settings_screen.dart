@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'account_management_screen.dart';
 import 'downloads_screen.dart';
+import 'download_path_settings_screen.dart';
 import 'theme_settings_screen.dart';
 import 'player_buttons_settings_screen.dart';
 import 'about_screen.dart';
@@ -187,6 +188,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (context) => const DownloadsScreen(),
+                ),
+              );
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.folder_outlined),
+            title: const Text('下载路径'),
+            subtitle: const Text('自定义下载文件保存位置'),
+            trailing: const Icon(Icons.arrow_forward_ios),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const DownloadPathSettingsScreen(),
                 ),
               );
             },
