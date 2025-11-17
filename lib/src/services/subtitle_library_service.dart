@@ -429,6 +429,158 @@ class SubtitleLibraryService {
     }
   }
 
+  /// 移动字幕文件或文件夹到指定目录
+  static Future<bool> move(String sourcePath, String targetFolderPath) async {
+    try {
+      final entity = FileSystemEntity.typeSync(sourcePath);
+      final fileName = sourcePath.split(Platform.pathSeparator).last;
+      final newPath = '$targetFolderPath${Platform.pathSeparator}$fileName';
+
+      // 检查目标路径是否与源路径相同
+      if (sourcePath == newPath) {
+        return true; // 无需移动
+      }
+
+      // 检查目标是否已存在
+      final targetExists = await FileSystemEntity.isFile(newPath) ||
+          await FileSystemEntity.isDirectory(newPath);
+
+      if (entity == FileSystemEntityType.file) {
+        if (targetExists && await FileSystemEntity.isFile(newPath)) {
+          // 文件冲突：添加序号
+          final nameWithoutExt = fileName.contains('.')
+              ? fileName.substring(0, fileName.lastIndexOf('.'))
+              : fileName;
+          final ext = fileName.contains('.')
+              ? fileName.substring(fileName.lastIndexOf('.'))
+              : '';
+          int counter = 1;
+          String finalPath;
+
+          do {
+            finalPath =
+                '$targetFolderPath${Platform.pathSeparator}${nameWithoutExt}_$counter$ext';
+            counter++;
+          } while (await File(finalPath).exists());
+
+          await File(sourcePath).rename(finalPath);
+          print('[SubtitleLibrary] 文件已移动（重命名）: $sourcePath -> $finalPath');
+        } else {
+          await File(sourcePath).rename(newPath);
+          print('[SubtitleLibrary] 文件已移动: $sourcePath -> $newPath');
+        }
+      } else if (entity == FileSystemEntityType.directory) {
+        if (targetExists && await FileSystemEntity.isDirectory(newPath)) {
+          // 文件夹冲突：合并内容
+          print('[SubtitleLibrary] 检测到同名文件夹，开始合并: $sourcePath -> $newPath');
+          await _mergeFolders(sourcePath, newPath);
+          print('[SubtitleLibrary] 文件夹已合并: $sourcePath -> $newPath');
+        } else {
+          // 目标不存在或是文件，直接重命名
+          await Directory(sourcePath).rename(newPath);
+          print('[SubtitleLibrary] 文件夹已移动: $sourcePath -> $newPath');
+        }
+      } else {
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      print('[SubtitleLibrary] 移动失败: $sourcePath, 错误: $e');
+      return false;
+    }
+  }
+
+  /// 合并两个文件夹（将源文件夹内容移动到目标文件夹）
+  static Future<void> _mergeFolders(
+      String sourceFolder, String targetFolder) async {
+    final sourceDir = Directory(sourceFolder);
+    final targetDir = Directory(targetFolder);
+
+    if (!await sourceDir.exists()) return;
+    if (!await targetDir.exists()) {
+      await targetDir.create(recursive: true);
+    }
+
+    // 遍历源文件夹中的所有内容
+    await for (final entity in sourceDir.list()) {
+      final fileName = entity.path.split(Platform.pathSeparator).last;
+      final targetPath = '${targetDir.path}${Platform.pathSeparator}$fileName';
+
+      if (entity is File) {
+        // 处理文件
+        if (await File(targetPath).exists()) {
+          // 目标已存在文件，添加序号
+          final nameWithoutExt = fileName.contains('.')
+              ? fileName.substring(0, fileName.lastIndexOf('.'))
+              : fileName;
+          final ext = fileName.contains('.')
+              ? fileName.substring(fileName.lastIndexOf('.'))
+              : '';
+          int counter = 1;
+          String finalPath;
+
+          do {
+            finalPath =
+                '${targetDir.path}${Platform.pathSeparator}${nameWithoutExt}_$counter$ext';
+            counter++;
+          } while (await File(finalPath).exists());
+
+          await entity.copy(finalPath);
+          await entity.delete();
+        } else {
+          await entity.rename(targetPath);
+        }
+      } else if (entity is Directory) {
+        // 处理子文件夹（递归合并）
+        if (await Directory(targetPath).exists()) {
+          await _mergeFolders(entity.path, targetPath);
+        } else {
+          await entity.rename(targetPath);
+        }
+      }
+    }
+
+    // 删除源文件夹（应该已经为空）
+    if (await sourceDir.exists()) {
+      try {
+        await sourceDir.delete();
+      } catch (e) {
+        print('[SubtitleLibrary] 删除空文件夹失败: $sourceFolder, 错误: $e');
+      }
+    }
+  }
+
+  /// 获取所有可用的目标文件夹（用于移动文件）
+  static Future<List<Map<String, dynamic>>> getAvailableFolders() async {
+    final libraryDir = await getSubtitleLibraryDirectory();
+
+    if (!await libraryDir.exists()) {
+      return [];
+    }
+
+    final folders = <Map<String, dynamic>>[];
+
+    // 添加根目录选项
+    folders.add({
+      'name': '根目录',
+      'path': libraryDir.path,
+    });
+
+    await for (final entity
+        in libraryDir.list(recursive: true, followLinks: false)) {
+      if (entity is Directory) {
+        final relativePath = entity.path.substring(libraryDir.path.length + 1);
+        folders.add({
+          'name': relativePath,
+          'path': entity.path,
+        });
+      }
+    }
+
+    return folders;
+  }
+
   /// 获取字幕库统计信息
   static Future<LibraryStats> getStats() async {
     final libraryDir = await getSubtitleLibraryDirectory();

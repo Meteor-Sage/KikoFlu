@@ -604,62 +604,68 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
                 SizedBox(width: horizontalPadding - 8),
               ],
             )
-          : Row(
-              children: [
-                // 选择按钮
-                Padding(
-                  padding: const EdgeInsets.only(left: 20, right: 8),
-                  child: TextButton.icon(
-                    icon: const Icon(Icons.checklist, size: 20),
-                    label: const Text('选择'),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 10),
-                      backgroundColor: Theme.of(context)
-                          .colorScheme
-                          .primaryContainer
-                          .withOpacity(0.5),
-                    ),
-                    onPressed: _toggleSelectionMode,
-                  ),
-                ),
-                // 刷新按钮
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: TextButton.icon(
-                    icon: const Icon(Icons.refresh, size: 20),
-                    label: const Text('本地重载'),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 10),
-                      backgroundColor: Theme.of(context)
-                          .colorScheme
-                          .primaryContainer
-                          .withOpacity(0.5),
-                    ),
-                    onPressed: _refreshMetadata,
-                  ),
-                ),
-                // 打开文件夹按钮（仅 Windows 和 macOS）
-                if (Platform.isWindows || Platform.isMacOS)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: TextButton.icon(
-                      icon: const Icon(Icons.folder_open, size: 20),
-                      label: const Text('打开文件夹'),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 10),
-                        backgroundColor: Theme.of(context)
-                            .colorScheme
-                            .primaryContainer
-                            .withOpacity(0.5),
+          : Align(
+              alignment: Alignment.centerLeft,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // 选择按钮
+                    Padding(
+                      padding: const EdgeInsets.only(left: 20, right: 8),
+                      child: TextButton.icon(
+                        icon: const Icon(Icons.checklist, size: 20),
+                        label: const Text('选择'),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
+                          backgroundColor: Theme.of(context)
+                              .colorScheme
+                              .primaryContainer
+                              .withOpacity(0.5),
+                        ),
+                        onPressed: _toggleSelectionMode,
                       ),
-                      onPressed: _openDownloadFolder,
                     ),
-                  ),
-                const Spacer(),
-              ],
+                    // 刷新按钮
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: TextButton.icon(
+                        icon: const Icon(Icons.refresh, size: 20),
+                        label: const Text('重载'),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
+                          backgroundColor: Theme.of(context)
+                              .colorScheme
+                              .primaryContainer
+                              .withOpacity(0.5),
+                        ),
+                        onPressed: _refreshMetadata,
+                      ),
+                    ),
+                    // 打开文件夹按钮（仅 Windows 和 macOS）
+                    if (Platform.isWindows || Platform.isMacOS)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: TextButton.icon(
+                          icon: const Icon(Icons.folder_open, size: 20),
+                          label: const Text('打开文件夹'),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 10),
+                            backgroundColor: Theme.of(context)
+                                .colorScheme
+                                .primaryContainer
+                                .withOpacity(0.5),
+                          ),
+                          onPressed: _openDownloadFolder,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
     );
   }
