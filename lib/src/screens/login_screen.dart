@@ -155,6 +155,39 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
 
+    // 显示二次确认对话框
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('游客模式确认'),
+          content: const Text(
+            '您将使用公用游客账户登录。\n\n'
+            '请注意：\n'
+            '• 收藏、评论等功能会与其他游客用户共享\n'
+            '• 访问速率可能会受到限制\n'
+            '• 数据不保证安全性和持久性\n\n'
+            '建议注册专属账户以获得更好的使用体验。',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('继续使用游客模式'),
+            ),
+          ],
+        );
+      },
+    );
+
+    // 用户取消了操作
+    if (confirmed != true) {
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     final host = _hostValue.trim();

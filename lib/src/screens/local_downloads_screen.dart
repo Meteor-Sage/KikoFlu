@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
 
 import '../models/download_task.dart';
@@ -109,6 +110,42 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
     setState(() {
       _selectedWorkIds.clear();
     });
+  }
+
+  // 打开本地下载目录
+  Future<void> _openDownloadFolder() async {
+    try {
+      final downloadDir = await DownloadService.instance.getDownloadDirectory();
+      final path = downloadDir.path;
+
+      // 检查平台并打开文件夹
+      if (Platform.isWindows || Platform.isMacOS) {
+        final uri = Uri.file(path);
+        final canLaunch = await canLaunchUrl(uri);
+        
+        if (canLaunch) {
+          await launchUrl(uri);
+        } else {
+          if (mounted) {
+            _showSnackBarSafe(
+              SnackBar(
+                content: Text('无法打开文件夹: $path'),
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnackBarSafe(
+          SnackBar(
+            content: Text('打开文件夹失败: $e'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   // 刷新元数据
@@ -531,6 +568,24 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
                     onPressed: _refreshMetadata,
                   ),
                 ),
+                // 打开文件夹按钮（仅 Windows 和 macOS）
+                if (Platform.isWindows || Platform.isMacOS)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: TextButton.icon(
+                      icon: const Icon(Icons.folder_open, size: 20),
+                      label: const Text('打开文件夹'),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 10),
+                        backgroundColor: Theme.of(context)
+                            .colorScheme
+                            .primaryContainer
+                            .withOpacity(0.5),
+                      ),
+                      onPressed: _openDownloadFolder,
+                    ),
+                  ),
                 const Spacer(),
               ],
             ),
