@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import '../models/lyric.dart';
 import '../models/audio_track.dart';
 import '../services/cache_service.dart';
+import '../services/subtitle_library_service.dart';
 import 'auth_provider.dart';
 import 'audio_provider.dart';
 
@@ -51,7 +52,15 @@ class LyricController extends StateNotifier<LyricState> {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      // 查找歌词文件
+      // 优先级1：从字幕库查找匹配的字幕文件
+      final libraryLyricPath = await _findLyricInLibrary(track);
+      if (libraryLyricPath != null) {
+        print('[Lyric] 从字幕库加载: $libraryLyricPath');
+        await loadLyricFromLocalFile(libraryLyricPath);
+        return;
+      }
+
+      // 优先级2：从完整文件树查找歌词文件
       final lyricFile = _findLyricFile(track, allFiles);
 
       if (lyricFile == null) {
@@ -140,6 +149,172 @@ class LyricController extends StateNotifier<LyricState> {
         error: '加载歌词失败: $e',
       );
     }
+  }
+
+  // 从字幕库查找匹配的字幕文件
+  Future<String?> _findLyricInLibrary(AudioTrack track) async {
+    try {
+      final libraryDir =
+          await SubtitleLibraryService.getSubtitleLibraryDirectory();
+      if (!await libraryDir.exists()) {
+        return null;
+      }
+
+      final trackTitle = track.title;
+      final audioNameWithoutExt = _removeAudioExtension(trackTitle);
+      final textExtensions = ['.vtt', '.srt', '.txt', '.lrc'];
+      final workId = track.workId;
+
+      print('[Lyric] 在字幕库中查找: track="$trackTitle", workId=$workId');
+
+      // 优先级1: 查找作品ID文件夹
+      if (workId != null) {
+        // 尝试查找 RJ{workId} 文件夹
+        final rjFolderPath = '${libraryDir.path}/RJ$workId';
+        final rjFolder = Directory(rjFolderPath);
+        if (await rjFolder.exists()) {
+          final match = await _searchLyricInFolder(
+            rjFolder,
+            trackTitle,
+            audioNameWithoutExt,
+            textExtensions,
+          );
+          if (match != null) {
+            print('[Lyric] 在RJ$workId文件夹找到匹配: $match');
+            return match;
+          }
+        }
+
+        // 尝试查找纯数字ID文件夹
+        final idFolderPath = '${libraryDir.path}/$workId';
+        final idFolder = Directory(idFolderPath);
+        if (await idFolder.exists()) {
+          final match = await _searchLyricInFolder(
+            idFolder,
+            trackTitle,
+            audioNameWithoutExt,
+            textExtensions,
+          );
+          if (match != null) {
+            print('[Lyric] 在$workId文件夹找到匹配: $match');
+            return match;
+          }
+        }
+
+        // 递归查找包含作品ID的文件夹
+        final match = await _recursiveFindByWorkId(
+          libraryDir,
+          workId.toString(),
+          trackTitle,
+          audioNameWithoutExt,
+          textExtensions,
+        );
+        if (match != null) {
+          print('[Lyric] 在作品ID相关文件夹找到匹配: $match');
+          return match;
+        }
+      }
+
+      // 优先级2: 查找"已保存"文件夹
+      final savedFolderPath = '${libraryDir.path}/已保存';
+      final savedFolder = Directory(savedFolderPath);
+      if (await savedFolder.exists()) {
+        final match = await _searchLyricInFolder(
+          savedFolder,
+          trackTitle,
+          audioNameWithoutExt,
+          textExtensions,
+        );
+        if (match != null) {
+          print('[Lyric] 在"已保存"文件夹找到匹配: $match');
+          return match;
+        }
+      }
+
+      print('[Lyric] 字幕库中未找到匹配的字幕');
+      return null;
+    } catch (e) {
+      print('[Lyric] 字幕库查找出错: $e');
+      return null;
+    }
+  }
+
+  // 递归查找包含作品ID的文件夹
+  Future<String?> _recursiveFindByWorkId(
+    Directory dir,
+    String workId,
+    String trackTitle,
+    String audioNameWithoutExt,
+    List<String> textExtensions,
+  ) async {
+    try {
+      await for (final entity in dir.list()) {
+        if (entity is Directory) {
+          final folderName = entity.path.split(Platform.pathSeparator).last;
+          // 检查文件夹名是否包含作品ID或RJ+作品ID
+          if (folderName == workId || folderName == 'RJ$workId') {
+            final match = await _searchLyricInFolder(
+              entity,
+              trackTitle,
+              audioNameWithoutExt,
+              textExtensions,
+            );
+            if (match != null) return match;
+          }
+          // 继续递归搜索子文件夹
+          final match = await _recursiveFindByWorkId(
+            entity,
+            workId,
+            trackTitle,
+            audioNameWithoutExt,
+            textExtensions,
+          );
+          if (match != null) return match;
+        }
+      }
+    } catch (e) {
+      // 忽略权限错误等
+    }
+    return null;
+  }
+
+  // 在指定文件夹中递归搜索匹配的字幕文件
+  Future<String?> _searchLyricInFolder(
+    Directory folder,
+    String trackTitle,
+    String audioNameWithoutExt,
+    List<String> textExtensions,
+  ) async {
+    try {
+      await for (final entity in folder.list(recursive: true)) {
+        if (entity is File) {
+          final fileName =
+              entity.path.split(Platform.pathSeparator).last.toLowerCase();
+
+          // 检查是否是字幕文件
+          final isLyricFile =
+              textExtensions.any((ext) => fileName.endsWith(ext));
+          if (!isLyricFile) continue;
+
+          // 规则1: 完全匹配（音频文件名 + 字幕扩展名）
+          for (final ext in textExtensions) {
+            if (fileName == '${trackTitle.toLowerCase()}$ext') {
+              return entity.path;
+            }
+          }
+
+          // 规则2: 去掉音频扩展名后匹配
+          for (final ext in textExtensions) {
+            if (fileName == '${audioNameWithoutExt.toLowerCase()}$ext') {
+              return entity.path;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // 忽略权限错误等
+    }
+    return null;
   }
 
   // 查找歌词文件
