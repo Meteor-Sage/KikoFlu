@@ -6,6 +6,10 @@ import 'package:url_launcher/url_launcher.dart';
 import '../services/subtitle_library_service.dart';
 import '../providers/settings_provider.dart';
 import '../widgets/text_preview_screen.dart';
+import '../providers/audio_provider.dart';
+import '../providers/lyric_provider.dart';
+import '../widgets/responsive_dialog.dart';
+import '../utils/file_icon_utils.dart';
 
 /// 字幕库界面
 class SubtitleLibraryScreen extends ConsumerStatefulWidget {
@@ -262,6 +266,16 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (item['type'] == 'text' &&
+                FileIconUtils.isLyricFile(item['title'] ?? ''))
+              ListTile(
+                leading: const Icon(Icons.subtitles, color: Colors.orange),
+                title: const Text('载入为字幕'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _loadLyricManually(item);
+                },
+              ),
             if (item['type'] == 'text')
               ListTile(
                 leading: const Icon(Icons.visibility),
@@ -321,6 +335,7 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
             title: path.split(Platform.pathSeparator).last,
             textUrl: 'file://$path',
             workId: null,
+            onSavedToLibrary: _loadFiles,
           ),
         ),
       );
@@ -433,6 +448,162 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
 
     if (success) {
       _loadFiles();
+    }
+  }
+
+  // 手动加载字幕
+  Future<void> _loadLyricManually(Map<String, dynamic> item) async {
+    final title = item['title'] ?? '未知文件';
+    final path = item['path'] as String;
+
+    // 检查当前是否有播放中的音频
+    final currentTrackAsync = ref.read(currentTrackProvider);
+    final currentTrack = currentTrackAsync.value;
+
+    if (currentTrack == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('当前没有播放的音频，无法加载字幕'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      return;
+    }
+
+    // 二次确认对话框
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => ResponsiveAlertDialog(
+        title: const Text('加载字幕'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('确定要将以下文件加载为当前音频的字幕吗？'),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '字幕文件：',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '当前音频：',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    Text(
+                      currentTrack.title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '注意：切换到其他音频时，字幕将自动恢复为默认匹配方式。',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('确定加载'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    // 显示加载中提示
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ),
+            SizedBox(width: 12),
+            Text('正在加载字幕...'),
+          ],
+        ),
+        duration: Duration(seconds: 2),
+      ),
+    );
+
+    try {
+      // 从本地文件路径加载字幕
+      await ref
+          .read(lyricControllerProvider.notifier)
+          .loadLyricFromLocalFile(path);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text('字幕已加载：$title'),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('加载字幕失败: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
@@ -587,12 +758,48 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
                     ],
                   ),
                 ),
+                // 字幕文件操作按钮
+                if (!isFolder && FileIconUtils.isLyricFile(item['title'] ?? ''))
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        onPressed: () => _loadLyricManually(item),
+                        icon: const Icon(Icons.subtitles),
+                        color: Colors.orange,
+                        tooltip: '加载为字幕',
+                        iconSize: 20,
+                        padding: EdgeInsets.zero,
+                        constraints:
+                            const BoxConstraints(minWidth: 32, minHeight: 32),
+                      ),
+                      IconButton(
+                        onPressed: () => _previewFile(path),
+                        icon: const Icon(Icons.visibility),
+                        color: Colors.blue,
+                        tooltip: '预览',
+                        iconSize: 20,
+                        padding: EdgeInsets.zero,
+                        constraints:
+                            const BoxConstraints(minWidth: 32, minHeight: 32),
+                      ),
+                    ],
+                  )
+                else if (isFolder)
+                  Text(
+                    '${(item['children'] as List?)?.length ?? 0} 项',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
                 // 更多选项按钮
                 IconButton(
                   icon: const Icon(Icons.more_vert, size: 18),
                   onPressed: () => _showFileOptions(item, path),
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
+                  constraints:
+                      const BoxConstraints(minWidth: 32, minHeight: 32),
                 ),
               ],
             ),

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 
@@ -221,6 +222,46 @@ class LyricController extends StateNotifier<LyricState> {
   }
 
   // 手动加载字幕文件
+  /// 从本地文件路径加载字幕（用于字幕库）
+  Future<void> loadLyricFromLocalFile(String filePath) async {
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      print('[Lyric] 从本地文件加载字幕: $filePath');
+
+      // 读取文件内容
+      final file = File(filePath);
+      if (!await file.exists()) {
+        state = LyricState(
+          lyrics: [],
+          isLoading: false,
+          error: '文件不存在',
+        );
+        return;
+      }
+
+      final content = await file.readAsString();
+
+      // 解析歌词
+      final lyrics = LyricParser.parse(content);
+      state = LyricState(
+        lyrics: lyrics,
+        isLoading: false,
+        lyricUrl: 'file://$filePath',
+      );
+
+      print('[Lyric] 成功从本地文件加载字幕，共 ${lyrics.length} 行');
+    } catch (e) {
+      print('[Lyric] 从本地文件加载字幕失败: $e');
+      state = LyricState(
+        lyrics: [],
+        isLoading: false,
+        error: '加载字幕失败: $e',
+      );
+      rethrow;
+    }
+  }
+
   Future<void> loadLyricManually(dynamic lyricFile) async {
     state = state.copyWith(isLoading: true, error: null);
 

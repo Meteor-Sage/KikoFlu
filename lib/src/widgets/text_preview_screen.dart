@@ -1,9 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:path/path.dart' as path;
 
 import '../services/cache_service.dart';
 import '../services/translation_service.dart';
+import '../services/subtitle_library_service.dart';
 import 'scrollable_appbar.dart';
 
 /// 文本预览屏幕
@@ -12,6 +15,7 @@ class TextPreviewScreen extends StatefulWidget {
   final String title;
   final int? workId;
   final String? hash;
+  final VoidCallback? onSavedToLibrary;
 
   const TextPreviewScreen({
     super.key,
@@ -19,6 +23,7 @@ class TextPreviewScreen extends StatefulWidget {
     required this.title,
     this.workId,
     this.hash,
+    this.onSavedToLibrary,
   });
 
   @override
@@ -35,10 +40,15 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
   bool _showTranslation = false;
   bool _isTranslating = false;
   String _translationProgress = '';
+  bool _isEditMode = false;
+  late TextEditingController _textController;
+  late TextEditingController _translatedTextController;
 
   @override
   void initState() {
     super.initState();
+    _textController = TextEditingController();
+    _translatedTextController = TextEditingController();
     _loadTextContent();
     _scrollController.addListener(_updateScrollProgress);
   }
@@ -47,6 +57,8 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
   void dispose() {
     _scrollController.removeListener(_updateScrollProgress);
     _scrollController.dispose();
+    _textController.dispose();
+    _translatedTextController.dispose();
     super.dispose();
   }
 
@@ -57,6 +69,144 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
       setState(() {
         _scrollProgress = maxScroll > 0 ? currentScroll / maxScroll : 0.0;
       });
+    }
+  }
+
+  void _showSaveOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.folder_open),
+              title: const Text('保存到本地'),
+              subtitle: const Text('选择目录保存文件'),
+              onTap: () {
+                Navigator.pop(context);
+                _saveToLocal();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.library_books),
+              title: const Text('保存到字幕库'),
+              subtitle: const Text('保存到字幕库的“已保存”目录'),
+              onTap: () {
+                Navigator.pop(context);
+                _saveToSubtitleLibrary();
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _saveToLocal() async {
+    // 获取当前显示的内容（可能是编辑后的）
+    final contentToSave = _getCurrentContent();
+    if (contentToSave == null || contentToSave.isEmpty) {
+      _showSnackBar('没有可保存的内容', Colors.orange);
+      return;
+    }
+
+    try {
+      // 选择保存目录
+      final directoryPath = await FilePicker.platform.getDirectoryPath();
+      if (directoryPath == null) return;
+
+      // 生成文件名
+      String fileName = widget.title;
+      if (!fileName.contains('.')) {
+        fileName = '$fileName.txt';
+      }
+
+      // 检查文件是否已存在，如果存在则添加序号
+      String finalPath = path.join(directoryPath, fileName);
+      int counter = 1;
+      while (await File(finalPath).exists()) {
+        final nameWithoutExt = path.basenameWithoutExtension(fileName);
+        final ext = path.extension(fileName);
+        finalPath = path.join(directoryPath, '${nameWithoutExt}_$counter$ext');
+        counter++;
+      }
+
+      // 写入文件
+      final file = File(finalPath);
+      await file.writeAsString(contentToSave);
+
+      _showSnackBar('文件已保存到：$finalPath', Colors.green);
+    } catch (e) {
+      _showSnackBar('保存失败: $e', Colors.red);
+    }
+  }
+
+  Future<void> _saveToSubtitleLibrary() async {
+    // 获取当前显示的内容（可能是编辑后的）
+    final contentToSave = _getCurrentContent();
+    if (contentToSave == null || contentToSave.isEmpty) {
+      _showSnackBar('没有可保存的内容', Colors.orange);
+      return;
+    }
+
+    try {
+      // 获取字幕库目录
+      final libraryDir =
+          await SubtitleLibraryService.getSubtitleLibraryDirectory();
+
+      // 创建“已保存”目录
+      final savedDir = Directory(path.join(libraryDir.path, '已保存'));
+      if (!await savedDir.exists()) {
+        await savedDir.create();
+      }
+
+      // 生成文件名
+      String fileName = widget.title;
+      if (!fileName.contains('.')) {
+        fileName = '$fileName.txt';
+      }
+
+      // 检查文件是否已存在，如果存在则添加序号
+      String finalPath = path.join(savedDir.path, fileName);
+      int counter = 1;
+      while (await File(finalPath).exists()) {
+        final nameWithoutExt = path.basenameWithoutExtension(fileName);
+        final ext = path.extension(fileName);
+        finalPath = path.join(savedDir.path, '${nameWithoutExt}_$counter$ext');
+        counter++;
+      }
+
+      // 写入文件
+      final file = File(finalPath);
+      await file.writeAsString(contentToSave);
+
+      _showSnackBar('已保存到字幕库', Colors.green);
+
+      // 触发字幕库重载回调
+      widget.onSavedToLibrary?.call();
+    } catch (e) {
+      _showSnackBar('保存失败: $e', Colors.red);
+    }
+  }
+
+  void _showSnackBar(String message, Color backgroundColor) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: backgroundColor,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  String? _getCurrentContent() {
+    if (_showTranslation && _translatedContent != null) {
+      return _isEditMode ? _translatedTextController.text : _translatedContent;
+    } else {
+      return _isEditMode ? _textController.text : _content;
     }
   }
 
@@ -76,6 +226,7 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
           final content = await localFile.readAsString();
           setState(() {
             _content = content;
+            _textController.text = content;
             _isLoading = false;
           });
           return;
@@ -100,6 +251,7 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
         if (cachedContent != null) {
           setState(() {
             _content = cachedContent;
+            _textController.text = cachedContent;
             _isLoading = false;
           });
           return;
@@ -130,6 +282,7 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
 
         setState(() {
           _content = content;
+          _textController.text = content;
           _isLoading = false;
         });
       } else {
@@ -165,6 +318,7 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
 
       setState(() {
         _translatedContent = translated;
+        _translatedTextController.text = translated;
         _showTranslation = true;
         _isTranslating = false;
         _translationProgress = '';
@@ -191,6 +345,20 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
       appBar: ScrollableAppBar(
         title: Text(widget.title),
         actions: [
+          if (_content != null && _content!.isNotEmpty)
+            IconButton(
+              icon: Icon(
+                _isEditMode ? Icons.visibility : Icons.edit,
+                color:
+                    _isEditMode ? Theme.of(context).colorScheme.primary : null,
+              ),
+              onPressed: () {
+                setState(() {
+                  _isEditMode = !_isEditMode;
+                });
+              },
+              tooltip: _isEditMode ? '预览模式' : '编辑模式',
+            ),
           if (_content != null && _content!.isNotEmpty)
             IconButton(
               icon: _isTranslating
@@ -223,14 +391,8 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
             ),
           IconButton(
             icon: const Icon(Icons.download),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('下载功能开发中...'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
+            onPressed: _showSaveOptions,
+            tooltip: '保存',
           ),
         ],
       ),
@@ -299,15 +461,30 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
             child: SingleChildScrollView(
               controller: _scrollController,
               padding: const EdgeInsets.all(16),
-              child: SelectableText(
-                _showTranslation && _translatedContent != null
-                    ? _translatedContent!
-                    : _content ?? '',
-                style: const TextStyle(
-                  fontFamily: 'monospace',
-                  fontSize: 14,
-                ),
-              ),
+              child: _isEditMode
+                  ? TextField(
+                      controller: _showTranslation && _translatedContent != null
+                          ? _translatedTextController
+                          : _textController,
+                      maxLines: null,
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 14,
+                      ),
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: '编辑文本内容...',
+                      ),
+                    )
+                  : SelectableText(
+                      _showTranslation && _translatedContent != null
+                          ? _translatedContent!
+                          : _content ?? '',
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 14,
+                      ),
+                    ),
             ),
           ),
         ),
