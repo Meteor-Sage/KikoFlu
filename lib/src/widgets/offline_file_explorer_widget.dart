@@ -1,10 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/work.dart';
+import '../services/download_path_service.dart';
 import '../models/audio_track.dart';
 import '../providers/audio_provider.dart';
 import '../providers/lyric_provider.dart';
@@ -71,8 +71,8 @@ class _OfflineFileExplorerWidgetState
     });
 
     try {
-      final appDir = await getApplicationDocumentsDirectory();
-      final workDir = Directory('${appDir.path}/downloads/${widget.work.id}');
+      final downloadDir = await DownloadPathService.getDownloadDirectory();
+      final workDir = Directory('${downloadDir.path}/${widget.work.id}');
 
       if (!await workDir.exists()) {
         setState(() {
@@ -398,10 +398,9 @@ class _OfflineFileExplorerWidgetState
     }
 
     // 获取本地文件路径
-    final appDir = await getApplicationDocumentsDirectory();
+    final downloadDir = await DownloadPathService.getDownloadDirectory();
     final relativePath = parentPath.isEmpty ? title : '$parentPath/$title';
-    final localPath =
-        '${appDir.path}/downloads/${widget.work.id}/$relativePath';
+    final localPath = '${downloadDir.path}/${widget.work.id}/$relativePath';
     final localFile = File(localPath);
 
     if (!await localFile.exists()) {
@@ -412,8 +411,7 @@ class _OfflineFileExplorerWidgetState
     // 获取作品封面URL（用于播放器显示）
     String? coverUrl;
     try {
-      final coverFile =
-          File('${appDir.path}/downloads/${widget.work.id}/cover.jpg');
+      final coverFile = File('${downloadDir.path}/${widget.work.id}/cover.jpg');
       if (await coverFile.exists()) {
         coverUrl = 'file://${coverFile.path}';
       }
@@ -444,7 +442,7 @@ class _OfflineFileExplorerWidgetState
       final fileRelativePath =
           parentPath.isEmpty ? fileTitle : '$parentPath/$fileTitle';
       final filePath =
-          '${appDir.path}/downloads/${widget.work.id}/$fileRelativePath';
+          '${downloadDir.path}/${widget.work.id}/$fileRelativePath';
       final file2 = File(filePath);
 
       if (await file2.exists()) {
@@ -617,8 +615,8 @@ class _OfflineFileExplorerWidgetState
 
   // 预览图片文件（从本地）
   Future<void> _previewImageFile(dynamic file) async {
-    final appDir = await getApplicationDocumentsDirectory();
-    final workPath = '${appDir.path}/downloads/${widget.work.id}';
+    final downloadDir = await DownloadPathService.getDownloadDirectory();
+    final workPath = '${downloadDir.path}/${widget.work.id}';
 
     final imageFiles = _getImageFilesFromCurrentDirectory();
     final currentIndex = imageFiles.indexWhere(
@@ -726,8 +724,8 @@ class _OfflineFileExplorerWidgetState
       return;
     }
 
-    final appDir = await getApplicationDocumentsDirectory();
-    final localPath = '${appDir.path}/downloads/${widget.work.id}/$filePath';
+    final downloadDir = await DownloadPathService.getDownloadDirectory();
+    final localPath = '${downloadDir.path}/${widget.work.id}/$filePath';
     final localFile = File(localPath);
 
     if (!await localFile.exists()) {
@@ -763,8 +761,8 @@ class _OfflineFileExplorerWidgetState
       return;
     }
 
-    final appDir = await getApplicationDocumentsDirectory();
-    final localPath = '${appDir.path}/downloads/${widget.work.id}/$filePath';
+    final downloadDir = await DownloadPathService.getDownloadDirectory();
+    final localPath = '${downloadDir.path}/${widget.work.id}/$filePath';
     final localFile = File(localPath);
 
     if (!await localFile.exists()) {
@@ -799,8 +797,8 @@ class _OfflineFileExplorerWidgetState
       return;
     }
 
-    final appDir = await getApplicationDocumentsDirectory();
-    final localPath = '${appDir.path}/downloads/${widget.work.id}/$filePath';
+    final downloadDir = await DownloadPathService.getDownloadDirectory();
+    final localPath = '${downloadDir.path}/${widget.work.id}/$filePath';
     final localFile = File(localPath);
 
     if (!await localFile.exists()) {

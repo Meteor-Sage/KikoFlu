@@ -122,7 +122,7 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
       if (Platform.isWindows || Platform.isMacOS) {
         final uri = Uri.file(path);
         final canLaunch = await canLaunchUrl(uri);
-        
+
         if (canLaunch) {
           await launchUrl(uri);
         } else {
