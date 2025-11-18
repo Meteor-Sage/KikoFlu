@@ -20,6 +20,7 @@ import '../widgets/review_progress_dialog.dart';
 import '../widgets/rating_detail_popup.dart';
 import '../services/translation_service.dart';
 import '../widgets/download_fab.dart';
+import '../providers/work_detail_display_provider.dart';
 
 class WorkDetailScreen extends ConsumerStatefulWidget {
   final Work work;
@@ -721,83 +722,93 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 标题（可长按复制）+ 内联字幕图标（紧跟标题最后一个字，不换行）
-          GestureDetector(
-            onLongPress: () => _copyToClipboard(
-              _showTranslation && _translatedTitle != null
-                  ? _translatedTitle!
-                  : work.title,
-              '标题',
-            ),
-            child: Text.rich(
-              TextSpan(
-                children: [
+          Consumer(
+            builder: (context, ref, _) {
+              final displaySettings = ref.watch(workDetailDisplayProvider);
+              return GestureDetector(
+                onLongPress: () => _copyToClipboard(
+                  _showTranslation && _translatedTitle != null
+                      ? _translatedTitle!
+                      : work.title,
+                  '标题',
+                ),
+                child: Text.rich(
                   TextSpan(
-                    text: _showTranslation && _translatedTitle != null
-                        ? _translatedTitle
-                        : work.title,
-                  ),
-                  if (work.sourceUrl != null)
-                    WidgetSpan(
-                      alignment: PlaceholderAlignment.middle,
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 6),
-                        child: MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: GestureDetector(
-                            onTap: () => _openSourceUrl(work.sourceUrl!),
-                            child: Icon(
-                              Icons.open_in_new,
-                              size: 18,
-                              color: Theme.of(context).colorScheme.primary,
+                    children: [
+                      TextSpan(
+                        text: _showTranslation && _translatedTitle != null
+                            ? _translatedTitle
+                            : work.title,
+                      ),
+                      if (displaySettings.showExternalLinks &&
+                          work.sourceUrl != null)
+                        WidgetSpan(
+                          alignment: PlaceholderAlignment.middle,
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 6),
+                            child: MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              child: GestureDetector(
+                                onTap: () => _openSourceUrl(work.sourceUrl!),
+                                child: Icon(
+                                  Icons.open_in_new,
+                                  size: 18,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
-                  // 翻译按钮
-                  WidgetSpan(
-                    alignment: PlaceholderAlignment.middle,
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 6),
-                      child: MouseRegion(
-                        cursor: _isTranslating
-                            ? SystemMouseCursors.basic
-                            : SystemMouseCursors.click,
-                        child: GestureDetector(
-                          onTap: _isTranslating ? null : _translateTitle,
-                          child: _isTranslating
-                              ? SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color:
-                                        Theme.of(context).colorScheme.primary,
-                                  ),
-                                )
-                              : Icon(
-                                  Icons.g_translate,
-                                  size: 18,
-                                  color: _showTranslation
-                                      ? Theme.of(context).colorScheme.primary
-                                      : Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withOpacity(0.6),
-                                ),
+                      // 翻译按钮
+                      if (displaySettings.showTranslateButton)
+                        WidgetSpan(
+                          alignment: PlaceholderAlignment.middle,
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 6),
+                            child: MouseRegion(
+                              cursor: _isTranslating
+                                  ? SystemMouseCursors.basic
+                                  : SystemMouseCursors.click,
+                              child: GestureDetector(
+                                onTap: _isTranslating ? null : _translateTitle,
+                                child: _isTranslating
+                                    ? SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primary,
+                                        ),
+                                      )
+                                    : Icon(
+                                        Icons.g_translate,
+                                        size: 18,
+                                        color: _showTranslation
+                                            ? Theme.of(context)
+                                                .colorScheme
+                                                .primary
+                                            : Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withOpacity(0.6),
+                                      ),
+                              ),
+                            ),
+                          ),
                         ),
+                    ],
+                  ),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
                       ),
-                    ),
-                  ),
-                ],
-              ),
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-              textAlign: TextAlign.start,
-              softWrap: true,
-            ),
+                  textAlign: TextAlign.start,
+                  softWrap: true,
+                ),
+              );
+            },
           ),
           const SizedBox(height: 8),
 
@@ -828,172 +839,186 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
             ),
 
           // 评分信息 价格和销售信息
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              // 评分信息 - 总是显示，支持悬浮显示详情
-              MouseRegion(
-                cursor: work.rateCountDetail != null &&
-                        work.rateCountDetail!.isNotEmpty
-                    ? SystemMouseCursors.click
-                    : SystemMouseCursors.basic,
-                child: GestureDetector(
-                  onTap: () {
-                    if (work.rateCountDetail != null &&
-                        work.rateCountDetail!.isNotEmpty) {
-                      _showRatingDetailDialog(work);
-                    }
-                  },
-                  child: Tooltip(
-                    message: work.rateCountDetail != null &&
-                            work.rateCountDetail!.isNotEmpty
-                        ? '点击查看评分详情'
-                        : '',
-                    preferBelow: false,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.star, color: Colors.amber, size: 20),
-                        const SizedBox(width: 4),
-                        Text(
-                          (work.rateAverage != null &&
-                                  work.rateCount != null &&
-                                  work.rateCount! > 0)
-                              ? work.rateAverage!.toStringAsFixed(1)
-                              : '-',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
+          Consumer(
+            builder: (context, ref, _) {
+              final displaySettings = ref.watch(workDetailDisplayProvider);
+              return Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  // 评分信息 - 根据设置显示
+                  if (displaySettings.showRating)
+                    MouseRegion(
+                      cursor: work.rateCountDetail != null &&
+                              work.rateCountDetail!.isNotEmpty
+                          ? SystemMouseCursors.click
+                          : SystemMouseCursors.basic,
+                      child: GestureDetector(
+                        onTap: () {
+                          if (work.rateCountDetail != null &&
+                              work.rateCountDetail!.isNotEmpty) {
+                            _showRatingDetailDialog(work);
+                          }
+                        },
+                        child: Tooltip(
+                          message: work.rateCountDetail != null &&
+                                  work.rateCountDetail!.isNotEmpty
+                              ? '点击查看评分详情'
+                              : '',
+                          preferBelow: false,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.star,
+                                  color: Colors.amber, size: 20),
+                              const SizedBox(width: 4),
+                              Text(
+                                (work.rateAverage != null &&
+                                        work.rateCount != null &&
+                                        work.rateCount! > 0)
+                                    ? work.rateAverage!.toStringAsFixed(1)
+                                    : '-',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              // 括号内包含数字和感叹号图标
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    '(',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${work.rateCount ?? 0}',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  // 如果有详情数据，显示信息图标
+                                  if (work.rateCountDetail != null &&
+                                      work.rateCountDetail!.isNotEmpty)
+                                    Icon(
+                                      Icons.info_outline,
+                                      size: 14,
+                                      color: Colors.grey[600],
+                                    ),
+                                  Text(
+                                    ')',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        // 括号内包含数字和感叹号图标
-                        Row(
+                      ),
+                    ),
+
+                  // 我的评分 - 仅当有评分时显示
+                  if (_currentRating != null)
+                    InkWell(
+                      onTap: _showProgressDialog,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primaryContainer,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              '(',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 12,
-                              ),
+                            Icon(
+                              Icons.person,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onPrimaryContainer,
+                              size: 14,
                             ),
-                            Text(
-                              '${work.rateCount ?? 0}',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 12,
-                              ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.star,
+                              color: Colors.amber,
+                              size: 14,
                             ),
-                            // 如果有详情数据，显示信息图标
-                            if (work.rateCountDetail != null &&
-                                work.rateCountDetail!.isNotEmpty)
-                              Icon(
-                                Icons.info_outline,
-                                size: 14,
-                                color: Colors.grey[600],
-                              ),
+                            const SizedBox(width: 2),
                             Text(
-                              ')',
+                              '$_currentRating',
                               style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 12,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onPrimaryContainer,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
-              ),
 
-              // 我的评分 - 仅当有评分时显示
-              if (_currentRating != null)
-                InkWell(
-                  onTap: _showProgressDialog,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+                  // 价格信息
+                  if (displaySettings.showPrice && work.price != null)
+                    Text(
+                      '${work.price} 日元',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Colors.red[700],
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
                     ),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
+
+                  // 时长信息
+                  if (displaySettings.showDuration &&
+                      work.duration != null &&
+                      work.duration! > 0)
+                    Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          Icons.person,
-                          color:
-                              Theme.of(context).colorScheme.onPrimaryContainer,
-                          size: 14,
-                        ),
+                        const Icon(Icons.access_time,
+                            color: Colors.blue, size: 16),
                         const SizedBox(width: 4),
-                        Icon(
-                          Icons.star,
-                          color: Colors.amber,
-                          size: 14,
-                        ),
-                        const SizedBox(width: 2),
                         Text(
-                          '$_currentRating',
-                          style: TextStyle(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onPrimaryContainer,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          _formatDuration(work.duration!),
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Colors.blue[700],
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                         ),
                       ],
                     ),
-                  ),
-                ),
 
-              // 价格信息
-              if (work.price != null)
-                Text(
-                  '${work.price} 日元',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.red[700],
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                      ),
-                ),
-
-              // 时长信息
-              if (work.duration != null && work.duration! > 0)
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.access_time, color: Colors.blue, size: 16),
-                    const SizedBox(width: 4),
+                  // 销售数量信息
+                  if (displaySettings.showSales &&
+                      work.dlCount != null &&
+                      work.dlCount! > 0)
                     Text(
-                      _formatDuration(work.duration!),
+                      '售出：${_formatNumber(work.dlCount!)}',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.blue[700],
+                            color: Colors.grey[600],
                             fontSize: 12,
-                            fontWeight: FontWeight.w500,
                           ),
                     ),
-                  ],
-                ),
-
-              // 销售数量信息
-              if (work.dlCount != null && work.dlCount! > 0)
-                Text(
-                  '售出：${_formatNumber(work.dlCount!)}',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey[600],
-                        fontSize: 12,
-                      ),
-                ),
-            ],
+                ],
+              );
+            },
           ),
 
           const SizedBox(height: 16),
@@ -1151,23 +1176,34 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
           ],
 
           // 发布日期
-          if (work.release != null) ...[
-            Text(
-              '发布日期',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
+          Consumer(
+            builder: (context, ref, _) {
+              final displaySettings = ref.watch(workDetailDisplayProvider);
+              if (!displaySettings.showReleaseDate || work.release == null) {
+                return const SizedBox.shrink();
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '发布日期',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
                   ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              work.release!.split('T')[0],
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontSize: 14,
+                  const SizedBox(height: 8),
+                  Text(
+                    work.release!.split('T')[0],
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontSize: 14,
+                        ),
                   ),
-            ),
-            const SizedBox(height: 16),
-          ],
+                  const SizedBox(height: 16),
+                ],
+              );
+            },
+          ),
 
           // 其他语言版本
           if (work.otherLanguageEditions != null &&
