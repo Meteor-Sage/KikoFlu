@@ -103,7 +103,7 @@ msix_config:
   display_name: KikoFlu
   publisher_display_name: KikoFlu Dev
   identity_name: com.meteor.kikoeruflutter
-  msix_version: 2.0.1
+  msix_version: 2.0.1.0
   logo_path: assets\icons\app_icon.ico
   capabilities: internetClient, musicLibrary, privateNetworkClientServer
   languages: zh-CN, en-US, ja-JP
