@@ -52,7 +52,9 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
   Future<void> _showCreatePlaylistDialog() async {
     final nameController = TextEditingController();
     final descriptionController = TextEditingController();
+    final linkController = TextEditingController();
     PlaylistPrivacy selectedPrivacy = PlaylistPrivacy.private;
+    bool isCreateMode = true; // true: 创建模式, false: 添加链接模式
 
     final result = await showDialog<bool>(
       context: context,
@@ -69,118 +71,174 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
                 maxWidth: dialogWidth.clamp(300.0, 600.0),
                 maxHeight: MediaQuery.of(context).size.height * 0.85,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 标题栏
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-                    child: Row(
-                      children: [
-                        Text(
-                          '创建播放列表',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                      ],
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // 标题栏
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                      child: Row(
+                        children: [
+                          Text(
+                            isCreateMode ? '创建播放列表' : '添加播放列表',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
 
-                  // 内容区域
-                  Flexible(
-                    child: SingleChildScrollView(
+                    // 模式切换
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: SegmentedButton<bool>(
+                        segments: const [
+                          ButtonSegment<bool>(
+                            value: true,
+                            label: Text('创建'),
+                            icon: Icon(Icons.add),
+                          ),
+                          ButtonSegment<bool>(
+                            value: false,
+                            label: Text('添加'),
+                            icon: Icon(Icons.link),
+                          ),
+                        ],
+                        selected: {isCreateMode},
+                        onSelectionChanged: (Set<bool> selected) {
+                          setDialogState(() {
+                            isCreateMode = selected.first;
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 内容区域
+                    Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        children: isCreateMode
+                            ? [
+                                // 创建模式的输入框
+                                // 名称输入
+                                TextField(
+                                  controller: nameController,
+                                  decoration: const InputDecoration(
+                                    labelText: '播放列表名称',
+                                    hintText: '请输入名称',
+                                    border: OutlineInputBorder(),
+                                    prefixIcon: Icon(Icons.title),
+                                  ),
+                                  autofocus: true,
+                                  maxLength: 50,
+                                ),
+                                const SizedBox(height: 16),
+
+                                // 隐私设置
+                                DropdownButtonFormField<PlaylistPrivacy>(
+                                  value: selectedPrivacy,
+                                  decoration: InputDecoration(
+                                    labelText: '隐私设置',
+                                    border: const OutlineInputBorder(),
+                                    prefixIcon: const Icon(Icons.lock_outline),
+                                    helperText: selectedPrivacy.description,
+                                    helperMaxLines: 2,
+                                  ),
+                                  items: PlaylistPrivacy.values.map((privacy) {
+                                    return DropdownMenuItem<PlaylistPrivacy>(
+                                      value: privacy,
+                                      child: Text(privacy.label),
+                                    );
+                                  }).toList(),
+                                  onChanged: (value) {
+                                    if (value != null) {
+                                      setDialogState(() {
+                                        selectedPrivacy = value;
+                                      });
+                                    }
+                                  },
+                                ),
+                                const SizedBox(height: 16),
+
+                                // 描述输入
+                                TextField(
+                                  controller: descriptionController,
+                                  decoration: const InputDecoration(
+                                    labelText: '描述（可选）',
+                                    hintText: '添加一些描述信息',
+                                    border: OutlineInputBorder(),
+                                    prefixIcon: Icon(Icons.description),
+                                  ),
+                                  maxLines: 1,
+                                  maxLength: 200,
+                                ),
+                                const SizedBox(height: 8),
+                              ]
+                            : [
+                                // 添加链接模式的输入框
+                                TextField(
+                                  controller: linkController,
+                                  decoration: const InputDecoration(
+                                    labelText: '播放列表链接',
+                                    hintText:
+                                        '粘贴播放列表链接，如:\nhttps://www.asmr.one/playlist?id=...',
+                                    border: OutlineInputBorder(),
+                                    prefixIcon: Icon(Icons.link),
+                                  ),
+                                  autofocus: true,
+                                  maxLines: 3,
+                                ),
+                                const SizedBox(height: 8),
+                              ],
+                      ),
+                    ),
+
+                    // 操作按钮
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          // 名称输入
-                          TextField(
-                            controller: nameController,
-                            decoration: const InputDecoration(
-                              labelText: '播放列表名称',
-                              hintText: '请输入名称',
-                              border: OutlineInputBorder(),
-                              prefixIcon: Icon(Icons.title),
-                            ),
-                            autofocus: true,
-                            maxLength: 50,
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('取消'),
                           ),
-                          const SizedBox(height: 16),
-
-                          // 隐私设置
-                          DropdownButtonFormField<PlaylistPrivacy>(
-                            value: selectedPrivacy,
-                            decoration: InputDecoration(
-                              labelText: '隐私设置',
-                              border: const OutlineInputBorder(),
-                              prefixIcon: const Icon(Icons.lock_outline),
-                              helperText: selectedPrivacy.description,
-                              helperMaxLines: 2,
-                            ),
-                            items: PlaylistPrivacy.values.map((privacy) {
-                              return DropdownMenuItem<PlaylistPrivacy>(
-                                value: privacy,
-                                child: Text(privacy.label),
-                              );
-                            }).toList(),
-                            onChanged: (value) {
-                              if (value != null) {
-                                setDialogState(() {
-                                  selectedPrivacy = value;
-                                });
+                          const SizedBox(width: 8),
+                          FilledButton(
+                            onPressed: () {
+                              if (isCreateMode) {
+                                if (nameController.text.trim().isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('请输入播放列表名称'),
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                  return;
+                                }
+                              } else {
+                                if (linkController.text.trim().isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('请输入播放列表链接'),
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                  return;
+                                }
                               }
+                              Navigator.pop(context, true);
                             },
+                            child: Text(isCreateMode ? '创建' : '添加'),
                           ),
-                          const SizedBox(height: 16),
-
-                          // 描述输入
-                          TextField(
-                            controller: descriptionController,
-                            decoration: const InputDecoration(
-                              labelText: '描述（可选）',
-                              hintText: '添加一些描述信息',
-                              border: OutlineInputBorder(),
-                              prefixIcon: Icon(Icons.description),
-                            ),
-                            maxLines: 1,
-                            maxLength: 200,
-                          ),
-                          const SizedBox(height: 8),
                         ],
                       ),
                     ),
-                  ),
-
-                  // 操作按钮
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, false),
-                          child: const Text('取消'),
-                        ),
-                        const SizedBox(width: 8),
-                        FilledButton(
-                          onPressed: () {
-                            if (nameController.text.trim().isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('请输入播放列表名称'),
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
-                              return;
-                            }
-                            Navigator.pop(context, true);
-                          },
-                          child: const Text('创建'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -191,18 +249,132 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
     // 先保存值，再释放 controller
     final name = nameController.text.trim();
     final description = descriptionController.text.trim();
+    final link = linkController.text.trim();
 
     // 延迟释放 controller，等待对话框关闭动画完成
     Future.delayed(const Duration(milliseconds: 300), () {
       nameController.dispose();
       descriptionController.dispose();
+      linkController.dispose();
     });
 
     if (result == true && mounted) {
-      await _createPlaylist(
-        name: name,
-        privacy: selectedPrivacy,
-        description: description,
+      if (isCreateMode) {
+        await _createPlaylist(
+          name: name,
+          privacy: selectedPrivacy,
+          description: description,
+        );
+      } else {
+        await _addPlaylistByLink(link);
+      }
+    }
+  }
+
+  /// 通过链接添加播放列表
+  Future<void> _addPlaylistByLink(String link) async {
+    try {
+      // 解析链接中的 ID
+      String? playlistId;
+
+      // 支持多种链接格式（不限域名）
+      final patterns = [
+        RegExp(r'playlist\?id=([a-f0-9-]+)',
+            caseSensitive: false), // 匹配 ?id= 参数
+        RegExp(r'playlist/([a-f0-9-]+)',
+            caseSensitive: false), // 匹配 /playlist/ 路径
+        RegExp(r'^([a-f0-9-]+)$', caseSensitive: false), // 直接输入 ID
+      ];
+
+      for (final pattern in patterns) {
+        final match = pattern.firstMatch(link);
+        if (match != null) {
+          playlistId = match.group(1);
+          break;
+        }
+      }
+
+      if (playlistId == null || playlistId.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('无法识别的播放列表链接或ID'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      // 显示加载提示
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              SizedBox(width: 12),
+              Text('正在添加播放列表...'),
+            ],
+          ),
+          duration: Duration(seconds: 30),
+        ),
+      );
+
+      final apiService = ref.read(kikoeruApiServiceProvider);
+      await apiService.likePlaylist(playlistId);
+
+      if (!mounted) return;
+
+      // 隐藏加载提示
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+      // 显示成功提示
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('播放列表添加成功'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Theme.of(context).colorScheme.primary,
+        ),
+      );
+
+      // 刷新列表
+      ref.read(playlistsProvider.notifier).refresh();
+    } catch (e) {
+      if (!mounted) return;
+
+      // 隐藏加载提示
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+      // 解析错误信息
+      String errorMessage = '添加失败';
+      final errorString = e.toString();
+
+      if (errorString.contains('playlist.playlistNotFound') ||
+          errorString.contains('404')) {
+        errorMessage = '播放列表不存在或已被删除';
+      } else if (errorString.contains('401') || errorString.contains('403')) {
+        errorMessage = '没有权限访问此播放列表';
+      } else if (errorString.contains('Network') ||
+          errorString.contains('connect')) {
+        errorMessage = '网络连接失败，请检查网络';
+      } else {
+        errorMessage =
+            '添加失败: ${errorString.length > 50 ? errorString.substring(0, 50) + "..." : errorString}';
+      }
+
+      // 显示错误提示
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Theme.of(context).colorScheme.error,
+          duration: const Duration(seconds: 4),
+        ),
       );
     }
   }
