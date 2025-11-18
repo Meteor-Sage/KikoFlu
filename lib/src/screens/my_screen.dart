@@ -11,6 +11,7 @@ import '../models/download_task.dart';
 import 'downloads_screen.dart';
 import 'local_downloads_screen.dart';
 import 'subtitle_library_screen.dart';
+import 'playlists_screen.dart';
 export '../providers/my_reviews_provider.dart' show MyReviewLayoutType;
 
 class MyScreen extends ConsumerStatefulWidget {
@@ -31,7 +32,7 @@ class _MyScreenState extends ConsumerState<MyScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     // 只在首次加载时获取数据，如果已有数据则不重新加载
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final myState = ref.read(myReviewsProvider);
@@ -189,6 +190,7 @@ class _MyScreenState extends ConsumerState<MyScreen>
           controller: _tabController,
           tabs: const [
             Tab(text: '在线标记'),
+            Tab(text: '播放列表'),
             Tab(text: '本地下载'),
             Tab(text: '字幕库'),
           ],
@@ -201,8 +203,8 @@ class _MyScreenState extends ConsumerState<MyScreen>
           if (_tabController.index == 0) {
             return const DownloadFab();
           }
-          // 本地下载页（索引1）：始终显示
-          if (_tabController.index == 1) {
+          // 本地下载页（索引2）：始终显示
+          if (_tabController.index == 2) {
             return StreamBuilder<List<DownloadTask>>(
               stream: DownloadService.instance.tasksStream,
               builder: (context, snapshot) {
@@ -228,6 +230,7 @@ class _MyScreenState extends ConsumerState<MyScreen>
         controller: _tabController,
         children: [
           _buildOnlineBookmarksTab(),
+          const PlaylistsScreen(),
           const LocalDownloadsScreen(),
           const SubtitleLibraryScreen(),
         ],

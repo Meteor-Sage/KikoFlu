@@ -766,11 +766,58 @@ class KikoeruApiService {
     }
   }
 
-  Future<Map<String, dynamic>> createPlaylist(String name) async {
+  /// 获取用户的播放列表（需要token）
+  /// page: 页码（从1开始）
+  /// pageSize: 每页数量
+  /// filterBy: 筛选条件（固定为'all'）
+  Future<Map<String, dynamic>> getUserPlaylists({
+    int page = 1,
+    int pageSize = 20,
+    String filterBy = 'all',
+  }) async {
     try {
+      final response = await _dio.get(
+        '/api/playlist/get-playlists',
+        queryParameters: {
+          'page': page,
+          'pageSize': pageSize,
+          'filterBy': filterBy,
+        },
+      );
+      return response.data;
+    } catch (e) {
+      throw KikoeruApiException('Failed to get user playlists', e);
+    }
+  }
+
+  /// 创建播放列表（需要token）
+  /// name: 播放列表名称（必填）
+  /// privacy: 隐私设置 0=私享(只有您可以观看), 1=不公开(知道链接的人才能观看), 2=公开(任何人都可以观看)
+  /// locale: 语言区域，默认'zh-CN'
+  /// description: 描述（可选）
+  /// works: 作品ID列表，默认为空列表
+  Future<Map<String, dynamic>> createPlaylist({
+    required String name,
+    int privacy = 0,
+    String locale = 'zh-CN',
+    String? description,
+    List<int>? works,
+  }) async {
+    try {
+      final data = {
+        'name': name,
+        'privacy': privacy,
+        'locale': locale,
+        'works': works ?? [],
+      };
+
+      if (description != null && description.isNotEmpty) {
+        data['description'] = description;
+      }
+
       final response = await _dio.post(
-        '/api/playlists',
-        data: {'name': name},
+        '/api/playlist/create-playlist',
+        data: data,
       );
       return response.data;
     } catch (e) {
