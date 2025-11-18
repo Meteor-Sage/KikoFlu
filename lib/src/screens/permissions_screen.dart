@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../utils/snackbar_util.dart';
+
 /// 权限管理页面（仅安卓平台）
 class PermissionsScreen extends StatefulWidget {
   const PermissionsScreen({super.key});
@@ -51,32 +53,17 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
 
       if (mounted) {
         if (status.isGranted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('通知权限已授予'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          SnackBarUtil.showSuccess(context, '通知权限已授予');
           await _checkPermissions();
         } else if (status.isDenied) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('通知权限被拒绝'),
-              backgroundColor: Colors.orange,
-            ),
-          );
+          SnackBarUtil.showWarning(context, '通知权限被拒绝');
         } else if (status.isPermanentlyDenied) {
           _showOpenSettingsDialog('通知权限');
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('请求通知权限失败: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        SnackBarUtil.showError(context, '请求通知权限失败: $e');
       }
     }
   }
@@ -87,32 +74,17 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
 
       if (mounted) {
         if (status.isGranted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('后台运行权限已授予'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          SnackBarUtil.showSuccess(context, '后台运行权限已授予');
           await _checkPermissions();
         } else if (status.isDenied) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('后台运行权限被拒绝'),
-              backgroundColor: Colors.orange,
-            ),
-          );
+          SnackBarUtil.showWarning(context, '后台运行权限被拒绝');
         } else if (status.isPermanentlyDenied) {
           _showOpenSettingsDialog('后台运行权限');
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('请求后台运行权限失败: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        SnackBarUtil.showError(context, '请求后台运行权限失败: $e');
       }
     }
   }

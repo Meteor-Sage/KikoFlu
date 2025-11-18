@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/player_buttons_provider.dart';
+import '../utils/snackbar_util.dart';
 import '../widgets/scrollable_appbar.dart';
 
 /// 播放器按钮设置页面
@@ -64,9 +65,7 @@ class _PlayerButtonsSettingsScreenState
     }
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('设置已保存')),
-      );
+      SnackBarUtil.showSuccess(context, '设置已保存');
       Navigator.of(context).pop();
     }
   }
@@ -110,9 +109,7 @@ class _PlayerButtonsSettingsScreenState
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('已恢复默认设置')),
-        );
+        SnackBarUtil.showSuccess(context, '已恢复默认设置');
       }
     }
   }

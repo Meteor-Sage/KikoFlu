@@ -7,6 +7,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../models/work.dart';
 import '../providers/auth_provider.dart';
 import '../services/translation_service.dart';
+import '../utils/snackbar_util.dart';
 import '../widgets/scrollable_appbar.dart';
 import '../widgets/tag_chip.dart';
 import '../widgets/va_chip.dart';
@@ -77,13 +78,7 @@ class _OfflineWorkDetailScreenState
           _isTranslating = false;
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('翻译失败: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 2),
-          ),
-        );
+        SnackBarUtil.showError(context, '翻译失败: $e');
       }
     }
   }
@@ -91,12 +86,10 @@ class _OfflineWorkDetailScreenState
   // 复制标题到剪贴板
   void _copyToClipboard(String text, String label) {
     Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('已复制$label: $text'),
-        duration: const Duration(seconds: 1),
-        behavior: SnackBarBehavior.floating,
-      ),
+    SnackBarUtil.showSuccess(
+      context,
+      '已复制$label: $text',
+      duration: const Duration(seconds: 1),
     );
   }
 

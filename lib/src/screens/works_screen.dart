@@ -10,6 +10,7 @@ import '../widgets/enhanced_work_card.dart';
 import '../widgets/sort_dialog.dart';
 import '../widgets/pagination_bar.dart';
 import '../utils/responsive_grid_helper.dart';
+import '../utils/snackbar_util.dart';
 import '../widgets/scrollable_appbar.dart';
 import '../widgets/download_fab.dart';
 
@@ -105,12 +106,9 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
         displayMode == DisplayMode.recommended;
 
     if (isRecommendMode) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              displayMode == DisplayMode.popular ? '热门推荐模式不支持排序' : '推荐模式不支持排序'),
-          duration: const Duration(seconds: 2),
-        ),
+      SnackBarUtil.showInfo(
+        context,
+        displayMode == DisplayMode.popular ? '热门推荐模式不支持排序' : '推荐模式不支持排序',
       );
       return;
     }
