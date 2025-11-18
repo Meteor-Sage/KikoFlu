@@ -89,13 +89,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('字幕库匹配优先级'),
+        title: const Text(
+          '字幕库优先级',
+          style: TextStyle(fontSize: 18),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              '选择字幕库在自动字幕加载流程中的优先级：',
+              '选择字幕库在自动加载中的优先级：',
               style: TextStyle(fontSize: 14),
             ),
             const SizedBox(height: 16),
@@ -104,8 +107,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 title: Text(priority.displayName),
                 subtitle: Text(
                   priority == SubtitleLibraryPriority.highest
-                      ? '优先查找字幕库，再查找文件树'
-                      : '优先查找文件树，再查找字幕库',
+                      ? '优先查找字幕库，再查找在线/下载'
+                      : '优先查找在线/下载，再查找字幕库',
                   style: TextStyle(
                     fontSize: 12,
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -310,7 +313,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               return ListTile(
                 leading: Icon(Icons.library_books,
                     color: Theme.of(context).colorScheme.primary),
-                title: const Text('字幕库匹配优先级'),
+                title: const Text('字幕库优先级'),
                 subtitle: Text('当前: ${priority.displayName}'),
                 trailing: const Icon(Icons.arrow_forward_ios),
                 onTap: () {

@@ -10,10 +10,10 @@ final subtitleLibraryRefreshTriggerProvider = StateProvider<int>((ref) => 0);
 /// 字幕库匹配优先级
 enum SubtitleLibraryPriority {
   /// 最优先 - 字幕库优先于文件树匹配
-  highest('最优先', 'highest'),
+  highest('优先', 'highest'),
 
   /// 最后 - 字幕库在文件树匹配之后
-  lowest('最后', 'lowest');
+  lowest('滞后', 'lowest');
 
   final String displayName;
   final String value;
