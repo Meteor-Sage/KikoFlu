@@ -20,11 +20,6 @@
 </div>
 
 
-<div align="center">
-  <img src="screenshots/10.png" width="900" alt="">
-</div>
-
-
 
 ## 特性
 
