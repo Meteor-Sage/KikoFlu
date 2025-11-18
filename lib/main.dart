@@ -167,7 +167,9 @@ class _KikoeruAppState extends ConsumerState<KikoeruApp> {
   Widget _buildHomeScreen() {
     final authState = ref.watch(authProvider);
 
-    if (authState.currentUser != null && authState.isLoggedIn) {
+    // 如果有用户信息（包括离线模式），显示主页
+    // 这样用户可以访问本地下载的内容
+    if (authState.currentUser != null) {
       return const MainScreen();
     } else {
       return const LoginScreen();

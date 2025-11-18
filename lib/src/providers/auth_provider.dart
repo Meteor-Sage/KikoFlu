@@ -124,7 +124,32 @@ class AuthNotifier extends StateNotifier<AuthState> {
           print('[Auth] Re-login successful');
           return;
         } else {
-          print('[Auth] Re-login failed');
+          print('[Auth] Re-login failed due to network or server issue');
+          // 网络问题导致登录失败，但我们有缓存的账户信息
+          // 允许用户以离线模式进入应用（可以使用本地下载内容）
+          print('[Auth] Entering offline mode with cached account');
+
+          // 使用缓存的账户信息设置基本状态
+          _apiService.init('', activeAccount.host);
+
+          state = state.copyWith(
+            currentUser: User(
+              name: activeAccount.username,
+              group: 'guest',
+              loggedIn: false, // 标记为未完全登录（离线模式）
+              host: activeAccount.host,
+              password: activeAccount.password,
+              token: '',
+              lastUpdateTime: DateTime.now(),
+            ),
+            host: activeAccount.host,
+            token: '',
+            isLoggedIn: false, // 离线模式
+            error: '网络连接失败，以离线模式启动',
+          );
+
+          print('[Auth] Offline mode activated');
+          return;
         }
       } else {
         print('[Auth] No active account found in database');
@@ -135,6 +160,38 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await logout();
     } catch (e) {
       print('[Auth] Failed to load saved auth: $e');
+
+      // 在异常情况下，也尝试检查是否有缓存账户
+      try {
+        final activeAccount = await AccountDatabase.instance.getActiveAccount();
+        if (activeAccount != null) {
+          print(
+              '[Auth] Exception occurred but found cached account, entering offline mode');
+
+          _apiService.init('', activeAccount.host);
+
+          state = state.copyWith(
+            currentUser: User(
+              name: activeAccount.username,
+              group: 'guest',
+              loggedIn: false,
+              host: activeAccount.host,
+              password: activeAccount.password,
+              token: '',
+              lastUpdateTime: DateTime.now(),
+            ),
+            host: activeAccount.host,
+            token: '',
+            isLoggedIn: false,
+            error: '网络连接失败，以离线模式启动',
+          );
+
+          return;
+        }
+      } catch (dbError) {
+        print('[Auth] Failed to check database: $dbError');
+      }
+
       await logout();
     }
   }
@@ -494,6 +551,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
     if (state.currentUser == user) {
       await logout();
     }
+  }
+
+  /// 重新尝试连接（用于从离线模式恢复）
+  Future<void> retryConnection() async {
+    print('[Auth] Retrying connection...');
+    await _loadCurrentUser();
   }
 
   void clearError() {

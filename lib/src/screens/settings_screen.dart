@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:io';
 
 import 'account_management_screen.dart';
 import 'download_path_settings_screen.dart';
 import 'theme_settings_screen.dart';
 import 'ui_settings_screen.dart';
-import 'audio_format_settings_screen.dart';
+import 'preferences_screen.dart';
 import 'about_screen.dart';
+import 'permissions_screen.dart';
 import '../providers/settings_provider.dart';
 import '../providers/update_provider.dart';
 import '../services/cache_service.dart';
@@ -81,67 +83,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     } finally {
       _isUpdatingCacheSize = false;
     }
-  }
-
-  void _showSubtitleLibraryPriorityDialog() {
-    final currentPriority = ref.read(subtitleLibraryPriorityProvider);
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text(
-          '字幕库优先级',
-          style: TextStyle(fontSize: 18),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '选择字幕库在自动加载中的优先级：',
-              style: TextStyle(fontSize: 14),
-            ),
-            const SizedBox(height: 16),
-            ...SubtitleLibraryPriority.values.map((priority) {
-              return RadioListTile<SubtitleLibraryPriority>(
-                title: Text(priority.displayName),
-                subtitle: Text(
-                  priority == SubtitleLibraryPriority.highest
-                      ? '优先查找字幕库，再查找在线/下载'
-                      : '优先查找在线/下载，再查找字幕库',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                value: priority,
-                groupValue: currentPriority,
-                onChanged: (value) {
-                  if (value != null) {
-                    ref
-                        .read(subtitleLibraryPriorityProvider.notifier)
-                        .updatePriority(value);
-                    Navigator.pop(context);
-                    _showSnackBar(
-                      SnackBar(
-                        content: Text('已设置为: ${value.displayName}'),
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                  }
-                },
-              );
-            }),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('关闭'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
@@ -222,19 +163,41 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Widget _buildAccountCard(BuildContext context) {
     return Card(
-      child: ListTile(
-        leading: Icon(Icons.manage_accounts,
-            color: Theme.of(context).colorScheme.primary),
-        title: const Text('账户管理'),
-        subtitle: const Text('多账户管理,切换账户'),
-        trailing: const Icon(Icons.arrow_forward_ios),
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => const AccountManagementScreen(),
+      child: Column(
+        children: [
+          ListTile(
+            leading: Icon(Icons.manage_accounts,
+                color: Theme.of(context).colorScheme.primary),
+            title: const Text('账户管理'),
+            subtitle: const Text('多账户管理,切换账户'),
+            trailing: const Icon(Icons.arrow_forward_ios),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const AccountManagementScreen(),
+                ),
+              );
+            },
+          ),
+          // 仅在安卓平台显示权限管理
+          if (Platform.isAndroid) ...[
+            Divider(color: Theme.of(context).colorScheme.outlineVariant),
+            ListTile(
+              leading: Icon(Icons.security,
+                  color: Theme.of(context).colorScheme.primary),
+              title: const Text('权限管理'),
+              subtitle: const Text('通知权限、后台运行权限'),
+              trailing: const Icon(Icons.arrow_forward_ios),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const PermissionsScreen(),
+                  ),
+                );
+              },
             ),
-          );
-        },
+          ],
+        ],
       ),
     );
   }
@@ -307,32 +270,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             },
           ),
           Divider(color: Theme.of(context).colorScheme.outlineVariant),
-          Consumer(
-            builder: (context, ref, _) {
-              final priority = ref.watch(subtitleLibraryPriorityProvider);
-              return ListTile(
-                leading: Icon(Icons.library_books,
-                    color: Theme.of(context).colorScheme.primary),
-                title: const Text('字幕库优先级'),
-                subtitle: Text('当前: ${priority.displayName}'),
-                trailing: const Icon(Icons.arrow_forward_ios),
-                onTap: () {
-                  _showSubtitleLibraryPriorityDialog();
-                },
-              );
-            },
-          ),
-          Divider(color: Theme.of(context).colorScheme.outlineVariant),
           ListTile(
-            leading: Icon(Icons.audio_file,
-                color: Theme.of(context).colorScheme.primary),
-            title: const Text('音频格式偏好'),
-            subtitle: const Text('设置音频格式的优先级顺序'),
+            leading:
+                Icon(Icons.tune, color: Theme.of(context).colorScheme.primary),
+            title: const Text('偏好设置'),
+            subtitle: const Text('字幕库优先级、音频格式偏好'),
             trailing: const Icon(Icons.arrow_forward_ios),
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => const AudioFormatSettingsScreen(),
+                  builder: (context) => const PreferencesScreen(),
                 ),
               );
             },

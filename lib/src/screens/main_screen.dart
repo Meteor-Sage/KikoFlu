@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/audio_provider.dart';
 import '../providers/update_provider.dart';
+import '../providers/auth_provider.dart';
 import '../widgets/mini_player.dart';
 import 'works_screen.dart';
 import 'search_screen.dart';
@@ -94,64 +95,155 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     if (isLandscape) {
       // 横屏布局：使用 NavigationRail
       return Scaffold(
-        body: Row(
+        body: Stack(
           children: [
-            // 侧边导航栏 - 添加 SingleChildScrollView 避免键盘弹出时像素重叠
-            SingleChildScrollView(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: MediaQuery.of(context).size.height,
-                ),
-                child: IntrinsicHeight(
-                  child: NavigationRail(
-                    selectedIndex: _currentIndex,
-                    onDestinationSelected: _handleDestinationSelected,
-                    labelType: NavigationRailLabelType.selected,
-                    destinations: destinations
-                        .map((dest) => NavigationRailDestination(
-                              icon: dest.icon,
-                              selectedIcon: dest.selectedIcon,
-                              label: Text(dest.label),
-                            ))
-                        .toList(),
-                  ),
-                ),
-              ),
-            ),
-            const VerticalDivider(thickness: 1, width: 1),
             // 主内容区域
-            Expanded(
-              child: Column(
-                children: [
-                  // 主内容
-                  Expanded(
-                    child: PageStorage(
-                      bucket: _bucket,
-                      child: IndexedStack(
-                        index: _currentIndex,
-                        children: List.generate(_screens.length, (index) {
-                          return HeroMode(
-                            enabled: index == _currentIndex,
-                            child: _screens[index],
-                          );
-                        }),
+            Row(
+              children: [
+                // 侧边导航栏
+                SafeArea(
+                  child: SingleChildScrollView(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: MediaQuery.of(context).size.height -
+                            MediaQuery.of(context).padding.top -
+                            MediaQuery.of(context).padding.bottom,
+                      ),
+                      child: IntrinsicHeight(
+                        child: NavigationRail(
+                          selectedIndex: _currentIndex,
+                          onDestinationSelected: _handleDestinationSelected,
+                          labelType: NavigationRailLabelType.selected,
+                          destinations: destinations
+                              .map((dest) => NavigationRailDestination(
+                                    icon: dest.icon,
+                                    selectedIcon: dest.selectedIcon,
+                                    label: Text(dest.label),
+                                  ))
+                              .toList(),
+                        ),
                       ),
                     ),
                   ),
-                  // MiniPlayer
-                  Consumer(
+                ),
+                const VerticalDivider(thickness: 1, width: 1),
+                // 页面内容
+                Expanded(
+                  child: Consumer(
                     builder: (context, ref, child) {
-                      final currentTrack = ref.watch(currentTrackProvider);
-                      return currentTrack.when(
-                        data: (track) => track != null
-                            ? const MiniPlayer()
-                            : const SizedBox.shrink(),
-                        loading: () => const SizedBox.shrink(),
-                        error: (_, __) => const SizedBox.shrink(),
+                      final authState = ref.watch(authProvider);
+                      final isOfflineMode = authState.currentUser != null &&
+                          !authState.isLoggedIn &&
+                          authState.error != null;
+
+                      return Padding(
+                        padding: EdgeInsets.only(top: isOfflineMode ? 30 : 0),
+                        child: SafeArea(
+                          top: false,
+                          child: Column(
+                            children: [
+                              // 主内容
+                              Expanded(
+                                child: PageStorage(
+                                  bucket: _bucket,
+                                  child: IndexedStack(
+                                    index: _currentIndex,
+                                    children:
+                                        List.generate(_screens.length, (index) {
+                                      return HeroMode(
+                                        enabled: index == _currentIndex,
+                                        child: _screens[index],
+                                      );
+                                    }),
+                                  ),
+                                ),
+                              ),
+                              // MiniPlayer
+                              Consumer(
+                                builder: (context, ref, child) {
+                                  final currentTrack =
+                                      ref.watch(currentTrackProvider);
+                                  return currentTrack.when(
+                                    data: (track) => track != null
+                                        ? const MiniPlayer()
+                                        : const SizedBox.shrink(),
+                                    loading: () => const SizedBox.shrink(),
+                                    error: (_, __) => const SizedBox.shrink(),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
                       );
                     },
                   ),
-                ],
+                ),
+              ],
+            ),
+            // 离线模式提示横幅（覆盖在顶部）
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Consumer(
+                builder: (context, ref, child) {
+                  final authState = ref.watch(authProvider);
+                  final isOfflineMode = authState.currentUser != null &&
+                      !authState.isLoggedIn &&
+                      authState.error != null;
+
+                  if (!isOfflineMode) {
+                    return const SizedBox.shrink();
+                  }
+
+                  final topPadding = MediaQuery.of(context).padding.top;
+
+                  return Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.fromLTRB(12, topPadding + 4, 12, 4),
+                    color: Colors.orange.shade800,
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.cloud_off,
+                          size: 14,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 6),
+                        const Expanded(
+                          child: Text(
+                            '离线模式：网络连接失败，仅可访问本地内容',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () async {
+                            final notifier = ref.read(authProvider.notifier);
+                            await notifier.retryConnection();
+                          },
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: const Text(
+                            '重试',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
           ],
@@ -161,17 +253,102 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
     // 竖屏布局：使用 BottomNavigationBar
     return Scaffold(
-      body: PageStorage(
-        bucket: _bucket,
-        child: IndexedStack(
-          index: _currentIndex,
-          children: List.generate(_screens.length, (index) {
-            return HeroMode(
-              enabled: index == _currentIndex,
-              child: _screens[index],
-            );
-          }),
-        ),
+      body: Stack(
+        children: [
+          // 主内容
+          Consumer(
+            builder: (context, ref, child) {
+              final authState = ref.watch(authProvider);
+              final isOfflineMode = authState.currentUser != null &&
+                  !authState.isLoggedIn &&
+                  authState.error != null;
+
+              return Padding(
+                padding: EdgeInsets.only(top: isOfflineMode ? 30 : 0),
+                child: SafeArea(
+                  top: false,
+                  child: PageStorage(
+                    bucket: _bucket,
+                    child: IndexedStack(
+                      index: _currentIndex,
+                      children: List.generate(_screens.length, (index) {
+                        return HeroMode(
+                          enabled: index == _currentIndex,
+                          child: _screens[index],
+                        );
+                      }),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          // 离线模式提示横幅（覆盖在顶部）
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Consumer(
+              builder: (context, ref, child) {
+                final authState = ref.watch(authProvider);
+                final isOfflineMode = authState.currentUser != null &&
+                    !authState.isLoggedIn &&
+                    authState.error != null;
+
+                if (!isOfflineMode) {
+                  return const SizedBox.shrink();
+                }
+
+                final topPadding = MediaQuery.of(context).padding.top;
+
+                return Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.fromLTRB(12, topPadding + 4, 12, 4),
+                  color: Colors.orange.shade800,
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.cloud_off,
+                        size: 14,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 6),
+                      const Expanded(
+                        child: Text(
+                          '离线模式：网络连接失败，仅可访问本地内容',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () async {
+                          final notifier = ref.read(authProvider.notifier);
+                          await notifier.retryConnection();
+                        },
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text(
+                          '重试',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,

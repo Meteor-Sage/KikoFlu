@@ -10,53 +10,66 @@ class UiSettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('界面设置',style: TextStyle(fontSize: 18),),
+        title: const Text(
+          '界面设置',
+          style: TextStyle(fontSize: 18),
+        ),
       ),
       body: ListView(
+        padding: const EdgeInsets.all(16),
         children: [
-          ListTile(
-            leading:
-                Icon(Icons.tune, color: Theme.of(context).colorScheme.primary),
-            title: const Text('播放器按钮'),
-            subtitle: const Text('自定义播放器控制按钮顺序'),
-            trailing: const Icon(Icons.arrow_forward_ios),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const PlayerButtonsSettingsScreen(),
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: Icon(Icons.tune,
+                      color: Theme.of(context).colorScheme.primary),
+                  title: const Text('播放器按钮'),
+                  subtitle: const Text('自定义播放器控制按钮顺序'),
+                  trailing: const Icon(Icons.arrow_forward_ios),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            const PlayerButtonsSettingsScreen(),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
-          Divider(color: Theme.of(context).colorScheme.outlineVariant),
-          ListTile(
-            leading: Icon(Icons.visibility,
-                color: Theme.of(context).colorScheme.primary),
-            title: const Text('作品详情显示'),
-            subtitle: const Text('控制作品详情页显示的信息项'),
-            trailing: const Icon(Icons.arrow_forward_ios),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const WorkDetailDisplaySettingsScreen(),
+                Divider(color: Theme.of(context).colorScheme.outlineVariant),
+                ListTile(
+                  leading: Icon(Icons.visibility,
+                      color: Theme.of(context).colorScheme.primary),
+                  title: const Text('作品详情显示'),
+                  subtitle: const Text('控制作品详情页显示的信息项'),
+                  trailing: const Icon(Icons.arrow_forward_ios),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            const WorkDetailDisplaySettingsScreen(),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
-          Divider(color: Theme.of(context).colorScheme.outlineVariant),
-          ListTile(
-            leading: Icon(Icons.grid_view,
-                color: Theme.of(context).colorScheme.primary),
-            title: const Text('作品卡片显示'),
-            subtitle: const Text('控制作品卡片显示的信息项'),
-            trailing: const Icon(Icons.arrow_forward_ios),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const WorkCardDisplaySettingsScreen(),
+                Divider(color: Theme.of(context).colorScheme.outlineVariant),
+                ListTile(
+                  leading: Icon(Icons.grid_view,
+                      color: Theme.of(context).colorScheme.primary),
+                  title: const Text('作品卡片显示'),
+                  subtitle: const Text('控制作品卡片显示的信息项'),
+                  trailing: const Icon(Icons.arrow_forward_ios),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            const WorkCardDisplaySettingsScreen(),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
+              ],
+            ),
           ),
         ],
       ),
