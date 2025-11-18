@@ -1190,6 +1190,7 @@ class _OfflineFileExplorerWidgetState
                 ),
                 // 操作按钮
                 if (type == 'audio' ||
+                    type == 'video' ||
                     FileIconUtils.isImageFile(item) ||
                     FileIconUtils.isTextFile(item) ||
                     FileIconUtils.isPdfFile(item) ||
