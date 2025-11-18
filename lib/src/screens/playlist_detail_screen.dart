@@ -4,6 +4,7 @@ import '../providers/playlist_detail_provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/enhanced_work_card.dart';
 import '../widgets/pagination_bar.dart';
+import '../utils/snackbar_util.dart';
 
 class PlaylistDetailScreen extends ConsumerStatefulWidget {
   final String playlistId;
@@ -71,13 +72,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
 
     // 系统播放列表不能删除
     if (playlist.isSystemPlaylist && isOwner) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('系统播放列表不能删除'),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
+      SnackBarUtil.showError(context, '系统播放列表不能删除');
       return;
     }
 
@@ -119,22 +114,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
     try {
       // 显示加载提示
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Row(
-            children: [
-              SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-              SizedBox(width: 12),
-              Text('正在删除...'),
-            ],
-          ),
-          duration: Duration(seconds: 30),
-        ),
-      );
+      SnackBarUtil.showLoading(context, '正在删除...');
 
       await ref
           .read(playlistDetailProvider(widget.playlistId).notifier)
@@ -143,16 +123,10 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
       if (!mounted) return;
 
       // 隐藏加载提示
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      SnackBarUtil.hide(context);
 
       // 显示成功提示并返回上一页
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('删除成功'),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Theme.of(context).colorScheme.primary,
-        ),
-      );
+      SnackBarUtil.showSuccess(context, '删除成功');
 
       // 延迟一点返回，让用户看到成功提示
       await Future.delayed(const Duration(milliseconds: 300));
@@ -162,17 +136,10 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
       if (!mounted) return;
 
       // 隐藏加载提示
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      SnackBarUtil.hide(context);
 
       // 显示错误提示
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('删除失败: ${e.toString()}'),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Theme.of(context).colorScheme.error,
-          duration: const Duration(seconds: 4),
-        ),
-      );
+      SnackBarUtil.showError(context, '删除失败: ${e.toString()}');
     }
   }
 
@@ -322,12 +289,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                       work: work,
                       onTap: () {
                         // TODO: 导航到作品详情页
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('点击了作品: ${work.title}'),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
+                        SnackBarUtil.showInfo(context, '点击了作品: ${work.title}');
                       },
                     ),
                   );
