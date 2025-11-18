@@ -7,11 +7,13 @@ import '../providers/auth_provider.dart';
 class PlaylistCard extends ConsumerWidget {
   final Playlist playlist;
   final VoidCallback? onTap;
+  final VoidCallback? onDelete;
 
   const PlaylistCard({
     super.key,
     required this.playlist,
     this.onTap,
+    this.onDelete,
   });
 
   @override
@@ -157,14 +159,28 @@ class PlaylistCard extends ConsumerWidget {
                 ),
               ),
 
-              // 右侧箭头指示器
+              // 右侧删除按钮或箭头指示器
               Padding(
-                padding: const EdgeInsets.only(right: 12),
-                child: Icon(
-                  Icons.chevron_right,
-                  size: 20,
-                  color: theme.colorScheme.onSurfaceVariant.withOpacity(0.4),
-                ),
+                padding: const EdgeInsets.only(right: 4),
+                child: onDelete != null
+                    ? IconButton(
+                        icon: Icon(
+                          Icons.delete_outline,
+                          size: 20,
+                          color: theme.colorScheme.error.withOpacity(0.7),
+                        ),
+                        onPressed: onDelete,
+                        tooltip: '删除',
+                      )
+                    : Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Icon(
+                          Icons.chevron_right,
+                          size: 20,
+                          color: theme.colorScheme.onSurfaceVariant
+                              .withOpacity(0.4),
+                        ),
+                      ),
               ),
             ],
           ),

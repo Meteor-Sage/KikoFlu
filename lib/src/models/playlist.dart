@@ -42,28 +42,30 @@ class Playlist extends Equatable {
   final int privacy;
 
   /// 语言区域
+  @JsonKey(defaultValue: '')
   final String locale;
 
   /// 播放次数
-  @JsonKey(name: 'playback_count')
+  @JsonKey(name: 'playback_count', defaultValue: 0)
   final int playbackCount;
 
   /// 播放列表名称
   final String name;
 
   /// 描述
+  @JsonKey(defaultValue: '')
   final String description;
 
   /// 创建时间
-  @JsonKey(name: 'created_at')
+  @JsonKey(name: 'created_at', defaultValue: '')
   final String createdAt;
 
   /// 更新时间
-  @JsonKey(name: 'updated_at')
+  @JsonKey(name: 'updated_at', defaultValue: '')
   final String updatedAt;
 
   /// 作品数量
-  @JsonKey(name: 'works_count')
+  @JsonKey(name: 'works_count', defaultValue: 0)
   final int worksCount;
 
   /// 最新作品ID
@@ -71,22 +73,22 @@ class Playlist extends Equatable {
   final int? latestWorkID;
 
   /// 主封面URL
-  @JsonKey(name: 'mainCoverUrl')
+  @JsonKey(name: 'mainCoverUrl', defaultValue: '')
   final String mainCoverUrl;
 
   const Playlist({
     required this.id,
     required this.userName,
     required this.privacy,
-    required this.locale,
-    required this.playbackCount,
+    this.locale = '',
+    this.playbackCount = 0,
     required this.name,
-    required this.description,
-    required this.createdAt,
-    required this.updatedAt,
-    required this.worksCount,
+    this.description = '',
+    this.createdAt = '',
+    this.updatedAt = '',
+    this.worksCount = 0,
     this.latestWorkID,
-    required this.mainCoverUrl,
+    this.mainCoverUrl = '',
   });
 
   factory Playlist.fromJson(Map<String, dynamic> json) =>

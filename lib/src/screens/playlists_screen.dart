@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/playlists_provider.dart';
-import '../providers/auth_provider.dart' show kikoeruApiServiceProvider;
+import '../providers/auth_provider.dart';
 import '../widgets/playlist_card.dart';
 import '../widgets/pagination_bar.dart';
 import '../models/playlist.dart' show PlaylistPrivacy;
+import 'playlist_detail_screen.dart';
 
 class PlaylistsScreen extends ConsumerStatefulWidget {
   const PlaylistsScreen({super.key});
@@ -589,14 +590,20 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
               return RepaintBoundary(
                 child: PlaylistCard(
                   playlist: playlist,
-                  onTap: () {
-                    // TODO: 导航到播放列表详情页
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('点击了播放列表: ${playlist.displayName}'),
-                        behavior: SnackBarBehavior.floating,
+                  onTap: () async {
+                    // 导航到播放列表详情页
+                    final deleted = await Navigator.of(context).push<bool>(
+                      MaterialPageRoute(
+                        builder: (context) => PlaylistDetailScreen(
+                          playlistId: playlist.id,
+                          playlistName: playlist.displayName,
+                        ),
                       ),
                     );
+                    // 如果在详情页中删除了播放列表，刷新列表
+                    if (deleted == true) {
+                      ref.read(playlistsProvider.notifier).refresh();
+                    }
                   },
                 ),
               );

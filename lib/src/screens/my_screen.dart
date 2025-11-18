@@ -122,20 +122,20 @@ class _MyScreenState extends ConsumerState<MyScreen>
     BorderRadius buttonBorderRadius;
     if (index == 0) {
       buttonBorderRadius = const BorderRadius.only(
-        topLeft: Radius.circular(20),
-        bottomLeft: Radius.circular(20),
+        topLeft: Radius.circular(16),
+        bottomLeft: Radius.circular(16),
       );
     } else if (index == total - 1) {
       buttonBorderRadius = const BorderRadius.only(
-        topRight: Radius.circular(20),
-        bottomRight: Radius.circular(20),
+        topRight: Radius.circular(16),
+        bottomRight: Radius.circular(16),
       );
     } else {
       buttonBorderRadius = BorderRadius.zero;
     }
 
     return Padding(
-      padding: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.only(right: 4),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -143,7 +143,7 @@ class _MyScreenState extends ConsumerState<MyScreen>
           borderRadius: buttonBorderRadius,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
             decoration: BoxDecoration(
               color: isSelected
                   ? theme.colorScheme.primaryContainer
@@ -155,16 +155,16 @@ class _MyScreenState extends ConsumerState<MyScreen>
               children: [
                 Icon(
                   icon,
-                  size: 18,
+                  size: 16,
                   color: isSelected
                       ? theme.colorScheme.primary
                       : theme.colorScheme.onSurfaceVariant,
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 4),
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                     color: isSelected
                         ? theme.colorScheme.primary
