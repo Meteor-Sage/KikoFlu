@@ -122,9 +122,7 @@ class _AudioFormatSettingsScreenState
                         ),
                         const SizedBox(height: 12),
                         const Text(
-                          '• 打开作品详情页时，会优先展开包含优先级更高格式音频的文件夹\n'
-                          '• 拖动格式卡片可以调整优先级顺序\n'
-                          '• 靠前的格式优先级更高',
+                          '• 打开作品详情页时，会自动优先展开优先级更高格式音频的文件夹',
                           style: TextStyle(fontSize: 12, height: 1.5),
                         ),
                       ],

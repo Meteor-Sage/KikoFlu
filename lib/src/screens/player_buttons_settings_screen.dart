@@ -149,21 +149,26 @@ class _PlayerButtonsSettingsScreenState
                           children: [
                             Icon(
                               Icons.info_outline,
+                              size: 20,
                               color: Theme.of(context).colorScheme.primary,
                             ),
                             const SizedBox(width: 8),
                             Text(
                               '按钮显示规则',
-                              style: Theme.of(context).textTheme.titleMedium,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleSmall
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 12),
                         Text(
                           '• 前 $maxVisible 个按钮会显示在播放器底部\n'
-                          '• 其余按钮会收纳在"更多"菜单中\n'
-                          '• 长按拖动可调整按钮顺序',
-                          style: Theme.of(context).textTheme.bodyMedium,
+                          '• 其余按钮会收纳在"更多"菜单中',
+                          style: const TextStyle(fontSize: 12, height: 1.5),
                         ),
                       ],
                     ),

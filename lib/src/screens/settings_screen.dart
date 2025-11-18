@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'account_management_screen.dart';
 import 'download_path_settings_screen.dart';
 import 'theme_settings_screen.dart';
-import 'player_buttons_settings_screen.dart';
+import 'ui_settings_screen.dart';
 import 'audio_format_settings_screen.dart';
 import 'about_screen.dart';
 import '../providers/settings_provider.dart';
@@ -293,15 +293,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           Divider(color: Theme.of(context).colorScheme.outlineVariant),
           ListTile(
-            leading:
-                Icon(Icons.tune, color: Theme.of(context).colorScheme.primary),
-            title: const Text('播放器按钮'),
-            subtitle: const Text('自定义播放器控制按钮顺序'),
+            leading: Icon(Icons.dashboard_customize,
+                color: Theme.of(context).colorScheme.primary),
+            title: const Text('界面设置'),
+            subtitle: const Text('播放器、详情页、卡片界面'),
             trailing: const Icon(Icons.arrow_forward_ios),
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => const PlayerButtonsSettingsScreen(),
+                  builder: (context) => const UiSettingsScreen(),
                 ),
               );
             },

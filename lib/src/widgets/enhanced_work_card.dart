@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/work.dart';
 import '../providers/auth_provider.dart';
+import '../providers/work_card_display_provider.dart';
 import '../screens/work_detail_screen.dart';
 import 'tag_chip.dart';
 import 'va_chip.dart';
@@ -92,6 +93,7 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
+    final displaySettings = ref.watch(workCardDisplayProvider);
     final host = authState.host ?? '';
     final token = authState.token ?? '';
 
@@ -111,17 +113,18 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
     // 竖屏模式：2列显示中等卡片，3列显示紧凑卡片
     if (widget.crossAxisCount >= 5 ||
         (widget.crossAxisCount == 3 && !isLandscape)) {
-      return _buildCompactCard(context, host, token, cardOnTap);
+      return _buildCompactCard(
+          context, host, token, cardOnTap, displaySettings);
     } else if (widget.crossAxisCount >= 2) {
-      return _buildMediumCard(context, host, token, cardOnTap);
+      return _buildMediumCard(context, host, token, cardOnTap, displaySettings);
     } else {
-      return _buildFullCard(context, host, token, cardOnTap);
+      return _buildFullCard(context, host, token, cardOnTap, displaySettings);
     }
   }
 
   // 紧凑卡片 (3列布局)
-  Widget _buildCompactCard(
-      BuildContext context, String host, String token, VoidCallback cardOnTap) {
+  Widget _buildCompactCard(BuildContext context, String host, String token,
+      VoidCallback cardOnTap, WorkCardDisplaySettings displaySettings) {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
     final titleFontSize = isLandscape ? 13.5 : 11.0;
@@ -150,7 +153,8 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                     child: _buildRjTag(),
                   ),
                   // 日期标签 (右下角)
-                  if (widget.work.release != null)
+                  if (displaySettings.showReleaseDate &&
+                      widget.work.release != null)
                     Positioned(
                       bottom: 4,
                       right: 4,
@@ -185,8 +189,8 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
   }
 
   // 中等卡片 (2列布局)
-  Widget _buildMediumCard(
-      BuildContext context, String host, String token, VoidCallback cardOnTap) {
+  Widget _buildMediumCard(BuildContext context, String host, String token,
+      VoidCallback cardOnTap, WorkCardDisplaySettings displaySettings) {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
     final titleFontSize = isLandscape ? 14.5 : 12.0;
@@ -224,7 +228,8 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                       left: 6,
                       child: _buildSubtitleTag(context),
                     ),
-                  if (widget.work.release != null)
+                  if (displaySettings.showReleaseDate &&
+                      widget.work.release != null)
                     Positioned(
                       bottom: 6,
                       right: 6,
@@ -251,16 +256,17 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                   ),
                   const SizedBox(height: 3),
                   // 社团名称
-                  Text(
-                    widget.work.name ?? '',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey[600],
-                          fontSize: bodyFontSize,
-                        ),
-                  ),
-                  const SizedBox(height: 3),
+                  if (displaySettings.showCircle)
+                    Text(
+                      widget.work.name ?? '',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.grey[600],
+                            fontSize: bodyFontSize,
+                          ),
+                    ),
+                  if (displaySettings.showCircle) const SizedBox(height: 3),
                   // 价格
-                  if (widget.work.price != null)
+                  if (displaySettings.showPrice && widget.work.price != null)
                     Text(
                       '${widget.work.price} 日元',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -270,7 +276,8 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                           ),
                     ),
                   // 评分信息
-                  if (widget.work.rateAverage != null &&
+                  if (displaySettings.showRating &&
+                      widget.work.rateAverage != null &&
                       widget.work.rateCount != null &&
                       widget.work.rateCount! > 0) ...[
                     const SizedBox(height: 3),
@@ -311,8 +318,8 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
   }
 
   // 完整卡片 (列表布局)
-  Widget _buildFullCard(
-      BuildContext context, String host, String token, VoidCallback cardOnTap) {
+  Widget _buildFullCard(BuildContext context, String host, String token,
+      VoidCallback cardOnTap, WorkCardDisplaySettings displaySettings) {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
     final rjFontSize = isLandscape ? 11.0 : 10.0;
@@ -396,16 +403,20 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                   // 社团和价格行
                   Row(
                     children: [
-                      Expanded(
-                        child: Text(
-                          widget.work.name ?? '',
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: Colors.grey[600],
-                                  ),
+                      if (displaySettings.showCircle)
+                        Expanded(
+                          child: Text(
+                            widget.work.name ?? '',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color: Colors.grey[600],
+                                ),
+                          ),
                         ),
-                      ),
-                      if (widget.work.price != null)
+                      if (displaySettings.showPrice &&
+                          widget.work.price != null)
                         Text(
                           '${widget.work.price} 日元',
                           style:
@@ -420,7 +431,8 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                   // 日期和下载数
                   Row(
                     children: [
-                      if (widget.work.release != null)
+                      if (displaySettings.showReleaseDate &&
+                          widget.work.release != null)
                         Text(
                           widget.work.release!,
                           style:
@@ -429,10 +441,12 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                                   ),
                         ),
                       // 评分信息
-                      if (widget.work.rateAverage != null &&
+                      if (displaySettings.showRating &&
+                          widget.work.rateAverage != null &&
                           widget.work.rateCount != null &&
                           widget.work.rateCount! > 0) ...[
-                        if (widget.work.release != null)
+                        if (displaySettings.showReleaseDate &&
+                            widget.work.release != null)
                           const SizedBox(width: 8),
                         Icon(
                           Icons.star,
@@ -450,7 +464,8 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                         ),
                       ],
                       const Spacer(),
-                      if (widget.work.dlCount != null)
+                      if (displaySettings.showSales &&
+                          widget.work.dlCount != null)
                         Text(
                           '售出：${widget.work.dlCount}',
                           style:
