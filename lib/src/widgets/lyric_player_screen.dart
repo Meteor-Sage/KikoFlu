@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/lyric.dart';
 import '../providers/audio_provider.dart';
 import '../providers/lyric_provider.dart';
+import 'subtitle_adjustment_dialog.dart';
 
 class LyricPlayerScreen extends ConsumerStatefulWidget {
   const LyricPlayerScreen({super.key});
@@ -50,7 +51,8 @@ class _LyricPlayerScreenState extends ConsumerState<LyricPlayerScreen> {
     final position = ref.read(positionProvider).valueOrNull;
 
     if (position != null && lyricState.lyrics.isNotEmpty) {
-      final currentIndex = _getCurrentLyricIndex(position, lyricState.lyrics);
+      final adjustedLyrics = lyricState.adjustedLyrics;
+      final currentIndex = _getCurrentLyricIndex(position, adjustedLyrics);
       if (currentIndex >= 0) {
         _currentLyricIndex = currentIndex;
         _isInitialScroll = false;
@@ -146,10 +148,11 @@ class _LyricPlayerScreenState extends ConsumerState<LyricPlayerScreen> {
     if (!_scrollController.hasClients) return;
 
     final lyricState = ref.read(lyricControllerProvider);
+    final adjustedLyrics = lyricState.adjustedLyrics;
     final screenHeight = MediaQuery.of(context).size.height;
 
     // 使用精确估算计算目标位置
-    final targetOffset = _calculateOffsetToIndex(index, lyricState.lyrics);
+    final targetOffset = _calculateOffsetToIndex(index, adjustedLyrics);
 
     // 减去半个屏幕高度，让目标歌词居中
     final centeredOffset = targetOffset - screenHeight / 2;
@@ -247,6 +250,23 @@ class _LyricPlayerScreenState extends ConsumerState<LyricPlayerScreen> {
         elevation: 0,
         scrolledUnderElevation: 0,
         actions: [
+          // 字幕轴调整按钮
+          if (lyricState.lyrics.isNotEmpty)
+            IconButton(
+              icon: Badge(
+                isLabelVisible: lyricState.timelineOffset != Duration.zero,
+                label: const Icon(Icons.check, size: 10),
+                child: const Icon(Icons.tune),
+              ),
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  barrierColor: Colors.transparent,
+                  builder: (context) => const SubtitleAdjustmentDialog(),
+                );
+              },
+              tooltip: '字幕轴调整',
+            ),
           IconButton(
             icon: Icon(_autoScroll ? Icons.lock : Icons.lock_open),
             onPressed: () {
@@ -288,14 +308,15 @@ class _LyricPlayerScreenState extends ConsumerState<LyricPlayerScreen> {
 
           return position.when(
             data: (pos) {
-              final currentIndex =
-                  _getCurrentLyricIndex(pos, lyricState.lyrics);
+              // 使用调整后的歌词
+              final adjustedLyrics = lyricState.adjustedLyrics;
+              final currentIndex = _getCurrentLyricIndex(pos, adjustedLyrics);
 
               // 自动滚动到当前歌词
               if (currentIndex != _currentLyricIndex && currentIndex >= 0) {
                 _currentLyricIndex = currentIndex;
                 WidgetsBinding.instance.addPostFrameCallback((_) {
-                  _scrollToCurrentLyric(currentIndex, lyricState.lyrics);
+                  _scrollToCurrentLyric(currentIndex, adjustedLyrics);
                 });
               }
 
@@ -311,9 +332,9 @@ class _LyricPlayerScreenState extends ConsumerState<LyricPlayerScreen> {
                   controller: _scrollController,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-                  itemCount: lyricState.lyrics.length,
+                  itemCount: adjustedLyrics.length,
                   itemBuilder: (context, index) {
-                    final lyric = lyricState.lyrics[index];
+                    final lyric = adjustedLyrics[index];
                     final isActive = index == currentIndex;
                     // 空文本表示间隙占位符，显示 ♪
                     final isPlaceholder = lyric.text.isEmpty;

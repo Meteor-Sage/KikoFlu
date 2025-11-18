@@ -8,6 +8,27 @@ class LyricLine {
     required this.endTime,
     required this.text,
   });
+
+  LyricLine copyWith({
+    Duration? startTime,
+    Duration? endTime,
+    String? text,
+  }) {
+    return LyricLine(
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+      text: text ?? this.text,
+    );
+  }
+
+  /// 应用时间轴偏移
+  LyricLine applyOffset(Duration offset) {
+    return LyricLine(
+      startTime: startTime + offset,
+      endTime: endTime + offset,
+      text: text,
+    );
+  }
 }
 
 class LyricParser {
@@ -71,7 +92,6 @@ class LyricParser {
 
     return _finalizeLyrics(lyrics);
   }
-
 
   static List<LyricLine> parseWebVTT(String content) {
     final lines = content.split('\n');

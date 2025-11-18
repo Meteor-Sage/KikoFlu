@@ -202,8 +202,9 @@ class _FullLyricDisplayState extends ConsumerState<FullLyricDisplay> {
 
   void _onLyricTap(int index) {
     final lyricState = ref.read(lyricControllerProvider);
-    if (index >= 0 && index < lyricState.lyrics.length) {
-      final targetTime = lyricState.lyrics[index].startTime;
+    final adjustedLyrics = lyricState.adjustedLyrics;
+    if (index >= 0 && index < adjustedLyrics.length) {
+      final targetTime = adjustedLyrics[index].startTime;
       ref.read(audioPlayerControllerProvider.notifier).seek(targetTime);
 
       setState(() {
@@ -227,9 +228,11 @@ class _FullLyricDisplayState extends ConsumerState<FullLyricDisplay> {
 
     return position.when(
       data: (pos) {
+        // 使用调整后的歌词
+        final adjustedLyrics = lyricState.adjustedLyrics;
         final displayPosition = widget.seekingPosition ?? pos;
         final currentIndex =
-            _getCurrentLyricIndex(displayPosition, lyricState.lyrics);
+            _getCurrentLyricIndex(displayPosition, adjustedLyrics);
 
         if (currentIndex != _currentLyricIndex && currentIndex >= 0) {
           final previousIndex = _currentLyricIndex;
@@ -246,9 +249,9 @@ class _FullLyricDisplayState extends ConsumerState<FullLyricDisplay> {
         return ListView.builder(
           controller: _scrollController,
           padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
-          itemCount: lyricState.lyrics.length,
+          itemCount: adjustedLyrics.length,
           itemBuilder: (context, index) {
-            final lyric = lyricState.lyrics[index];
+            final lyric = adjustedLyrics[index];
             final isActive = index == currentIndex;
             final isPast = index < currentIndex;
 

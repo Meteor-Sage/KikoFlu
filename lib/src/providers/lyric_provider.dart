@@ -16,12 +16,14 @@ class LyricState {
   final bool isLoading;
   final String? error;
   final String? lyricUrl;
+  final Duration timelineOffset; // 时间轴偏移（毫秒）
 
   LyricState({
     this.lyrics = const [],
     this.isLoading = false,
     this.error,
     this.lyricUrl,
+    this.timelineOffset = Duration.zero,
   });
 
   LyricState copyWith({
@@ -29,13 +31,23 @@ class LyricState {
     bool? isLoading,
     String? error,
     String? lyricUrl,
+    Duration? timelineOffset,
   }) {
     return LyricState(
       lyrics: lyrics ?? this.lyrics,
       isLoading: isLoading ?? this.isLoading,
       error: error ?? this.error,
       lyricUrl: lyricUrl ?? this.lyricUrl,
+      timelineOffset: timelineOffset ?? this.timelineOffset,
     );
+  }
+
+  /// 获取应用了时间轴偏移后的歌词列表
+  List<LyricLine> get adjustedLyrics {
+    if (timelineOffset == Duration.zero) {
+      return lyrics;
+    }
+    return lyrics.map((lyric) => lyric.applyOffset(timelineOffset)).toList();
   }
 }
 
@@ -417,6 +429,57 @@ class LyricController extends StateNotifier<LyricState> {
     state = LyricState();
   }
 
+  /// 调整字幕轴偏移
+  void adjustTimelineOffset(Duration offset) {
+    state = state.copyWith(timelineOffset: offset);
+  }
+
+  /// 重置字幕轴偏移
+  void resetTimelineOffset() {
+    state = state.copyWith(timelineOffset: Duration.zero);
+  }
+
+  /// 获取导出格式的字幕内容（应用了时间轴偏移）
+  String exportLyrics({String format = 'lrc'}) {
+    final adjustedLyrics = state.adjustedLyrics;
+    if (adjustedLyrics.isEmpty) return '';
+
+    final buffer = StringBuffer();
+
+    if (format == 'lrc') {
+      // LRC 格式
+      for (final lyric in adjustedLyrics) {
+        if (lyric.text.isEmpty) continue; // 跳过占位符
+        final minutes = lyric.startTime.inMinutes;
+        final seconds = lyric.startTime.inSeconds % 60;
+        final centiseconds = (lyric.startTime.inMilliseconds % 1000) ~/ 10;
+        buffer.writeln(
+            '[${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}.${centiseconds.toString().padLeft(2, '0')}]${lyric.text}');
+      }
+    } else if (format == 'vtt') {
+      // WebVTT 格式
+      buffer.writeln('WEBVTT\n');
+      for (final lyric in adjustedLyrics) {
+        if (lyric.text.isEmpty) continue; // 跳过占位符
+        buffer.writeln(_formatWebVTTTime(lyric.startTime) +
+            ' --> ' +
+            _formatWebVTTTime(lyric.endTime));
+        buffer.writeln(lyric.text);
+        buffer.writeln();
+      }
+    }
+
+    return buffer.toString();
+  }
+
+  String _formatWebVTTTime(Duration duration) {
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes % 60;
+    final seconds = duration.inSeconds % 60;
+    final milliseconds = duration.inMilliseconds % 1000;
+    return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}.${milliseconds.toString().padLeft(3, '0')}';
+  }
+
   // 手动加载字幕文件
   /// 从本地文件路径加载字幕（用于字幕库）
   Future<void> loadLyricFromLocalFile(String filePath) async {
@@ -609,8 +672,11 @@ final currentLyricTextProvider = Provider<String?>((ref) {
 
   if (lyricState.lyrics.isEmpty) return null;
 
+  // 使用调整后的歌词
+  final adjustedLyrics = lyricState.adjustedLyrics;
+
   return position.when(
-    data: (pos) => LyricParser.getCurrentLyric(lyricState.lyrics, pos),
+    data: (pos) => LyricParser.getCurrentLyric(adjustedLyrics, pos),
     loading: () => null,
     error: (_, __) => null,
   );
