@@ -13,6 +13,7 @@ import 'privacy_mode_settings_screen.dart';
 import '../providers/settings_provider.dart';
 import '../providers/update_provider.dart';
 import '../services/cache_service.dart';
+import '../utils/snackbar_util.dart';
 import '../widgets/scrollable_appbar.dart';
 import '../widgets/download_fab.dart';
 
@@ -54,8 +55,48 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   // 安全显示 SnackBar 的辅助方法
   void _showSnackBar(SnackBar snackBar) {
     if (!mounted) return;
-    final messenger = _scaffoldMessenger ?? ScaffoldMessenger.of(context);
-    messenger.showSnackBar(snackBar);
+    
+    // 提取 SnackBar 内容
+    final content = snackBar.content;
+    String message = '';
+    
+    if (content is Text) {
+      message = content.data ?? '';
+    } else if (content is Row) {
+      final children = content.children;
+      for (final child in children) {
+        if (child is Text) {
+          message = child.data ?? '';
+          break;
+        } else if (child is Expanded) {
+          final expandedChild = child.child;
+          if (expandedChild is Text) {
+            message = expandedChild.data ?? '';
+            break;
+          }
+        }
+      }
+    }
+    
+    if (message.isEmpty) {
+      final messenger = _scaffoldMessenger ?? ScaffoldMessenger.of(context);
+      messenger.showSnackBar(snackBar);
+      return;
+    }
+    
+    // 根据背景色判断类型
+    final backgroundColor = snackBar.backgroundColor;
+    final duration = snackBar.duration ?? const Duration(seconds: 2);
+    
+    if (backgroundColor == Colors.red || backgroundColor == Theme.of(context).colorScheme.error) {
+      SnackBarUtil.showError(context, message, duration: duration);
+    } else if (backgroundColor == Colors.green) {
+      SnackBarUtil.showSuccess(context, message, duration: duration);
+    } else if (backgroundColor == Colors.orange) {
+      SnackBarUtil.showWarning(context, message, duration: duration);
+    } else {
+      SnackBarUtil.showInfo(context, message, duration: duration);
+    }
   }
 
   Future<void> _updateCacheSize() async {

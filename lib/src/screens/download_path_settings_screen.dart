@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/download_path_service.dart';
 import '../services/download_service.dart';
 import '../providers/settings_provider.dart';
+import '../utils/snackbar_util.dart';
 import '../widgets/scrollable_appbar.dart';
 
 class DownloadPathSettingsScreen extends ConsumerStatefulWidget {
@@ -252,19 +253,11 @@ class _DownloadPathSettingsScreenState
     if (!mounted) return;
 
     try {
-      final messenger = ScaffoldMessenger.maybeOf(context);
-      if (messenger == null) {
-        print('[DownloadPathSettings] 无法显示 SnackBar: $message');
-        return;
+      if (isError) {
+        SnackBarUtil.showError(context, message, duration: const Duration(seconds: 4));
+      } else {
+        SnackBarUtil.showInfo(context, message, duration: const Duration(seconds: 2));
       }
-
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: isError ? Theme.of(context).colorScheme.error : null,
-          duration: Duration(seconds: isError ? 4 : 2),
-        ),
-      );
     } catch (e) {
       print('[DownloadPathSettings] 无法显示 SnackBar: $e');
     }

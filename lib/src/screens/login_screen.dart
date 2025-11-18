@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/auth_provider.dart';
 import '../services/kikoeru_api_service.dart';
+import '../utils/snackbar_util.dart';
 import '../widgets/scrollable_appbar.dart';
 import 'main_screen.dart';
 
@@ -109,9 +110,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         if (widget.isAddingAccount) {
           // Adding account mode - just go back
           Navigator.pop(context, true);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('账户 "$username" 已添加')),
-          );
+          SnackBarUtil.showSuccess(context, '账户 "$username" 已添加');
         } else {
           // Normal login - go to main screen
           Navigator.of(context).pushAndRemoveUntil(
@@ -121,20 +120,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         }
       } else if (mounted) {
         final error = ref.read(authProvider).error;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(error ?? (_isLogin ? '登录失败' : '注册失败')),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
+        SnackBarUtil.showError(
+          context,
+          error ?? (_isLogin ? '登录失败' : '注册失败'),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_isLogin ? '登录失败' : '注册失败'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
+        SnackBarUtil.showError(
+          context,
+          _isLogin ? '登录失败' : '注册失败',
         );
       }
     }
@@ -146,12 +141,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _loginAsGuest() async {
     // 验证服务器地址
     if (_hostValue.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('请先输入服务器地址'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
+      SnackBarUtil.showError(context, '请先输入服务器地址');
       return;
     }
 
@@ -203,9 +193,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         if (widget.isAddingAccount) {
           // Adding account mode - just go back
           Navigator.pop(context, true);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('游客账户已添加')),
-          );
+          SnackBarUtil.showSuccess(context, '游客账户已添加');
         } else {
           // Normal login - go to main screen
           Navigator.of(context).pushAndRemoveUntil(
@@ -215,21 +203,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         }
       } else if (mounted) {
         final error = ref.read(authProvider).error;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(error ?? '游客登录失败'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
+        SnackBarUtil.showError(
+          context,
+          error ?? '游客登录失败',
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('游客登录失败'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
+        SnackBarUtil.showError(context, '游客登录失败');
       }
     }
 

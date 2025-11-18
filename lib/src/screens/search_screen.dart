@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/search_type.dart';
 import '../providers/auth_provider.dart';
+import '../utils/snackbar_util.dart';
 import '../widgets/scrollable_appbar.dart';
 import '../widgets/download_fab.dart';
 import 'search_result_screen.dart';
@@ -143,9 +144,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
   void _addSearchCondition() {
     final value = _searchController.text.trim();
     if (value.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请输入搜索内容')),
-      );
+      SnackBarUtil.showWarning(context, '请输入搜索内容');
       return;
     }
 
@@ -184,9 +183,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
 
   Future<void> _performSearch() async {
     if (_searchConditions.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请至少添加一个搜索条件')),
-      );
+      SnackBarUtil.showWarning(context, '请至少添加一个搜索条件');
       return;
     }
 

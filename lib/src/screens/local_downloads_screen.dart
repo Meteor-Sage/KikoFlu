@@ -8,6 +8,7 @@ import '../models/download_task.dart';
 import '../models/work.dart';
 import '../services/download_service.dart';
 import '../utils/string_utils.dart';
+import '../utils/snackbar_util.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/pagination_bar.dart';
 import 'offline_work_detail_screen.dart';
@@ -32,15 +33,51 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
   void _showSnackBarSafe(SnackBar snackBar) {
     if (!mounted) return;
 
-    // Use try-catch to safely handle any context issues
     try {
-      // Get ScaffoldMessenger at the time of showing, not cached
-      final messenger = ScaffoldMessenger.maybeOf(context);
-      if (messenger != null && messenger.mounted) {
-        messenger.showSnackBar(snackBar);
+      // 提取消息
+      final content = snackBar.content;
+      String message = '';
+      
+      if (content is Text) {
+        message = content.data ?? '';
+      } else if (content is Row) {
+        final children = content.children;
+        for (final child in children) {
+          if (child is Text) {
+            message = child.data ?? '';
+            break;
+          } else if (child is Expanded) {
+            final expandedChild = child.child;
+            if (expandedChild is Text) {
+              message = expandedChild.data ?? '';
+              break;
+            }
+          }
+        }
+      }
+      
+      if (message.isEmpty) {
+        final messenger = ScaffoldMessenger.maybeOf(context);
+        if (messenger != null && messenger.mounted) {
+          messenger.showSnackBar(snackBar);
+        }
+        return;
+      }
+      
+      // 根据背景色判断类型
+      final backgroundColor = snackBar.backgroundColor;
+      final duration = snackBar.duration ?? const Duration(seconds: 2);
+      
+      if (backgroundColor == Colors.red || backgroundColor == Theme.of(context).colorScheme.error) {
+        SnackBarUtil.showError(context, message, duration: duration);
+      } else if (backgroundColor == Colors.green) {
+        SnackBarUtil.showSuccess(context, message, duration: duration);
+      } else if (backgroundColor == Colors.orange) {
+        SnackBarUtil.showWarning(context, message, duration: duration);
+      } else {
+        SnackBarUtil.showInfo(context, message, duration: duration);
       }
     } catch (e) {
-      // Silently ignore - widget is being disposed
       print('[LocalDownloads] 无法显示 SnackBar: $e');
     }
   }

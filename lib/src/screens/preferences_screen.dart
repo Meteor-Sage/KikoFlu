@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'audio_format_settings_screen.dart';
 import '../providers/settings_provider.dart';
+import '../utils/snackbar_util.dart';
 import '../widgets/scrollable_appbar.dart';
 
 /// 偏好设置页面
@@ -48,11 +49,9 @@ class PreferencesScreen extends ConsumerWidget {
                         .read(subtitleLibraryPriorityProvider.notifier)
                         .updatePriority(value);
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('已设置为: ${value.displayName}'),
-                        duration: const Duration(seconds: 2),
-                      ),
+                    SnackBarUtil.showSuccess(
+                      context,
+                      '已设置为: ${value.displayName}',
                     );
                   }
                 },

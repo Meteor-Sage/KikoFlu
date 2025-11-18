@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/settings_provider.dart';
+import '../utils/snackbar_util.dart';
 import '../widgets/scrollable_appbar.dart';
 
 /// 防社死设置页面
@@ -65,9 +66,7 @@ class _PrivacyModeSettingsScreenState
                     .read(privacyModeSettingsProvider.notifier)
                     .setCustomTitle(title);
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('替换标题已保存')),
-                );
+                SnackBarUtil.showSuccess(context, '替换标题已保存');
               }
             },
             child: const Text('保存'),
