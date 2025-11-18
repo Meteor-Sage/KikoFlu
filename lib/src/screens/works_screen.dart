@@ -365,43 +365,80 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
   }
 
   Widget _buildBody(WorksState worksState) {
-    // 错误状态 - 优先处理，无论是否有数据
-    if (worksState.error != null && worksState.works.isEmpty) {
+    // 错误状态或空状态 - 统一显示
+    if (worksState.works.isEmpty) {
+      // 如果有错误，显示错误信息
+      if (worksState.error != null) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 64,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '加载失败',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                worksState.error!,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () => ref.read(worksProvider.notifier).refresh(),
+                icon: const Icon(Icons.refresh),
+                label: const Text('重试'),
+              ),
+            ],
+          ),
+        );
+      }
+
+      // 加载中
+      if (worksState.isLoading) {
+        return const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('加载中...'),
+            ],
+          ),
+        );
+      }
+
+      // 空状态
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Theme.of(context).colorScheme.error,
-            ),
+            Icon(Icons.audiotrack,
+                size: 64, color: Theme.of(context).colorScheme.outline),
             const SizedBox(height: 16),
             Text(
-              '加载失败',
+              '暂无作品',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 8),
             Text(
-              worksState.error!,
+              '请检查网络连接或稍后重试',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () => ref.read(worksProvider.notifier).refresh(),
-              icon: const Icon(Icons.refresh),
-              label: const Text('重试'),
             ),
           ],
         ),
       );
     }
-
-
-
 
     return RefreshIndicator(
       onRefresh: () => ref.read(worksProvider.notifier).refresh(),

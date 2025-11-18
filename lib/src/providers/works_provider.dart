@@ -217,40 +217,6 @@ class WorksNotifier extends StateNotifier<WorksState> {
     } catch (e) {
       print('Failed to load works: $e');
 
-      // 如果是首次加载失败（没有数据），在短暂延迟后自动重试一次
-      if (state.works.isEmpty && refresh) {
-        print('Initial load failed, will retry in 1 second...');
-        state = state.copyWith(
-          isLoading: false,
-          error: '加载中，请稍候...',
-        );
-
-        // 延迟1秒后重试
-        await Future.delayed(const Duration(seconds: 1));
-
-        // 只重试一次，通过检查错误信息避免无限重试
-        if (!state.error!.contains('重试失败')) {
-          print('Retrying initial load...');
-          state = state.copyWith(
-            isLoading: true,
-            error: null,
-          );
-
-          try {
-            // 重试加载
-            await loadWorks(refresh: true);
-            return;
-          } catch (retryError) {
-            print('Retry failed: $retryError');
-            state = state.copyWith(
-              isLoading: false,
-              error: '加载失败，请下拉刷新重试 (重试失败: ${retryError.toString()})',
-            );
-            return;
-          }
-        }
-      }
-
       state = state.copyWith(
         isLoading: false,
         error: '加载失败: ${e.toString()}',
