@@ -825,6 +825,19 @@ class KikoeruApiService {
     }
   }
 
+  /// 添加(收藏)别人的播放列表
+  Future<Map<String, dynamic>> likePlaylist(String playlistId) async {
+    try {
+      final response = await _dio.post(
+        '/api/playlist/like-playlist',
+        data: {'id': playlistId},
+      );
+      return response.data;
+    } catch (e) {
+      throw KikoeruApiException('Failed to like playlist', e);
+    }
+  }
+
   // Progress API
   Future<void> updateProgress(int workId, double progress) async {
     try {
