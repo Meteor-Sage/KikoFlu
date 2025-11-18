@@ -396,6 +396,7 @@ class _OfflineWorkDetailScreenState
               children: work.tags!
                   .map((tag) => TagChip(
                         tag: tag,
+                        fontSize: 12,
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 4),
                         borderRadius: 6,

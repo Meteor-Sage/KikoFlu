@@ -180,12 +180,22 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
                   child: _buildModeButtons(context, worksState),
                 ),
               ),
+              // 分隔线
+              Container(
+                height: 28,
+                width: 1,
+                color: Theme.of(context)
+                    .colorScheme
+                    .outlineVariant
+                    .withOpacity(0.5),
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+              ),
               // 第二列：布局切换按钮
               IconButton(
                 icon: _getLayoutIcon(worksState.layoutType),
                 iconSize: 22,
-                padding: const EdgeInsets.all(8),
-                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                padding: const EdgeInsets.all(6),
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                 onPressed: () =>
                     ref.read(worksProvider.notifier).toggleLayoutType(),
                 tooltip: _getLayoutTooltip(worksState.layoutType),
@@ -201,24 +211,24 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
                       : null,
                 ),
                 iconSize: 22,
-                padding: const EdgeInsets.all(8),
-                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                padding: const EdgeInsets.all(6),
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                 onPressed: () =>
                     ref.read(worksProvider.notifier).toggleSubtitleFilter(),
                 tooltip: worksState.subtitleFilter == 1 ? '显示全部作品' : '仅显示带字幕作品',
               ),
               // 第四列：排序按钮
               Padding(
-                padding: EdgeInsets.only(right: horizontalPadding - 8),
+                padding: EdgeInsets.only(right: horizontalPadding - 6),
                 child: IconButton(
                   icon: Icon(
                     Icons.sort,
                     color: isRecommendMode ? Colors.grey : null,
                   ),
                   iconSize: 22,
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(6),
                   constraints:
-                      const BoxConstraints(minWidth: 40, minHeight: 40),
+                      const BoxConstraints(minWidth: 36, minHeight: 36),
                   onPressed:
                       isRecommendMode ? null : () => _showSortDialog(context),
                   tooltip: isRecommendMode ? '推荐模式不支持排序' : '排序',
@@ -297,20 +307,20 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
     BorderRadius buttonBorderRadius;
     if (index == 0) {
       buttonBorderRadius = const BorderRadius.only(
-        topLeft: Radius.circular(20),
-        bottomLeft: Radius.circular(20),
+        topLeft: Radius.circular(16),
+        bottomLeft: Radius.circular(16),
       );
     } else if (index == total - 1) {
       buttonBorderRadius = const BorderRadius.only(
-        topRight: Radius.circular(20),
-        bottomRight: Radius.circular(20),
+        topRight: Radius.circular(16),
+        bottomRight: Radius.circular(16),
       );
     } else {
       buttonBorderRadius = BorderRadius.zero;
     }
 
     return Padding(
-      padding: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.only(right: 4),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -318,7 +328,7 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
           onTap: onTap,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
             decoration: BoxDecoration(
               color: isSelected
                   ? theme.colorScheme.primaryContainer
@@ -330,19 +340,19 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
               children: [
                 Icon(
                   icon,
-                  size: 18,
+                  size: 16,
                   color: isSelected
                       ? theme.colorScheme.primary
                       : theme.colorScheme.onSurfaceVariant,
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 4),
                 Text(
                   label,
                   style: TextStyle(
                     color: isSelected
                         ? theme.colorScheme.primary
                         : theme.colorScheme.onSurfaceVariant,
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                   ),
                 ),
