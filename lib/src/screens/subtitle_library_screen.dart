@@ -44,16 +44,6 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
     });
   }
 
-  void _toggleItemSelection(String path) {
-    setState(() {
-      if (_selectedPaths.contains(path)) {
-        _selectedPaths.remove(path);
-      } else {
-        _selectedPaths.add(path);
-      }
-    });
-  }
-
   void _selectAll() {
     setState(() {
       _selectedPaths.clear();
