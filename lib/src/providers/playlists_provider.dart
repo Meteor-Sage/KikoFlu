@@ -127,6 +127,35 @@ class PlaylistsNotifier extends StateNotifier<PlaylistsState> {
     }
   }
 
+  /// 删除播放列表
+  /// 根据播放列表的所有者和类型自动选择合适的删除API
+  Future<void> deletePlaylist(
+    Playlist playlist,
+    String currentUserName,
+  ) async {
+    try {
+      // 判断是否为当前用户创建的播放列表
+      final isOwner = playlist.userName == currentUserName;
+
+      if (isOwner) {
+        // 如果是系统播放列表，不允许删除
+        if (playlist.isSystemPlaylist) {
+          throw Exception('系统播放列表不能删除');
+        }
+        // 使用删除API删除自己创建的播放列表
+        await _apiService.deletePlaylist(playlist.id);
+      } else {
+        // 使用取消收藏API删除别人的播放列表
+        await _apiService.removeLikePlaylist(playlist.id);
+      }
+
+      // 删除成功后刷新列表
+      await load(refresh: true);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   void refresh() => load(refresh: true);
 }
 

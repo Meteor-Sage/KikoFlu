@@ -838,6 +838,66 @@ class KikoeruApiService {
     }
   }
 
+  /// 取消收藏播放列表（删除不属于自己的播放列表）
+  Future<Map<String, dynamic>> removeLikePlaylist(String playlistId) async {
+    try {
+      final response = await _dio.post(
+        '/api/playlist/remove-like-playlist',
+        data: {'id': playlistId},
+      );
+      return response.data;
+    } catch (e) {
+      throw KikoeruApiException('Failed to remove liked playlist', e);
+    }
+  }
+
+  /// 删除自己创建的播放列表
+  Future<Map<String, dynamic>> deletePlaylist(String playlistId) async {
+    try {
+      final response = await _dio.post(
+        '/api/playlist/delete-playlist',
+        data: {'id': playlistId},
+      );
+      return response.data;
+    } catch (e) {
+      throw KikoeruApiException('Failed to delete playlist', e);
+    }
+  }
+
+  /// 获取播放列表元数据
+  Future<Map<String, dynamic>> getPlaylistMetadata(String playlistId) async {
+    try {
+      final response = await _dio.get(
+        '/api/playlist/get-playlist-metadata',
+        queryParameters: {'id': playlistId},
+      );
+      return response.data;
+    } catch (e) {
+      throw KikoeruApiException('Failed to get playlist metadata', e);
+    }
+  }
+
+  /// 获取播放列表中的作品
+  Future<Map<String, dynamic>> getPlaylistWorks({
+    required String playlistId,
+    int page = 1,
+    int pageSize = 12,
+  }) async {
+    try {
+      final response = await _dio.get(
+        '/api/playlist/get-playlist-works',
+        queryParameters: {
+          'id': playlistId,
+          'page': page,
+          'pageSize': pageSize,
+        },
+      );
+      return response.data;
+    } catch (e) {
+      throw KikoeruApiException('Failed to get playlist works', e);
+    }
+  }
+
   // Progress API
   Future<void> updateProgress(int workId, double progress) async {
     try {

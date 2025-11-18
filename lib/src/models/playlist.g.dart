@@ -10,15 +10,15 @@ Playlist _$PlaylistFromJson(Map<String, dynamic> json) => Playlist(
       id: json['id'] as String,
       userName: json['user_name'] as String,
       privacy: (json['privacy'] as num).toInt(),
-      locale: json['locale'] as String,
-      playbackCount: (json['playback_count'] as num).toInt(),
+      locale: json['locale'] as String? ?? '',
+      playbackCount: (json['playback_count'] as num?)?.toInt() ?? 0,
       name: json['name'] as String,
-      description: json['description'] as String,
-      createdAt: json['created_at'] as String,
-      updatedAt: json['updated_at'] as String,
-      worksCount: (json['works_count'] as num).toInt(),
+      description: json['description'] as String? ?? '',
+      createdAt: json['created_at'] as String? ?? '',
+      updatedAt: json['updated_at'] as String? ?? '',
+      worksCount: (json['works_count'] as num?)?.toInt() ?? 0,
       latestWorkID: (json['latestWorkID'] as num?)?.toInt(),
-      mainCoverUrl: json['mainCoverUrl'] as String,
+      mainCoverUrl: json['mainCoverUrl'] as String? ?? '',
     );
 
 Map<String, dynamic> _$PlaylistToJson(Playlist instance) => <String, dynamic>{
