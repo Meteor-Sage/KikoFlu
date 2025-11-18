@@ -224,15 +224,17 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
                 _importFile();
               },
             ),
-            ListTile(
-              leading: const Icon(Icons.folder),
-              title: const Text('导入文件夹'),
-              subtitle: const Text('保留文件夹结构，仅导入字幕文件'),
-              onTap: () {
-                Navigator.pop(context);
-                _importFolder();
-              },
-            ),
+            // iOS 不支持文件夹选择器
+            if (!Platform.isIOS)
+              ListTile(
+                leading: const Icon(Icons.folder),
+                title: const Text('导入文件夹'),
+                subtitle: const Text('保留文件夹结构，仅导入字幕文件'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _importFolder();
+                },
+              ),
             ListTile(
               leading: const Icon(Icons.archive),
               title: const Text('导入压缩包'),

@@ -181,21 +181,7 @@ class ReviewProgressDialog {
                                           if (currentProgress != null ||
                                               currentRating != null) ...[
                                             const Divider(height: 1),
-                                            ListTile(
-                                              leading: Icon(
-                                                Icons.delete_outline,
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .error,
-                                              ),
-                                              title: Text(
-                                                '移除',
-                                                style: TextStyle(
-                                                  color: Theme.of(context)
-                                                      .colorScheme
-                                                      .error,
-                                                ),
-                                              ),
+                                            InkWell(
                                               onTap: () {
                                                 Navigator.of(dialogContext)
                                                     .pop({
@@ -203,9 +189,35 @@ class ReviewProgressDialog {
                                                   'rating': null,
                                                 });
                                               },
-                                              contentPadding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 8),
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 4,
+                                                        vertical: 12),
+                                                child: Row(
+                                                  children: [
+                                                    SizedBox(
+                                                      width: 40,
+                                                      child: Icon(
+                                                        Icons.delete_outline,
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .error,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Text(
+                                                      '移除',
+                                                      style: TextStyle(
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .error,
+                                                        fontSize: 16,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
                                             ),
                                           ],
                                         ],
