@@ -135,15 +135,19 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
     _loadFiles();
   }
 
-  Future<void> _loadFiles() async {
+  Future<void> _loadFiles({bool forceRefresh = false}) async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      final files = await SubtitleLibraryService.getSubtitleFiles();
-      final stats = await SubtitleLibraryService.getStats();
+      final files = await SubtitleLibraryService.getSubtitleFiles(
+        forceRefresh: forceRefresh,
+      );
+      final stats = await SubtitleLibraryService.getStats(
+        forceRefresh: forceRefresh,
+      );
 
       setState(() {
         _files = files;
@@ -159,53 +163,59 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
   }
 
   Future<void> _importFile() async {
+    // 显示加载提示
+    SnackBarUtil.showLoading(context, '正在导入字幕文件...');
+
     final result = await SubtitleLibraryService.importSubtitleFile();
 
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(result.message),
-        backgroundColor: result.success ? Colors.green : Colors.red,
-      ),
-    );
+    // 隐藏加载提示
+    SnackBarUtil.hide(context);
 
     if (result.success) {
+      SnackBarUtil.showSuccess(context, result.message);
       _loadFiles();
+    } else {
+      SnackBarUtil.showError(context, result.message);
     }
   }
 
   Future<void> _importFolder() async {
+    // 显示加载提示
+    SnackBarUtil.showLoading(context, '正在扫描文件夹并导入字幕文件...');
+
     final result = await SubtitleLibraryService.importFolder();
 
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(result.message),
-        backgroundColor: result.success ? Colors.green : Colors.red,
-      ),
-    );
+    // 隐藏加载提示
+    SnackBarUtil.hide(context);
 
     if (result.success) {
+      SnackBarUtil.showSuccess(context, result.message);
       _loadFiles();
+    } else {
+      SnackBarUtil.showError(context, result.message);
     }
   }
 
   Future<void> _importArchive() async {
+    // 显示加载提示
+    SnackBarUtil.showLoading(context, '正在解压压缩包并导入字幕文件...');
+
     final result = await SubtitleLibraryService.importArchive();
 
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(result.message),
-        backgroundColor: result.success ? Colors.green : Colors.red,
-      ),
-    );
+    // 隐藏加载提示
+    SnackBarUtil.hide(context);
 
     if (result.success) {
+      SnackBarUtil.showSuccess(context, result.message);
       _loadFiles();
+    } else {
+      SnackBarUtil.showError(context, result.message);
     }
   }
 
@@ -812,55 +822,23 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
   }
 
   Future<void> _moveItem(Map<String, dynamic> item) async {
-    final folders = await SubtitleLibraryService.getAvailableFolders();
-
-    // 如果是移动文件夹，需要过滤掉自身和自身的子文件夹
-    final availableFolders = item['type'] == 'folder'
-        ? folders.where((folder) {
-            final folderPath = folder['path'] as String;
-            final itemPath = item['path'] as String;
-            return folderPath != itemPath &&
-                !folderPath.startsWith('$itemPath${Platform.pathSeparator}');
-          }).toList()
-        : folders;
+    final libraryDir =
+        await SubtitleLibraryService.getSubtitleLibraryDirectory();
+    final itemPath = item['path'] as String;
 
     if (!mounted) return;
 
     final selectedFolder = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('移动到'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: availableFolders.length,
-            itemBuilder: (context, index) {
-              final folder = availableFolders[index];
-              final name = folder['name'] as String;
-              final path = folder['path'] as String;
-
-              return ListTile(
-                leading: const Icon(Icons.folder, color: Colors.amber),
-                title: Text(name),
-                onTap: () => Navigator.pop(context, path),
-              );
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-        ],
+      builder: (context) => _FolderBrowserDialog(
+        rootPath: libraryDir.path,
+        excludePath: item['type'] == 'folder' ? itemPath : null,
       ),
     );
 
     if (selectedFolder == null) return;
 
-    final success =
-        await SubtitleLibraryService.move(item['path'], selectedFolder);
+    final success = await SubtitleLibraryService.move(itemPath, selectedFolder);
 
     if (!mounted) return;
 
@@ -1109,7 +1087,7 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
                             ),
                           )
                         : RefreshIndicator(
-                            onRefresh: _loadFiles,
+                            onRefresh: () => _loadFiles(forceRefresh: true),
                             child: ListView(
                               padding: const EdgeInsets.only(bottom: 80),
                               children: [
@@ -1217,7 +1195,7 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
                               .primaryContainer
                               .withOpacity(0.5),
                         ),
-                        onPressed: _loadFiles,
+                        onPressed: () => _loadFiles(forceRefresh: true),
                       ),
                     ),
                     // 打开文件夹按钮（仅 Windows 和 macOS）
@@ -1268,6 +1246,172 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
                 ),
               ),
             ),
+    );
+  }
+}
+
+/// 树形文件夹浏览器对话框（懒加载）
+class _FolderBrowserDialog extends StatefulWidget {
+  final String rootPath;
+  final String? excludePath; // 排除的路径（用于移动文件夹时）
+
+  const _FolderBrowserDialog({
+    required this.rootPath,
+    this.excludePath,
+  });
+
+  @override
+  State<_FolderBrowserDialog> createState() => _FolderBrowserDialogState();
+}
+
+class _FolderBrowserDialogState extends State<_FolderBrowserDialog> {
+  final List<String> _pathStack = []; // 当前路径栈
+  List<Map<String, dynamic>> _currentFolders = [];
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFolders();
+  }
+
+  String get _currentPath {
+    if (_pathStack.isEmpty) {
+      return widget.rootPath;
+    }
+    return _pathStack.last;
+  }
+
+  String get _currentDisplayName {
+    if (_pathStack.isEmpty) {
+      return '根目录';
+    }
+    final name = _pathStack.last.split(Platform.pathSeparator).last;
+    // 限制最多10个字符
+    if (name.length > 10) {
+      return '${name.substring(0, 10)}...';
+    }
+    return name;
+  }
+
+  Future<void> _loadFolders() async {
+    setState(() => _loading = true);
+
+    try {
+      final folders = await SubtitleLibraryService.getSubFolders(_currentPath);
+
+      // 过滤排除的路径
+      final filteredFolders = widget.excludePath != null
+          ? folders.where((folder) {
+              final folderPath = folder['path'] as String;
+              return folderPath != widget.excludePath &&
+                  !folderPath.startsWith(
+                      '${widget.excludePath}${Platform.pathSeparator}');
+            }).toList()
+          : folders;
+
+      setState(() {
+        _currentFolders = filteredFolders;
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() => _loading = false);
+    }
+  }
+
+  void _navigateToFolder(String folderPath) {
+    setState(() {
+      _pathStack.add(folderPath);
+    });
+    _loadFolders();
+  }
+
+  void _navigateBack() {
+    if (_pathStack.isNotEmpty) {
+      setState(() {
+        _pathStack.removeLast();
+      });
+      _loadFolders();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Row(
+        children: [
+          if (_pathStack.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: _navigateBack,
+              tooltip: '返回上级',
+            ),
+          Expanded(
+            child: Text(
+              '移动到: $_currentDisplayName',
+              style: const TextStyle(fontSize: 16),
+            ),
+          ),
+        ],
+      ),
+      content: SizedBox(
+        width: double.maxFinite,
+        height: 400,
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
+                children: [
+                  // 子文件夹列表
+                  Expanded(
+                    child: _currentFolders.isEmpty
+                        ? const Center(
+                            child: Text(
+                              '此目录下没有子文件夹',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          )
+                        : ListView.builder(
+                            itemCount: _currentFolders.length,
+                            itemBuilder: (context, index) {
+                              final folder = _currentFolders[index];
+                              final name = folder['name'] as String;
+                              final path = folder['path'] as String;
+
+                              return ListTile(
+                                leading: const Icon(Icons.folder,
+                                    color: Colors.amber),
+                                title: Text(name),
+                                trailing: const Icon(Icons.chevron_right),
+                                onTap: () => _navigateToFolder(path),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('取消'),
+        ),
+        Flexible(
+          child: ElevatedButton.icon(
+            icon: const Icon(Icons.check_circle, size: 18),
+            label: Text(
+              _currentDisplayName,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            ),
+            onPressed: () => Navigator.pop(context, _currentPath),
+          ),
+        ),
+      ],
     );
   }
 }

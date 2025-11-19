@@ -144,6 +144,9 @@ class _SubtitleAdjustmentDialogState
       final file = File(filePath);
       await file.writeAsString(lrcContent);
 
+      // 局部刷新缓存以便字幕库更新该目录
+      await SubtitleLibraryService.refreshDirectoryCache(savedDir.path);
+
       if (mounted) {
         Navigator.pop(context);
         SnackBarUtil.showSuccess(context, '已保存到字幕库');
