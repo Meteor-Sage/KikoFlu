@@ -183,6 +183,9 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
       final file = File(finalPath);
       await file.writeAsString(contentToSave);
 
+      // 局部刷新缓存以便字幕库更新该目录
+      await SubtitleLibraryService.refreshDirectoryCache(savedDir.path);
+
       SnackBarUtil.showSuccess(context, '已保存到字幕库');
 
       // 触发字幕库重载回调
