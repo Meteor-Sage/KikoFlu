@@ -163,15 +163,15 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
   }
 
   Future<void> _importFile() async {
-    // 显示加载提示
-    SnackBarUtil.showLoading(context, '正在导入字幕文件...');
+    // 显示简单的加载对话框（单文件导入通常很快）
+    _showSimpleLoadingDialog('正在导入字幕文件...');
 
     final result = await SubtitleLibraryService.importSubtitleFile();
 
     if (!mounted) return;
 
-    // 隐藏加载提示
-    SnackBarUtil.hide(context);
+    // 关闭加载对话框
+    Navigator.of(context).pop();
 
     if (result.success) {
       SnackBarUtil.showSuccess(context, result.message);
@@ -181,16 +181,38 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
     }
   }
 
-  Future<void> _importFolder() async {
-    // 显示加载提示
-    SnackBarUtil.showLoading(context, '正在扫描文件夹并导入字幕文件...');
+  void _showSimpleLoadingDialog(String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(message),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-    final result = await SubtitleLibraryService.importFolder();
+  Future<void> _importFolder() async {
+    // 显示动态进度对话框
+    final updateProgress = _showProgressDialog('正在准备导入...');
+
+    final result = await SubtitleLibraryService.importFolder(
+      onProgress: updateProgress,
+    );
 
     if (!mounted) return;
 
-    // 隐藏加载提示
-    SnackBarUtil.hide(context);
+    // 关闭加载对话框
+    Navigator.of(context).pop();
 
     if (result.success) {
       SnackBarUtil.showSuccess(context, result.message);
@@ -201,15 +223,17 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
   }
 
   Future<void> _importArchive() async {
-    // 显示加载提示
-    SnackBarUtil.showLoading(context, '正在解压压缩包并导入字幕文件...');
+    // 显示动态进度对话框
+    final updateProgress = _showProgressDialog('正在准备解压...');
 
-    final result = await SubtitleLibraryService.importArchive();
+    final result = await SubtitleLibraryService.importArchive(
+      onProgress: updateProgress,
+    );
 
     if (!mounted) return;
 
-    // 隐藏加载提示
-    SnackBarUtil.hide(context);
+    // 关闭加载对话框
+    Navigator.of(context).pop();
 
     if (result.success) {
       SnackBarUtil.showSuccess(context, result.message);
@@ -217,6 +241,41 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
     } else {
       SnackBarUtil.showError(context, result.message);
     }
+  }
+
+  void Function(String)? _showProgressDialog(String initialMessage) {
+    final ValueNotifier<String> progressNotifier =
+        ValueNotifier(initialMessage);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          content: ValueListenableBuilder<String>(
+            valueListenable: progressNotifier,
+            builder: (context, message, child) => Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    return (String message) {
+      if (mounted) {
+        progressNotifier.value = message;
+      }
+    };
   }
 
   void _showImportOptions() {

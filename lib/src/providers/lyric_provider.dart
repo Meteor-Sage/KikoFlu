@@ -200,51 +200,39 @@ class LyricController extends StateNotifier<LyricState> {
 
       print('[Lyric] 在字幕库中查找: track="$trackTitle", workId=$workId');
 
-      // 优先级1: 查找作品ID文件夹
+      // 优先级1: 查找作品ID文件夹（在"已解析"文件夹下）
       if (workId != null) {
-        // 尝试查找 RJ{workId} 文件夹
-        final rjFolderPath = '${libraryDir.path}/RJ$workId';
-        final rjFolder = Directory(rjFolderPath);
-        if (await rjFolder.exists()) {
-          final match = await _searchLyricInFolder(
-            rjFolder,
-            trackTitle,
-            audioNameWithoutExt,
-            textExtensions,
-          );
-          if (match != null) {
-            print('[Lyric] 在RJ$workId文件夹找到匹配: $match');
-            return match;
-          }
-        }
+        final parsedFolderPath = '${libraryDir.path}/已解析';
+        final parsedFolder = Directory(parsedFolderPath);
 
-        // 尝试查找纯数字ID文件夹
-        final idFolderPath = '${libraryDir.path}/$workId';
-        final idFolder = Directory(idFolderPath);
-        if (await idFolder.exists()) {
-          final match = await _searchLyricInFolder(
-            idFolder,
-            trackTitle,
-            audioNameWithoutExt,
-            textExtensions,
-          );
-          if (match != null) {
-            print('[Lyric] 在$workId文件夹找到匹配: $match');
-            return match;
-          }
-        }
+        if (await parsedFolder.exists()) {
+          // 生成可能的文件夹名称列表（支持带前导零的格式）
+          final possibleFolderNames = [
+            'RJ$workId', // RJ1003058
+            'RJ0$workId', // RJ01003058
+            'BJ$workId', // BJ1003058
+            'BJ0$workId', // BJ01003058
+            'VJ$workId', // VJ1003058
+            'VJ0$workId', // VJ01003058
+          ];
 
-        // 递归查找包含作品ID的文件夹
-        final match = await _recursiveFindByWorkId(
-          libraryDir,
-          workId.toString(),
-          trackTitle,
-          audioNameWithoutExt,
-          textExtensions,
-        );
-        if (match != null) {
-          print('[Lyric] 在作品ID相关文件夹找到匹配: $match');
-          return match;
+          // 尝试查找所有可能的文件夹
+          for (final folderName in possibleFolderNames) {
+            final folderPath = '$parsedFolderPath/$folderName';
+            final folder = Directory(folderPath);
+            if (await folder.exists()) {
+              final match = await _searchLyricInFolder(
+                folder,
+                trackTitle,
+                audioNameWithoutExt,
+                textExtensions,
+              );
+              if (match != null) {
+                print('[Lyric] 在已解析/$folderName文件夹找到匹配: $match');
+                return match;
+              }
+            }
+          }
         }
       }
 
@@ -270,45 +258,6 @@ class LyricController extends StateNotifier<LyricState> {
       print('[Lyric] 字幕库查找出错: $e');
       return null;
     }
-  }
-
-  // 递归查找包含作品ID的文件夹
-  Future<String?> _recursiveFindByWorkId(
-    Directory dir,
-    String workId,
-    String trackTitle,
-    String audioNameWithoutExt,
-    List<String> textExtensions,
-  ) async {
-    try {
-      await for (final entity in dir.list()) {
-        if (entity is Directory) {
-          final folderName = entity.path.split(Platform.pathSeparator).last;
-          // 检查文件夹名是否包含作品ID或RJ+作品ID
-          if (folderName == workId || folderName == 'RJ$workId') {
-            final match = await _searchLyricInFolder(
-              entity,
-              trackTitle,
-              audioNameWithoutExt,
-              textExtensions,
-            );
-            if (match != null) return match;
-          }
-          // 继续递归搜索子文件夹
-          final match = await _recursiveFindByWorkId(
-            entity,
-            workId,
-            trackTitle,
-            audioNameWithoutExt,
-            textExtensions,
-          );
-          if (match != null) return match;
-        }
-      }
-    } catch (e) {
-      // 忽略权限错误等
-    }
-    return null;
   }
 
   // 在指定文件夹中递归搜索匹配的字幕文件
