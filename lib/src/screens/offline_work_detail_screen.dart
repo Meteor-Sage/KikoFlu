@@ -3,10 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:archive/archive.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:path/path.dart' as path;
 
 import '../models/work.dart';
 import '../providers/auth_provider.dart';
 import '../services/translation_service.dart';
+import '../services/download_service.dart';
 import '../utils/snackbar_util.dart';
 import '../widgets/scrollable_appbar.dart';
 import '../widgets/tag_chip.dart';
@@ -93,6 +97,139 @@ class _OfflineWorkDetailScreenState
     );
   }
 
+  // 导出作品为ZIP
+  Future<void> _exportWork() async {
+    try {
+      // 显示进度对话框
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => PopScope(
+          canPop: false,
+          child: AlertDialog(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                const Text('正在打包作品...'),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      // 获取作品下载目录
+      final downloadService = DownloadService.instance;
+      final downloadDir = await downloadService.getDownloadDirectory();
+      final workDir = Directory('${downloadDir.path}/${widget.work.id}');
+
+      if (!await workDir.exists()) {
+        if (mounted) {
+          Navigator.of(context).pop(); // 关闭进度对话框
+
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              SnackBarUtil.showError(context, '作品目录不存在');
+            }
+          });
+        }
+        return;
+      }
+
+      // 创建ZIP压缩包
+      final archive = Archive();
+
+      // 递归添加文件到压缩包
+      await _addDirectoryToArchive(archive, workDir, workDir.path);
+
+      // 编码为ZIP字节
+      final zipBytes = ZipEncoder().encode(archive);
+      if (zipBytes == null) {
+        if (mounted) {
+          Navigator.of(context).pop();
+
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              SnackBarUtil.showError(context, '打包失败');
+            }
+          });
+        }
+        return;
+      }
+
+      if (!mounted) return;
+      Navigator.of(context).pop(); // 关闭进度对话框
+
+      // 让用户选择保存位置
+      final directoryPath = await FilePicker.platform.getDirectoryPath();
+      if (directoryPath == null) return; // 用户取消
+
+      if (!mounted) return; // 选择目录后再次检查
+
+      // 生成文件名
+      final fileName = 'RJ${widget.work.id}.zip';
+      final savePath = path.join(directoryPath, fileName);
+
+      // 写入文件
+      final file = File(savePath);
+      await file.writeAsBytes(zipBytes);
+
+      if (mounted) {
+        // 使用 addPostFrameCallback 确保在正确时机显示提示
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            SnackBarUtil.showSuccess(
+              context,
+              '导出成功：$savePath',
+              duration: const Duration(seconds: 3),
+            );
+          }
+        });
+      }
+    } catch (e) {
+      // 在 catch 块中也需要安全处理
+      if (mounted) {
+        // 尝试关闭可能存在的进度对话框
+        try {
+          Navigator.of(context).pop();
+        } catch (_) {
+          // 如果对话框已经关闭，忽略错误
+        }
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            SnackBarUtil.showError(context, '导出失败: $e');
+          }
+        });
+      }
+    }
+  }
+
+  // 递归添加目录内容到压缩包
+  Future<void> _addDirectoryToArchive(
+    Archive archive,
+    Directory dir,
+    String basePath,
+  ) async {
+    await for (final entity in dir.list(recursive: false)) {
+      final relativePath = path.relative(entity.path, from: basePath);
+
+      if (entity is File) {
+        final bytes = await entity.readAsBytes();
+        final file = ArchiveFile(
+          relativePath,
+          bytes.length,
+          bytes,
+        );
+        archive.addFile(file);
+      } else if (entity is Directory) {
+        await _addDirectoryToArchive(archive, entity, basePath);
+      }
+    }
+  }
+
   // 构建网络封面图片（使用缓存）
   Widget _buildNetworkCover(Work work, String host, String token) {
     return CachedNetworkImage(
@@ -129,6 +266,13 @@ class _OfflineWorkDetailScreenState
           floatingActionButton: const DownloadFab(),
           appBar: ScrollableAppBar(
             systemOverlayStyle: systemOverlayStyle,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.archive_outlined),
+                tooltip: '导出为ZIP',
+                onPressed: _exportWork,
+              ),
+            ],
             title: GestureDetector(
               onLongPress: () => _copyToClipboard('RJ${widget.work.id}', 'RJ号'),
               child: Row(
