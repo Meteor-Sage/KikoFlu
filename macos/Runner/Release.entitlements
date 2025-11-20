@@ -17,5 +17,11 @@
 	<!-- 允许音频输出 -->
 	<key>com.apple.security.device.audio-output</key>
 	<true/>
+	<!-- 允许媒体播放器集成 -->
+	<key>com.apple.security.temporary-exception.mach-lookup.global-name</key>
+	<array>
+		<string>com.apple.coremedia.endpoint.xpc</string>
+		<string>com.apple.coremedia.routingcontext.xpc</string>
+	</array>
 </dict>
 </plist>

@@ -68,6 +68,9 @@ class AudioPlayerService {
       ),
     );
 
+    // Set initial playback state for all platforms
+    _updatePlaybackState();
+
     // Initialize Windows SMTC (System Media Transport Controls)
     if (Platform.isWindows) {
       _smtc = SMTCWindows(
