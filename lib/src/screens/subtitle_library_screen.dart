@@ -174,10 +174,21 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
     Navigator.of(context).pop();
 
     if (result.success) {
-      SnackBarUtil.showSuccess(context, result.message);
-      _loadFiles();
+      // 先刷新界面
+      await _loadFiles();
+
+      // 等待界面更新完成后再显示提示
+      if (mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            SnackBarUtil.showSuccess(context, result.message);
+          }
+        });
+      }
     } else {
-      SnackBarUtil.showError(context, result.message);
+      if (mounted) {
+        SnackBarUtil.showError(context, result.message);
+      }
     }
   }
 
@@ -215,10 +226,21 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
     Navigator.of(context).pop();
 
     if (result.success) {
-      SnackBarUtil.showSuccess(context, result.message);
-      _loadFiles();
+      // 先刷新界面
+      await _loadFiles();
+
+      // 等待界面更新完成后再显示提示
+      if (mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            SnackBarUtil.showSuccess(context, result.message);
+          }
+        });
+      }
     } else {
-      SnackBarUtil.showError(context, result.message);
+      if (mounted) {
+        SnackBarUtil.showError(context, result.message);
+      }
     }
   }
 
@@ -236,10 +258,21 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
     Navigator.of(context).pop();
 
     if (result.success) {
-      SnackBarUtil.showSuccess(context, result.message);
-      _loadFiles();
+      // 先刷新界面
+      await _loadFiles();
+
+      // 等待界面更新完成后再显示提示
+      if (mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            SnackBarUtil.showSuccess(context, result.message);
+          }
+        });
+      }
     } else {
-      SnackBarUtil.showError(context, result.message);
+      if (mounted) {
+        SnackBarUtil.showError(context, result.message);
+      }
     }
   }
 
@@ -370,57 +403,8 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '用于存放主动导入或保存的文本文件',
+                          '用于存放主动导入或保存的字幕文件，并在播放音频时支持自动/手动加载',
                           style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // 支持的文件类型
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 28,
-                    height: 28,
-                    margin: const EdgeInsets.only(right: 12),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Center(
-                      child: Text(
-                        '2',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color:
-                              Theme.of(context).colorScheme.onPrimaryContainer,
-                        ),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '支持导入的文件类型',
-                          style:
-                              Theme.of(context).textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '字幕文件，文件夹，压缩包',
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    fontFamily: 'monospace',
-                                  ),
                         ),
                       ],
                     ),
@@ -484,7 +468,7 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
                                   ),
                                   Expanded(
                                     child: Text(
-                                      '在"已解析"文件夹下查找对应作品\n支持格式：RJ123456、RJ01003058、BJ123456、VJ123456',
+                                      '在"已解析"文件夹下查找对应作品\n支持文件夹格式：RJ123456',
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodyMedium,
@@ -522,7 +506,7 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
                                   ),
                                   Expanded(
                                     child: Text(
-                                      '匹配规则：字幕文件名与音频文件名相同\n（去除或保留音频扩展名均可）',
+                                      '匹配规则：字幕文件名与音频文件名相同（去除或保留音频扩展名均可）',
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodyMedium,
@@ -590,7 +574,7 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
                                   ),
                                   Expanded(
                                     child: Text(
-                                      '导入时自动识别 RJ/BJ/VJ 格式文件夹，归类到"已解析"',
+                                      '导入时自动识别 RJ 格式文件夹，归类到"已解析"',
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodyMedium,
@@ -628,113 +612,7 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
                                   ),
                                   Expanded(
                                     child: Text(
-                                      '作品详情页音频文件显示 📘 标记表示有字幕库匹配',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // 高级功能
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 28,
-                    height: 28,
-                    margin: const EdgeInsets.only(right: 12),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Center(
-                      child: Text(
-                        '5',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color:
-                              Theme.of(context).colorScheme.onPrimaryContainer,
-                        ),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '高级功能',
-                          style:
-                              Theme.of(context).textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                        ),
-                        const SizedBox(height: 4),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '• ',
-                                    style:
-                                        Theme.of(context).textTheme.bodyMedium,
-                                  ),
-                                  Expanded(
-                                    child: Text(
-                                      '同名文件夹自动合并，同名文件自动替换',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '• ',
-                                    style:
-                                        Theme.of(context).textTheme.bodyMedium,
-                                  ),
-                                  Expanded(
-                                    child: Text(
-                                      '支持导入嵌套压缩包，自动解压并分类',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '• ',
-                                    style:
-                                        Theme.of(context).textTheme.bodyMedium,
-                                  ),
-                                  Expanded(
-                                    child: Text(
-                                      '向前兼容：自动迁移根目录旧格式文件夹',
+                                      '识别到的音频图标会增加蓝色标记，表示有字幕库匹配',
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodyMedium,
@@ -904,15 +782,32 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
 
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(success ? '重命名成功' : '重命名失败'),
-        backgroundColor: success ? Colors.green : Colors.red,
-      ),
-    );
-
     if (success) {
-      _loadFiles();
+      // 先刷新界面
+      await _loadFiles();
+
+      // 等待界面更新完成后再显示提示
+      if (mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('重命名成功'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        });
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('重命名失败'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -943,15 +838,32 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
 
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(success ? '删除成功' : '删除失败'),
-        backgroundColor: success ? Colors.green : Colors.red,
-      ),
-    );
-
     if (success) {
-      _loadFiles();
+      // 先刷新界面
+      await _loadFiles();
+
+      // 等待界面更新完成后再显示提示
+      if (mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('删除成功'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        });
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('删除失败'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -1132,15 +1044,32 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
 
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(success ? '移动成功' : '移动失败'),
-        backgroundColor: success ? Colors.green : Colors.red,
-      ),
-    );
-
     if (success) {
-      _loadFiles();
+      // 先刷新界面
+      await _loadFiles();
+
+      // 等待界面更新完成后再显示提示
+      if (mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('移动成功'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        });
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('移动失败'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

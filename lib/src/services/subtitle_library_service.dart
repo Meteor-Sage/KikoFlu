@@ -16,6 +16,7 @@ class SubtitleLibraryService {
   // 自动分配目录名称
   static const String _parsedFolderName = '已解析';
   static const String _unknownFolderName = '未知作品';
+  static const String _savedFolderName = '已保存';
 
   // 缓存相关
   static List<Map<String, dynamic>>? _cachedFileTree;
@@ -133,6 +134,14 @@ class SubtitleLibraryService {
       }
 
       final libraryDir = await getSubtitleLibraryDirectory();
+
+      // 创建"已保存"文件夹
+      final savedDir = Directory('${libraryDir.path}/$_savedFolderName');
+      if (!await savedDir.exists()) {
+        await savedDir.create(recursive: true);
+        print('[SubtitleLibrary] 创建"已保存"文件夹: ${savedDir.path}');
+      }
+
       int successCount = 0;
       int errorCount = 0;
       final List<String> errorFiles = [];
@@ -151,7 +160,7 @@ class SubtitleLibraryService {
         }
 
         try {
-          final destFile = File('${libraryDir.path}/$fileName');
+          final destFile = File('${savedDir.path}/$fileName');
 
           // 如果文件已存在，添加序号
           String finalFileName = fileName;
@@ -163,13 +172,13 @@ class SubtitleLibraryService {
                 fileName.substring(0, fileName.lastIndexOf('.'));
             final ext = fileName.substring(fileName.lastIndexOf('.'));
             finalFileName = '${nameWithoutExt}_$counter$ext';
-            finalDestFile = File('${libraryDir.path}/$finalFileName');
+            finalDestFile = File('${savedDir.path}/$finalFileName');
             counter++;
           }
 
           await sourceFile.copy(finalDestFile.path);
           successCount++;
-          print('[SubtitleLibrary] 导入字幕文件: $finalFileName');
+          print('[SubtitleLibrary] 导入字幕文件到"已保存": $finalFileName');
         } catch (e) {
           errorCount++;
           errorFiles.add('$fileName ($e)');
@@ -177,7 +186,10 @@ class SubtitleLibraryService {
         }
       }
 
-      String message = '成功导入 $successCount 个字幕文件';
+      // 清除缓存
+      clearCache();
+
+      String message = '成功导入 $successCount 个字幕文件到"已保存"文件夹';
       if (errorCount > 0) {
         message += '\n失败 $errorCount 个';
         if (errorFiles.length <= 3) {
@@ -1542,7 +1554,7 @@ class SubtitleLibraryService {
           // 跳过系统文件夹
           if (folderName == _parsedFolderName ||
               folderName == _unknownFolderName ||
-              folderName == '已保存' ||
+              folderName == _savedFolderName ||
               folderName.startsWith('.')) {
             continue;
           }

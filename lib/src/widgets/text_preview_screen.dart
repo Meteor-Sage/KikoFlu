@@ -109,7 +109,9 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
     // 获取当前显示的内容（可能是编辑后的）
     final contentToSave = _getCurrentContent();
     if (contentToSave == null || contentToSave.isEmpty) {
-      SnackBarUtil.showWarning(context, '没有可保存的内容');
+      if (mounted) {
+        SnackBarUtil.showWarning(context, '没有可保存的内容');
+      }
       return;
     }
 
@@ -138,9 +140,13 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
       final file = File(finalPath);
       await file.writeAsString(contentToSave);
 
-      SnackBarUtil.showSuccess(context, '文件已保存到：$finalPath');
+      if (mounted) {
+        SnackBarUtil.showSuccess(context, '文件已保存到：$finalPath');
+      }
     } catch (e) {
-      SnackBarUtil.showError(context, '保存失败: $e');
+      if (mounted) {
+        SnackBarUtil.showError(context, '保存失败: $e');
+      }
     }
   }
 
@@ -148,7 +154,9 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
     // 获取当前显示的内容（可能是编辑后的）
     final contentToSave = _getCurrentContent();
     if (contentToSave == null || contentToSave.isEmpty) {
-      SnackBarUtil.showWarning(context, '没有可保存的内容');
+      if (mounted) {
+        SnackBarUtil.showWarning(context, '没有可保存的内容');
+      }
       return;
     }
 
@@ -186,12 +194,21 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
       // 局部刷新缓存以便字幕库更新该目录
       await SubtitleLibraryService.refreshDirectoryCache(savedDir.path);
 
-      SnackBarUtil.showSuccess(context, '已保存到字幕库');
-
       // 触发字幕库重载回调
       widget.onSavedToLibrary?.call();
+
+      // 等待下一帧再显示成功提示
+      if (mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            SnackBarUtil.showSuccess(context, '已保存到字幕库');
+          }
+        });
+      }
     } catch (e) {
-      SnackBarUtil.showError(context, '保存失败: $e');
+      if (mounted) {
+        SnackBarUtil.showError(context, '保存失败: $e');
+      }
     }
   }
 
