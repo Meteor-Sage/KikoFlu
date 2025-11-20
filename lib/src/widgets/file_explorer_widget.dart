@@ -15,6 +15,7 @@ import '../providers/settings_provider.dart';
 import '../services/download_service.dart';
 import '../services/cache_service.dart';
 import '../services/translation_service.dart';
+import '../services/subtitle_library_service.dart';
 import '../utils/file_icon_utils.dart';
 import '../utils/snackbar_util.dart';
 import 'responsive_dialog.dart';
@@ -39,6 +40,7 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
   final Set<String> _expandedFolders = {}; // 记录展开的文件夹路径
   final Map<String, bool> _downloadedFiles = {}; // hash -> downloaded
   final Map<String, String> _fileRelativePaths = {}; // hash -> relative path
+  final Set<String> _audioWithLibrarySubtitles = {}; // 存储在字幕库中有匹配字幕的音频文件名
   bool _isLoading = false;
   String? _errorMessage;
   String? _mainFolderPath; // 主文件夹路径
@@ -102,12 +104,18 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
       setState(() {
         _rootFiles = files;
         _isLoading = false;
-        // 识别主文件夹并自动展开
-        _identifyAndExpandMainFolder();
       });
 
       // 检查已下载的文件
       _checkDownloadedFiles();
+
+      // 检查字幕库中的匹配项
+      await _checkLibrarySubtitles();
+
+      // 识别主文件夹并自动展开（需要在检查字幕库后执行）
+      setState(() {
+        _identifyAndExpandMainFolder();
+      });
     } catch (e) {
       setState(() {
         _errorMessage = '加载文件失败: $e';
@@ -169,6 +177,121 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
     if (mounted) {
       setState(() {});
     }
+  }
+
+  // 检查字幕库中哪些音频文件有匹配的字幕
+  Future<void> _checkLibrarySubtitles() async {
+    try {
+      final libraryDir =
+          await SubtitleLibraryService.getSubtitleLibraryDirectory();
+      if (!await libraryDir.exists()) {
+        return;
+      }
+
+      _audioWithLibrarySubtitles.clear();
+      final workId = widget.work.id;
+      final parsedFolderPath = '${libraryDir.path}/已解析';
+      final textExtensions = ['.vtt', '.srt', '.txt', '.lrc'];
+
+      // 生成可能的文件夹名称列表（支持带前导零的格式）
+      final possibleFolderNames = [
+        'RJ$workId',
+        'RJ0$workId',
+        'BJ$workId',
+        'BJ0$workId',
+        'VJ$workId',
+        'VJ0$workId',
+      ];
+
+      // 收集所有音频文件名
+      final audioFiles = <String>[];
+      void collectAudioFiles(List<dynamic> items) {
+        for (final item in items) {
+          if (item['type'] == 'audio') {
+            final title = item['title'] ?? item['name'] ?? '';
+            if (title.isNotEmpty) {
+              audioFiles.add(title);
+            }
+          }
+          final children = item['children'] as List<dynamic>?;
+          if (children != null) {
+            collectAudioFiles(children);
+          }
+        }
+      }
+
+      collectAudioFiles(_rootFiles);
+
+      // 检查每个可能的文件夹
+      for (final folderName in possibleFolderNames) {
+        final folderPath = '$parsedFolderPath/$folderName';
+        final folder = Directory(folderPath);
+        if (!await folder.exists()) continue;
+
+        // 遍历字幕库文件夹，查找匹配的字幕
+        await for (final entity in folder.list(recursive: true)) {
+          if (entity is File) {
+            final fileName = entity.path.split(Platform.pathSeparator).last;
+            final lowerFileName = fileName.toLowerCase();
+
+            // 检查是否是字幕文件
+            if (!textExtensions.any((ext) => lowerFileName.endsWith(ext))) {
+              continue;
+            }
+
+            // 检查是否有音频文件匹配这个字幕
+            for (final audioFile in audioFiles) {
+              final audioNameWithoutExt = _removeAudioExtension(audioFile);
+
+              // 规则1: 完全匹配
+              for (final ext in textExtensions) {
+                if (lowerFileName == '${audioFile.toLowerCase()}$ext') {
+                  _audioWithLibrarySubtitles.add(audioFile);
+                  break;
+                }
+              }
+
+              // 规则2: 去掉扩展名匹配
+              for (final ext in textExtensions) {
+                if (lowerFileName ==
+                    '${audioNameWithoutExt.toLowerCase()}$ext') {
+                  _audioWithLibrarySubtitles.add(audioFile);
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      print(
+          '[FileExplorer] 字幕库匹配: ${_audioWithLibrarySubtitles.length} 个音频文件有字幕');
+    } catch (e) {
+      print('[FileExplorer] 检查字幕库失败: $e');
+    }
+  }
+
+  // 移除音频文件扩展名
+  String _removeAudioExtension(String fileName) {
+    final audioExtensions = [
+      '.mp3',
+      '.wav',
+      '.flac',
+      '.m4a',
+      '.aac',
+      '.ogg',
+      '.opus',
+      '.wma',
+      '.mp4',
+    ];
+
+    final lowerName = fileName.toLowerCase();
+    for (final ext in audioExtensions) {
+      if (lowerName.endsWith(ext)) {
+        return fileName.substring(0, fileName.length - ext.length);
+      }
+    }
+    return fileName;
   }
 
   // 识别主文件夹：音频数量最多的目录，如果有多个则选择文本文件最多的
@@ -265,6 +388,12 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
     for (final child in items) {
       if (child['type'] == 'audio') {
         audioCount++;
+
+        // 检查该音频是否在字幕库中有匹配的字幕
+        final audioTitle = child['title'] ?? child['name'] ?? '';
+        if (_audioWithLibrarySubtitles.contains(audioTitle)) {
+          textCount++; // 字幕库匹配也算作文本文件
+        }
       } else if (FileIconUtils.isTextFile(child)) {
         textCount++;
       }
@@ -404,11 +533,11 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
 
   void _showSnackBar(SnackBar snackBar) {
     if (!mounted) return;
-    
+
     // 提取 SnackBar 的内容和类型
     final content = snackBar.content;
     String message = '';
-    
+
     if (content is Text) {
       message = content.data ?? '';
     } else if (content is Row) {
@@ -427,18 +556,19 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
         }
       }
     }
-    
+
     if (message.isEmpty) {
       // 如果无法提取消息，使用原始方法
-      final messenger = _scaffoldMessenger ?? ScaffoldMessenger.maybeOf(context);
+      final messenger =
+          _scaffoldMessenger ?? ScaffoldMessenger.maybeOf(context);
       messenger?.showSnackBar(snackBar);
       return;
     }
-    
+
     // 根据背景色判断类型
     final backgroundColor = snackBar.backgroundColor;
     final duration = snackBar.duration ?? const Duration(seconds: 2);
-    
+
     if (backgroundColor == Colors.red) {
       SnackBarUtil.showError(context, message, duration: duration);
     } else if (backgroundColor == Colors.green) {
@@ -1492,7 +1622,7 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
                 else
                   const SizedBox(width: 20),
                 const SizedBox(width: 8),
-                // 文件图标（带已下载徽章）
+                // 文件图标（带已下载徽章和字幕库标记）
                 SizedBox(
                   width: 24,
                   height: 24,
@@ -1518,6 +1648,24 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
                             child: Icon(
                               Icons.check_circle,
                               color: Colors.green[600],
+                              size: 13,
+                            ),
+                          ),
+                        ),
+                      // 字幕库匹配标记（音频文件）
+                      if (type == 'audio' &&
+                          _audioWithLibrarySubtitles.contains(title))
+                        Positioned(
+                          left: 0,
+                          top: 0,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.subtitles,
+                              color: Colors.blue[600],
                               size: 13,
                             ),
                           ),
