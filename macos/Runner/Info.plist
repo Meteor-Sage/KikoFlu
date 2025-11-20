@@ -52,10 +52,10 @@
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	
-	<!-- Background audio support -->
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>audio</string>
-	</array>
+	<!-- Media playback support -->
+	<key>NSSupportsAutomaticTermination</key>
+	<false/>
+	<key>NSSupportsSuddenTermination</key>
+	<false/>
 </dict>
 </plist>
