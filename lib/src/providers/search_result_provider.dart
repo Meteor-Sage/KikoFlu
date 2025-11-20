@@ -144,16 +144,22 @@ class SearchResultNotifier extends StateNotifier<SearchResultState> {
 
       // 根据 searchParams 判断搜索类型
       if (state.searchParams?.containsKey('vaId') == true) {
-        // 声优搜索 - VA API 不支持 order/sort/subtitle 参数
+        // 声优搜索 - 支持完整的排序和过滤参数
         result = await _apiService.getWorksByVa(
           vaId: state.searchParams!['vaId'],
           page: page,
+          order: state.sortOption.value,
+          sort: state.sortDirection.value,
+          subtitle: state.subtitleFilter,
         );
       } else if (state.searchParams?.containsKey('tagId') == true) {
-        // 标签搜索 - Tag API 不支持 order/sort/subtitle 参数
+        // 标签搜索 - 支持完整的排序和过滤参数
         result = await _apiService.getWorksByTag(
           tagId: state.searchParams!['tagId'],
           page: page,
+          order: state.sortOption.value,
+          sort: state.sortDirection.value,
+          subtitle: state.subtitleFilter,
         );
       } else {
         // 关键词搜索 - 支持完整的排序和过滤参数
