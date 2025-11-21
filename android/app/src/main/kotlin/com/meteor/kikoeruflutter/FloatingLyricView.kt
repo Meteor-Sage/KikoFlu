@@ -52,8 +52,7 @@ class FloatingLyricView(
             setTextColor(Color.WHITE)
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL) // 使用常规字重
             gravity = Gravity.CENTER
-            // 添加文本阴影效果，增强可读性
-            setShadowLayer(6f, 0f, 2f, Color.parseColor("#CC000000"))
+            // 不添加文本阴影，保持简洁
             maxLines = 2
             ellipsize = android.text.TextUtils.TruncateAt.END
             letterSpacing = 0.02f // 增加字间距，更易阅读

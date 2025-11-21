@@ -5,8 +5,8 @@ import '../services/floating_lyric_service.dart';
 
 /// 悬浮歌词样式设置
 class FloatingLyricStyle {
-  final double fontSize; // 字体大小 (14-32)
-  final double opacity; // 不透明度 (0.5-1.0)
+  final double fontSize; // 字体大小 (10-28)
+  final double opacity; // 背景不透明度 (0.0-1.0)
   final Color textColor; // 文字颜色
   final Color backgroundColor; // 背景颜色
   final double cornerRadius; // 圆角半径 (0-24)
@@ -14,7 +14,7 @@ class FloatingLyricStyle {
   final double paddingVertical; // 垂直内边距 (6-20)
 
   const FloatingLyricStyle({
-    this.fontSize = 16.0,
+    this.fontSize = 14.0,
     this.opacity = 0.95,
     this.textColor = Colors.white,
     this.backgroundColor = const Color(0xFF000000),
@@ -59,7 +59,7 @@ class FloatingLyricStyle {
   // 从 Map 恢复
   factory FloatingLyricStyle.fromMap(Map<String, dynamic> map) {
     return FloatingLyricStyle(
-      fontSize: map['fontSize']?.toDouble() ?? 16.0,
+      fontSize: map['fontSize']?.toDouble() ?? 14.0,
       opacity: map['opacity']?.toDouble() ?? 0.95,
       textColor: Color(map['textColor'] ?? Colors.white.value),
       backgroundColor:
@@ -101,7 +101,7 @@ class FloatingLyricStyleNotifier extends StateNotifier<FloatingLyricStyle> {
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
 
-    final fontSize = prefs.getDouble('${_keyPrefix}fontSize') ?? 16.0;
+    final fontSize = prefs.getDouble('${_keyPrefix}fontSize') ?? 14.0;
     final opacity = prefs.getDouble('${_keyPrefix}opacity') ?? 0.95;
     final textColor =
         Color(prefs.getInt('${_keyPrefix}textColor') ?? Colors.white.value);
@@ -205,8 +205,9 @@ class FloatingLyricStyleNotifier extends StateNotifier<FloatingLyricStyle> {
   }
 
   /// 应用预设样式
-  Future<void> applyPreset(FloatingLyricStylePreset preset) async {
-    state = preset.style;
+  Future<void> applyPreset(FloatingLyricStylePreset preset,
+      [BuildContext? context]) async {
+    state = preset.getStyle(context);
     await _save();
     _applyStyle();
   }
@@ -214,6 +215,7 @@ class FloatingLyricStyleNotifier extends StateNotifier<FloatingLyricStyle> {
 
 /// 预设样式
 enum FloatingLyricStylePreset {
+  dynamic, // 动态
   classic, // 经典
   modern, // 现代
   minimal, // 极简
@@ -224,6 +226,8 @@ enum FloatingLyricStylePreset {
 extension FloatingLyricStylePresetExtension on FloatingLyricStylePreset {
   String get name {
     switch (this) {
+      case FloatingLyricStylePreset.dynamic:
+        return '动态';
       case FloatingLyricStylePreset.classic:
         return '经典';
       case FloatingLyricStylePreset.modern:
@@ -239,6 +243,8 @@ extension FloatingLyricStylePresetExtension on FloatingLyricStylePreset {
 
   String get description {
     switch (this) {
+      case FloatingLyricStylePreset.dynamic:
+        return '跟随系统主题，自动取色';
       case FloatingLyricStylePreset.classic:
         return '黑底白字，经典耐看';
       case FloatingLyricStylePreset.modern:
@@ -252,11 +258,38 @@ extension FloatingLyricStylePresetExtension on FloatingLyricStylePreset {
     }
   }
 
-  FloatingLyricStyle get style {
+  FloatingLyricStyle getStyle([BuildContext? context]) {
     switch (this) {
+      case FloatingLyricStylePreset.dynamic:
+        // 动态主题：使用系统主题色
+        if (context != null) {
+          final theme = Theme.of(context);
+          final colorScheme = theme.colorScheme;
+          final isDark = theme.brightness == Brightness.dark;
+
+          return FloatingLyricStyle(
+            fontSize: 14.0,
+            opacity: isDark ? 0.90 : 0.85,
+            textColor: colorScheme.onPrimary,
+            backgroundColor: colorScheme.primary,
+            cornerRadius: 16.0,
+            paddingHorizontal: 20.0,
+            paddingVertical: 10.0,
+          );
+        }
+        // 如果没有context，使用中性配色
+        return const FloatingLyricStyle(
+          fontSize: 14.0,
+          opacity: 0.88,
+          textColor: Colors.white,
+          backgroundColor: Color(0xFF2196F3), // Material Blue
+          cornerRadius: 16.0,
+          paddingHorizontal: 20.0,
+          paddingVertical: 10.0,
+        );
       case FloatingLyricStylePreset.classic:
         return const FloatingLyricStyle(
-          fontSize: 16.0,
+          fontSize: 14.0,
           opacity: 0.95,
           textColor: Colors.white,
           backgroundColor: Color(0xFF000000),
@@ -266,7 +299,7 @@ extension FloatingLyricStylePresetExtension on FloatingLyricStylePreset {
         );
       case FloatingLyricStylePreset.modern:
         return const FloatingLyricStyle(
-          fontSize: 18.0,
+          fontSize: 16.0,
           opacity: 0.90,
           textColor: Colors.white,
           backgroundColor: Color(0xFF1A237E), // 深蓝紫
@@ -276,7 +309,7 @@ extension FloatingLyricStylePresetExtension on FloatingLyricStylePreset {
         );
       case FloatingLyricStylePreset.minimal:
         return const FloatingLyricStyle(
-          fontSize: 15.0,
+          fontSize: 13.0,
           opacity: 0.75,
           textColor: Color(0xFF212121),
           backgroundColor: Color(0xFFFFFFFF),
@@ -286,7 +319,7 @@ extension FloatingLyricStylePresetExtension on FloatingLyricStylePreset {
         );
       case FloatingLyricStylePreset.vibrant:
         return const FloatingLyricStyle(
-          fontSize: 17.0,
+          fontSize: 15.0,
           opacity: 0.92,
           textColor: Colors.white,
           backgroundColor: Color(0xFFE91E63), // 粉红
@@ -296,7 +329,7 @@ extension FloatingLyricStylePresetExtension on FloatingLyricStylePreset {
         );
       case FloatingLyricStylePreset.elegant:
         return const FloatingLyricStyle(
-          fontSize: 16.0,
+          fontSize: 14.0,
           opacity: 0.88,
           textColor: Color(0xFFE3F2FD),
           backgroundColor: Color(0xFF0D47A1), // 深蓝
