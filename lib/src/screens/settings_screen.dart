@@ -243,10 +243,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               );
             },
           ),
-          // 仅在安卓平台显示悬浮歌词和权限管理
-          if (Platform.isAndroid) ...[
+          // 显示悬浮歌词 (Android & Windows)
+          if (Platform.isAndroid || Platform.isWindows) ...[
             Divider(color: Theme.of(context).colorScheme.outlineVariant),
             _buildFloatingLyricTile(context),
+          ],
+
+          // 仅在安卓平台显示权限管理
+          if (Platform.isAndroid) ...[
             Divider(color: Theme.of(context).colorScheme.outlineVariant),
             ListTile(
               leading: Icon(Icons.security,

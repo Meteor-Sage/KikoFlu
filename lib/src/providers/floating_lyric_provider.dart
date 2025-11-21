@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
@@ -73,8 +74,36 @@ class FloatingLyricEnabledNotifier extends StateNotifier<bool> {
   }
 
   Future<void> _showFloatingLyric() async {
-    await FloatingLyricService.instance.show('♪ - ♪');
-    // 应用当前样式
+    // 直接从 SharedPreferences 读取样式，确保在 Provider 未加载完成时也能获取正确样式
+    final prefs = await SharedPreferences.getInstance();
+    const keyPrefix = 'floating_lyric_style_';
+
+    final fontSize = prefs.getDouble('${keyPrefix}fontSize') ?? 14.0;
+    final opacity = prefs.getDouble('${keyPrefix}opacity') ?? 0.95;
+    final textColorInt =
+        prefs.getInt('${keyPrefix}textColor') ?? Colors.white.value;
+    final backgroundColorInt = prefs.getInt('${keyPrefix}backgroundColor') ??
+        const Color(0xFF000000).value;
+    final cornerRadius = prefs.getDouble('${keyPrefix}cornerRadius') ?? 16.0;
+    final paddingHorizontal =
+        prefs.getDouble('${keyPrefix}paddingHorizontal') ?? 20.0;
+    final paddingVertical =
+        prefs.getDouble('${keyPrefix}paddingVertical') ?? 10.0;
+
+    final textColor = Color(textColorInt);
+    final backgroundColor = Color(backgroundColorInt);
+
+    final styleMap = {
+      'fontSize': fontSize,
+      'textColor': textColor.value,
+      'backgroundColor': backgroundColor.withOpacity(opacity).value,
+      'cornerRadius': cornerRadius,
+      'paddingHorizontal': paddingHorizontal,
+      'paddingVertical': paddingVertical,
+    };
+
+    await FloatingLyricService.instance.show('♪ - ♪', style: styleMap);
+    // 应用当前样式 (Keep this for Android or if window was already open)
     ref.read(floatingLyricStyleProvider.notifier).applyStyle();
     // 启动后台更新
     _startBackgroundUpdate();

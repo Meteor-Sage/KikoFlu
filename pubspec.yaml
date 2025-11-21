@@ -67,6 +67,7 @@ dependencies:
   package_info_plus: ^9.0.0
   msix: ^3.16.12
   window_manager: ^0.4.3
+  desktop_multi_window: ^0.3.0
 
 dev_dependencies:
   flutter_test:

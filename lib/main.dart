@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +11,7 @@ import 'package:window_manager/window_manager.dart';
 
 import 'src/screens/login_screen.dart';
 import 'src/screens/main_screen.dart';
+import 'src/widgets/desktop_floating_lyric.dart';
 import 'src/utils/theme.dart';
 import 'src/services/storage_service.dart';
 import 'src/services/account_database.dart';
@@ -20,8 +22,24 @@ import 'src/providers/auth_provider.dart';
 import 'src/providers/theme_provider.dart';
 import 'src/providers/update_provider.dart';
 
-void main() async {
+void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  if (args.firstOrNull == 'multi_window') {
+    final windowId = args[1];
+    final argument = args[2].isEmpty
+        ? const <String, dynamic>{}
+        : jsonDecode(args[2]) as Map<String, dynamic>;
+
+    // Initialize window manager for the new window
+    await windowManager.ensureInitialized();
+
+    runApp(DesktopFloatingLyric(
+      windowId: windowId,
+      arguments: argument,
+    ));
+    return;
+  }
 
   // Initialize just_audio_media_kit for desktop platforms
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
