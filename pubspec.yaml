@@ -59,6 +59,7 @@ dependencies:
   file_picker: ^8.0.0+1
   archive: ^3.6.1
   gbk_codec: ^0.4.0
+  charset: ^2.0.1
   
   # System Integration
   url_launcher: ^6.2.2
