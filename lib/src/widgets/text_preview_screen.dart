@@ -1,8 +1,11 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as path;
+import 'package:gbk_codec/gbk_codec.dart';
+import 'package:charset/charset.dart';
 
 import '../services/cache_service.dart';
 import '../services/translation_service.dart';
@@ -44,6 +47,7 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
   bool _isEditMode = false;
   late TextEditingController _textController;
   late TextEditingController _translatedTextController;
+  String _detectedEncoding = 'UTF-8'; // 记录检测到的原始编码
 
   @override
   void initState() {
@@ -70,6 +74,173 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
       setState(() {
         _scrollProgress = maxScroll > 0 ? currentScroll / maxScroll : 0.0;
       });
+    }
+  }
+
+  /// 智能检测文件编码并读取内容
+  /// 支持 UTF-8、GBK、Shift-JIS 等常见编码
+  Future<String> _readFileWithEncoding(File file) async {
+    try {
+      final bytes = await file.readAsBytes();
+      return _decodeBytes(bytes);
+    } catch (e) {
+      print('[TextPreview] 读取文件失败: $e');
+      rethrow;
+    }
+  }
+
+  /// 智能解码字节数组
+  /// 尝试多种编码格式：UTF-16LE/BE -> UTF-8 -> GBK -> Shift-JIS -> Latin1
+  String _decodeBytes(List<int> bytes) {
+    // 1. 检查 UTF-16LE BOM (FF FE)
+    if (bytes.length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE) {
+      print('[TextPreview] 检测到 UTF-16LE BOM');
+      _detectedEncoding = 'UTF-16LE';
+      try {
+        // UTF-16LE: 小端序，移除 BOM
+        final utf16Bytes = bytes.sublist(2);
+        final utf16Codes = <int>[];
+        for (int i = 0; i < utf16Bytes.length; i += 2) {
+          if (i + 1 < utf16Bytes.length) {
+            // 小端序：低字节在前
+            final code = utf16Bytes[i] | (utf16Bytes[i + 1] << 8);
+            utf16Codes.add(code);
+          }
+        }
+        return String.fromCharCodes(utf16Codes);
+      } catch (e) {
+        print('[TextPreview] UTF-16LE 解码失败: $e');
+      }
+    }
+
+    // 2. 检查 UTF-16BE BOM (FE FF)
+    if (bytes.length >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF) {
+      print('[TextPreview] 检测到 UTF-16BE BOM');
+      _detectedEncoding = 'UTF-16BE';
+      try {
+        // UTF-16BE: 大端序，移除 BOM
+        final utf16Bytes = bytes.sublist(2);
+        final utf16Codes = <int>[];
+        for (int i = 0; i < utf16Bytes.length; i += 2) {
+          if (i + 1 < utf16Bytes.length) {
+            // 大端序：高字节在前
+            final code = (utf16Bytes[i] << 8) | utf16Bytes[i + 1];
+            utf16Codes.add(code);
+          }
+        }
+        return String.fromCharCodes(utf16Codes);
+      } catch (e) {
+        print('[TextPreview] UTF-16BE 解码失败: $e');
+      }
+    }
+
+    // 3. 检查 UTF-8 BOM (EF BB BF)
+    if (bytes.length >= 3 &&
+        bytes[0] == 0xEF &&
+        bytes[1] == 0xBB &&
+        bytes[2] == 0xBF) {
+      print('[TextPreview] 检测到 UTF-8 BOM');
+      _detectedEncoding = 'UTF-8';
+      return utf8.decode(bytes.sublist(3));
+    }
+
+    // 4. 尝试 UTF-8 解码
+    try {
+      final decoded = utf8.decode(bytes, allowMalformed: false);
+      // 检查是否有乱码字符（通常是解码错误的标志）
+      if (!decoded.contains('�')) {
+        print('[TextPreview] 使用 UTF-8 编码');
+        _detectedEncoding = 'UTF-8';
+        return decoded;
+      }
+    } catch (e) {
+      // UTF-8 解码失败，继续尝试其他编码
+    }
+
+    // 5. 尝试 GBK 解码（简体中文）
+    try {
+      final decoded = gbk_bytes.decode(bytes);
+      // 简单验证：检查是否包含常见中文字符
+      if (decoded.isNotEmpty && !decoded.contains('�')) {
+        print('[TextPreview] 使用 GBK 编码');
+        _detectedEncoding = 'GBK';
+        return decoded;
+      }
+    } catch (e) {
+      // GBK 解码失败
+    }
+
+    // 4. 尝试 Shift-JIS 解码（日文）
+    try {
+      final decoded = shiftJis.decode(bytes);
+      // 简单验证：检查是否有乱码
+      if (decoded.isNotEmpty && !decoded.contains('�')) {
+        print('[TextPreview] 使用 Shift-JIS 编码');
+        _detectedEncoding = 'Shift-JIS';
+        return decoded;
+      }
+    } catch (e) {
+      // Shift-JIS 解码失败
+    }
+
+    // 5. 最后尝试 Latin1（不会失败，但可能显示乱码）
+    try {
+      print('[TextPreview] 使用 Latin1 编码（降级处理）');
+      _detectedEncoding = 'Latin1';
+      return latin1.decode(bytes);
+    } catch (e) {
+      // 如果连 Latin1 都失败，返回错误提示
+      _detectedEncoding = 'Unknown';
+      return '文件编码无法识别，无法正确显示内容';
+    }
+  }
+
+  /// 将字符串编码为字节数组
+  /// 使用检测到的原始编码，保持文件编码一致性
+  List<int> _encodeString(String content) {
+    try {
+      switch (_detectedEncoding) {
+        case 'UTF-16LE':
+          print('[TextPreview] 使用 UTF-16LE 编码保存（含 BOM）');
+          // 转换为 UTF-16 码点
+          final codeUnits = content.codeUnits;
+          final bytes = <int>[0xFF, 0xFE]; // BOM
+          // 小端序：低字节在前
+          for (final code in codeUnits) {
+            bytes.add(code & 0xFF); // 低字节
+            bytes.add((code >> 8) & 0xFF); // 高字节
+          }
+          return bytes;
+        case 'UTF-16BE':
+          print('[TextPreview] 使用 UTF-16BE 编码保存（含 BOM）');
+          // 转换为 UTF-16 码点
+          final codeUnits = content.codeUnits;
+          final bytes = <int>[0xFE, 0xFF]; // BOM
+          // 大端序：高字节在前
+          for (final code in codeUnits) {
+            bytes.add((code >> 8) & 0xFF); // 高字节
+            bytes.add(code & 0xFF); // 低字节
+          }
+          return bytes;
+        case 'GBK':
+          print('[TextPreview] 使用 GBK 编码保存');
+          return gbk_bytes.encode(content);
+        case 'Shift-JIS':
+          print('[TextPreview] 使用 Shift-JIS 编码保存');
+          return shiftJis.encode(content);
+        case 'Latin1':
+          print('[TextPreview] 使用 Latin1 编码保存');
+          return latin1.encode(content);
+        case 'UTF-8':
+        default:
+          // UTF-8 是最安全的默认选择
+          print('[TextPreview] 使用 UTF-8 编码保存');
+          return utf8.encode(content);
+      }
+    } catch (e) {
+      // 编码失败时降级到 UTF-8
+      print('[TextPreview] 编码失败，降级到 UTF-8: $e');
+      return utf8.encode(content);
     }
   }
 
@@ -138,7 +309,9 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
 
       // 写入文件
       final file = File(finalPath);
-      await file.writeAsString(contentToSave);
+      // 使用原始编码保存，保持编码一致性
+      final bytes = _encodeString(contentToSave);
+      await file.writeAsBytes(bytes);
 
       if (mounted) {
         SnackBarUtil.showSuccess(context, '文件已保存到：$finalPath');
@@ -189,7 +362,9 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
 
       // 写入文件
       final file = File(finalPath);
-      await file.writeAsString(contentToSave);
+      // 使用原始编码保存，保持编码一致性
+      final bytes = _encodeString(contentToSave);
+      await file.writeAsBytes(bytes);
 
       // 局部刷新缓存以便字幕库更新该目录
       await SubtitleLibraryService.refreshDirectoryCache(savedDir.path);
@@ -233,7 +408,8 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
         final localFile = File(localPath);
 
         if (await localFile.exists()) {
-          final content = await localFile.readAsString();
+          // 使用智能编码检测读取文件
+          final content = await _readFileWithEncoding(localFile);
           setState(() {
             _content = content;
             _textController.text = content;
@@ -272,13 +448,15 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
       final response = await dio.get(
         widget.textUrl,
         options: Options(
-          responseType: ResponseType.plain,
+          responseType: ResponseType.bytes, // 改为获取字节数据
           receiveTimeout: const Duration(seconds: 30),
         ),
       );
 
       if (response.statusCode == 200) {
-        final content = response.data as String;
+        // 使用智能编码检测解码
+        final bytes = response.data as List<int>;
+        final content = _decodeBytes(bytes);
 
         if (widget.workId != null &&
             widget.hash != null &&
