@@ -169,15 +169,20 @@ class FloatingLyricPlugin(private val context: Context) : MethodCallHandler {
     private fun updateStyle(call: MethodCall, result: Result) {
         try {
             val fontSize = call.argument<Double>("fontSize")
-            val textColor = call.argument<Int>("textColor")
-            val backgroundColor = call.argument<Int>("backgroundColor")
-            val alpha = call.argument<Int>("alpha")
+            // Dart int is 64-bit, so it might be passed as Long
+            val textColor = call.argument<Number>("textColor")?.toInt()
+            val backgroundColor = call.argument<Number>("backgroundColor")?.toInt()
+            val cornerRadius = call.argument<Double>("cornerRadius")
+            val paddingHorizontal = call.argument<Double>("paddingHorizontal")
+            val paddingVertical = call.argument<Double>("paddingVertical")
 
             floatingView?.updateStyle(
                 fontSize?.toFloat(),
                 textColor,
                 backgroundColor,
-                alpha
+                cornerRadius?.toFloat(),
+                paddingHorizontal?.toFloat(),
+                paddingVertical?.toFloat()
             )
             result.success(true)
         } catch (e: Exception) {

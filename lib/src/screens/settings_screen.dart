@@ -10,6 +10,7 @@ import 'preferences_screen.dart';
 import 'about_screen.dart';
 import 'permissions_screen.dart';
 import 'privacy_mode_settings_screen.dart';
+import 'floating_lyric_style_screen.dart';
 import '../providers/settings_provider.dart';
 import '../providers/update_provider.dart';
 import '../providers/floating_lyric_provider.dart';
@@ -138,9 +139,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _updateCacheSize();
       },
     );
-
-    // 启用悬浮歌词自动更新器
-    ref.watch(floatingLyricAutoUpdaterProvider);
 
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
@@ -274,33 +272,57 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget _buildFloatingLyricTile(BuildContext context) {
     final isEnabled = ref.watch(floatingLyricEnabledProvider);
 
-    return SwitchListTile(
-      secondary: Icon(
-        Icons.subtitles_outlined,
-        color: Theme.of(context).colorScheme.primary,
-      ),
-      title: const Text('桌面悬浮歌词'),
-      subtitle: Text(
-        isEnabled ? '已启用 - 歌词将显示在桌面上' : '未启用',
-        style: TextStyle(
-          color: isEnabled
-              ? Theme.of(context).colorScheme.primary.withOpacity(0.8)
-              : null,
+    return Column(
+      children: [
+        SwitchListTile(
+          secondary: Icon(
+            Icons.subtitles_outlined,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          title: const Text('桌面悬浮歌词'),
+          subtitle: Text(
+            isEnabled ? '已启用 - 歌词将显示在桌面上' : '未启用',
+            style: TextStyle(
+              color: isEnabled
+                  ? Theme.of(context).colorScheme.primary.withOpacity(0.8)
+                  : null,
+            ),
+          ),
+          value: isEnabled,
+          onChanged: (value) async {
+            try {
+              await ref.read(floatingLyricEnabledProvider.notifier).toggle();
+            } catch (e) {
+              if (mounted) {
+                SnackBarUtil.showError(
+                  context,
+                  '操作失败: $e',
+                );
+              }
+            }
+          },
         ),
-      ),
-      value: isEnabled,
-      onChanged: (value) async {
-        try {
-          await ref.read(floatingLyricEnabledProvider.notifier).toggle();
-        } catch (e) {
-          if (mounted) {
-            SnackBarUtil.showError(
-              context,
-              '操作失败: $e',
-            );
-          }
-        }
-      },
+        if (isEnabled) ...[
+          Divider(
+            height: 1,
+            color: Theme.of(context).colorScheme.outlineVariant,
+            indent: 72,
+          ),
+          ListTile(
+            leading: const SizedBox(width: 24), // 占位对齐
+            title: const Text('样式设置'),
+            subtitle: const Text('自定义字体、颜色、透明度等'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const FloatingLyricStyleScreen(),
+                ),
+              );
+            },
+          ),
+        ],
+      ],
     );
   }
 

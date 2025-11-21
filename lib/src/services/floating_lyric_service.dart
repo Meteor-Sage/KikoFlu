@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'dart:io';
+import 'dart:async';
 
 /// 悬浮歌词服务
 /// 负责管理桌面悬浮窗显示和歌词更新
@@ -14,6 +15,10 @@ class FloatingLyricService {
     _instance ??= FloatingLyricService._();
     return _instance!;
   }
+
+  // 后台更新控制
+  StreamSubscription? _backgroundUpdateSubscription;
+  Function()? _onBackgroundUpdate;
 
   /// 检查是否支持悬浮窗（仅安卓平台）
   bool get isSupported => Platform.isAndroid;
@@ -107,12 +112,16 @@ class FloatingLyricService {
   /// [fontSize] 字体大小
   /// [textColor] 文字颜色（ARGB格式）
   /// [backgroundColor] 背景颜色（ARGB格式）
-  /// [alpha] 透明度 (0-255)
+  /// [cornerRadius] 圆角半径
+  /// [paddingHorizontal] 水平内边距
+  /// [paddingVertical] 垂直内边距
   Future<bool> updateStyle({
     double? fontSize,
     int? textColor,
     int? backgroundColor,
-    int? alpha,
+    double? cornerRadius,
+    double? paddingHorizontal,
+    double? paddingVertical,
   }) async {
     if (!isSupported) {
       return false;
@@ -123,7 +132,10 @@ class FloatingLyricService {
       if (fontSize != null) params['fontSize'] = fontSize;
       if (textColor != null) params['textColor'] = textColor;
       if (backgroundColor != null) params['backgroundColor'] = backgroundColor;
-      if (alpha != null) params['alpha'] = alpha;
+      if (cornerRadius != null) params['cornerRadius'] = cornerRadius;
+      if (paddingHorizontal != null)
+        params['paddingHorizontal'] = paddingHorizontal;
+      if (paddingVertical != null) params['paddingVertical'] = paddingVertical;
 
       final result = await _platform.invokeMethod('updateStyle', params);
       print('[FloatingLyric] 更新样式成功');

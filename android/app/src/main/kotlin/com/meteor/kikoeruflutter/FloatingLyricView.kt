@@ -3,6 +3,7 @@ package com.meteor.kikoeruflutter
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
@@ -29,27 +30,33 @@ class FloatingLyricView(
     private var isDragging = false
     private val dragThreshold = 10f // 拖动阈值，避免点击误触发
 
+    // 当前样式状态
+    private var currentBackgroundColor: Int = Color.parseColor("#F2000000")
+    private var currentCornerRadius: Float = 16f
+
     init {
-        // 设置背景为半透明黑色圆角矩形
-        setBackgroundColor(Color.parseColor("#E6000000"))
+        // 使用 GradientDrawable 创建圆角背景
+        updateBackground()
+        
         setPadding(
-            dpToPx(24f).toInt(),
-            dpToPx(12f).toInt(),
-            dpToPx(24f).toInt(),
-            dpToPx(12f).toInt()
+            dpToPx(20f).toInt(),
+            dpToPx(10f).toInt(),
+            dpToPx(20f).toInt(),
+            dpToPx(10f).toInt()
         )
-        elevation = dpToPx(8f)
+        elevation = dpToPx(12f) // 增加阴影深度
 
         // 创建文本视图
         textView = TextView(context).apply {
-            textSize = 18f
+            textSize = 16f
             setTextColor(Color.WHITE)
-            typeface = Typeface.DEFAULT_BOLD
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL) // 使用常规字重
             gravity = Gravity.CENTER
             // 添加文本阴影效果，增强可读性
-            setShadowLayer(4f, 0f, 2f, Color.parseColor("#80000000"))
+            setShadowLayer(6f, 0f, 2f, Color.parseColor("#CC000000"))
             maxLines = 2
             ellipsize = android.text.TextUtils.TruncateAt.END
+            letterSpacing = 0.02f // 增加字间距，更易阅读
         }
 
         addView(textView, LayoutParams(
@@ -57,7 +64,6 @@ class FloatingLyricView(
             LayoutParams.WRAP_CONTENT
         ))
     }
-
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
@@ -119,13 +125,26 @@ class FloatingLyricView(
     }
 
     /**
+     * 更新背景
+     */
+    private fun updateBackground() {
+        val drawable = GradientDrawable().apply {
+            setColor(currentBackgroundColor)
+            cornerRadius = dpToPx(currentCornerRadius)
+        }
+        background = drawable
+    }
+
+    /**
      * 更新样式
      */
     fun updateStyle(
         fontSize: Float?,
         textColor: Int?,
         backgroundColor: Int?,
-        alphaValue: Int?
+        cornerRadius: Float?,
+        paddingHorizontal: Float?,
+        paddingVertical: Float?
     ) {
         fontSize?.let {
             textView.textSize = it
@@ -133,11 +152,25 @@ class FloatingLyricView(
         textColor?.let {
             textView.setTextColor(it)
         }
+        
+        var backgroundChanged = false
         backgroundColor?.let {
-            setBackgroundColor(it)
+            currentBackgroundColor = it
+            backgroundChanged = true
         }
-        alphaValue?.let {
-            alpha = it / 255f
+        cornerRadius?.let {
+            currentCornerRadius = it
+            backgroundChanged = true
+        }
+        
+        if (backgroundChanged) {
+            updateBackground()
+        }
+
+        if (paddingHorizontal != null || paddingVertical != null) {
+            val pH = paddingHorizontal?.let { dpToPx(it).toInt() } ?: paddingLeft
+            val pV = paddingVertical?.let { dpToPx(it).toInt() } ?: paddingTop
+            setPadding(pH, pV, pH, pV)
         }
     }
 

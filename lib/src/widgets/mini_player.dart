@@ -6,7 +6,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../providers/audio_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/lyric_provider.dart';
-import '../providers/floating_lyric_provider.dart';
 import '../screens/audio_player_screen.dart';
 import 'volume_control.dart';
 
@@ -35,9 +34,6 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
 
     // 启用自动歌词加载器
     ref.watch(lyricAutoLoaderProvider);
-
-    // 启用悬浮歌词自动更新器
-    ref.watch(floatingLyricAutoUpdaterProvider);
 
     return currentTrack.when(
       data: (track) {
