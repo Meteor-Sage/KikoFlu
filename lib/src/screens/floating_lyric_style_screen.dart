@@ -72,13 +72,6 @@ class FloatingLyricStyleScreen extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: style.backgroundColorWithOpacity,
                   borderRadius: BorderRadius.circular(style.cornerRadius),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
                 ),
                 child: Text(
                   '♪ 示例歌词内容 ♪',
@@ -120,7 +113,7 @@ class FloatingLyricStyleScreen extends ConsumerWidget {
                   onPressed: () {
                     ref
                         .read(floatingLyricStyleProvider.notifier)
-                        .applyPreset(preset);
+                        .applyPreset(preset, context);
                   },
                 );
               }).toList(),
@@ -157,9 +150,9 @@ class FloatingLyricStyleScreen extends ConsumerWidget {
             ),
             Slider(
               value: style.fontSize,
-              min: 12,
+              min: 10,
               max: 28,
-              divisions: 16,
+              divisions: 18,
               label: '${style.fontSize.toInt()}',
               onChanged: (value) {
                 ref
@@ -185,7 +178,7 @@ class FloatingLyricStyleScreen extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '不透明度',
+                  '背景不透明度',
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 Text(
@@ -199,9 +192,9 @@ class FloatingLyricStyleScreen extends ConsumerWidget {
             ),
             Slider(
               value: style.opacity,
-              min: 0.5,
+              min: 0.0,
               max: 1.0,
-              divisions: 10,
+              divisions: 20,
               label: '${(style.opacity * 100).toInt()}%',
               onChanged: (value) {
                 ref
@@ -236,7 +229,7 @@ class FloatingLyricStyleScreen extends ConsumerWidget {
               style.textColor,
               [
                 Colors.white,
-                Colors.black,
+                const Color(0xFF212121), // 黑色，用于极简预设
                 const Color(0xFFE3F2FD),
                 const Color(0xFFFFF9C4),
                 const Color(0xFFFFCDD2),
@@ -255,6 +248,7 @@ class FloatingLyricStyleScreen extends ConsumerWidget {
               style.backgroundColor,
               [
                 Colors.black,
+                Colors.white, // 白色，用于极简预设
                 const Color(0xFF1A237E),
                 const Color(0xFF0D47A1),
                 const Color(0xFF1B5E20),
