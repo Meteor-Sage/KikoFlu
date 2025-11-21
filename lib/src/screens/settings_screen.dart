@@ -12,6 +12,7 @@ import 'permissions_screen.dart';
 import 'privacy_mode_settings_screen.dart';
 import '../providers/settings_provider.dart';
 import '../providers/update_provider.dart';
+import '../providers/floating_lyric_provider.dart';
 import '../services/cache_service.dart';
 import '../utils/snackbar_util.dart';
 import '../widgets/scrollable_appbar.dart';
@@ -55,11 +56,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   // 安全显示 SnackBar 的辅助方法
   void _showSnackBar(SnackBar snackBar) {
     if (!mounted) return;
-    
+
     // 提取 SnackBar 内容
     final content = snackBar.content;
     String message = '';
-    
+
     if (content is Text) {
       message = content.data ?? '';
     } else if (content is Row) {
@@ -77,18 +78,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         }
       }
     }
-    
+
     if (message.isEmpty) {
       final messenger = _scaffoldMessenger ?? ScaffoldMessenger.of(context);
       messenger.showSnackBar(snackBar);
       return;
     }
-    
+
     // 根据背景色判断类型
     final backgroundColor = snackBar.backgroundColor;
     final duration = snackBar.duration;
-    
-    if (backgroundColor == Colors.red || backgroundColor == Theme.of(context).colorScheme.error) {
+
+    if (backgroundColor == Colors.red ||
+        backgroundColor == Theme.of(context).colorScheme.error) {
       SnackBarUtil.showError(context, message, duration: duration);
     } else if (backgroundColor == Colors.green) {
       SnackBarUtil.showSuccess(context, message, duration: duration);
@@ -136,6 +138,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _updateCacheSize();
       },
     );
+
+    // 启用悬浮歌词自动更新器
+    ref.watch(floatingLyricAutoUpdaterProvider);
 
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
@@ -240,8 +245,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               );
             },
           ),
-          // 仅在安卓平台显示权限管理
+          // 仅在安卓平台显示悬浮歌词和权限管理
           if (Platform.isAndroid) ...[
+            Divider(color: Theme.of(context).colorScheme.outlineVariant),
+            _buildFloatingLyricTile(context),
             Divider(color: Theme.of(context).colorScheme.outlineVariant),
             ListTile(
               leading: Icon(Icons.security,
@@ -260,6 +267,40 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ],
         ],
       ),
+    );
+  }
+
+  /// 悬浮歌词开关组件
+  Widget _buildFloatingLyricTile(BuildContext context) {
+    final isEnabled = ref.watch(floatingLyricEnabledProvider);
+
+    return SwitchListTile(
+      secondary: Icon(
+        Icons.subtitles_outlined,
+        color: Theme.of(context).colorScheme.primary,
+      ),
+      title: const Text('桌面悬浮歌词'),
+      subtitle: Text(
+        isEnabled ? '已启用 - 歌词将显示在桌面上' : '未启用',
+        style: TextStyle(
+          color: isEnabled
+              ? Theme.of(context).colorScheme.primary.withOpacity(0.8)
+              : null,
+        ),
+      ),
+      value: isEnabled,
+      onChanged: (value) async {
+        try {
+          await ref.read(floatingLyricEnabledProvider.notifier).toggle();
+        } catch (e) {
+          if (mounted) {
+            SnackBarUtil.showError(
+              context,
+              '操作失败: $e',
+            );
+          }
+        }
+      },
     );
   }
 
