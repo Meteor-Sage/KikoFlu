@@ -243,19 +243,60 @@ class SubtitleLibraryService {
 
       onProgress?.call('正在扫描文件夹结构...');
 
-      // 递归处理：找出所有需要独立处理的目录
-      final result = await _processFolderRecursively(
-        sourceDir,
-        sourceDir,
-        libraryDir,
-        onProgress: onProgress,
-      );
+      // 检查根目录本身是否匹配规则（例如用户选择的就是 RJ123456 文件夹）
+      final rootFolderName = sourceDir.path.split(Platform.pathSeparator).last;
+      Map<String, int> result;
+
+      if (_matchFolderPattern(rootFolderName)) {
+        // 根目录匹配规则：将整个目录作为一个作品导入到"已解析"
+        onProgress?.call('正在处理: $rootFolderName');
+
+        final folderName = _normalizeFolderName(rootFolderName);
+        final targetCategory = _parsedFolderName;
+        final targetDir =
+            Directory('${libraryDir.path}/$targetCategory/$folderName');
+
+        // 检查目标路径长度
+        if (targetDir.path.length > _maxPathLength) {
+          return ImportResult(
+            success: false,
+            message: '目标路径过长，无法导入: $folderName (${targetDir.path.length} 字符)',
+          );
+        }
+
+        // 检查目标文件夹是否已存在，如果存在则合并（复制并替换）
+        if (await targetDir.exists()) {
+          print('[SubtitleLibrary] 检测到同名文件夹，合并并替换同名文件: $folderName');
+          result = await _mergeAndCopyFolder(sourceDir, targetDir,
+              onProgress: onProgress);
+          parsedFolderCount = 1;
+          print(
+              '[SubtitleLibrary] 已合并根目录文件夹: $folderName，导入 ${result['successCount']} 个字幕文件');
+        } else {
+          result = await _copyDirectoryWithFilter(
+            sourceDir,
+            targetDir,
+            onProgress: onProgress,
+          );
+          parsedFolderCount = 1;
+          print(
+              '[SubtitleLibrary] 已解析根目录文件夹: $folderName, 字幕文件: ${result['successCount']}');
+        }
+      } else {
+        // 根目录不匹配规则：递归处理子目录
+        result = await _processFolderRecursively(
+          sourceDir,
+          sourceDir,
+          libraryDir,
+          onProgress: onProgress,
+        );
+        parsedFolderCount = result['parsedCount'] ?? 0;
+        unknownFolderCount = result['unknownCount'] ?? 0;
+      }
 
       totalSuccess = result['successCount'] ?? 0;
       totalError = result['errorCount'] ?? 0;
       totalSkipped = result['skippedCount'] ?? 0;
-      parsedFolderCount = result['parsedCount'] ?? 0;
-      unknownFolderCount = result['unknownCount'] ?? 0;
 
       if (totalSuccess == 0) {
         return ImportResult(
@@ -928,6 +969,7 @@ class SubtitleLibraryService {
   }
 
   /// 合并两个文件夹（将源文件夹内容移动到目标文件夹）
+  /// 用于移动操作，会删除源文件夹，同名文件直接替换
   static Future<void> _mergeFolders(
       String sourceFolder, String targetFolder) async {
     final sourceDir = Directory(sourceFolder);
@@ -944,29 +986,12 @@ class SubtitleLibraryService {
       final targetPath = '${targetDir.path}${Platform.pathSeparator}$fileName';
 
       if (entity is File) {
-        // 处理文件
+        // 处理文件：直接替换
         if (await File(targetPath).exists()) {
-          // 目标已存在文件，添加序号
-          final nameWithoutExt = fileName.contains('.')
-              ? fileName.substring(0, fileName.lastIndexOf('.'))
-              : fileName;
-          final ext = fileName.contains('.')
-              ? fileName.substring(fileName.lastIndexOf('.'))
-              : '';
-          int counter = 1;
-          String finalPath;
-
-          do {
-            finalPath =
-                '${targetDir.path}${Platform.pathSeparator}${nameWithoutExt}_$counter$ext';
-            counter++;
-          } while (await File(finalPath).exists());
-
-          await entity.copy(finalPath);
-          await entity.delete();
-        } else {
-          await entity.rename(targetPath);
+          await File(targetPath).delete();
+          print('[SubtitleLibrary] 替换同名文件: $fileName');
         }
+        await entity.rename(targetPath);
       } else if (entity is Directory) {
         // 处理子文件夹（递归合并）
         if (await Directory(targetPath).exists()) {
@@ -985,6 +1010,76 @@ class SubtitleLibraryService {
         print('[SubtitleLibrary] 删除空文件夹失败: $sourceFolder, 错误: $e');
       }
     }
+  }
+
+  /// 合并并复制文件夹（用于导入，不删除源文件夹，同名文件直接替换）
+  /// 返回统计信息：successCount, errorCount, skippedCount
+  static Future<Map<String, int>> _mergeAndCopyFolder(
+    Directory sourceDir,
+    Directory targetDir, {
+    Function(String)? onProgress,
+  }) async {
+    int successCount = 0;
+    int errorCount = 0;
+    int skippedCount = 0;
+
+    try {
+      await for (final entity
+          in sourceDir.list(recursive: true, followLinks: false)) {
+        if (entity is File) {
+          final fileName = entity.path.split(Platform.pathSeparator).last;
+
+          if (!FileIconUtils.isLyricFile(fileName)) {
+            skippedCount++;
+            continue;
+          }
+
+          try {
+            final relativePath =
+                entity.path.substring(sourceDir.path.length + 1);
+            var targetFilePath = '${targetDir.path}/$relativePath';
+
+            // 检查路径长度，如果过长则缩短
+            if (targetFilePath.length > _maxPathLength) {
+              targetFilePath = _shortenPath(targetFilePath, fileName);
+              if (targetFilePath.isEmpty) {
+                print('[SubtitleLibrary] 路径过长无法缩短，跳过: $relativePath');
+                skippedCount++;
+                continue;
+              }
+            }
+
+            final targetFile = File(targetFilePath);
+            await targetFile.parent.create(recursive: true);
+
+            // 如果目标文件已存在，直接替换
+            if (await targetFile.exists()) {
+              print('[SubtitleLibrary] 替换同名文件: $fileName');
+            }
+
+            await entity.copy(targetFile.path);
+            successCount++;
+
+            // 每10个文件显示一次进度
+            if (successCount % 10 == 0) {
+              onProgress?.call('已处理 $successCount 个字幕文件...');
+            }
+          } catch (e) {
+            errorCount++;
+            print('[SubtitleLibrary] 复制文件失败: $fileName, 错误: $e');
+          }
+        }
+      }
+    } catch (e) {
+      print('[SubtitleLibrary] 合并复制目录失败: ${sourceDir.path}, 错误: $e');
+      errorCount++;
+    }
+
+    return {
+      'successCount': successCount,
+      'errorCount': errorCount,
+      'skippedCount': skippedCount,
+    };
   }
 
   /// 获取指定目录下的直接子文件夹（用于树形浏览）
@@ -1278,27 +1373,17 @@ class SubtitleLibraryService {
 
           onProgress?.call('正在处理: $folderName');
 
-          // 检查目标文件夹是否已存在，如果存在则合并
+          // 检查目标文件夹是否已存在，如果存在则合并（复制并替换）
           if (await targetDir.exists()) {
-            print('[SubtitleLibrary] 检测到同名文件夹，合并: $folderName');
-            await _mergeFolders(subDir.path, targetDir.path);
-            final result = {
-              'successCount': 0,
-              'errorCount': 0,
-              'skippedCount': 0
-            };
-            // 统计合并后的文件数
-            await for (final entity
-                in targetDir.list(recursive: true, followLinks: false)) {
-              if (entity is File &&
-                  FileIconUtils.isLyricFile(
-                      entity.path.split(Platform.pathSeparator).last)) {
-                result['successCount'] = (result['successCount'] ?? 0) + 1;
-              }
-            }
+            print('[SubtitleLibrary] 检测到同名文件夹，合并并替换同名文件: $folderName');
+            final result = await _mergeAndCopyFolder(subDir, targetDir,
+                onProgress: onProgress);
             successCount += result['successCount'] ?? 0;
+            errorCount += result['errorCount'] ?? 0;
+            skippedCount += result['skippedCount'] ?? 0;
             parsedCount++;
-            print('[SubtitleLibrary] 已合并文件夹: $folderName');
+            print(
+                '[SubtitleLibrary] 已合并文件夹: $folderName，导入 ${result['successCount']} 个字幕文件');
           } else {
             final result = await _copyDirectoryWithFilter(
               subDir,
@@ -1346,26 +1431,17 @@ class SubtitleLibraryService {
 
               onProgress?.call('正在处理: $folderName');
 
-              // 检查目标文件夹是否已存在，如果存在则合并
+              // 检查目标文件夹是否已存在，如果存在则合并（复制并替换）
               if (await targetDir.exists()) {
-                print('[SubtitleLibrary] 检测到同名文件夹，合并: $folderName');
-                await _mergeFolders(subDir.path, targetDir.path);
-                final result = {
-                  'successCount': 0,
-                  'errorCount': 0,
-                  'skippedCount': 0
-                };
-                await for (final entity
-                    in targetDir.list(recursive: true, followLinks: false)) {
-                  if (entity is File &&
-                      FileIconUtils.isLyricFile(
-                          entity.path.split(Platform.pathSeparator).last)) {
-                    result['successCount'] = (result['successCount'] ?? 0) + 1;
-                  }
-                }
+                print('[SubtitleLibrary] 检测到同名文件夹，合并并替换同名文件: $folderName');
+                final result = await _mergeAndCopyFolder(subDir, targetDir,
+                    onProgress: onProgress);
                 successCount += result['successCount'] ?? 0;
+                errorCount += result['errorCount'] ?? 0;
+                skippedCount += result['skippedCount'] ?? 0;
                 unknownCount++;
-                print('[SubtitleLibrary] 已合并未知作品: $folderName');
+                print(
+                    '[SubtitleLibrary] 已合并未知作品: $folderName，导入 ${result['successCount']} 个字幕文件');
               } else {
                 final result = await _copyDirectoryWithFilter(
                   subDir,
