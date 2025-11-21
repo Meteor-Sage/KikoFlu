@@ -15,6 +15,9 @@
     <!-- Battery optimization exemption permission -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     
+    <!-- Floating window permission -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    
     <!-- Storage permissions -->
     <!-- Android 12 及以下版本的存储权限 -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" 
