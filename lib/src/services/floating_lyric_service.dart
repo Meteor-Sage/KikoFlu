@@ -16,10 +16,6 @@ class FloatingLyricService {
     return _instance!;
   }
 
-  // 后台更新控制
-  StreamSubscription? _backgroundUpdateSubscription;
-  Function()? _onBackgroundUpdate;
-
   /// 检查是否支持悬浮窗（仅安卓平台）
   bool get isSupported => Platform.isAndroid;
 

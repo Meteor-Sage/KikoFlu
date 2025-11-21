@@ -170,12 +170,14 @@ class LyricController extends StateNotifier<LyricState> {
 
       // 4. 解析歌词
       final lyrics = LyricParser.parse(content); // 自动检测格式
+      print('[Lyric] 解析完成: ${lyrics.length} 行歌词');
       state = LyricState(
         lyrics: lyrics,
         isLoading: false,
         lyricUrl: lyricUrl,
       );
     } catch (e) {
+      print('[Lyric] 加载失败: $e');
       state = LyricState(
         lyrics: [],
         isLoading: false,
