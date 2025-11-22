@@ -297,63 +297,75 @@ class ReviewProgressDialog {
                     Padding(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 8),
-                      child: Row(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            title,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                          // 标题行
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: Text(
+                              title,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                          const SizedBox(width: 8),
-                          // 评分星星
-                          ...List.generate(5, (index) {
-                            final starValue = index + 1;
-                            final isSelected = selectedRating != null &&
-                                starValue <= selectedRating!;
-                            return IconButton(
-                              icon: Icon(
-                                isSelected ? Icons.star : Icons.star_border,
-                                color: isSelected ? Colors.amber : null,
-                                size: 22,
-                              ),
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(
-                                minWidth: 28,
-                                minHeight: 28,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  selectedRating = selectedRating == starValue
-                                      ? null
-                                      : starValue;
-                                });
-                              },
-                              tooltip: '$starValue 星',
-                            );
-                          }),
-                          const Spacer(),
-                          if (workId != null && workTitle != null)
-                            IconButton(
-                              icon: const Icon(Icons.playlist_add),
-                              onPressed: () async {
-                                await AddToPlaylistDialog.show(
-                                  context: context,
-                                  workId: workId,
-                                  workTitle: workTitle,
+                          // 评分和操作行
+                          Row(
+                            children: [
+                              // 评分星星
+                              ...List.generate(5, (index) {
+                                final starValue = index + 1;
+                                final isSelected = selectedRating != null &&
+                                    starValue <= selectedRating!;
+                                return IconButton(
+                                  icon: Icon(
+                                    isSelected ? Icons.star : Icons.star_border,
+                                    color: isSelected ? Colors.amber : null,
+                                    size: 22,
+                                  ),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 28,
+                                    minHeight: 28,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      selectedRating = selectedRating == starValue
+                                          ? null
+                                          : starValue;
+                                    });
+                                  },
+                                  tooltip: '$starValue 星',
                                 );
-                              },
-                              tooltip: '添加到播放列表',
-                            ),
-                          if (showLoading)
-                            const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
+                              }),
+                              const Spacer(),
+                              if (workId != null && workTitle != null)
+                                IconButton(
+                                  icon: const Icon(Icons.playlist_add),
+                                  onPressed: () async {
+                                    await AddToPlaylistDialog.show(
+                                      context: context,
+                                      workId: workId,
+                                      workTitle: workTitle,
+                                    );
+                                  },
+                                  tooltip: '添加到播放列表',
+                                ),
+                              if (showLoading)
+                                const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                            ],
+                          ),
                         ],
                       ),
                     ),
