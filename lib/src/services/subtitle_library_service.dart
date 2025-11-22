@@ -505,6 +505,36 @@ class SubtitleLibraryService {
       final Set<String> modifiedPaths = {};
 
       try {
+        // 智能判断是否需要为根压缩包创建文件夹
+        // 如果压缩包名符合 RJ 号格式，且内容不是已经包含在同名文件夹中，则创建文件夹
+        final zipName = platformFile.name;
+        final zipNameWithoutExt =
+            zipName.replaceAll(RegExp(r'\.(zip|rar|7z)$', caseSensitive: false), '');
+        
+        String relativePath = '';
+        
+        // 只有当压缩包名符合 RJ 号格式时才进行智能判断
+        if (_matchFolderPattern(zipNameWithoutExt)) {
+          Archive? rootArchive;
+          try {
+             // 重新解码一次用于检查结构（虽然有性能损耗，但为了正确性是值得的）
+             // 注意：这里假设是 ZIP，前面已经检查过
+             if (platformFile.extension == 'zip') {
+               rootArchive = ZipDecoder().decodeBytes(bytes, verify: false);
+             }
+          } catch (e) {
+            print('[SubtitleLibrary] 检查压缩包结构失败: $e');
+          }
+
+          if (rootArchive != null) {
+            final shouldCreate = _shouldCreateNewFolder(rootArchive, zipNameWithoutExt);
+            if (shouldCreate) {
+              relativePath = zipNameWithoutExt;
+              print('[SubtitleLibrary] 根压缩包符合 RJ 格式且内容分散，将解压到: $relativePath');
+            }
+          }
+        }
+
         // 先解压到临时目录
         onProgress?.call('正在解压压缩包...');
         print('[SubtitleLibrary] 解压到临时目录: ${tempDir.path}');
@@ -512,7 +542,7 @@ class SubtitleLibraryService {
           bytes,
           platformFile.extension ?? 'zip',
           tempDir.path,
-          '',
+          relativePath,
           stats,
           depth: 0,
           onProgress: onProgress,
