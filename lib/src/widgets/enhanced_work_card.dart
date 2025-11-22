@@ -6,6 +6,7 @@ import '../providers/auth_provider.dart';
 import '../providers/work_card_display_provider.dart';
 import '../screens/work_detail_screen.dart';
 import '../utils/snackbar_util.dart';
+import '../utils/string_utils.dart';
 import 'tag_chip.dart';
 import 'va_chip.dart';
 import 'work_bookmark_manager.dart';
@@ -297,6 +298,30 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                       ],
                     ),
                   ],
+                  // 时长信息
+                  if (displaySettings.showDuration &&
+                      widget.work.duration != null &&
+                      widget.work.duration! > 0) ...[
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.access_time,
+                          color: Colors.blue,
+                          size: iconSize,
+                        ),
+                        const SizedBox(width: 2),
+                        Text(
+                          formatDuration(Duration(seconds: widget.work.duration!)),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Colors.blue[700],
+                                fontSize: bodyFontSize,
+                                fontWeight: FontWeight.w500,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 4),
                   if (widget.work.vas != null && widget.work.vas!.isNotEmpty)
                     _buildVoiceActorsRow(context),
@@ -457,6 +482,25 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                                     color: Colors.amber[700],
                                     fontWeight: FontWeight.w500,
                                   ),
+                        ),
+                      ],
+                      // 时长信息
+                      if (displaySettings.showDuration &&
+                          widget.work.duration != null &&
+                          widget.work.duration! > 0) ...[
+                        const SizedBox(width: 8),
+                        const Icon(
+                          Icons.access_time,
+                          color: Colors.blue,
+                          size: 14,
+                        ),
+                        const SizedBox(width: 2),
+                        Text(
+                          formatDuration(Duration(seconds: widget.work.duration!)),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Colors.blue[700],
+                                fontWeight: FontWeight.w500,
+                              ),
                         ),
                       ],
                       const Spacer(),
