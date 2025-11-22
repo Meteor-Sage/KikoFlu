@@ -588,15 +588,25 @@ class _PlayerControlsWidgetState extends ConsumerState<PlayerControlsWidget> {
                 final pos = widget.position.value ?? Duration.zero;
                 final dur = widget.duration.value ?? Duration.zero;
 
-                return Slider(
-                  value: (widget.isSeekingManually
-                          ? widget.seekValue
-                          : dur.inMilliseconds > 0
-                              ? pos.inMilliseconds / dur.inMilliseconds
-                              : 0.0)
-                      .clamp(0.0, 1.0),
-                  onChanged: widget.onSeekChanged,
-                  onChangeEnd: widget.onSeekEnd,
+                return SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    // 增强未播放部分的可见度，使其与背景区分
+                    inactiveTrackColor: Theme.of(context)
+                        .colorScheme
+                        .onSurfaceVariant
+                        .withOpacity(0.15),
+                    trackShape: const RoundedRectSliderTrackShape(),
+                  ),
+                  child: Slider(
+                    value: (widget.isSeekingManually
+                            ? widget.seekValue
+                            : dur.inMilliseconds > 0
+                                ? pos.inMilliseconds / dur.inMilliseconds
+                                : 0.0)
+                        .clamp(0.0, 1.0),
+                    onChanged: widget.onSeekChanged,
+                    onChangeEnd: widget.onSeekEnd,
+                  ),
                 );
               },
             ),
