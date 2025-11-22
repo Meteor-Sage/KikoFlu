@@ -8,6 +8,7 @@ class WorkCardDisplaySettings {
   final bool showSales;
   final bool showReleaseDate;
   final bool showCircle;
+  final bool showDuration;
 
   const WorkCardDisplaySettings({
     this.showRating = true,
@@ -15,6 +16,7 @@ class WorkCardDisplaySettings {
     this.showSales = true,
     this.showReleaseDate = true,
     this.showCircle = true,
+    this.showDuration = false,
   });
 
   WorkCardDisplaySettings copyWith({
@@ -23,6 +25,7 @@ class WorkCardDisplaySettings {
     bool? showSales,
     bool? showReleaseDate,
     bool? showCircle,
+    bool? showDuration,
   }) {
     return WorkCardDisplaySettings(
       showRating: showRating ?? this.showRating,
@@ -30,6 +33,7 @@ class WorkCardDisplaySettings {
       showSales: showSales ?? this.showSales,
       showReleaseDate: showReleaseDate ?? this.showReleaseDate,
       showCircle: showCircle ?? this.showCircle,
+      showDuration: showDuration ?? this.showDuration,
     );
   }
 }
@@ -42,6 +46,7 @@ class WorkCardDisplayNotifier extends StateNotifier<WorkCardDisplaySettings> {
   static const String _keySales = '${_keyPrefix}sales';
   static const String _keyReleaseDate = '${_keyPrefix}release_date';
   static const String _keyCircle = '${_keyPrefix}circle';
+  static const String _keyDuration = '${_keyPrefix}duration';
 
   WorkCardDisplayNotifier() : super(const WorkCardDisplaySettings()) {
     _loadSettings();
@@ -56,6 +61,7 @@ class WorkCardDisplayNotifier extends StateNotifier<WorkCardDisplaySettings> {
         showSales: prefs.getBool(_keySales) ?? true,
         showReleaseDate: prefs.getBool(_keyReleaseDate) ?? true,
         showCircle: prefs.getBool(_keyCircle) ?? true,
+        showDuration: prefs.getBool(_keyDuration) ?? false,
       );
     } catch (e) {
       // 加载失败，使用默认值
@@ -87,6 +93,11 @@ class WorkCardDisplayNotifier extends StateNotifier<WorkCardDisplaySettings> {
     await _saveSettings();
   }
 
+  Future<void> toggleDuration() async {
+    state = state.copyWith(showDuration: !state.showDuration);
+    await _saveSettings();
+  }
+
   Future<void> _saveSettings() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -95,6 +106,7 @@ class WorkCardDisplayNotifier extends StateNotifier<WorkCardDisplaySettings> {
       await prefs.setBool(_keySales, state.showSales);
       await prefs.setBool(_keyReleaseDate, state.showReleaseDate);
       await prefs.setBool(_keyCircle, state.showCircle);
+      await prefs.setBool(_keyDuration, state.showDuration);
     } catch (e) {
       // 保存失败时静默处理
     }

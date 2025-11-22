@@ -49,6 +49,17 @@ class WorkCardDisplaySettingsScreen extends ConsumerWidget {
                 Divider(color: Theme.of(context).colorScheme.outlineVariant),
                 SwitchListTile(
                   secondary: Icon(
+                    Icons.access_time,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  title: const Text('时长信息'),
+                  subtitle: const Text('显示作品总时长'),
+                  value: settings.showDuration,
+                  onChanged: (_) => notifier.toggleDuration(),
+                ),
+                Divider(color: Theme.of(context).colorScheme.outlineVariant),
+                SwitchListTile(
+                  secondary: Icon(
                     Icons.shopping_cart,
                     color: Theme.of(context).colorScheme.primary,
                   ),
