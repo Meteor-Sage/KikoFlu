@@ -30,10 +30,33 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
   bool _isSelectionMode = false;
   final Set<String> _selectedPaths = {}; // 选中的文件/文件夹路径
 
+  // 搜索相关
+  bool _isSearching = false;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  String _currentPath = '';
+  String? _rootPath;
+
   @override
   void initState() {
     super.initState();
+    _initRootPath();
+  }
+
+  Future<void> _initRootPath() async {
+    final dir = await SubtitleLibraryService.getSubtitleLibraryDirectory();
+    setState(() {
+      _rootPath = dir.path;
+      _currentPath = dir.path;
+    });
     _loadFiles();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   void _toggleSelectionMode() {
@@ -1083,23 +1106,58 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
     });
   }
 
-  List<Widget> _buildFileTree(
-      List<Map<String, dynamic>> items, String parentPath,
-      {int level = 0}) {
+  List<Map<String, dynamic>> _filterFiles(
+      List<Map<String, dynamic>> files, String query) {
+    if (query.isEmpty) return files;
+
+    final List<Map<String, dynamic>> filtered = [];
+
+    for (final file in files) {
+      final bool isFolder = file['type'] == 'folder';
+      final String title = file['title'] ?? '';
+      final bool matches = title.toLowerCase().contains(query.toLowerCase());
+
+      if (isFolder) {
+        final List<Map<String, dynamic>> children =
+            (file['children'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
+        final List<Map<String, dynamic>> filteredChildren =
+            _filterFiles(children, query);
+
+        if (matches || filteredChildren.isNotEmpty) {
+          final Map<String, dynamic> newFolder = Map.from(file);
+          // 如果文件夹名字匹配，或者子文件有匹配，都显示该文件夹
+          // 这里只显示匹配的子文件，即使文件夹名字匹配也不显示所有子文件，
+          // 这样可以保持搜索结果的整洁。如果用户想看文件夹全部内容，可以清除搜索。
+          newFolder['children'] = filteredChildren;
+          filtered.add(newFolder);
+        }
+      } else {
+        if (matches) {
+          filtered.add(file);
+        }
+      }
+    }
+    return filtered;
+  }
+
+  List<Widget> _buildFileTree(List<Map<String, dynamic>> items, String parentPath,
+      {int level = 0, bool isRecursive = false}) {
     final children = <Widget>[];
 
     for (final item in items) {
       final isFolder = item['type'] == 'folder';
       final path = item['path'] as String;
-      final isExpanded = _expandedFolders.contains(path);
+      final isSelected = _selectedPaths.contains(path);
 
       children.add(
         InkWell(
           onTap: () {
-            if (isFolder) {
-              _toggleFolder(path);
+            if (_isSelectionMode) {
+              _toggleItemSelection(path, isFolder, item);
+            } else if (isFolder) {
+              _navigateTo(path);
             } else {
-              _showFileOptions(item, path);
+              _previewFile(path);
             }
           },
           child: Padding(
@@ -1111,26 +1169,11 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
             ),
             child: Row(
               children: [
-                // 展开/折叠箭头（文件夹）或占位符（文件）
-                SizedBox(
-                  width: 20,
-                  child: isFolder
-                      ? Icon(
-                          isExpanded
-                              ? Icons.keyboard_arrow_down
-                              : Icons.keyboard_arrow_right,
-                          size: 20,
-                        )
-                      : null,
-                ),
-                const SizedBox(width: 8),
-                // 文件/文件夹图标
+                // 文件夹图标
                 SizedBox(
                   width: 24,
                   child: Icon(
-                    isFolder
-                        ? (isExpanded ? Icons.folder_open : Icons.folder)
-                        : Icons.text_snippet,
+                    isFolder ? Icons.folder : Icons.text_snippet,
                     color: isFolder ? Colors.amber : Colors.grey,
                     size: 20,
                   ),
@@ -1202,17 +1245,32 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
                   constraints:
                       const BoxConstraints(minWidth: 32, minHeight: 32),
                 ),
+                // 选择模式下的复选框
+                if (_isSelectionMode)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Icon(
+                      isSelected
+                          ? Icons.check_circle
+                          : Icons.radio_button_unchecked,
+                      color: isSelected
+                          ? Theme.of(context).colorScheme.primary
+                          : Colors.grey,
+                      size: 20,
+                    ),
+                  ),
               ],
             ),
           ),
         ),
       );
 
-      if (isFolder && isExpanded && item['children'] != null) {
+      if (isRecursive && isFolder && item['children'] != null) {
         children.addAll(_buildFileTree(
-          item['children'],
+          (item['children'] as List).cast<Map<String, dynamic>>(),
           path,
           level: level + 1,
+          isRecursive: true,
         ));
       }
     }
@@ -1239,85 +1297,197 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
       }
     });
 
-    return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showImportOptions,
-        tooltip: '导入字幕',
-        child: const Icon(Icons.add),
-      ),
-      body: Column(
-        children: [
-          // 顶部工具栏
-          _buildTopBar(),
-          // 内容区域
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _errorMessage != null
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.error_outline,
-                                size: 48, color: Colors.red),
-                            const SizedBox(height: 16),
-                            Text(_errorMessage!),
-                            const SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: _loadFiles,
-                              child: const Text('重试'),
-                            ),
-                          ],
-                        ),
-                      )
-                    : _files.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.library_books_outlined,
-                                  size: 64,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  '字幕库为空',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  '点击右下角 + 按钮导入字幕',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                        : RefreshIndicator(
-                            onRefresh: () => _loadFiles(forceRefresh: true),
-                            child: ListView(
-                              padding: const EdgeInsets.only(bottom: 80),
-                              children: [
-                                ..._buildFileTree(_files, '', level: 0),
-                              ],
-                            ),
+    return PopScope(
+      canPop: _currentPath == _rootPath || _currentPath.isEmpty,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+        _navigateUp();
+      },
+      child: Scaffold(
+        floatingActionButton: FloatingActionButton(
+          onPressed: _showImportOptions,
+          tooltip: '导入字幕',
+          child: const Icon(Icons.add),
+        ),
+        body: Column(
+          children: [
+            // 顶部工具栏
+            _buildTopBar(),
+            // 内容区域
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _errorMessage != null
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.error_outline,
+                                  size: 48, color: Colors.red),
+                              const SizedBox(height: 16),
+                              Text(_errorMessage!),
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: _loadFiles,
+                                child: const Text('重试'),
+                              ),
+                            ],
                           ),
-          ),
-        ],
+                        )
+                      : _files.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.library_books_outlined,
+                                    size: 64,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    '字幕库为空',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    '点击右下角 + 按钮导入字幕',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : RefreshIndicator(
+                              onRefresh: () => _loadFiles(forceRefresh: true),
+                              child: ListView(
+                                padding: const EdgeInsets.only(bottom: 80),
+                                children: [
+                                  if (_currentPath != _rootPath &&
+                                      _currentPath.isNotEmpty &&
+                                      !_isSearching)
+                                    ListTile(
+                                      leading: const Icon(Icons.arrow_back),
+                                      title: const Text('返回上一级'),
+                                      onTap: _navigateUp,
+                                    ),
+                                  ..._buildFileTree(
+                                    _isSearching
+                                        ? _filterFiles(_files, _searchQuery)
+                                        : _getCurrentFiles(),
+                                    '',
+                                    level: 0,
+                                    isRecursive: _isSearching,
+                                  ),
+                                ],
+                              ),
+                            ),
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  void _toggleItemSelection(
+      String path, bool isFolder, Map<String, dynamic> item) {
+    setState(() {
+      if (_selectedPaths.contains(path)) {
+        _selectedPaths.remove(path);
+        if (isFolder) {
+          _removeChildrenFromSelection(item);
+        }
+      } else {
+        _selectedPaths.add(path);
+        if (isFolder) {
+          _addChildrenToSelection(item);
+        }
+      }
+    });
+  }
+
+  void _addChildrenToSelection(Map<String, dynamic> folder) {
+    if (folder['children'] != null) {
+      for (final child in folder['children']) {
+        _selectedPaths.add(child['path']);
+        if (child['type'] == 'folder') {
+          _addChildrenToSelection(child);
+        }
+      }
+    }
+  }
+
+  void _removeChildrenFromSelection(Map<String, dynamic> folder) {
+    if (folder['children'] != null) {
+      for (final child in folder['children']) {
+        _selectedPaths.remove(child['path']);
+        if (child['type'] == 'folder') {
+          _removeChildrenFromSelection(child);
+        }
+      }
+    }
+  }
+
+  void _navigateTo(String path) {
+    setState(() {
+      _currentPath = path;
+      _isSearching = false;
+      _searchQuery = '';
+      _searchController.clear();
+      _selectedPaths.clear();
+      _isSelectionMode = false;
+    });
+  }
+
+  void _navigateUp() {
+    if (_rootPath == null || _currentPath == _rootPath) return;
+    final parent = Directory(_currentPath).parent;
+    // Ensure we don't go above root
+    if (parent.path.length < _rootPath!.length) return;
+    
+    setState(() {
+      _currentPath = parent.path;
+      _selectedPaths.clear();
+      _isSelectionMode = false;
+    });
+  }
+
+  List<Map<String, dynamic>> _getCurrentFiles() {
+    if (_files.isEmpty) return [];
+    if (_currentPath == _rootPath || _currentPath.isEmpty) return _files;
+    
+    return _findChildren(_files, _currentPath) ?? [];
+  }
+
+  List<Map<String, dynamic>>? _findChildren(
+      List<Map<String, dynamic>> nodes, String targetPath) {
+    for (final node in nodes) {
+      if (node['path'] == targetPath) {
+        return (node['children'] as List<dynamic>?)
+            ?.cast<Map<String, dynamic>>();
+      }
+      if (node['type'] == 'folder' && node['children'] != null) {
+        final nodePath = node['path'] as String;
+        if (targetPath.startsWith(nodePath)) {
+          final result = _findChildren(
+              (node['children'] as List).cast<Map<String, dynamic>>(),
+              targetPath);
+          if (result != null) return result;
+        }
+      }
+    }
+    return null;
   }
 
   Widget _buildTopBar() {
@@ -1354,18 +1524,6 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 const Spacer(),
-                // 统计信息（非选择模式下显示）
-                if (_stats != null && !_isSelectionMode)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Text(
-                      '${_stats!.totalFiles} 个文件 • ${_stats!.sizeFormatted}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
                 // 全选/取消全选按钮
                 IconButton(
                   icon: Icon(
@@ -1393,78 +1551,144 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
                 SizedBox(width: horizontalPadding - 8),
               ],
             )
-          : Align(
-              alignment: Alignment.centerLeft,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
+          : _isSearching
+              ? Row(
                   children: [
-                    // 刷新按钮
                     Padding(
-                      padding: const EdgeInsets.only(left: 20, right: 8),
-                      child: TextButton.icon(
-                        icon: const Icon(Icons.refresh, size: 20),
-                        label: const Text('重载'),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10),
-                          backgroundColor: Theme.of(context)
-                              .colorScheme
-                              .primaryContainer
-                              .withOpacity(0.5),
-                        ),
-                        onPressed: () => _loadFiles(forceRefresh: true),
+                      padding: EdgeInsets.only(left: horizontalPadding - 8),
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_back),
+                        onPressed: () {
+                          setState(() {
+                            _isSearching = false;
+                            _searchQuery = '';
+                            _searchController.clear();
+                          });
+                        },
                       ),
                     ),
-                    // 打开文件夹按钮（仅 Windows 和 macOS）
-                    if (Platform.isWindows || Platform.isMacOS)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: TextButton.icon(
-                          icon: const Icon(Icons.folder_open, size: 20),
-                          label: const Text('打开文件夹'),
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 10),
-                            backgroundColor: Theme.of(context)
-                                .colorScheme
-                                .primaryContainer
-                                .withOpacity(0.5),
-                          ),
-                          onPressed: _openSubtitleLibraryFolder,
+                    Expanded(
+                      child: TextField(
+                        controller: _searchController,
+                        autofocus: true,
+                        decoration: const InputDecoration(
+                          hintText: '搜索字幕...',
+                          border: InputBorder.none,
                         ),
+                        onChanged: (value) {
+                          setState(() {
+                            _searchQuery = value;
+                          });
+                        },
                       ),
-                    // 统计信息
-                    if (_stats != null)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 16, right: 4),
-                        child: Text(
-                          '${_stats!.totalFiles} 个文件 • ${_stats!.sizeFormatted}',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                    // 帮助图标
-                    IconButton(
-                      icon: Icon(
-                        Icons.info_outline,
-                        size: 20,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      padding: const EdgeInsets.all(8),
-                      constraints:
-                          const BoxConstraints(minWidth: 36, minHeight: 36),
-                      tooltip: '字幕库使用说明',
-                      onPressed: _showLibraryInfoDialog,
                     ),
+                    if (_searchQuery.isNotEmpty)
+                      IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          setState(() {
+                            _searchQuery = '';
+                            _searchController.clear();
+                          });
+                        },
+                      ),
+                    SizedBox(width: horizontalPadding - 8),
                   ],
+                )
+              : Align(
+                  alignment: Alignment.centerLeft,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // 刷新按钮
+                        Padding(
+                          padding: const EdgeInsets.only(left: 20, right: 8),
+                          child: TextButton.icon(
+                            icon: const Icon(Icons.refresh, size: 20),
+                            label: const Text('重载'),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 10),
+                              backgroundColor: Theme.of(context)
+                                  .colorScheme
+                                  .primaryContainer
+                                  .withOpacity(0.5),
+                            ),
+                            onPressed: () => _loadFiles(forceRefresh: true),
+                          ),
+                        ),
+                        // 打开文件夹按钮（仅 Windows 和 macOS）
+                        if (Platform.isWindows || Platform.isMacOS)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: TextButton.icon(
+                              icon: const Icon(Icons.folder_open, size: 20),
+                              label: const Text('打开文件夹'),
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 10),
+                                backgroundColor: Theme.of(context)
+                                    .colorScheme
+                                    .primaryContainer
+                                    .withOpacity(0.5),
+                              ),
+                              onPressed: _openSubtitleLibraryFolder,
+                            ),
+                          ),
+                        // 搜索按钮
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: IconButton(
+                            icon: const Icon(Icons.search),
+                            onPressed: () {
+                              setState(() {
+                                _isSearching = true;
+                              });
+                            },
+                            tooltip: '搜索',
+                          ),
+                        ),
+                        // 选择模式按钮
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: IconButton(
+                            icon: const Icon(Icons.checklist),
+                            onPressed: _toggleSelectionMode,
+                            tooltip: '选择',
+                          ),
+                        ),
+                        // 统计信息
+                        if (_stats != null)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 8, right: 4),
+                            child: Text(
+                              '${_stats!.totalFiles} 个文件 • ${_stats!.sizeFormatted}',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color:
+                                    Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        // 帮助图标
+                        IconButton(
+                          icon: Icon(
+                            Icons.info_outline,
+                            size: 20,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          padding: const EdgeInsets.all(8),
+                          constraints:
+                              const BoxConstraints(minWidth: 36, minHeight: 36),
+                          tooltip: '字幕库使用说明',
+                          onPressed: _showLibraryInfoDialog,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
     );
   }
 }
