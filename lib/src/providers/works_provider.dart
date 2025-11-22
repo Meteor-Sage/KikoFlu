@@ -112,8 +112,17 @@ class WorksNotifier extends StateNotifier<WorksState> {
   final KikoeruApiService _apiService;
   final Ref _ref;
 
-  WorksNotifier(this._apiService, this._ref, {int initialPageSize = 40})
-      : super(WorksState(pageSize: initialPageSize));
+  WorksNotifier(
+    this._apiService,
+    this._ref, {
+    int initialPageSize = 40,
+    SortOrder initialSortOption = SortOrder.release,
+    SortDirection initialSortDirection = SortDirection.desc,
+  }) : super(WorksState(
+          pageSize: initialPageSize,
+          sortOption: initialSortOption,
+          sortDirection: initialSortDirection,
+        ));
 
   void updatePageSize(int newSize) {
     if (state.pageSize == newSize) return;
@@ -169,7 +178,9 @@ class WorksNotifier extends StateNotifier<WorksState> {
         response = await _apiService.getWorks(
           page: page,
           order: state.sortOption.value,
-          sort: state.sortDirection.value,
+          sort: state.sortOption == SortOrder.nsfw
+              ? 'asc'
+              : state.sortDirection.value,
           subtitle: state.subtitleFilter,
           pageSize: pageSize, // 传递 pageSize
         );
@@ -328,11 +339,26 @@ class WorksNotifier extends StateNotifier<WorksState> {
 final worksProvider = StateNotifierProvider<WorksNotifier, WorksState>((ref) {
   final apiService = ref.watch(kikoeruApiServiceProvider);
   final pageSize = ref.read(pageSizeProvider);
-  final notifier = WorksNotifier(apiService, ref, initialPageSize: pageSize);
+  final defaultSort = ref.read(defaultSortProvider);
+
+  final notifier = WorksNotifier(
+    apiService,
+    ref,
+    initialPageSize: pageSize,
+    initialSortOption: defaultSort.order,
+    initialSortDirection: defaultSort.direction,
+  );
 
   ref.listen(pageSizeProvider, (previous, next) {
     if (previous != next) {
       notifier.updatePageSize(next);
+    }
+  });
+
+  ref.listen(defaultSortProvider, (previous, next) {
+    if (previous != next) {
+      notifier.setSortOption(next.order);
+      notifier.setSortDirection(next.direction);
     }
   });
 

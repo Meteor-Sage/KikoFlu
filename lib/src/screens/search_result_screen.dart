@@ -3,6 +3,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/sort_options.dart';
 import '../providers/search_result_provider.dart';
 import '../services/kikoeru_api_service.dart' hide kikoeruApiServiceProvider;
 import '../providers/auth_provider.dart';
@@ -112,6 +113,9 @@ class _SearchResultContentState extends ConsumerState<_SearchResultContent> {
       builder: (context) => CommonSortDialog(
         currentOption: state.sortOption,
         currentDirection: state.sortDirection,
+        availableOptions: SortOrder.values
+            .where((option) => option != SortOrder.nsfw)
+            .toList(),
         onSort: (option, direction) {
           ref.read(searchResultProvider.notifier).updateSort(option, direction);
         },

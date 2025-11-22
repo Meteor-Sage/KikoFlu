@@ -402,7 +402,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             leading:
                 Icon(Icons.tune, color: Theme.of(context).colorScheme.primary),
             title: const Text('偏好设置'),
-            subtitle: const Text('字幕库优先级、音频格式偏好'),
+            subtitle: const Text('字幕库、默认排序、音频偏好'),
             trailing: const Icon(Icons.arrow_forward_ios),
             onTap: () {
               Navigator.of(context).push(
