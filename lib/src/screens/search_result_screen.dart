@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/search_result_provider.dart';
 import '../services/kikoeru_api_service.dart' hide kikoeruApiServiceProvider;
 import '../providers/auth_provider.dart';
+import '../providers/settings_provider.dart';
 import '../widgets/works_grid_view.dart';
 import '../widgets/sort_dialog.dart';
 import '../widgets/pagination_bar.dart';
@@ -30,7 +31,17 @@ class SearchResultScreen extends StatelessWidget {
       overrides: [
         searchResultProvider.overrideWith((ref) {
           final apiService = ref.watch(kikoeruApiServiceProvider);
-          return SearchResultNotifier(apiService);
+          final pageSize = ref.read(pageSizeProvider);
+          final notifier =
+              SearchResultNotifier(apiService, initialPageSize: pageSize);
+
+          ref.listen(pageSizeProvider, (previous, next) {
+            if (previous != next) {
+              notifier.updatePageSize(next);
+            }
+          });
+
+          return notifier;
         }),
       ],
       child: _SearchResultContent(

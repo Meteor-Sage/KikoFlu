@@ -261,3 +261,40 @@ final privacyModeSettingsProvider =
         (ref) {
   return PrivacyModeSettingsNotifier();
 });
+/// 分页大小设置
+class PageSizeNotifier extends StateNotifier<int> {
+  static const String _preferenceKey = 'page_size_preference';
+  static const int defaultSize = 40;
+
+  PageSizeNotifier() : super(defaultSize) {
+    _loadPreference();
+  }
+
+  Future<void> _loadPreference() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedValue = prefs.getInt(_preferenceKey);
+      if (savedValue != null && [20, 40, 60, 100].contains(savedValue)) {
+        state = savedValue;
+      }
+    } catch (e) {
+      state = defaultSize;
+    }
+  }
+
+  Future<void> updatePageSize(int size) async {
+    if (![20, 40, 60, 100].contains(size)) return;
+    state = size;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(_preferenceKey, size);
+    } catch (e) {
+      // ignore
+    }
+  }
+}
+
+/// 分页大小提供者
+final pageSizeProvider = StateNotifierProvider<PageSizeNotifier, int>((ref) {
+  return PageSizeNotifier();
+});

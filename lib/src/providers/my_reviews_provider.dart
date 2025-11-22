@@ -4,6 +4,7 @@ import 'package:equatable/equatable.dart';
 import '../models/work.dart';
 import '../services/kikoeru_api_service.dart' hide kikoeruApiServiceProvider;
 import 'auth_provider.dart';
+import 'settings_provider.dart';
 
 /// 用户 Review/收藏状态的过滤枚举
 enum MyReviewFilter {
@@ -89,7 +90,14 @@ class MyReviewsState extends Equatable {
 
 class MyReviewsNotifier extends StateNotifier<MyReviewsState> {
   final KikoeruApiService _apiService;
-  MyReviewsNotifier(this._apiService) : super(const MyReviewsState());
+  MyReviewsNotifier(this._apiService, {int initialPageSize = 20})
+      : super(MyReviewsState(pageSize: initialPageSize));
+
+  void updatePageSize(int newSize) {
+    if (state.pageSize == newSize) return;
+    state = state.copyWith(pageSize: newSize);
+    load(refresh: true);
+  }
 
   Future<void> load({bool refresh = false}) async {
     if (state.isLoading) return;
@@ -190,5 +198,14 @@ class MyReviewsNotifier extends StateNotifier<MyReviewsState> {
 final myReviewsProvider =
     StateNotifierProvider<MyReviewsNotifier, MyReviewsState>((ref) {
   final apiService = ref.watch(kikoeruApiServiceProvider);
-  return MyReviewsNotifier(apiService);
+  final pageSize = ref.read(pageSizeProvider);
+  final notifier = MyReviewsNotifier(apiService, initialPageSize: pageSize);
+
+  ref.listen(pageSizeProvider, (previous, next) {
+    if (previous != next) {
+      notifier.updatePageSize(next);
+    }
+  });
+
+  return notifier;
 });

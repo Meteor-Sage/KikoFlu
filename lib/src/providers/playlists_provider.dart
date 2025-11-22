@@ -4,6 +4,7 @@ import 'package:equatable/equatable.dart';
 import '../models/playlist.dart';
 import '../services/kikoeru_api_service.dart' hide kikoeruApiServiceProvider;
 import 'auth_provider.dart';
+import 'settings_provider.dart';
 
 class PlaylistsState extends Equatable {
   final List<Playlist> playlists;
@@ -59,7 +60,14 @@ class PlaylistsState extends Equatable {
 class PlaylistsNotifier extends StateNotifier<PlaylistsState> {
   final KikoeruApiService _apiService;
 
-  PlaylistsNotifier(this._apiService) : super(const PlaylistsState());
+  PlaylistsNotifier(this._apiService, {int initialPageSize = 20})
+      : super(PlaylistsState(pageSize: initialPageSize));
+
+  void updatePageSize(int newSize) {
+    if (state.pageSize == newSize) return;
+    state = state.copyWith(pageSize: newSize);
+    load(refresh: true);
+  }
 
   Future<void> load({bool refresh = false}) async {
     if (state.isLoading) return;
@@ -162,5 +170,14 @@ class PlaylistsNotifier extends StateNotifier<PlaylistsState> {
 final playlistsProvider =
     StateNotifierProvider<PlaylistsNotifier, PlaylistsState>((ref) {
   final apiService = ref.watch(kikoeruApiServiceProvider);
-  return PlaylistsNotifier(apiService);
+  final pageSize = ref.read(pageSizeProvider);
+  final notifier = PlaylistsNotifier(apiService, initialPageSize: pageSize);
+
+  ref.listen(pageSizeProvider, (previous, next) {
+    if (previous != next) {
+      notifier.updatePageSize(next);
+    }
+  });
+
+  return notifier;
 });

@@ -278,6 +278,7 @@ class KikoeruApiService {
   // Works APIs
   Future<Map<String, dynamic>> getWorks({
     int page = 1,
+    int pageSize = 40,
     String? order,
     String? sort,
     int? subtitle,
@@ -286,10 +287,11 @@ class KikoeruApiService {
     try {
       final queryParams = {
         'page': page,
+        'pageSize': pageSize,
         'order': order ?? _order,
         'sort': sort ?? _sort,
         'subtitle': subtitle ?? _subtitle,
-        'seed': seed ?? _seed,
+        'seed': seed ?? (21),
       };
 
       final response = await _dio.get(
@@ -388,6 +390,7 @@ class KikoeruApiService {
   Future<Map<String, dynamic>> getWorksByTag({
     required int tagId,
     int page = 1,
+    int pageSize = 40,
     String? order,
     String? sort,
     int? subtitle,
@@ -396,6 +399,7 @@ class KikoeruApiService {
     try {
       final queryParams = {
         'page': page,
+        'pageSize': pageSize,
         'order': order ?? _order,
         'sort': sort ?? _sort,
         'subtitle': subtitle ?? _subtitle,
@@ -415,6 +419,7 @@ class KikoeruApiService {
   Future<Map<String, dynamic>> getWorksByVa({
     required String vaId,
     int page = 1,
+    int pageSize = 40,
     String? order,
     String? sort,
     int? subtitle,
@@ -423,6 +428,7 @@ class KikoeruApiService {
     try {
       final queryParams = {
         'page': page,
+        'pageSize': pageSize,
         'order': order ?? _order,
         'sort': sort ?? _sort,
         'subtitle': subtitle ?? _subtitle,
@@ -443,7 +449,7 @@ class KikoeruApiService {
   Future<Map<String, dynamic>> searchWorks({
     required String keyword, // 搜索关键词（可以是组合的搜索条件）
     int page = 1,
-    int pageSize = 20,
+    int pageSize = 40,
     String? order,
     String? sort,
     int? subtitle,

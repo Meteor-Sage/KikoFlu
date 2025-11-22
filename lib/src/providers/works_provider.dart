@@ -4,6 +4,7 @@ import 'package:equatable/equatable.dart';
 import '../models/work.dart';
 import '../services/kikoeru_api_service.dart' hide kikoeruApiServiceProvider;
 import 'auth_provider.dart';
+import 'settings_provider.dart';
 import '../models/sort_options.dart';
 
 // Display mode - 展示模式
@@ -52,7 +53,7 @@ class WorksState extends Equatable {
     this.sortDirection = SortDirection.desc,
     this.displayMode = DisplayMode.all, // 默认显示全部作品
     this.subtitleFilter = 0, // 默认显示全部
-    this.pageSize = 30, // 全部模式每页30条
+    this.pageSize = 40, // 全部模式每页40条
     this.isLastPage = false,
   });
 
@@ -111,7 +112,14 @@ class WorksNotifier extends StateNotifier<WorksState> {
   final KikoeruApiService _apiService;
   final Ref _ref;
 
-  WorksNotifier(this._apiService, this._ref) : super(const WorksState());
+  WorksNotifier(this._apiService, this._ref, {int initialPageSize = 40})
+      : super(WorksState(pageSize: initialPageSize));
+
+  void updatePageSize(int newSize) {
+    if (state.pageSize == newSize) return;
+    state = state.copyWith(pageSize: newSize);
+    loadWorks(refresh: true);
+  }
 
   Future<void> loadWorks({bool refresh = false, int? targetPage}) async {
     if (state.isLoading) {
@@ -136,8 +144,8 @@ class WorksNotifier extends StateNotifier<WorksState> {
     try {
       Map<String, dynamic> response;
 
-      // 根据显示模式设置每页数量
-      final pageSize = isAllMode ? 30 : 20;
+      // 使用设置的每页数量
+      final pageSize = state.pageSize;
 
       // 根据显示模式选择不同的API
       if (state.displayMode == DisplayMode.popular) {
@@ -163,6 +171,7 @@ class WorksNotifier extends StateNotifier<WorksState> {
           order: state.sortOption.value,
           sort: state.sortDirection.value,
           subtitle: state.subtitleFilter,
+          pageSize: pageSize, // 传递 pageSize
         );
       }
 
@@ -315,8 +324,17 @@ class WorksNotifier extends StateNotifier<WorksState> {
   }
 }
 
-// Providers
+// Provider
 final worksProvider = StateNotifierProvider<WorksNotifier, WorksState>((ref) {
   final apiService = ref.watch(kikoeruApiServiceProvider);
-  return WorksNotifier(apiService, ref);
+  final pageSize = ref.read(pageSizeProvider);
+  final notifier = WorksNotifier(apiService, ref, initialPageSize: pageSize);
+
+  ref.listen(pageSizeProvider, (previous, next) {
+    if (previous != next) {
+      notifier.updatePageSize(next);
+    }
+  });
+
+  return notifier;
 });

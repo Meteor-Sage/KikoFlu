@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'player_buttons_settings_screen.dart';
 import 'work_detail_display_settings_screen.dart';
 import 'work_card_display_settings_screen.dart';
 import 'my_tabs_display_settings_screen.dart';
 import '../widgets/scrollable_appbar.dart';
+import '../providers/settings_provider.dart';
 
-class UiSettingsScreen extends StatelessWidget {
+class UiSettingsScreen extends ConsumerWidget {
   const UiSettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pageSize = ref.watch(pageSizeProvider);
+
     return Scaffold(
       appBar: const ScrollableAppBar(
         title: Text(
@@ -85,6 +89,30 @@ class UiSettingsScreen extends StatelessWidget {
                       ),
                     );
                   },
+                ),
+                Divider(color: Theme.of(context).colorScheme.outlineVariant),
+                ListTile(
+                  leading: Icon(Icons.format_list_numbered,
+                      color: Theme.of(context).colorScheme.primary),
+                  title: const Text('每页显示数量'),
+                  subtitle: Text('当前设置: $pageSize 条/页'),
+                  trailing: DropdownButton<int>(
+                    value: pageSize,
+                    underline: const SizedBox(),
+                    items: [20, 40, 60, 100].map((int value) {
+                      return DropdownMenuItem<int>(
+                        value: value,
+                        child: Text(value.toString()),
+                      );
+                    }).toList(),
+                    onChanged: (int? newValue) {
+                      if (newValue != null) {
+                        ref
+                            .read(pageSizeProvider.notifier)
+                            .updatePageSize(newValue);
+                      }
+                    },
+                  ),
                 ),
               ],
             ),
