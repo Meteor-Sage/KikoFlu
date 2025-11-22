@@ -6,6 +6,7 @@ import '../services/kikoeru_api_service.dart' hide kikoeruApiServiceProvider;
 import '../providers/works_provider.dart';
 import '../models/sort_options.dart';
 import 'auth_provider.dart';
+import 'settings_provider.dart';
 
 // Layout types for search results
 enum SearchLayoutType {
@@ -55,7 +56,7 @@ class SearchResultState extends Equatable {
     this.sortOption = SortOrder.createDate,
     this.sortDirection = SortDirection.desc,
     this.subtitleFilter = 0,
-    this.pageSize = 30,
+    this.pageSize = 40,
     this.keyword = '',
     this.searchParams,
   });
@@ -114,7 +115,8 @@ class SearchResultState extends Equatable {
 class SearchResultNotifier extends StateNotifier<SearchResultState> {
   final KikoeruApiService _apiService;
 
-  SearchResultNotifier(this._apiService) : super(const SearchResultState());
+  SearchResultNotifier(this._apiService, {int initialPageSize = 20})
+      : super(SearchResultState(pageSize: initialPageSize));
 
   Future<void> initializeSearch({
     required String keyword,
@@ -127,6 +129,15 @@ class SearchResultNotifier extends StateNotifier<SearchResultState> {
       works: [],
     );
     await loadResults();
+  }
+
+  void updatePageSize(int newSize) {
+    if (state.pageSize == newSize) return;
+    state = state.copyWith(pageSize: newSize);
+    // 如果当前有搜索内容，刷新列表
+    if (state.keyword.isNotEmpty || state.searchParams != null) {
+      refresh();
+    }
   }
 
   Future<void> loadResults({int? targetPage}) async {
@@ -148,6 +159,7 @@ class SearchResultNotifier extends StateNotifier<SearchResultState> {
         result = await _apiService.getWorksByVa(
           vaId: state.searchParams!['vaId'],
           page: page,
+          pageSize: state.pageSize,
           order: state.sortOption.value,
           sort: state.sortDirection.value,
           subtitle: state.subtitleFilter,
@@ -157,6 +169,7 @@ class SearchResultNotifier extends StateNotifier<SearchResultState> {
         result = await _apiService.getWorksByTag(
           tagId: state.searchParams!['tagId'],
           page: page,
+          pageSize: state.pageSize,
           order: state.sortOption.value,
           sort: state.sortDirection.value,
           subtitle: state.subtitleFilter,
@@ -166,6 +179,7 @@ class SearchResultNotifier extends StateNotifier<SearchResultState> {
         result = await _apiService.searchWorks(
           keyword: state.keyword,
           page: page,
+          pageSize: state.pageSize,
           order: state.sortOption.value,
           sort: state.sortDirection.value,
           subtitle: state.subtitleFilter,
@@ -240,5 +254,14 @@ class SearchResultNotifier extends StateNotifier<SearchResultState> {
 final searchResultProvider =
     StateNotifierProvider<SearchResultNotifier, SearchResultState>((ref) {
   final apiService = ref.watch(kikoeruApiServiceProvider);
-  return SearchResultNotifier(apiService);
+  final pageSize = ref.read(pageSizeProvider);
+  final notifier = SearchResultNotifier(apiService, initialPageSize: pageSize);
+
+  ref.listen(pageSizeProvider, (previous, next) {
+    if (previous != next) {
+      notifier.updatePageSize(next);
+    }
+  });
+
+  return notifier;
 });
