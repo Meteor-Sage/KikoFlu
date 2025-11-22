@@ -11,12 +11,13 @@ import 'responsive_dialog.dart';
 /// 自动适配横屏/竖屏布局：
 /// - 横屏：两列布局（左：排序字段，右：排序方向）
 /// - 竖屏：单列布局
-class CommonSortDialog extends StatelessWidget {
+class CommonSortDialog extends StatefulWidget {
   final SortOrder currentOption;
   final SortDirection currentDirection;
   final Function(SortOrder, SortDirection) onSort;
   final String title;
   final bool autoClose;
+  final List<SortOrder>? availableOptions;
 
   const CommonSortDialog({
     super.key,
@@ -25,12 +26,40 @@ class CommonSortDialog extends StatelessWidget {
     required this.onSort,
     this.title = '排序选项',
     this.autoClose = true,
+    this.availableOptions,
   });
+
+  @override
+  State<CommonSortDialog> createState() => _CommonSortDialogState();
+}
+
+class _CommonSortDialogState extends State<CommonSortDialog> {
+  late SortOrder _currentOption;
+  late SortDirection _currentDirection;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentOption = widget.currentOption;
+    _currentDirection = widget.currentDirection;
+  }
+
+  void _handleSort(SortOrder option, SortDirection direction) {
+    setState(() {
+      _currentOption = option;
+      _currentDirection = direction;
+    });
+    widget.onSort(option, direction);
+    if (widget.autoClose) {
+      Navigator.pop(context);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
+    final options = widget.availableOptions ?? SortOrder.values;
 
     // 横屏时使用两列布局
     if (isLandscape) {
@@ -38,7 +67,7 @@ class CommonSortDialog extends StatelessWidget {
         title: Row(
           children: [
             Expanded(
-              child: Text(title),
+              child: Text(widget.title),
             ),
             IconButton(
               icon: const Icon(Icons.close),
@@ -72,17 +101,14 @@ class CommonSortDialog extends StatelessWidget {
                       child: SingleChildScrollView(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
-                          children: SortOrder.values.map((option) {
+                          children: options.map((option) {
                             return RadioListTile<SortOrder>(
                               title: Text(option.label),
                               value: option,
-                              groupValue: currentOption,
+                              groupValue: _currentOption,
                               onChanged: (value) {
                                 if (value != null) {
-                                  onSort(value, currentDirection);
-                                  if (autoClose) {
-                                    Navigator.pop(context);
-                                  }
+                                  _handleSort(value, _currentDirection);
                                 }
                               },
                               dense: true,
@@ -121,13 +147,10 @@ class CommonSortDialog extends StatelessWidget {
                             return RadioListTile<SortDirection>(
                               title: Text(direction.label),
                               value: direction,
-                              groupValue: currentDirection,
+                              groupValue: _currentDirection,
                               onChanged: (value) {
                                 if (value != null) {
-                                  onSort(currentOption, value);
-                                  if (autoClose) {
-                                    Navigator.pop(context);
-                                  }
+                                  _handleSort(_currentOption, value);
                                 }
                               },
                               dense: true,
@@ -144,7 +167,7 @@ class CommonSortDialog extends StatelessWidget {
             ],
           ),
         ),
-        actions: autoClose
+        actions: widget.autoClose
             ? null
             : [
                 TextButton(
@@ -157,7 +180,7 @@ class CommonSortDialog extends StatelessWidget {
 
     // 竖屏时使用单列布局
     return ResponsiveAlertDialog(
-      title: Text(title),
+      title: Text(widget.title),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -168,17 +191,14 @@ class CommonSortDialog extends StatelessWidget {
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            ...SortOrder.values.map((option) {
+            ...options.map((option) {
               return RadioListTile<SortOrder>(
                 title: Text(option.label),
                 value: option,
-                groupValue: currentOption,
+                groupValue: _currentOption,
                 onChanged: (value) {
                   if (value != null) {
-                    onSort(value, currentDirection);
-                    if (autoClose) {
-                      Navigator.pop(context);
-                    }
+                    _handleSort(value, _currentDirection);
                   }
                 },
                 dense: true,
@@ -195,13 +215,10 @@ class CommonSortDialog extends StatelessWidget {
               return RadioListTile<SortDirection>(
                 title: Text(direction.label),
                 value: direction,
-                groupValue: currentDirection,
+                groupValue: _currentDirection,
                 onChanged: (value) {
                   if (value != null) {
-                    onSort(currentOption, value);
-                    if (autoClose) {
-                      Navigator.pop(context);
-                    }
+                    _handleSort(_currentOption, value);
                   }
                 },
                 dense: true,
@@ -213,7 +230,7 @@ class CommonSortDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(autoClose ? '取消' : '关闭'),
+          child: Text(widget.autoClose ? '取消' : '关闭'),
         ),
       ],
     );

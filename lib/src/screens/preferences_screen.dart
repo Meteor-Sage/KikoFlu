@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'audio_format_settings_screen.dart';
+import '../models/sort_options.dart';
 import '../providers/settings_provider.dart';
 import '../utils/snackbar_util.dart';
 import '../widgets/scrollable_appbar.dart';
+import '../widgets/sort_dialog.dart';
 
 /// 偏好设置页面
 class PreferencesScreen extends ConsumerWidget {
@@ -69,9 +71,33 @@ class PreferencesScreen extends ConsumerWidget {
     );
   }
 
+  void _showDefaultSortDialog(BuildContext context, WidgetRef ref) {
+    final currentSort = ref.read(defaultSortProvider);
+
+    showDialog(
+      context: context,
+      builder: (context) => CommonSortDialog(
+        title: '默认排序设置',
+        currentOption: currentSort.order,
+        currentDirection: currentSort.direction,
+        onSort: (option, direction) {
+          ref
+              .read(defaultSortProvider.notifier)
+              .updateDefaultSort(option, direction);
+          SnackBarUtil.showSuccess(
+            context,
+            '默认排序已更新',
+          );
+        },
+        autoClose: false,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final priority = ref.watch(subtitleLibraryPriorityProvider);
+    final defaultSort = ref.watch(defaultSortProvider);
 
     return Scaffold(
       appBar: const ScrollableAppBar(
@@ -91,6 +117,18 @@ class PreferencesScreen extends ConsumerWidget {
                   trailing: const Icon(Icons.arrow_forward_ios),
                   onTap: () {
                     _showSubtitleLibraryPriorityDialog(context, ref);
+                  },
+                ),
+                Divider(color: Theme.of(context).colorScheme.outlineVariant),
+                ListTile(
+                  leading: Icon(Icons.sort,
+                      color: Theme.of(context).colorScheme.primary),
+                  title: const Text('默认排序方式'),
+                  subtitle: Text(
+                      '${defaultSort.order.label} - ${defaultSort.direction.label}'),
+                  trailing: const Icon(Icons.arrow_forward_ios),
+                  onTap: () {
+                    _showDefaultSortDialog(context, ref);
                   },
                 ),
                 Divider(color: Theme.of(context).colorScheme.outlineVariant),

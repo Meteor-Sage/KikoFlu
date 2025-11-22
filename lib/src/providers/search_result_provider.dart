@@ -53,7 +53,7 @@ class SearchResultState extends Equatable {
     this.totalCount = 0,
     this.hasMore = true,
     this.layoutType = SearchLayoutType.bigGrid,
-    this.sortOption = SortOrder.createDate,
+    this.sortOption = SortOrder.release,
     this.sortDirection = SortDirection.desc,
     this.subtitleFilter = 0,
     this.pageSize = 40,

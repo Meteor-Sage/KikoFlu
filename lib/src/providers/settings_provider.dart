@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/sort_options.dart';
 
 /// Triggers when Settings screen should refresh cache-related information.
 final settingsCacheRefreshTriggerProvider = StateProvider<int>((ref) => 0);
@@ -297,4 +298,70 @@ class PageSizeNotifier extends StateNotifier<int> {
 /// 分页大小提供者
 final pageSizeProvider = StateNotifierProvider<PageSizeNotifier, int>((ref) {
   return PageSizeNotifier();
+});
+/// 默认排序设置状态
+class DefaultSortState {
+  final SortOrder order;
+  final SortDirection direction;
+
+  const DefaultSortState({
+    this.order = SortOrder.release,
+    this.direction = SortDirection.desc,
+  });
+}
+
+/// 默认排序设置
+class DefaultSortNotifier extends StateNotifier<DefaultSortState> {
+  static const String _orderKey = 'default_sort_order';
+  static const String _directionKey = 'default_sort_direction';
+
+  DefaultSortNotifier() : super(const DefaultSortState()) {
+    _loadPreference();
+  }
+
+  Future<void> _loadPreference() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final orderValue = prefs.getString(_orderKey);
+      final directionValue = prefs.getString(_directionKey);
+
+      SortOrder order = SortOrder.release;
+      if (orderValue != null) {
+        order = SortOrder.values.firstWhere(
+          (e) => e.value == orderValue,
+          orElse: () => SortOrder.release,
+        );
+      }
+
+      SortDirection direction = SortDirection.desc;
+      if (directionValue != null) {
+        direction = SortDirection.values.firstWhere(
+          (e) => e.value == directionValue,
+          orElse: () => SortDirection.desc,
+        );
+      }
+
+      state = DefaultSortState(order: order, direction: direction);
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  Future<void> updateDefaultSort(
+      SortOrder order, SortDirection direction) async {
+    state = DefaultSortState(order: order, direction: direction);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_orderKey, order.value);
+      await prefs.setString(_directionKey, direction.value);
+    } catch (e) {
+      // ignore
+    }
+  }
+}
+
+/// 默认排序提供者
+final defaultSortProvider =
+    StateNotifierProvider<DefaultSortNotifier, DefaultSortState>((ref) {
+  return DefaultSortNotifier();
 });
