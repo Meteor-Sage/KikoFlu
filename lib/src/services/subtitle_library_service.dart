@@ -9,6 +9,7 @@ import '../utils/file_icon_utils.dart';
 /// 字幕库管理服务
 class SubtitleLibraryService {
   static const String _libraryFolderName = 'subtitle_library';
+  static const String _cacheFileName = 'library_cache.json';
 
   // Windows 路径长度限制 (保留一些余量)
   static const int _maxPathLength = 240;
@@ -25,22 +26,33 @@ class SubtitleLibraryService {
   static String? _libraryRootPath;
 
   /// 清除缓存
-  static void clearCache() {
+  static Future<void> clearCache() async {
     _cachedFileTree = null;
     _cachedStats = null;
     _lastKnownModified = null;
     _libraryRootPath = null;
+    
+    try {
+      final libraryDir = await getSubtitleLibraryDirectory();
+      final cacheFile = File('${libraryDir.path}/$_cacheFileName');
+      if (await cacheFile.exists()) {
+        await cacheFile.delete();
+      }
+    } catch (e) {
+      print('[SubtitleLibrary] 删除缓存文件失败: $e');
+    }
+    
     print('[SubtitleLibrary] 缓存已清除');
   }
 
-  static void _ensureRootPath(String path) {
+  static Future<void> _ensureRootPath(String path) async {
     if (_libraryRootPath == null) {
       _libraryRootPath = path;
       return;
     }
 
     if (_libraryRootPath != path) {
-      clearCache();
+      await clearCache();
       _libraryRootPath = path;
     }
   }
@@ -53,6 +65,82 @@ class SubtitleLibraryService {
     } catch (e) {
       print('[SubtitleLibrary] 更新目录修改时间失败: $e');
     }
+  }
+
+  /// 保存缓存到磁盘
+  static Future<void> _saveCacheToDisk() async {
+    if (_cachedFileTree == null) return;
+
+    try {
+      final libraryDir = await getSubtitleLibraryDirectory();
+      final cacheFile = File('${libraryDir.path}/$_cacheFileName');
+      
+      final cacheData = {
+        'timestamp': DateTime.now().toIso8601String(),
+        'lastKnownModified': _lastKnownModified?.toIso8601String(),
+        'stats': _cachedStats != null ? {
+          'totalFiles': _cachedStats!.totalFiles,
+          'totalSize': _cachedStats!.totalSize,
+          'folderCount': _cachedStats!.folderCount,
+        } : null,
+        'fileTree': _cachedFileTree,
+      };
+
+      await cacheFile.writeAsString(jsonEncode(cacheData));
+      print('[SubtitleLibrary] 缓存已保存到磁盘');
+    } catch (e) {
+      print('[SubtitleLibrary] 保存缓存失败: $e');
+    }
+  }
+
+  /// 从磁盘加载缓存
+  static Future<bool> _loadCacheFromDisk() async {
+    try {
+      final libraryDir = await getSubtitleLibraryDirectory();
+      final cacheFile = File('${libraryDir.path}/$_cacheFileName');
+      
+      if (!await cacheFile.exists()) return false;
+
+      final content = await cacheFile.readAsString();
+      final cacheData = jsonDecode(content) as Map<String, dynamic>;
+
+      // 恢复修改时间
+      if (cacheData['lastKnownModified'] != null) {
+        _lastKnownModified = DateTime.parse(cacheData['lastKnownModified']);
+      }
+
+      // 恢复统计信息
+      if (cacheData['stats'] != null) {
+        final statsData = cacheData['stats'];
+        _cachedStats = LibraryStats(
+          totalFiles: statsData['totalFiles'],
+          totalSize: statsData['totalSize'],
+          folderCount: statsData['folderCount'],
+        );
+      }
+
+      // 恢复文件树
+      if (cacheData['fileTree'] != null) {
+        _cachedFileTree = _convertDynamicList(cacheData['fileTree'] as List<dynamic>);
+        print('[SubtitleLibrary] 已从磁盘加载缓存');
+        return true;
+      }
+      
+      return false;
+    } catch (e) {
+      print('[SubtitleLibrary] 加载缓存失败: $e');
+      return false;
+    }
+  }
+
+  static List<Map<String, dynamic>> _convertDynamicList(List<dynamic> list) {
+    return list.map((item) {
+      final Map<String, dynamic> map = Map<String, dynamic>.from(item);
+      if (map['children'] != null) {
+        map['children'] = _convertDynamicList(map['children'] as List<dynamic>);
+      }
+      return map;
+    }).toList();
   }
 
   /// 检查目录是否有变化
@@ -95,7 +183,7 @@ class SubtitleLibraryService {
       print('[SubtitleLibrary] 创建字幕库目录: ${libraryDir.path}');
     }
 
-    _ensureRootPath(libraryDir.path);
+    await _ensureRootPath(libraryDir.path);
     return libraryDir;
   }
 
@@ -186,8 +274,9 @@ class SubtitleLibraryService {
         }
       }
 
-      // 清除缓存
-      clearCache();
+      // 刷新"已保存"文件夹缓存
+      final savedDirPath = '${libraryDir.path}/$_savedFolderName';
+      await _refreshDirectoriesAfterChange({savedDirPath});
 
       String message = '成功导入 $successCount 个字幕文件到"已保存"文件夹';
       if (errorCount > 0) {
@@ -246,6 +335,7 @@ class SubtitleLibraryService {
       // 检查根目录本身是否匹配规则（例如用户选择的就是 RJ123456 文件夹）
       final rootFolderName = sourceDir.path.split(Platform.pathSeparator).last;
       Map<String, int> result;
+      final Set<String> modifiedPaths = {};
 
       if (_matchFolderPattern(rootFolderName)) {
         // 根目录匹配规则：将整个目录作为一个作品导入到"已解析"
@@ -270,6 +360,7 @@ class SubtitleLibraryService {
           result = await _mergeAndCopyFolder(sourceDir, targetDir,
               onProgress: onProgress);
           parsedFolderCount = 1;
+          modifiedPaths.add(targetDir.path);
           print(
               '[SubtitleLibrary] 已合并根目录文件夹: $folderName，导入 ${result['successCount']} 个字幕文件');
         } else {
@@ -279,6 +370,7 @@ class SubtitleLibraryService {
             onProgress: onProgress,
           );
           parsedFolderCount = 1;
+          modifiedPaths.add(targetDir.path);
           print(
               '[SubtitleLibrary] 已解析根目录文件夹: $folderName, 字幕文件: ${result['successCount']}');
         }
@@ -289,6 +381,7 @@ class SubtitleLibraryService {
           sourceDir,
           libraryDir,
           onProgress: onProgress,
+          modifiedPaths: modifiedPaths,
         );
         parsedFolderCount = result['parsedCount'] ?? 0;
         unknownFolderCount = result['unknownCount'] ?? 0;
@@ -319,8 +412,15 @@ class SubtitleLibraryService {
         message += '\n失败 $totalError 个';
       }
 
-      // 清除缓存以便下次重新扫描
-      clearCache();
+      // 刷新相关文件夹缓存
+      if (modifiedPaths.isNotEmpty) {
+        await _refreshDirectoriesAfterChange(modifiedPaths);
+      } else {
+        // 如果没有收集到具体路径（异常情况），回退到刷新整个分类
+        final parsedDirPath = '${libraryDir.path}/$_parsedFolderName';
+        final unknownDirPath = '${libraryDir.path}/$_unknownFolderName';
+        await _refreshDirectoriesAfterChange({parsedDirPath, unknownDirPath});
+      }
 
       return ImportResult(
         success: true,
@@ -402,6 +502,7 @@ class SubtitleLibraryService {
 
       // 创建导入统计器
       final stats = _ImportStats();
+      final Set<String> modifiedPaths = {};
 
       try {
         // 先解压到临时目录
@@ -424,6 +525,7 @@ class SubtitleLibraryService {
           tempDir,
           libraryDir,
           onProgress: onProgress,
+          modifiedPaths: modifiedPaths,
         );
 
         // 更新统计信息
@@ -466,6 +568,16 @@ class SubtitleLibraryService {
           success: false,
           message: message,
         );
+      }
+
+      // 刷新相关文件夹缓存
+      if (modifiedPaths.isNotEmpty) {
+        await _refreshDirectoriesAfterChange(modifiedPaths);
+      } else {
+        // 如果没有收集到具体路径（异常情况），回退到刷新整个分类
+        final parsedDirPath = '${libraryDir.path}/$_parsedFolderName';
+        final unknownDirPath = '${libraryDir.path}/$_unknownFolderName';
+        await _refreshDirectoriesAfterChange({parsedDirPath, unknownDirPath});
       }
 
       String message = '成功导入 ${stats.successCount} 个字幕文件';
@@ -686,6 +798,11 @@ class SubtitleLibraryService {
     // 向前兼容：迁移根目录的旧格式文件夹到"已解析"
     await _migrateOldFormatFolders(libraryDir);
 
+    // 尝试从磁盘加载缓存
+    if (!forceRefresh && _cachedFileTree == null) {
+      await _loadCacheFromDisk();
+    }
+
     // 检查是否需要刷新缓存
     final hasChanged = await _hasDirectoryChanged(libraryDir);
 
@@ -699,6 +816,7 @@ class SubtitleLibraryService {
 
     // 更新缓存
     _cachedFileTree = fileTree;
+    await _saveCacheToDisk();
 
     return fileTree;
   }
@@ -799,6 +917,7 @@ class SubtitleLibraryService {
       }
 
       await _updateLibraryModifiedTime(libraryDir);
+      await _saveCacheToDisk();
     } catch (e) {
       print('[SubtitleLibrary] 局部刷新缓存失败: $e');
     }
@@ -831,9 +950,15 @@ class SubtitleLibraryService {
           newChildren,
           includeSelf: !isRoot,
         );
+
+        // 如果新子节点为空且不是根目录，说明该文件夹变为空，应该被移除
+        // 这种情况下，统计数据需要减去文件夹本身
+        final bool shouldRemove = !isRoot && newChildren.isEmpty;
+
         _applyStatsDelta(
           filesDelta: newStats.files - oldStats.files,
-          foldersDelta: newStats.folders - oldStats.folders,
+          foldersDelta:
+              (newStats.folders - (shouldRemove ? 1 : 0)) - oldStats.folders,
           sizeDelta: newStats.size - oldStats.size,
         );
       }
@@ -843,13 +968,47 @@ class SubtitleLibraryService {
       } else {
         final location = _findNodeLocation(directoryPath, _cachedFileTree!);
         if (location == null) {
+          // 节点不存在，尝试添加到父节点
+          if (newChildren.isNotEmpty) {
+            final parentPath = FileSystemEntity.parentOf(directoryPath);
+            final parentLocation =
+                _findNodeLocation(parentPath, _cachedFileTree!);
+
+            if (parentLocation != null) {
+              final parentChildren = parentLocation.node['children']
+                  as List<Map<String, dynamic>>?;
+              if (parentChildren != null) {
+                parentChildren.add({
+                  'type': 'folder',
+                  'title': directoryPath.split(Platform.pathSeparator).last,
+                  'path': directoryPath,
+                  'children': newChildren,
+                });
+
+                // 重新排序
+                parentChildren.sort((a, b) {
+                  if (a['type'] == 'folder' && b['type'] != 'folder') return -1;
+                  if (a['type'] != 'folder' && b['type'] == 'folder') return 1;
+                  return (a['title'] as String).compareTo(b['title'] as String);
+                });
+                return;
+              }
+            }
+          }
+
           final parentPath = FileSystemEntity.parentOf(directoryPath);
           if (parentPath != directoryPath) {
             await _refreshDirectorySnapshot(parentPath);
           }
           return;
         }
-        location.node['children'] = newChildren;
+
+        if (newChildren.isEmpty) {
+          // 如果文件夹变为空，从父列表中移除
+          location.parentList.removeAt(location.index);
+        } else {
+          location.node['children'] = newChildren;
+        }
       }
     } catch (e) {
       print('[SubtitleLibrary] 更新目录缓存失败: $e');
@@ -1158,6 +1317,11 @@ class SubtitleLibraryService {
       );
     }
 
+    // 尝试从磁盘加载缓存
+    if (!forceRefresh && _cachedStats == null) {
+      await _loadCacheFromDisk();
+    }
+
     // 检查是否需要刷新缓存
     final hasChanged = await _hasDirectoryChanged(libraryDir);
 
@@ -1207,6 +1371,7 @@ class SubtitleLibraryService {
 
     // 更新缓存
     _cachedStats = stats;
+    await _saveCacheToDisk();
 
     return stats;
   }
@@ -1322,6 +1487,7 @@ class SubtitleLibraryService {
     Directory rootDir,
     Directory libraryDir, {
     Function(String)? onProgress,
+    Set<String>? modifiedPaths,
   }) async {
     int successCount = 0;
     int errorCount = 0;
@@ -1382,6 +1548,7 @@ class SubtitleLibraryService {
             errorCount += result['errorCount'] ?? 0;
             skippedCount += result['skippedCount'] ?? 0;
             parsedCount++;
+            modifiedPaths?.add(targetDir.path);
             print(
                 '[SubtitleLibrary] 已合并文件夹: $folderName，导入 ${result['successCount']} 个字幕文件');
           } else {
@@ -1394,6 +1561,7 @@ class SubtitleLibraryService {
             errorCount += result['errorCount'] ?? 0;
             skippedCount += result['skippedCount'] ?? 0;
             parsedCount++;
+            modifiedPaths?.add(targetDir.path);
 
             print(
                 '[SubtitleLibrary] 已解析文件夹: $folderName, 字幕文件: ${result['successCount']}');
@@ -1405,6 +1573,7 @@ class SubtitleLibraryService {
             rootDir,
             libraryDir,
             onProgress: onProgress,
+            modifiedPaths: modifiedPaths,
           );
           successCount += subResult['successCount'] ?? 0;
           errorCount += subResult['errorCount'] ?? 0;
@@ -1440,6 +1609,7 @@ class SubtitleLibraryService {
                 errorCount += result['errorCount'] ?? 0;
                 skippedCount += result['skippedCount'] ?? 0;
                 unknownCount++;
+                modifiedPaths?.add(targetDir.path);
                 print(
                     '[SubtitleLibrary] 已合并未知作品: $folderName，导入 ${result['successCount']} 个字幕文件');
               } else {
@@ -1452,6 +1622,7 @@ class SubtitleLibraryService {
                 errorCount += result['errorCount'] ?? 0;
                 skippedCount += result['skippedCount'] ?? 0;
                 unknownCount++;
+                modifiedPaths?.add(targetDir.path);
 
                 print(
                     '[SubtitleLibrary] 未知作品: $folderName, 字幕文件: ${result['successCount']}');
