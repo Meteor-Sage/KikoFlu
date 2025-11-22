@@ -4,13 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/search_result_provider.dart';
+import '../services/kikoeru_api_service.dart' hide kikoeruApiServiceProvider;
+import '../providers/auth_provider.dart';
 import '../widgets/works_grid_view.dart';
 import '../widgets/sort_dialog.dart';
 import '../widgets/pagination_bar.dart';
 import '../widgets/global_audio_player_wrapper.dart';
 import '../widgets/download_fab.dart';
 
-class SearchResultScreen extends ConsumerStatefulWidget {
+class SearchResultScreen extends StatelessWidget {
   final String keyword;
   final String? searchTypeLabel;
   final Map<String, dynamic>? searchParams;
@@ -23,10 +25,40 @@ class SearchResultScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<SearchResultScreen> createState() => _SearchResultScreenState();
+  Widget build(BuildContext context) {
+    return ProviderScope(
+      overrides: [
+        searchResultProvider.overrideWith((ref) {
+          final apiService = ref.watch(kikoeruApiServiceProvider);
+          return SearchResultNotifier(apiService);
+        }),
+      ],
+      child: _SearchResultContent(
+        keyword: keyword,
+        searchTypeLabel: searchTypeLabel,
+        searchParams: searchParams,
+      ),
+    );
+  }
 }
 
-class _SearchResultScreenState extends ConsumerState<SearchResultScreen> {
+class _SearchResultContent extends ConsumerStatefulWidget {
+  final String keyword;
+  final String? searchTypeLabel;
+  final Map<String, dynamic>? searchParams;
+
+  const _SearchResultContent({
+    super.key,
+    required this.keyword,
+    this.searchTypeLabel,
+    this.searchParams,
+  });
+
+  @override
+  ConsumerState<_SearchResultContent> createState() => _SearchResultContentState();
+}
+
+class _SearchResultContentState extends ConsumerState<_SearchResultContent> {
   final ScrollController _scrollController = ScrollController();
 
   @override
