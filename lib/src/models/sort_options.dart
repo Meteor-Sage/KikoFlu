@@ -7,6 +7,7 @@ enum SortOrder {
   dlCount('dl_count', '销量'),
   price('price', '价格'),
   nsfw('nsfw', '全年龄'),
+  updatedAt('updated_at', '标记时间'),
   ;
 
   const SortOrder(this.value, this.label);

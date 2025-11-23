@@ -13,6 +13,8 @@ import 'downloads_screen.dart';
 import 'local_downloads_screen.dart';
 import 'subtitle_library_screen.dart';
 import 'playlists_screen.dart';
+import '../widgets/sort_dialog.dart';
+import '../models/sort_options.dart';
 export '../providers/my_reviews_provider.dart' show MyReviewLayoutType;
 
 class MyScreen extends ConsumerStatefulWidget {
@@ -235,6 +237,27 @@ class _MyScreenState extends ConsumerState<MyScreen>
     );
   }
 
+  void _showSortDialog() {
+    final state = ref.read(myReviewsProvider);
+    showDialog(
+      context: context,
+      builder: (context) => CommonSortDialog(
+        title: '排序方式',
+        currentOption: state.sortType,
+        currentDirection: state.sortOrder,
+        availableOptions: const [
+          SortOrder.updatedAt,
+          SortOrder.release,
+          SortOrder.review,
+          SortOrder.dlCount,
+        ],
+        onSort: (option, direction) {
+          ref.read(myReviewsProvider.notifier).changeSort(option, direction);
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context); // 必须调用以保持状态
@@ -325,15 +348,30 @@ class _MyScreenState extends ConsumerState<MyScreen>
               // 布局切换按钮
               Padding(
                 padding: EdgeInsets.only(right: horizontalPadding - 8),
-                child: IconButton(
-                  icon: _getLayoutIcon(state.layoutType),
-                  iconSize: 22,
-                  padding: const EdgeInsets.all(8),
-                  constraints:
-                      const BoxConstraints(minWidth: 40, minHeight: 40),
-                  onPressed: () =>
-                      ref.read(myReviewsProvider.notifier).toggleLayoutType(),
-                  tooltip: _getLayoutTooltip(state.layoutType),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.sort),
+                      iconSize: 22,
+                      padding: const EdgeInsets.all(8),
+                      constraints:
+                          const BoxConstraints(minWidth: 40, minHeight: 40),
+                      onPressed: _showSortDialog,
+                      tooltip: '排序',
+                    ),
+                    IconButton(
+                      icon: _getLayoutIcon(state.layoutType),
+                      iconSize: 22,
+                      padding: const EdgeInsets.all(8),
+                      constraints:
+                          const BoxConstraints(minWidth: 40, minHeight: 40),
+                      onPressed: () => ref
+                          .read(myReviewsProvider.notifier)
+                          .toggleLayoutType(),
+                      tooltip: _getLayoutTooltip(state.layoutType),
+                    ),
+                  ],
                 ),
               ),
             ],

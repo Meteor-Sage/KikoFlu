@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:equatable/equatable.dart';
 
 import '../models/work.dart';
+import '../models/sort_options.dart';
 import '../services/kikoeru_api_service.dart' hide kikoeruApiServiceProvider;
 import 'auth_provider.dart';
 import 'settings_provider.dart';
@@ -37,6 +38,8 @@ class MyReviewsState extends Equatable {
   final MyReviewFilter filter;
   final int pageSize;
   final MyReviewLayoutType layoutType;
+  final SortOrder sortType;
+  final SortDirection sortOrder;
 
   const MyReviewsState({
     this.works = const [],
@@ -48,6 +51,8 @@ class MyReviewsState extends Equatable {
     this.filter = MyReviewFilter.all,
     this.pageSize = 20,
     this.layoutType = MyReviewLayoutType.bigGrid,
+    this.sortType = SortOrder.updatedAt,
+    this.sortOrder = SortDirection.desc,
   });
 
   MyReviewsState copyWith({
@@ -60,6 +65,8 @@ class MyReviewsState extends Equatable {
     MyReviewFilter? filter,
     int? pageSize,
     MyReviewLayoutType? layoutType,
+    SortOrder? sortType,
+    SortDirection? sortOrder,
   }) {
     return MyReviewsState(
       works: works ?? this.works,
@@ -71,6 +78,8 @@ class MyReviewsState extends Equatable {
       filter: filter ?? this.filter,
       pageSize: pageSize ?? this.pageSize,
       layoutType: layoutType ?? this.layoutType,
+      sortType: sortType ?? this.sortType,
+      sortOrder: sortOrder ?? this.sortOrder,
     );
   }
 
@@ -85,6 +94,8 @@ class MyReviewsState extends Equatable {
         filter,
         pageSize,
         layoutType,
+        sortType,
+        sortOrder,
       ];
 }
 
@@ -109,6 +120,8 @@ class MyReviewsNotifier extends StateNotifier<MyReviewsState> {
       final result = await _apiService.getMyReviews(
         page: page,
         filter: state.filter.value,
+        order: state.sortType.value,
+        sort: state.sortOrder.value,
       );
 
       // 服务器返回结构未知，尝试多种字段名
@@ -179,6 +192,17 @@ class MyReviewsNotifier extends StateNotifier<MyReviewsState> {
 
   void changeFilter(MyReviewFilter filter) {
     state = state.copyWith(filter: filter, currentPage: 1, totalCount: 0);
+    load(refresh: true);
+  }
+
+  void changeSort(SortOrder sortType, SortDirection sortOrder) {
+    if (state.sortType == sortType && state.sortOrder == sortOrder) return;
+    state = state.copyWith(
+      sortType: sortType,
+      sortOrder: sortOrder,
+      currentPage: 1,
+      totalCount: 0,
+    );
     load(refresh: true);
   }
 

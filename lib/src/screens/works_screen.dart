@@ -13,6 +13,7 @@ import '../utils/responsive_grid_helper.dart';
 import '../utils/snackbar_util.dart';
 import '../widgets/scrollable_appbar.dart';
 import '../widgets/download_fab.dart';
+import '../models/sort_options.dart';
 
 class WorksScreen extends ConsumerStatefulWidget {
   const WorksScreen({super.key});
@@ -120,6 +121,9 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
       builder: (context) => CommonSortDialog(
         currentOption: state.sortOption,
         currentDirection: state.sortDirection,
+        availableOptions: SortOrder.values
+            .where((option) => option != SortOrder.updatedAt)
+            .toList(),
         onSort: (option, direction) {
           ref.read(worksProvider.notifier).setSortOption(option);
           ref.read(worksProvider.notifier).setSortDirection(direction);

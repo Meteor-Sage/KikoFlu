@@ -114,7 +114,8 @@ class _SearchResultContentState extends ConsumerState<_SearchResultContent> {
         currentOption: state.sortOption,
         currentDirection: state.sortDirection,
         availableOptions: SortOrder.values
-            .where((option) => option != SortOrder.nsfw)
+            .where((option) =>
+                option != SortOrder.nsfw && option != SortOrder.updatedAt)
             .toList(),
         onSort: (option, direction) {
           ref.read(searchResultProvider.notifier).updateSort(option, direction);
