@@ -11,8 +11,22 @@ class FloatingLyricService {
 
   static FloatingLyricService? _instance;
   String? _windowId;
+  String? _lastText;
+  
+  final _onCloseController = StreamController<void>.broadcast();
+  Stream<void> get onClose => _onCloseController.stream;
 
-  FloatingLyricService._();
+  FloatingLyricService._() {
+    _platform.setMethodCallHandler(_handleMethodCall);
+  }
+
+  Future<dynamic> _handleMethodCall(MethodCall call) async {
+    switch (call.method) {
+      case 'onClose':
+        _onCloseController.add(null);
+        break;
+    }
+  }
 
   static FloatingLyricService get instance {
     _instance ??= FloatingLyricService._();
@@ -124,6 +138,12 @@ class FloatingLyricService {
     if (!isSupported) {
       return false;
     }
+
+    // 去重检查，避免频繁调用 MethodChannel
+    if (text == _lastText) {
+      return true;
+    }
+    _lastText = text;
 
     if (Platform.isWindows) {
       if (_windowId != null) {

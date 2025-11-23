@@ -21,17 +21,31 @@ class FloatingLyricEnabledNotifier extends StateNotifier<bool> {
   StreamSubscription? _positionSubscription;
   StreamSubscription? _playingSubscription;
   StreamSubscription? _trackSubscription;
+  StreamSubscription? _closeSubscription;
   ProviderSubscription? _lyricStateSubscription;
   String? _lastTrackId;
 
   FloatingLyricEnabledNotifier(this.ref) : super(false) {
     _load();
+    _listenToCloseEvent();
   }
 
   @override
   void dispose() {
     _stopBackgroundUpdate();
+    _closeSubscription?.cancel();
     super.dispose();
+  }
+
+  void _listenToCloseEvent() {
+    _closeSubscription = FloatingLyricService.instance.onClose.listen((_) async {
+      if (state) {
+        state = false;
+        _stopBackgroundUpdate();
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool(_key, false);
+      }
+    });
   }
 
   Future<void> _load() async {
