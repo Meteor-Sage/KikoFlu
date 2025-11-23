@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
@@ -25,6 +26,38 @@ class SubtitleLibraryService {
   static DateTime? _lastKnownModified;
   static String? _libraryRootPath;
 
+  static final _cacheUpdateController = StreamController<void>.broadcast();
+  static Stream<void> get onCacheUpdated => _cacheUpdateController.stream;
+
+  /// 获取已解析目录下的所有文件夹名称
+  static Future<List<String>> getParsedSubtitleFolders() async {
+    if (_cachedFileTree == null) {
+      await getSubtitleFiles();
+    }
+
+    if (_cachedFileTree == null) return [];
+
+    try {
+      final parsedFolder = _cachedFileTree!.firstWhere(
+        (item) => item['title'] == _parsedFolderName && item['type'] == 'folder',
+        orElse: () => <String, dynamic>{},
+      );
+
+      if (parsedFolder.isEmpty || parsedFolder['children'] == null) {
+        return [];
+      }
+
+      final children = parsedFolder['children'] as List<dynamic>;
+      return children
+          .where((item) => item['type'] == 'folder')
+          .map((item) => item['title'] as String)
+          .toList();
+    } catch (e) {
+      print('[SubtitleLibrary] 获取已解析文件夹列表失败: $e');
+      return [];
+    }
+  }
+
   /// 清除缓存
   static Future<void> clearCache() async {
     _cachedFileTree = null;
@@ -43,6 +76,7 @@ class SubtitleLibraryService {
     }
     
     print('[SubtitleLibrary] 缓存已清除');
+    _cacheUpdateController.add(null);
   }
 
   static Future<void> _ensureRootPath(String path) async {
@@ -88,6 +122,7 @@ class SubtitleLibraryService {
 
       await cacheFile.writeAsString(jsonEncode(cacheData));
       print('[SubtitleLibrary] 缓存已保存到磁盘');
+      _cacheUpdateController.add(null);
     } catch (e) {
       print('[SubtitleLibrary] 保存缓存失败: $e');
     }
