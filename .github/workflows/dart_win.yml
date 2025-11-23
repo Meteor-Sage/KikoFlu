@@ -31,16 +31,20 @@ jobs:
         uses: thedoctor0/zip-release@0.7.6
         with:
           type: 'zip'
-          filename: 'KikoFlu-Windows.zip'
+          filename: 'KikoFlu-windows.zip'
           directory: 'build/windows/x64/runner/Release'
           
       - name: Create MSIX
         run: flutter pub run msix:create --install-certificate false
         
+      - name: Rename MSIX
+        run: |
+          Get-ChildItem -Path build/windows -Filter *.msix -Recurse | Rename-Item -NewName "kikoeru-windows.msix"
+
       - name: Upload Windows Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: windows-release
           path: |
-            build/windows/x64/runner/Release/KikoFlu-Windows.zip
-            build/windows/**/*.msix
+            build/windows/x64/runner/Release/KikoFlu-windows.zip
+            build/windows/**/kikoeru-windows.msix
