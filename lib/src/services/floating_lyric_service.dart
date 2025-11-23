@@ -21,7 +21,10 @@ class FloatingLyricService {
 
   /// 检查是否支持悬浮窗
   bool get isSupported =>
-      Platform.isAndroid || Platform.isWindows || Platform.isMacOS;
+      Platform.isAndroid ||
+      Platform.isWindows ||
+      Platform.isMacOS ||
+      Platform.isIOS;
 
   /// 显示悬浮窗
   /// [text] 要显示的文本内容
@@ -154,7 +157,7 @@ class FloatingLyricService {
 
   /// 检查是否有悬浮窗权限
   Future<bool> hasPermission() async {
-    if (Platform.isWindows || Platform.isMacOS) return true;
+    if (Platform.isWindows || Platform.isMacOS || Platform.isIOS) return true;
     if (!isSupported) {
       return false;
     }
@@ -170,7 +173,7 @@ class FloatingLyricService {
 
   /// 请求悬浮窗权限
   Future<bool> requestPermission() async {
-    if (Platform.isWindows || Platform.isMacOS) return true;
+    if (Platform.isWindows || Platform.isMacOS || Platform.isIOS) return true;
     if (!isSupported) {
       return false;
     }

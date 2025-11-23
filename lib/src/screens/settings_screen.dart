@@ -243,8 +243,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               );
             },
           ),
-          // 显示悬浮歌词 (Android & Windows & macOS)
-          if (Platform.isAndroid || Platform.isWindows || Platform.isMacOS) ...[
+          // 显示悬浮歌词 (Android & Windows & macOS & iOS)
+          if (Platform.isAndroid ||
+              Platform.isWindows ||
+              Platform.isMacOS ||
+              Platform.isIOS) ...[
             Divider(color: Theme.of(context).colorScheme.outlineVariant),
             _buildFloatingLyricTile(context),
           ],
