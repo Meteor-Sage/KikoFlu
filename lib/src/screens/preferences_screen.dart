@@ -80,6 +80,9 @@ class PreferencesScreen extends ConsumerWidget {
         title: '默认排序设置',
         currentOption: currentSort.order,
         currentDirection: currentSort.direction,
+        availableOptions: SortOrder.values
+            .where((option) => option != SortOrder.updatedAt)
+            .toList(),
         onSort: (option, direction) {
           ref
               .read(defaultSortProvider.notifier)
@@ -123,7 +126,7 @@ class PreferencesScreen extends ConsumerWidget {
                 ListTile(
                   leading: Icon(Icons.sort,
                       color: Theme.of(context).colorScheme.primary),
-                  title: const Text('默认排序方式'),
+                  title: const Text('首页默认排序方式'),
                   subtitle: Text(
                       '${defaultSort.order.label} - ${defaultSort.direction.label}'),
                   trailing: const Icon(Icons.arrow_forward_ios),
