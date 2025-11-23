@@ -126,20 +126,25 @@ class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
     }
     
     private func updateText(_ text: String) {
-        lyricView?.text = text
-        // Adjust font size or layout if needed
+        DispatchQueue.main.async {
+            self.lyricView?.text = text
+            self.lyricView?.setNeedsLayout()
+        }
     }
     
     private func prepareLyricView(text: String) {
         if lyricView == nil {
             lyricView = UILabel()
-            lyricView?.textColor = .black
-            lyricView?.backgroundColor = UIColor(white: 1.0, alpha: 0.8)
-            lyricView?.font = UIFont.systemFont(ofSize: 24, weight: .bold)
+            lyricView?.textColor = .white
+            lyricView?.backgroundColor = UIColor(white: 0.0, alpha: 0.3) // 半透明黑色背景
+            lyricView?.font = UIFont.systemFont(ofSize: 20, weight: .medium)
             lyricView?.textAlignment = .center
             lyricView?.numberOfLines = 0
-            lyricView?.layer.cornerRadius = 10
+            lyricView?.layer.cornerRadius = 8
             lyricView?.clipsToBounds = true
+            // 添加文字阴影以提高可读性
+            lyricView?.shadowColor = .black
+            lyricView?.shadowOffset = CGSize(width: 1, height: 1)
         }
         lyricView?.text = text
     }
@@ -164,6 +169,7 @@ class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
     func pictureInPictureControllerDidStopPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
         lyricView?.removeFromSuperview()
         player?.pause()
+        channel.invokeMethod("onClose", arguments: nil)
     }
     
     func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, failedToStartPictureInPictureWithError error: Error) {
