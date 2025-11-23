@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:equatable/equatable.dart';
 
@@ -428,9 +430,30 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       return true;
     } catch (e) {
+      String errorMessage = 'Registration failed: ${e.toString()}';
+
+      if (e is KikoeruApiException && e.originalError is DioException) {
+        final dioError = e.originalError as DioException;
+        if (dioError.response != null && dioError.response?.statusCode == 403) {
+          final data = dioError.response?.data;
+          if (data is Map && data['error'] != null) {
+            errorMessage = data['error'];
+          } else if (data is String) {
+            try {
+              final json = jsonDecode(data);
+              if (json is Map && json['error'] != null) {
+                errorMessage = json['error'];
+              }
+            } catch (_) {
+              // Ignore json decode error
+            }
+          }
+        }
+      }
+
       state = state.copyWith(
         isLoading: false,
-        error: 'Registration failed: ${e.toString()}',
+        error: errorMessage,
       );
       return false;
     }
