@@ -1,9 +1,4 @@
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-
-name: Dart
+name: Build
 
 on:
   push:
@@ -12,8 +7,44 @@ on:
     branches: [ "main" ]
 
 jobs:
+  windows:
+    name: Windows Build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          
+      - name: Get Dependencies
+        run: flutter pub get
+        
+      - name: Build Windows Release
+        run: flutter build windows --release
+        
+      - name: Create Zip
+        uses: thedoctor0/zip-release@0.7.6
+        with:
+          type: 'zip'
+          filename: 'KikoFlu-Windows.zip'
+          directory: 'build/windows/x64/runner/Release'
+          
+      - name: Create MSIX
+        run: flutter pub run msix:create
+        
+      - name: Upload Windows Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: |
+            build/windows/x64/runner/Release/KikoFlu-Windows.zip
+            build/windows/**/*.msix
+
   android:
     name: Android Build
+    needs: windows
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -32,14 +63,27 @@ jobs:
       - name: Get Dependencies
         run: flutter pub get
         
-      - name: Build APK
+      - name: Build Universal APK
         run: flutter build apk --release
         
-      - name: Rename APK
-        run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/KikoFlu-Android.apk
+      - name: Rename Universal APK
+        run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/KikoFlu-android-universe-release.apk
         
-      - name: Upload Artifact
+      - name: Build Split APKs
+        run: flutter build apk --release --split-per-abi
+        
+      - name: Rename Split APKs
+        run: |
+          mv build/app/outputs/flutter-apk/app-arm64-v8a-release.apk build/app/outputs/flutter-apk/KikoFlu-android-arm64-v8a-release.apk
+          mv build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk build/app/outputs/flutter-apk/KikoFlu-android-armeabi-v7a-release.apk
+          mv build/app/outputs/flutter-apk/app-x86_64-release.apk build/app/outputs/flutter-apk/KikoFlu-android-x86_64-release.apk
+          
+      - name: Upload Android Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: android-release
-          path: build/app/outputs/flutter-apk/KikoFlu-Android.apk
+          path: |
+            build/app/outputs/flutter-apk/KikoFlu-android-universe-release.apk
+            build/app/outputs/flutter-apk/KikoFlu-android-arm64-v8a-release.apk
+            build/app/outputs/flutter-apk/KikoFlu-android-armeabi-v7a-release.apk
+            build/app/outputs/flutter-apk/KikoFlu-android-x86_64-release.apk
