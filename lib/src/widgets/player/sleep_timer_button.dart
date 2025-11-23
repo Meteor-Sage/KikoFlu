@@ -37,7 +37,14 @@ class SleepTimerButton extends ConsumerWidget {
                 iconSize: iconSize,
                 padding: isLandscapeCompact ? EdgeInsets.zero : null,
                 constraints: isLandscapeCompact
-                    ? const BoxConstraints(minWidth: 36, minHeight: 36)
+                    ? const BoxConstraints(minWidth: 36, minHeight: 30, maxHeight: 30)
+                    : null,
+                style: isLandscapeCompact
+                    ? IconButton.styleFrom(
+                        minimumSize: const Size(36, 30),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        padding: EdgeInsets.zero,
+                      )
                     : null,
                 visualDensity: isLandscapeCompact
                     ? VisualDensity.compact
@@ -75,13 +82,20 @@ class SleepTimerButton extends ConsumerWidget {
                 iconSize: iconSize,
                 padding: isLandscapeCompact ? EdgeInsets.zero : null,
                 constraints: isLandscapeCompact
-                    ? const BoxConstraints(minWidth: 36, minHeight: 36)
+                    ? const BoxConstraints(minWidth: 36, minHeight: 30, maxHeight: 30)
+                    : null,
+                style: isLandscapeCompact
+                    ? IconButton.styleFrom(
+                        minimumSize: const Size(36, 30),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        padding: EdgeInsets.zero,
+                      )
                     : null,
                 visualDensity: isLandscapeCompact
                     ? VisualDensity.compact
                     : VisualDensity.standard,
               ),
-              SizedBox(height: iconSize == null ? 14 : 4),
+              SizedBox(height: iconSize == null ? 14 : 0),
             ],
           ),
         ),
