@@ -24,6 +24,7 @@ class AudioPlayerService {
   LoopMode _appLoopMode = LoopMode.off; // Track loop mode at app level
   String? _tempPlaybackFilePath; // 临时音频副本路径，用于规避字幕冲突
   Directory? _tempAudioDirectory;
+  bool _isSwitchingTrack = false; // Flag to indicate track switching state
 
   static const List<String> _lyricExtensions = [
     '.lrc',
@@ -177,6 +178,19 @@ class AudioPlayerService {
     final playing = _player.playing;
     final processingState = _player.processingState;
 
+    // Determine the effective processing state
+    // If we are switching tracks, force buffering state to keep system controls active
+    final effectiveProcessingState = _isSwitchingTrack
+        ? AudioProcessingState.buffering
+        : {
+              ProcessingState.idle: AudioProcessingState.idle,
+              ProcessingState.loading: AudioProcessingState.loading,
+              ProcessingState.buffering: AudioProcessingState.buffering,
+              ProcessingState.ready: AudioProcessingState.ready,
+              ProcessingState.completed: AudioProcessingState.completed,
+            }[processingState] ??
+            AudioProcessingState.idle;
+
     (_audioHandler as _AudioPlayerHandler).playbackState.add(PlaybackState(
           controls: [
             MediaControl.skipToPrevious,
@@ -189,14 +203,7 @@ class AudioPlayerService {
             MediaAction.seekBackward,
           },
           androidCompactActionIndices: const [0, 1, 2],
-          processingState: {
-                ProcessingState.idle: AudioProcessingState.idle,
-                ProcessingState.loading: AudioProcessingState.loading,
-                ProcessingState.buffering: AudioProcessingState.buffering,
-                ProcessingState.ready: AudioProcessingState.ready,
-                ProcessingState.completed: AudioProcessingState.completed,
-              }[processingState] ??
-              AudioProcessingState.idle,
+          processingState: effectiveProcessingState,
           playing: playing,
           updatePosition: _player.position,
           bufferedPosition: _player.bufferedPosition,
@@ -228,6 +235,11 @@ class AudioPlayerService {
 
   Future<void> _loadTrack(AudioTrack track) async {
     print('[Audio] _loadTrack: title="${track.title}", url="${track.url}"');
+    
+    // Set switching flag and update state to buffering immediately
+    _isSwitchingTrack = true;
+    _updatePlaybackState();
+
     // Reset completion flag for new track (macOS specific)
     if (Platform.isMacOS) {
       _completionHandled = false;
@@ -237,6 +249,15 @@ class AudioPlayerService {
     await _cleanupTempPlaybackFile();
 
     try {
+      // Update media item immediately to show new track info
+      await _updateMediaItem(
+        track,
+        privacyEnabled: _privacyEnabled,
+        blurCover: _privacyBlurCover,
+        maskTitle: _privacyMaskTitle,
+        customTitle: _privacyCustomTitle,
+      );
+
       String? audioFilePath;
       bool loaded = false;
 
@@ -290,17 +311,11 @@ class AudioPlayerService {
       }
 
       _currentTrackController.add(track);
-
-      // Update media item for system controls
-      await _updateMediaItem(
-        track,
-        privacyEnabled: _privacyEnabled,
-        blurCover: _privacyBlurCover,
-        maskTitle: _privacyMaskTitle,
-        customTitle: _privacyCustomTitle,
-      );
     } catch (e) {
       print('Error loading audio source: $e');
+    } finally {
+      _isSwitchingTrack = false;
+      _updatePlaybackState();
     }
   }
 
