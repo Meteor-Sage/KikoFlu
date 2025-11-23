@@ -94,6 +94,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final password = _passwordController.text;
     final host = _hostValue.trim();
 
+    if (!_isLogin) {
+      if (username.length < 5) {
+        SnackBarUtil.showError(context, '用户名不能少于5个字符');
+        setState(() => _isLoading = false);
+        return;
+      }
+      if (password.length < 5) {
+        SnackBarUtil.showError(context, '密码不能少于5个字符');
+        setState(() => _isLoading = false);
+        return;
+      }
+    }
+
     try {
       bool success;
       if (_isLogin) {
@@ -576,8 +589,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           if (value == null || value.trim().isEmpty) {
             return '请输入用户名';
           }
-          if (!_isLogin && value.trim().length < 3) {
-            return '用户名至少需要3个字符';
+          if (!_isLogin && value.trim().length < 5) {
+            return '用户名至少需要5个字符';
           }
           return null;
         },
@@ -610,8 +623,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           if (value == null || value.isEmpty) {
             return '请输入密码';
           }
-          if (!_isLogin && value.length < 6) {
-            return '密码至少需要6个字符';
+          if (!_isLogin && value.length < 5) {
+            return '密码至少需要5个字符';
           }
           return null;
         },
