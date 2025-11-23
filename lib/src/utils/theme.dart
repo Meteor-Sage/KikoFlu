@@ -143,7 +143,7 @@ class AppTheme {
   }
 
   // 根据主题类型获取对应的颜色方案
-  static ColorScheme _getColorScheme(ColorSchemeType type, bool isDark) {
+  static ColorScheme getColorScheme(ColorSchemeType type, bool isDark) {
     switch (type) {
       case ColorSchemeType.oceanBlue:
         return isDark ? _oceanBlueDark : _oceanBlueLight;
@@ -158,6 +158,11 @@ class AppTheme {
       case ColorSchemeType.dynamic:
         return isDark ? _oceanBlueDark : _oceanBlueLight; // 动态主题的后备方案
     }
+  }
+
+  // 根据主题类型获取对应的颜色方案
+  static ColorScheme _getColorScheme(ColorSchemeType type, bool isDark) {
+    return getColorScheme(type, isDark);
   }
 
   // ========== 海洋蓝主题 ==========

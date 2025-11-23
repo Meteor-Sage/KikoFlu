@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/floating_lyric_service.dart';
+import '../utils/theme.dart';
+import 'theme_provider.dart';
 
 /// 悬浮歌词样式设置
 class FloatingLyricStyle {
@@ -15,9 +17,9 @@ class FloatingLyricStyle {
 
   const FloatingLyricStyle({
     this.fontSize = 14.0,
-    this.opacity = 0.95,
+    this.opacity = 0.88,
     this.textColor = Colors.white,
-    this.backgroundColor = const Color(0xFF000000),
+    this.backgroundColor = const Color(0xFF2196F3),
     this.cornerRadius = 16.0,
     this.paddingHorizontal = 20.0,
     this.paddingVertical = 10.0,
@@ -88,26 +90,87 @@ class FloatingLyricStyle {
 final floatingLyricStyleProvider =
     StateNotifierProvider<FloatingLyricStyleNotifier, FloatingLyricStyle>(
         (ref) {
-  return FloatingLyricStyleNotifier();
+  return FloatingLyricStyleNotifier(ref);
 });
 
-class FloatingLyricStyleNotifier extends StateNotifier<FloatingLyricStyle> {
+class FloatingLyricStyleNotifier extends StateNotifier<FloatingLyricStyle>
+    with WidgetsBindingObserver {
   static const _keyPrefix = 'floating_lyric_style_';
+  final Ref ref;
 
-  FloatingLyricStyleNotifier() : super(const FloatingLyricStyle()) {
+  FloatingLyricStyleNotifier(this.ref) : super(const FloatingLyricStyle()) {
+    WidgetsBinding.instance.addObserver(this);
     _load();
+    _listenToThemeChanges();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangePlatformBrightness() {
+    _updateColorsFromThemeIfDefault();
+  }
+
+  void _listenToThemeChanges() {
+    ref.listen<ThemeSettings>(themeSettingsProvider, (previous, next) async {
+      if (previous == next) return;
+      await _updateColorsFromThemeIfDefault();
+    });
+  }
+
+  Future<void> _updateColorsFromThemeIfDefault() async {
+    final prefs = await SharedPreferences.getInstance();
+    final hasCustomTextColor = prefs.containsKey('${_keyPrefix}textColor');
+    final hasCustomBackgroundColor =
+        prefs.containsKey('${_keyPrefix}backgroundColor');
+
+    if (hasCustomTextColor && hasCustomBackgroundColor) return;
+
+    final themeSettings = ref.read(themeSettingsProvider);
+    final isDark = themeSettings.themeMode == AppThemeMode.dark ||
+        (themeSettings.themeMode == AppThemeMode.system &&
+            WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+                Brightness.dark);
+    final colorScheme =
+        AppTheme.getColorScheme(themeSettings.colorSchemeType, isDark);
+
+    var newState = state;
+    if (!hasCustomTextColor) {
+      newState = newState.copyWith(textColor: colorScheme.onPrimary);
+    }
+    if (!hasCustomBackgroundColor) {
+      newState = newState.copyWith(backgroundColor: colorScheme.primary);
+    }
+
+    if (newState != state) {
+      state = newState;
+      _applyStyle();
+    }
   }
 
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
 
+    final themeSettings = ref.read(themeSettingsProvider);
+    final isDark = themeSettings.themeMode == AppThemeMode.dark ||
+        (themeSettings.themeMode == AppThemeMode.system &&
+            WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+                Brightness.dark);
+    final colorScheme =
+        AppTheme.getColorScheme(themeSettings.colorSchemeType, isDark);
+
     final fontSize = prefs.getDouble('${_keyPrefix}fontSize') ?? 14.0;
-    final opacity = prefs.getDouble('${_keyPrefix}opacity') ?? 0.95;
-    final textColor =
-        Color(prefs.getInt('${_keyPrefix}textColor') ?? Colors.white.value);
-    final backgroundColor = Color(
-        prefs.getInt('${_keyPrefix}backgroundColor') ??
-            const Color(0xFF000000).value);
+    final opacity = prefs.getDouble('${_keyPrefix}opacity') ?? 0.88;
+    final textColor = prefs.containsKey('${_keyPrefix}textColor')
+        ? Color(prefs.getInt('${_keyPrefix}textColor')!)
+        : colorScheme.onPrimary;
+    final backgroundColor = prefs.containsKey('${_keyPrefix}backgroundColor')
+        ? Color(prefs.getInt('${_keyPrefix}backgroundColor')!)
+        : colorScheme.primary;
     final cornerRadius = prefs.getDouble('${_keyPrefix}cornerRadius') ?? 16.0;
     final paddingHorizontal =
         prefs.getDouble('${_keyPrefix}paddingHorizontal') ?? 20.0;
@@ -128,13 +191,15 @@ class FloatingLyricStyleNotifier extends StateNotifier<FloatingLyricStyle> {
     _applyStyle();
   }
 
-  Future<void> _save() async {
+  Future<void> _save({bool saveColors = false}) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble('${_keyPrefix}fontSize', state.fontSize);
     await prefs.setDouble('${_keyPrefix}opacity', state.opacity);
-    await prefs.setInt('${_keyPrefix}textColor', state.textColor.value);
-    await prefs.setInt(
-        '${_keyPrefix}backgroundColor', state.backgroundColor.value);
+    if (saveColors) {
+      await prefs.setInt('${_keyPrefix}textColor', state.textColor.value);
+      await prefs.setInt(
+          '${_keyPrefix}backgroundColor', state.backgroundColor.value);
+    }
     await prefs.setDouble('${_keyPrefix}cornerRadius', state.cornerRadius);
     await prefs.setDouble(
         '${_keyPrefix}paddingHorizontal', state.paddingHorizontal);
@@ -169,13 +234,13 @@ class FloatingLyricStyleNotifier extends StateNotifier<FloatingLyricStyle> {
 
   Future<void> updateTextColor(Color color) async {
     state = state.copyWith(textColor: color);
-    await _save();
+    await _save(saveColors: true);
     _applyStyle();
   }
 
   Future<void> updateBackgroundColor(Color color) async {
     state = state.copyWith(backgroundColor: color);
-    await _save();
+    await _save(saveColors: true);
     _applyStyle();
   }
 
@@ -199,8 +264,26 @@ class FloatingLyricStyleNotifier extends StateNotifier<FloatingLyricStyle> {
 
   /// 重置为默认样式
   Future<void> reset() async {
-    state = const FloatingLyricStyle();
-    await _save();
+    final themeSettings = ref.read(themeSettingsProvider);
+    final isDark = themeSettings.themeMode == AppThemeMode.dark ||
+        (themeSettings.themeMode == AppThemeMode.system &&
+            WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+                Brightness.dark);
+    final colorScheme =
+        AppTheme.getColorScheme(themeSettings.colorSchemeType, isDark);
+
+    state = FloatingLyricStyle(
+      textColor: colorScheme.onPrimary,
+      backgroundColor: colorScheme.primary,
+    );
+    
+    await _save(saveColors: false);
+    
+    // 清除颜色设置，使其跟随主题
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('${_keyPrefix}textColor');
+    await prefs.remove('${_keyPrefix}backgroundColor');
+    
     _applyStyle();
   }
 
@@ -208,7 +291,18 @@ class FloatingLyricStyleNotifier extends StateNotifier<FloatingLyricStyle> {
   Future<void> applyPreset(FloatingLyricStylePreset preset,
       [BuildContext? context]) async {
     state = preset.getStyle(context);
-    await _save();
+
+    if (preset == FloatingLyricStylePreset.dynamic) {
+      await _save(saveColors: false);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('${_keyPrefix}textColor');
+      await prefs.remove('${_keyPrefix}backgroundColor');
+      // 确保使用当前主题颜色
+      await _updateColorsFromThemeIfDefault();
+    } else {
+      await _save(saveColors: true);
+    }
+
     _applyStyle();
   }
 }
