@@ -450,7 +450,7 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
                     ),
                     child: Center(
                       child: Text(
-                        '3',
+                        '2',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color:
@@ -490,11 +490,18 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
                                         Theme.of(context).textTheme.bodyMedium,
                                   ),
                                   Expanded(
-                                    child: Text(
-                                      '在"已解析"文件夹下查找对应作品\n支持文件夹格式：RJ123456',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium,
+                                    child: Text.rich(
+                                      TextSpan(
+                                        style: Theme.of(context).textTheme.bodyMedium,
+                                        children: [
+                                          const TextSpan(text: '在'),
+                                          const TextSpan(
+                                            text: '<已解析>',
+                                            style: TextStyle(fontWeight: FontWeight.bold),
+                                          ),
+                                          const TextSpan(text: '文件夹下查找对应作品\n支持文件夹格式：RJ123456'),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -509,11 +516,18 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
                                         Theme.of(context).textTheme.bodyMedium,
                                   ),
                                   Expanded(
-                                    child: Text(
-                                      '在"已保存"文件夹下查找单个字幕文件',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium,
+                                    child: Text.rich(
+                                      TextSpan(
+                                        style: Theme.of(context).textTheme.bodyMedium,
+                                        children: [
+                                          const TextSpan(text: '在'),
+                                          const TextSpan(
+                                            text: '<已保存>',
+                                            style: TextStyle(fontWeight: FontWeight.bold),
+                                          ),
+                                          const TextSpan(text: '文件夹下查找单个字幕文件'),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -561,7 +575,7 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
                     ),
                     child: Center(
                       child: Text(
-                        '4',
+                        '3',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color:
@@ -596,8 +610,80 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
                                         Theme.of(context).textTheme.bodyMedium,
                                   ),
                                   Expanded(
+                                    child: Text.rich(
+                                      TextSpan(
+                                        style: Theme.of(context).textTheme.bodyMedium,
+                                        children: [
+                                          const TextSpan(text: '识别到的作品会被添加绿色'),
+                                          WidgetSpan(
+                                            alignment: PlaceholderAlignment.middle,
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                  horizontal: 4, vertical: 1),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white
+                                                    .withOpacity(0.9),
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
+                                              ),
+                                              child: const Icon(
+                                                Icons.closed_caption,
+                                                color: Colors.green,
+                                                size: 18.0,
+                                              ),
+                                            ),
+                                          ),
+                                          const TextSpan(text: '标签 ，音频文件图标也会增加 '),
+                                          WidgetSpan(
+                                            alignment: PlaceholderAlignment.middle,
+                                            child: SizedBox(
+                                              width: 24,
+                                              height: 24,
+                                              child: Stack(
+                                                children: [
+                                                  const Icon(
+                                                    Icons.audiotrack,
+                                                    color: Colors.green,
+                                                    size: 24,
+                                                  ),
+                                                  Positioned(
+                                                    left: 0,
+                                                    top: 0,
+                                                    child: Container(
+                                                      decoration:
+                                                          const BoxDecoration(
+                                                        color: Colors.white,
+                                                        shape: BoxShape.circle,
+                                                      ),
+                                                      child: Icon(
+                                                        Icons.subtitles,
+                                                        color: Colors.blue[600],
+                                                        size: 13,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                          const TextSpan(text: ' 标记，表示有字幕库匹配'),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                                                            Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '• ',
+                                    style:
+                                        Theme.of(context).textTheme.bodyMedium,
+                                  ),
+                                  Expanded(
                                     child: Text(
-                                      '导入时自动识别 RJ 格式文件夹，归类到"已解析"',
+                                      '导入时自动识别 RJ 格式，归类到<已解析>',
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodyMedium,
@@ -625,24 +711,6 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
                                 ],
                               ),
                               const SizedBox(height: 6),
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '• ',
-                                    style:
-                                        Theme.of(context).textTheme.bodyMedium,
-                                  ),
-                                  Expanded(
-                                    child: Text(
-                                      '识别到的音频图标会增加蓝色标记，表示有字幕库匹配',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium,
-                                    ),
-                                  ),
-                                ],
-                              ),
                             ],
                           ),
                         ),
