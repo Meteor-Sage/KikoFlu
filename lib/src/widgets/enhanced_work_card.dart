@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../models/work.dart';
 import '../providers/auth_provider.dart';
 import '../providers/work_card_display_provider.dart';
+import '../providers/subtitle_library_provider.dart';
 import '../screens/work_detail_screen.dart';
 import '../utils/snackbar_util.dart';
 import '../utils/string_utils.dart';
@@ -149,6 +150,19 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                     left: 4,
                     child: _buildRjTag(),
                   ),
+                  // 字幕标签 (左下角)
+                  if (widget.work.hasSubtitle == true ||
+                      ref.watch(subtitleLibraryProvider).contains(widget.work.id))
+                    Positioned(
+                      bottom: 4,
+                      left: 4,
+                      child: _buildSubtitleTag(
+                        context,
+                        isLocal: ref
+                            .watch(subtitleLibraryProvider)
+                            .contains(widget.work.id),
+                      ),
+                    ),
                   // 日期标签 (右下角)
                   if (displaySettings.showReleaseDate &&
                       widget.work.release != null)
@@ -219,11 +233,17 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                     child: _buildRjTag(),
                   ),
                   // 字幕标签 (左下角)
-                  if (widget.work.hasSubtitle == true)
+                  if (widget.work.hasSubtitle == true ||
+                      ref.watch(subtitleLibraryProvider).contains(widget.work.id))
                     Positioned(
                       bottom: 6,
                       left: 6,
-                      child: _buildSubtitleTag(context),
+                      child: _buildSubtitleTag(
+                        context,
+                        isLocal: ref
+                            .watch(subtitleLibraryProvider)
+                            .contains(widget.work.id),
+                      ),
                     ),
                   if (displaySettings.showReleaseDate &&
                       widget.work.release != null)
@@ -393,11 +413,19 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                           ),
                         ),
                         // 字幕标签 (左下角)
-                        if (widget.work.hasSubtitle == true)
+                        if (widget.work.hasSubtitle == true ||
+                            ref
+                                .watch(subtitleLibraryProvider)
+                                .contains(widget.work.id))
                           Positioned(
                             bottom: 2,
                             left: 2,
-                            child: _buildSubtitleTag(context),
+                            child: _buildSubtitleTag(
+                              context,
+                              isLocal: ref
+                                  .watch(subtitleLibraryProvider)
+                                  .contains(widget.work.id),
+                            ),
                           ),
                       ],
                     ),
@@ -641,7 +669,7 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
     );
   }
 
-  Widget _buildSubtitleTag(BuildContext context) {
+  Widget _buildSubtitleTag(BuildContext context, {bool isLocal = false}) {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
     final iconSize = isLandscape ? 16.0 : 14.0;
@@ -649,7 +677,7 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.7),
+        color: isLocal ? Colors.green.withOpacity(0.9) : Colors.black.withOpacity(0.7),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Icon(
