@@ -101,6 +101,17 @@ class WorkDetailDisplaySettingsScreen extends ConsumerWidget {
                   value: settings.showTranslateButton,
                   onChanged: (_) => notifier.toggleTranslateButton(),
                 ),
+                Divider(color: Theme.of(context).colorScheme.outlineVariant),
+                SwitchListTile(
+                  secondary: Icon(
+                    Icons.closed_caption,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  title: const Text('字幕标签'),
+                  subtitle: const Text('在封面图上显示字幕标签'),
+                  value: settings.showSubtitleTag,
+                  onChanged: (_) => notifier.toggleSubtitleTag(),
+                ),
               ],
             ),
           ),

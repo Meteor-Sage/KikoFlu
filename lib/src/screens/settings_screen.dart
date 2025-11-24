@@ -243,7 +243,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               );
             },
           ),
-          // 显示悬浮歌词 (Android & Windows & macOS & iOS)
+          // 显示悬浮字幕 (Android & Windows & macOS & iOS)
           if (Platform.isAndroid ||
               Platform.isWindows ||
               Platform.isMacOS ||
@@ -275,7 +275,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  /// 悬浮歌词开关组件
+  /// 悬浮字幕开关组件
   Widget _buildFloatingLyricTile(BuildContext context) {
     final isEnabled = ref.watch(floatingLyricEnabledProvider);
 
@@ -286,9 +286,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             Icons.subtitles_outlined,
             color: Theme.of(context).colorScheme.primary,
           ),
-          title: const Text('桌面悬浮歌词'),
+          title: const Text('桌面悬浮字幕'),
           subtitle: Text(
-            isEnabled ? '已启用 - 歌词将显示在桌面上' : '未启用',
+            isEnabled ? '已启用 - 字幕将显示在桌面上' : '未启用',
             style: TextStyle(
               color: isEnabled
                   ? Theme.of(context).colorScheme.primary.withOpacity(0.8)

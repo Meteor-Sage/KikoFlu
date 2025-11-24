@@ -11,7 +11,7 @@ class MainActivity : AudioServiceActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         
-        // 注册悬浮歌词插件
+        // 注册悬浮字幕插件
         floatingLyricPlugin = FloatingLyricPlugin(this)
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,

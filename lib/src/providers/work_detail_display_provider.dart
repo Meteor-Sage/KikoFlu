@@ -10,6 +10,7 @@ class WorkDetailDisplaySettings {
   final bool showExternalLinks;
   final bool showReleaseDate;
   final bool showTranslateButton;
+  final bool showSubtitleTag;
 
   const WorkDetailDisplaySettings({
     this.showRating = true,
@@ -19,6 +20,7 @@ class WorkDetailDisplaySettings {
     this.showExternalLinks = true,
     this.showReleaseDate = true,
     this.showTranslateButton = true,
+    this.showSubtitleTag = true,
   });
 
   WorkDetailDisplaySettings copyWith({
@@ -29,6 +31,7 @@ class WorkDetailDisplaySettings {
     bool? showExternalLinks,
     bool? showReleaseDate,
     bool? showTranslateButton,
+    bool? showSubtitleTag,
   }) {
     return WorkDetailDisplaySettings(
       showRating: showRating ?? this.showRating,
@@ -38,6 +41,7 @@ class WorkDetailDisplaySettings {
       showExternalLinks: showExternalLinks ?? this.showExternalLinks,
       showReleaseDate: showReleaseDate ?? this.showReleaseDate,
       showTranslateButton: showTranslateButton ?? this.showTranslateButton,
+      showSubtitleTag: showSubtitleTag ?? this.showSubtitleTag,
     );
   }
 }
@@ -53,6 +57,7 @@ class WorkDetailDisplayNotifier
   static const String _keyExternalLinks = '${_keyPrefix}external_links';
   static const String _keyReleaseDate = '${_keyPrefix}release_date';
   static const String _keyTranslateButton = '${_keyPrefix}translate_button';
+  static const String _keySubtitleTag = '${_keyPrefix}subtitle_tag';
 
   WorkDetailDisplayNotifier() : super(const WorkDetailDisplaySettings()) {
     _loadSettings();
@@ -69,6 +74,7 @@ class WorkDetailDisplayNotifier
         showExternalLinks: prefs.getBool(_keyExternalLinks) ?? true,
         showReleaseDate: prefs.getBool(_keyReleaseDate) ?? true,
         showTranslateButton: prefs.getBool(_keyTranslateButton) ?? true,
+        showSubtitleTag: prefs.getBool(_keySubtitleTag) ?? true,
       );
     } catch (e) {
       // 加载失败，使用默认值
@@ -110,6 +116,11 @@ class WorkDetailDisplayNotifier
     await _saveSettings();
   }
 
+  Future<void> toggleSubtitleTag() async {
+    state = state.copyWith(showSubtitleTag: !state.showSubtitleTag);
+    await _saveSettings();
+  }
+
   Future<void> _saveSettings() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -120,6 +131,7 @@ class WorkDetailDisplayNotifier
       await prefs.setBool(_keyExternalLinks, state.showExternalLinks);
       await prefs.setBool(_keyReleaseDate, state.showReleaseDate);
       await prefs.setBool(_keyTranslateButton, state.showTranslateButton);
+      await prefs.setBool(_keySubtitleTag, state.showSubtitleTag);
     } catch (e) {
       // 保存失败时静默处理
     }

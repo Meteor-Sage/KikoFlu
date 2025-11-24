@@ -12,7 +12,7 @@ class FloatingLyricStyleScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: const ScrollableAppBar(
-        title: Text('悬浮歌词样式', style: TextStyle(fontSize: 18)),
+        title: Text('悬浮字幕样式', style: TextStyle(fontSize: 18)),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -74,7 +74,7 @@ class FloatingLyricStyleScreen extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(style.cornerRadius),
                 ),
                 child: Text(
-                  '♪ 示例歌词内容 ♪',
+                  '♪ 示例字幕内容 ♪',
                   style: TextStyle(
                     color: style.textColor,
                     fontSize: style.fontSize,

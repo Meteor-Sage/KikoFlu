@@ -13,7 +13,7 @@ class PlayerLyricStyleScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: const ScrollableAppBar(
-        title: Text('播放器歌词样式'),
+        title: Text('播放器字幕样式'),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -68,11 +68,11 @@ class PlayerLyricStyleScreen extends ConsumerWidget {
           const SizedBox(height: 24),
           _buildSection(
             context,
-            title: '全屏歌词 (竖屏/横屏)',
+            title: '全屏字幕 (竖屏/横屏)',
             children: [
               _buildSlider(
                 context,
-                label: '当前歌词大小',
+                label: '当前字幕大小',
                 value: settings.fullActiveFontSize,
                 min: 14,
                 max: 32,
@@ -80,7 +80,7 @@ class PlayerLyricStyleScreen extends ConsumerWidget {
               ),
               _buildSlider(
                 context,
-                label: '其他歌词大小',
+                label: '其他字幕大小',
                 value: settings.fullInactiveFontSize,
                 min: 12,
                 max: 28,

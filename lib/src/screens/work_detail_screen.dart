@@ -677,7 +677,8 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                     },
                   ),
                 // 字幕标签 - 浮动在右下角
-                if (work.hasSubtitle == true)
+                if (ref.watch(workDetailDisplayProvider).showSubtitleTag &&
+                    work.hasSubtitle == true)
                   Positioned(
                     right: 12,
                     bottom: 12,

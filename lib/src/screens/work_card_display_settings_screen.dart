@@ -90,6 +90,17 @@ class WorkCardDisplaySettingsScreen extends ConsumerWidget {
                   value: settings.showCircle,
                   onChanged: (_) => notifier.toggleCircle(),
                 ),
+                Divider(color: Theme.of(context).colorScheme.outlineVariant),
+                SwitchListTile(
+                  secondary: Icon(
+                    Icons.closed_caption,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  title: const Text('字幕标签'),
+                  subtitle: const Text('显示作品卡片上的字幕标签'),
+                  value: settings.showSubtitleTag,
+                  onChanged: (_) => notifier.toggleSubtitleTag(),
+                ),
               ],
             ),
           ),

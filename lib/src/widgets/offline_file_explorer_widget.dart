@@ -96,7 +96,7 @@ class _OfflineFileExplorerWidgetState
 
       // 递归检查并过滤本地存在的文件
       _localFiles = await _filterLocalFiles(widget.fileTree!, workDir.path, '');
-      // 更新全局文件列表供歌词自动加载使用
+      // 更新全局文件列表供字幕自动加载使用
       _fileListController.updateFiles(List<dynamic>.from(_localFiles));
 
       // 检查字幕库中的匹配项

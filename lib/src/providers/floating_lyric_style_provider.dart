@@ -5,7 +5,7 @@ import '../services/floating_lyric_service.dart';
 import '../utils/theme.dart';
 import 'theme_provider.dart';
 
-/// 悬浮歌词样式设置
+/// 悬浮字幕样式设置
 class FloatingLyricStyle {
   final double fontSize; // 字体大小 (10-28)
   final double opacity; // 背景不透明度 (0.0-1.0)
@@ -86,7 +86,7 @@ class FloatingLyricStyle {
   }
 }
 
-/// 悬浮歌词样式 Provider
+/// 悬浮字幕样式 Provider
 final floatingLyricStyleProvider =
     StateNotifierProvider<FloatingLyricStyleNotifier, FloatingLyricStyle>(
         (ref) {
@@ -276,14 +276,14 @@ class FloatingLyricStyleNotifier extends StateNotifier<FloatingLyricStyle>
       textColor: colorScheme.onPrimary,
       backgroundColor: colorScheme.primary,
     );
-    
+
     await _save(saveColors: false);
-    
+
     // 清除颜色设置，使其跟随主题
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('${_keyPrefix}textColor');
     await prefs.remove('${_keyPrefix}backgroundColor');
-    
+
     _applyStyle();
   }
 

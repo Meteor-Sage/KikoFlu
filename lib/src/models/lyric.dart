@@ -154,7 +154,7 @@ class LyricParser {
     final List<LyricLine> finalLyrics = [];
 
     for (int i = 0; i < lyrics.length - 1; i++) {
-      // 当前歌词的结束时间直接设置为下一行的开始时间
+      // 当前字幕的结束时间直接设置为下一行的开始时间
       finalLyrics.add(LyricLine(
         startTime: lyrics[i].startTime,
         endTime: lyrics[i + 1].startTime,

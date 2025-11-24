@@ -9,6 +9,7 @@ class WorkCardDisplaySettings {
   final bool showReleaseDate;
   final bool showCircle;
   final bool showDuration;
+  final bool showSubtitleTag;
 
   const WorkCardDisplaySettings({
     this.showRating = true,
@@ -17,6 +18,7 @@ class WorkCardDisplaySettings {
     this.showReleaseDate = true,
     this.showCircle = true,
     this.showDuration = false,
+    this.showSubtitleTag = true,
   });
 
   WorkCardDisplaySettings copyWith({
@@ -26,6 +28,7 @@ class WorkCardDisplaySettings {
     bool? showReleaseDate,
     bool? showCircle,
     bool? showDuration,
+    bool? showSubtitleTag,
   }) {
     return WorkCardDisplaySettings(
       showRating: showRating ?? this.showRating,
@@ -34,6 +37,7 @@ class WorkCardDisplaySettings {
       showReleaseDate: showReleaseDate ?? this.showReleaseDate,
       showCircle: showCircle ?? this.showCircle,
       showDuration: showDuration ?? this.showDuration,
+      showSubtitleTag: showSubtitleTag ?? this.showSubtitleTag,
     );
   }
 }
@@ -47,6 +51,7 @@ class WorkCardDisplayNotifier extends StateNotifier<WorkCardDisplaySettings> {
   static const String _keyReleaseDate = '${_keyPrefix}release_date';
   static const String _keyCircle = '${_keyPrefix}circle';
   static const String _keyDuration = '${_keyPrefix}duration';
+  static const String _keySubtitleTag = '${_keyPrefix}subtitle_tag';
 
   WorkCardDisplayNotifier() : super(const WorkCardDisplaySettings()) {
     _loadSettings();
@@ -62,6 +67,7 @@ class WorkCardDisplayNotifier extends StateNotifier<WorkCardDisplaySettings> {
         showReleaseDate: prefs.getBool(_keyReleaseDate) ?? true,
         showCircle: prefs.getBool(_keyCircle) ?? true,
         showDuration: prefs.getBool(_keyDuration) ?? false,
+        showSubtitleTag: prefs.getBool(_keySubtitleTag) ?? true,
       );
     } catch (e) {
       // 加载失败，使用默认值
@@ -98,6 +104,11 @@ class WorkCardDisplayNotifier extends StateNotifier<WorkCardDisplaySettings> {
     await _saveSettings();
   }
 
+  Future<void> toggleSubtitleTag() async {
+    state = state.copyWith(showSubtitleTag: !state.showSubtitleTag);
+    await _saveSettings();
+  }
+
   Future<void> _saveSettings() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -107,6 +118,7 @@ class WorkCardDisplayNotifier extends StateNotifier<WorkCardDisplaySettings> {
       await prefs.setBool(_keyReleaseDate, state.showReleaseDate);
       await prefs.setBool(_keyCircle, state.showCircle);
       await prefs.setBool(_keyDuration, state.showDuration);
+      await prefs.setBool(_keySubtitleTag, state.showSubtitleTag);
     } catch (e) {
       // 保存失败时静默处理
     }

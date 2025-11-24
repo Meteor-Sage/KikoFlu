@@ -33,7 +33,7 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
     final authState = ref.watch(authProvider);
     final isMiniPlayerVisible = ref.watch(miniPlayerVisibilityProvider);
 
-    // 启用自动歌词加载器
+    // 启用自动字幕加载器
     ref.watch(lyricAutoLoaderProvider);
 
     return currentTrack.when(
