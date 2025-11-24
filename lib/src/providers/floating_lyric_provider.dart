@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
+import 'dart:io';
 import '../services/floating_lyric_service.dart';
 import '../services/audio_player_service.dart';
 import '../models/lyric.dart';
@@ -102,11 +103,10 @@ class FloatingLyricEnabledNotifier extends StateNotifier<bool> {
 
     await FloatingLyricService.instance.show('♪ - ♪', style: styleMap);
 
-    // 移除显式的 applyStyle 调用，因为 show 方法已经传递了样式参数
-    // 且立即调用可能会因为窗口未完全初始化导致通信失败
-
-    // 给予窗口一点初始化时间，避免立即发送消息导致 CHANNEL_UNREGISTERED
-    await Future.delayed(const Duration(milliseconds: 500));
+    // Windows 平台需要给予窗口一点初始化时间，避免立即发送消息导致 CHANNEL_UNREGISTERED
+    if (Platform.isWindows) {
+      await Future.delayed(const Duration(milliseconds: 500));
+    }
 
     // 再次应用样式。
     // 这样做有两个目的：
