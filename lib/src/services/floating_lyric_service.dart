@@ -12,7 +12,7 @@ class FloatingLyricService {
   static FloatingLyricService? _instance;
   String? _windowId;
   String? _lastText;
-  
+
   final _onCloseController = StreamController<void>.broadcast();
   Stream<void> get onClose => _onCloseController.stream;
 
@@ -158,8 +158,10 @@ class FloatingLyricService {
           return true;
         } catch (e) {
           print('[FloatingLyric] Windows更新文本失败: $e');
-          // Do not reset _windowId here, as failure might be temporary (e.g. window initializing)
-          // If window is truly closed, hide() will handle the cleanup when user toggles off.
+          // 如果是通道未注册（通常意味着窗口已关闭或未初始化），重置 ID
+          if (e.toString().contains('CHANNEL_UNREGISTERED')) {
+            _windowId = null;
+          }
           return false;
         }
       }
@@ -246,6 +248,9 @@ class FloatingLyricService {
           return true;
         } catch (e) {
           print('[FloatingLyric] Windows更新样式失败: $e');
+          if (e.toString().contains('CHANNEL_UNREGISTERED')) {
+            _windowId = null;
+          }
           return false;
         }
       }

@@ -101,8 +101,19 @@ class FloatingLyricEnabledNotifier extends StateNotifier<bool> {
     };
 
     await FloatingLyricService.instance.show('♪ - ♪', style: styleMap);
-    // 应用当前样式 (Keep this for Android or if window was already open)
+
+    // 移除显式的 applyStyle 调用，因为 show 方法已经传递了样式参数
+    // 且立即调用可能会因为窗口未完全初始化导致通信失败
+
+    // 给予窗口一点初始化时间，避免立即发送消息导致 CHANNEL_UNREGISTERED
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    // 再次应用样式。
+    // 这样做有两个目的：
+    // 1. 如果上面的 show 使用的是默认样式（因为 Provider 还没加载完），此时 Provider 应该加载完了，再次应用可以修正样式。
+    // 2. 如果 Provider 在 show 执行期间加载完成并尝试 updateStyle 但失败了（因为窗口还没创建好），这里可以补救。
     ref.read(floatingLyricStyleProvider.notifier).applyStyle();
+
     // 启动后台更新
     _startBackgroundUpdate();
   }
