@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
@@ -38,7 +37,8 @@ class FloatingLyricEnabledNotifier extends StateNotifier<bool> {
   }
 
   void _listenToCloseEvent() {
-    _closeSubscription = FloatingLyricService.instance.onClose.listen((_) async {
+    _closeSubscription =
+        FloatingLyricService.instance.onClose.listen((_) async {
       if (state) {
         state = false;
         _stopBackgroundUpdate();
@@ -88,32 +88,16 @@ class FloatingLyricEnabledNotifier extends StateNotifier<bool> {
   }
 
   Future<void> _showFloatingLyric() async {
-    // 直接从 SharedPreferences 读取样式，确保在 Provider 未加载完成时也能获取正确样式
-    final prefs = await SharedPreferences.getInstance();
-    const keyPrefix = 'floating_lyric_style_';
-
-    final fontSize = prefs.getDouble('${keyPrefix}fontSize') ?? 14.0;
-    final opacity = prefs.getDouble('${keyPrefix}opacity') ?? 0.95;
-    final textColorInt =
-        prefs.getInt('${keyPrefix}textColor') ?? Colors.white.value;
-    final backgroundColorInt = prefs.getInt('${keyPrefix}backgroundColor') ??
-        const Color(0xFF000000).value;
-    final cornerRadius = prefs.getDouble('${keyPrefix}cornerRadius') ?? 16.0;
-    final paddingHorizontal =
-        prefs.getDouble('${keyPrefix}paddingHorizontal') ?? 20.0;
-    final paddingVertical =
-        prefs.getDouble('${keyPrefix}paddingVertical') ?? 10.0;
-
-    final textColor = Color(textColorInt);
-    final backgroundColor = Color(backgroundColorInt);
+    // 使用 Provider 中的样式，确保与当前设置一致
+    final style = ref.read(floatingLyricStyleProvider);
 
     final styleMap = {
-      'fontSize': fontSize,
-      'textColor': textColor.value,
-      'backgroundColor': backgroundColor.withOpacity(opacity).value,
-      'cornerRadius': cornerRadius,
-      'paddingHorizontal': paddingHorizontal,
-      'paddingVertical': paddingVertical,
+      'fontSize': style.fontSize,
+      'textColor': style.textColorArgb,
+      'backgroundColor': style.backgroundColorArgb,
+      'cornerRadius': style.cornerRadius,
+      'paddingHorizontal': style.paddingHorizontal,
+      'paddingVertical': style.paddingVertical,
     };
 
     await FloatingLyricService.instance.show('♪ - ♪', style: styleMap);

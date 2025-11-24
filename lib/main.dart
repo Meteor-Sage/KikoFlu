@@ -17,6 +17,7 @@ import 'src/services/storage_service.dart';
 import 'src/services/account_database.dart';
 import 'src/services/cache_service.dart';
 import 'src/services/download_service.dart';
+import 'src/services/floating_lyric_service.dart';
 import 'src/providers/audio_provider.dart';
 import 'src/providers/auth_provider.dart';
 import 'src/providers/theme_provider.dart';
@@ -113,10 +114,13 @@ class KikoeruApp extends ConsumerStatefulWidget {
   ConsumerState<KikoeruApp> createState() => _KikoeruAppState();
 }
 
-class _KikoeruAppState extends ConsumerState<KikoeruApp> {
+class _KikoeruAppState extends ConsumerState<KikoeruApp> with WindowListener {
   @override
   void initState() {
     super.initState();
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      windowManager.addListener(this);
+    }
     // Initialize audio and video services
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(audioPlayerControllerProvider.notifier).initialize();
@@ -124,6 +128,23 @@ class _KikoeruAppState extends ConsumerState<KikoeruApp> {
       // Silent update check on startup
       _checkForUpdates();
     });
+  }
+
+  @override
+  void dispose() {
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      windowManager.removeListener(this);
+    }
+    super.dispose();
+  }
+
+  @override
+  void onWindowClose() async {
+    if (Platform.isWindows) {
+      // 关闭主窗口时，同时关闭悬浮歌词窗口
+      await FloatingLyricService.instance.hide();
+    }
+    super.onWindowClose();
   }
 
   /// Silently check for updates on startup
