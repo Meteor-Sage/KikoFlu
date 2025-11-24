@@ -734,41 +734,127 @@ class _OfflineFileExplorerWidgetState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => ResponsiveAlertDialog(
-        title: const Text('加载字幕'),
+        title: Row(
+          children: [
+            Icon(
+              Icons.subtitles,
+              color: Theme.of(context).colorScheme.primary,
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            const Text('加载字幕'),
+          ],
+        ),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('确定要将以下文件加载为当前音频的字幕吗？'),
-              const SizedBox(height: 12),
+              Text(
+                '确定要将以下文件加载为当前音频的字幕吗？',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 16),
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(4),
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                    width: 1,
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('字幕文件：',
-                        style:
-                            TextStyle(fontSize: 12, color: Colors.grey[600])),
-                    Text(title,
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.closed_caption,
+                          size: 16,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '字幕文件',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 8),
-                    Text('当前音频：',
-                        style:
-                            TextStyle(fontSize: 12, color: Colors.grey[600])),
-                    Text(currentTrack.title,
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.music_note,
+                          size: 16,
+                          color: Theme.of(context).colorScheme.secondary,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '当前音频',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.secondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      currentTrack.title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
                   ],
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                '注意：切换到其他音频时，字幕将自动恢复为默认匹配方式。',
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .secondaryContainer
+                      .withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.onSecondaryContainer,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '切换到其他音频时,字幕将自动恢复为默认匹配方式',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSecondaryContainer,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

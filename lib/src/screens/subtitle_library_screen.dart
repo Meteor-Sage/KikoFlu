@@ -491,14 +491,19 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
                                   Expanded(
                                     child: Text.rich(
                                       TextSpan(
-                                        style: Theme.of(context).textTheme.bodyMedium,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium,
                                         children: [
                                           const TextSpan(text: '在'),
                                           const TextSpan(
                                             text: '<已解析>',
-                                            style: TextStyle(fontWeight: FontWeight.bold),
+                                            style: TextStyle(
+                                                fontWeight: FontWeight.bold),
                                           ),
-                                          const TextSpan(text: '文件夹下查找对应作品\n支持文件夹格式：RJ123456'),
+                                          const TextSpan(
+                                              text:
+                                                  '文件夹下查找对应作品\n支持文件夹格式：RJ123456'),
                                         ],
                                       ),
                                     ),
@@ -517,12 +522,15 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
                                   Expanded(
                                     child: Text.rich(
                                       TextSpan(
-                                        style: Theme.of(context).textTheme.bodyMedium,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium,
                                         children: [
                                           const TextSpan(text: '在'),
                                           const TextSpan(
                                             text: '<已保存>',
-                                            style: TextStyle(fontWeight: FontWeight.bold),
+                                            style: TextStyle(
+                                                fontWeight: FontWeight.bold),
                                           ),
                                           const TextSpan(text: '文件夹下查找单个字幕文件'),
                                         ],
@@ -611,14 +619,19 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
                                   Expanded(
                                     child: Text.rich(
                                       TextSpan(
-                                        style: Theme.of(context).textTheme.bodyMedium,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium,
                                         children: [
                                           const TextSpan(text: '识别到的作品会被添加绿色'),
                                           WidgetSpan(
-                                            alignment: PlaceholderAlignment.middle,
+                                            alignment:
+                                                PlaceholderAlignment.middle,
                                             child: Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                  horizontal: 4, vertical: 1),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 4,
+                                                      vertical: 1),
                                               decoration: BoxDecoration(
                                                 color: Colors.white
                                                     .withOpacity(0.9),
@@ -632,9 +645,11 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
                                               ),
                                             ),
                                           ),
-                                          const TextSpan(text: '标签 ，音频文件图标也会增加 '),
+                                          const TextSpan(
+                                              text: '标签 ，音频文件图标也会增加 '),
                                           WidgetSpan(
-                                            alignment: PlaceholderAlignment.middle,
+                                            alignment:
+                                                PlaceholderAlignment.middle,
                                             child: SizedBox(
                                               width: 24,
                                               height: 24,
@@ -672,7 +687,7 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
                                   ),
                                 ],
                               ),
-                                                            Row(
+                              Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
@@ -983,59 +998,126 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => ResponsiveAlertDialog(
-        title: const Text('加载字幕'),
+        title: Row(
+          children: [
+            Icon(
+              Icons.subtitles,
+              color: Theme.of(context).colorScheme.primary,
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            const Text('加载字幕'),
+          ],
+        ),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('确定要将以下文件加载为当前音频的字幕吗？'),
-              const SizedBox(height: 12),
+              Text(
+                '确定要将以下文件加载为当前音频的字幕吗？',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 16),
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(4),
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                    width: 1,
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '字幕文件：',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.closed_caption,
+                          size: 16,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '字幕文件',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ],
                     ),
+                    const SizedBox(height: 8),
                     Text(
                       title,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
+                        fontSize: 14,
                       ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.music_note,
+                          size: 16,
+                          color: Theme.of(context).colorScheme.secondary,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '当前音频',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.secondary,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      '当前音频：',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
-                    ),
                     Text(
                       currentTrack.title,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
+                        fontSize: 14,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                '注意：切换到其他音频时，字幕将自动恢复为默认匹配方式。',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .secondaryContainer
+                      .withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.onSecondaryContainer,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '切换到其他音频时,字幕将自动恢复为默认匹配方式',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSecondaryContainer,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -1176,7 +1258,9 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
 
       if (isFolder) {
         final List<Map<String, dynamic>> children =
-            (file['children'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
+            (file['children'] as List<dynamic>?)
+                    ?.cast<Map<String, dynamic>>() ??
+                [];
         final List<Map<String, dynamic>> filteredChildren =
             _filterFiles(children, query);
 
@@ -1197,7 +1281,8 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
     return filtered;
   }
 
-  List<Widget> _buildFileTree(List<Map<String, dynamic>> items, String parentPath,
+  List<Widget> _buildFileTree(
+      List<Map<String, dynamic>> items, String parentPath,
       {int level = 0, bool isRecursive = false}) {
     final children = <Widget>[];
 
@@ -1370,19 +1455,23 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
           children: [
             // 顶部工具栏
             _buildTopBar(),
-            
+
             // 固定位置的返回上一级按钮
-            if (_currentPath != _rootPath && _currentPath.isNotEmpty && !_isSearching)
+            if (_currentPath != _rootPath &&
+                _currentPath.isNotEmpty &&
+                !_isSearching)
               Material(
                 color: Theme.of(context).colorScheme.surface,
                 child: InkWell(
                   onTap: _navigateUp,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
                       border: Border(
                         bottom: BorderSide(
-                          color: Theme.of(context).dividerColor.withOpacity(0.5),
+                          color:
+                              Theme.of(context).dividerColor.withOpacity(0.5),
                         ),
                       ),
                     ),
@@ -1534,7 +1623,7 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
     final parent = Directory(_currentPath).parent;
     // Ensure we don't go above root
     if (parent.path.length < _rootPath!.length) return;
-    
+
     setState(() {
       _currentPath = parent.path;
       _selectedPaths.clear();
@@ -1545,7 +1634,7 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
   List<Map<String, dynamic>> _getCurrentFiles() {
     if (_files.isEmpty) return [];
     if (_currentPath == _rootPath || _currentPath.isEmpty) return _files;
-    
+
     return _findChildren(_files, _currentPath) ?? [];
   }
 
@@ -1576,7 +1665,7 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
 
     // 构建面包屑导航
     List<Widget> breadcrumbs = [];
-    
+
     // 根节点
     breadcrumbs.add(
       InkWell(
@@ -1598,22 +1687,24 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
       ),
     );
 
-    if (_currentPath.isNotEmpty && _rootPath != null && _currentPath != _rootPath) {
+    if (_currentPath.isNotEmpty &&
+        _rootPath != null &&
+        _currentPath != _rootPath) {
       final relative = _currentPath.substring(_rootPath!.length);
       if (relative.isNotEmpty) {
         var cleanRelative = relative;
         if (cleanRelative.startsWith(Platform.pathSeparator)) {
           cleanRelative = cleanRelative.substring(1);
         }
-        
+
         final parts = cleanRelative.split(Platform.pathSeparator);
         String currentBuildPath = _rootPath!;
-        
+
         for (var i = 0; i < parts.length; i++) {
           final part = parts[i];
           currentBuildPath = '$currentBuildPath${Platform.pathSeparator}$part';
           final targetPath = currentBuildPath; // Capture for closure
-          
+
           breadcrumbs.add(
             Text(
               ' > ',
@@ -1623,10 +1714,10 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
               ),
             ),
           );
-          
+
           // 最后一项不可点击（当前位置）
           if (i == parts.length - 1) {
-             breadcrumbs.add(
+            breadcrumbs.add(
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                 child: Text(
@@ -1645,7 +1736,8 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
                 onTap: () => _navigateTo(targetPath),
                 borderRadius: BorderRadius.circular(4),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                   child: Text(
                     part,
                     style: TextStyle(
@@ -1805,14 +1897,16 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
                     },
                     tooltip: '搜索',
                     padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    constraints:
+                        const BoxConstraints(minWidth: 36, minHeight: 36),
                   ),
                   IconButton(
                     icon: const Icon(Icons.checklist),
                     onPressed: _toggleSelectionMode,
                     tooltip: '选择',
                     padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    constraints:
+                        const BoxConstraints(minWidth: 36, minHeight: 36),
                   ),
                   IconButton(
                     icon: Icon(
@@ -1828,9 +1922,12 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
                   ),
                   if (_stats != null)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
@@ -1844,19 +1941,18 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
                 ],
               ),
             ),
-          
           if (!_isSearching && !_isSelectionMode)
             Padding(
               padding: EdgeInsets.only(
-                left: horizontalPadding, 
+                left: horizontalPadding,
                 right: horizontalPadding,
                 top: 8,
               ),
               child: Row(
                 children: [
                   Icon(
-                    Icons.folder_open, 
-                    size: 16, 
+                    Icons.folder_open,
+                    size: 16,
                     color: Theme.of(context).colorScheme.primary,
                   ),
                   const SizedBox(width: 8),
