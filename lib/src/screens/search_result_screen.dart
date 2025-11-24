@@ -66,7 +66,8 @@ class _SearchResultContent extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<_SearchResultContent> createState() => _SearchResultContentState();
+  ConsumerState<_SearchResultContent> createState() =>
+      _SearchResultContentState();
 }
 
 class _SearchResultContentState extends ConsumerState<_SearchResultContent> {

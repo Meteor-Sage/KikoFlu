@@ -30,12 +30,14 @@ class WorksGridView extends StatelessWidget {
       case LayoutType.bigGrid:
         return _buildGridView(
           context,
-          crossAxisCount: ResponsiveGridHelper.getBigGridCrossAxisCount(context),
+          crossAxisCount:
+              ResponsiveGridHelper.getBigGridCrossAxisCount(context),
         );
       case LayoutType.smallGrid:
         return _buildGridView(
           context,
-          crossAxisCount: ResponsiveGridHelper.getSmallGridCrossAxisCount(context),
+          crossAxisCount:
+              ResponsiveGridHelper.getSmallGridCrossAxisCount(context),
         );
       case LayoutType.list:
         return _buildListView(context);
