@@ -1044,31 +1044,35 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // 封面图
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: CachedNetworkImage(
-                imageUrl: '$host/api/cover/${work.id}?type=main&token=$token',
-                width: 56,
-                height: 56,
-                fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
-                  color: colorScheme.surfaceContainerHighest,
-                  child: Center(
-                    child: Icon(
-                      Icons.image,
-                      color: colorScheme.onSurfaceVariant,
-                      size: 24,
+            // 封面图 - 使用 Hero 动画和统一的图片源
+            Hero(
+              tag: 'work_cover_${work.id}',
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: CachedNetworkImage(
+                  imageUrl: work.getCoverImageUrl(host, token: token),
+                  cacheKey: 'work_cover_${work.id}',
+                  width: 56,
+                  height: 56,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(
+                    color: colorScheme.surfaceContainerHighest,
+                    child: Center(
+                      child: Icon(
+                        Icons.image,
+                        color: colorScheme.onSurfaceVariant,
+                        size: 24,
+                      ),
                     ),
                   ),
-                ),
-                errorWidget: (context, url, error) => Container(
-                  color: colorScheme.surfaceContainerHighest,
-                  child: Center(
-                    child: Icon(
-                      Icons.broken_image,
-                      color: colorScheme.onSurfaceVariant,
-                      size: 24,
+                  errorWidget: (context, url, error) => Container(
+                    color: colorScheme.surfaceContainerHighest,
+                    child: Center(
+                      child: Icon(
+                        Icons.broken_image,
+                        color: colorScheme.onSurfaceVariant,
+                        size: 24,
+                      ),
                     ),
                   ),
                 ),
