@@ -168,7 +168,7 @@ jobs:
           hdiutil create -volname "KikoFlu" \
             -srcfolder build/dmg \
             -ov -format UDZO \
-            KikoFlu-macOS.dmg
+            KikoFlu-macos.dmg
             
       - name: Upload macOS Artifact
         uses: actions/upload-artifact@v4

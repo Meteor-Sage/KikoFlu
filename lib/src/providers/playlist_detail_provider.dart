@@ -3,6 +3,7 @@ import '../models/playlist.dart';
 import '../models/work.dart';
 import '../services/kikoeru_api_service.dart' hide kikoeruApiServiceProvider;
 import 'auth_provider.dart' show kikoeruApiServiceProvider;
+import 'settings_provider.dart';
 
 /// 播放列表详情状态
 class PlaylistDetailState {
@@ -54,8 +55,10 @@ class PlaylistDetailNotifier extends StateNotifier<PlaylistDetailState> {
   final KikoeruApiService _apiService;
   final String playlistId;
 
-  PlaylistDetailNotifier(this._apiService, this.playlistId)
-      : super(const PlaylistDetailState());
+  PlaylistDetailNotifier(this._apiService, this.playlistId, int pageSize)
+      : super(PlaylistDetailState(pageSize: pageSize)) {
+    load();
+  }
 
   /// 加载播放列表元数据和作品
   Future<void> load({bool refresh = false}) async {
@@ -270,6 +273,7 @@ final playlistDetailProvider = StateNotifierProvider.family<
     PlaylistDetailNotifier, PlaylistDetailState, String>(
   (ref, playlistId) {
     final apiService = ref.watch(kikoeruApiServiceProvider);
-    return PlaylistDetailNotifier(apiService, playlistId);
+    final pageSize = ref.watch(pageSizeProvider);
+    return PlaylistDetailNotifier(apiService, playlistId, pageSize);
   },
 );
