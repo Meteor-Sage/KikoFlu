@@ -15,7 +15,6 @@ class KikoeruApiService {
   int _subtitle = 0; // 1: 带字幕, 0: 不限制 (默认显示所有作品)
   String _order = 'create_date';
   String _sort = 'desc'; // 默认降序排列
-  int _seed = 35; // 随机种子
 
   KikoeruApiService() {
     _dio = Dio();
@@ -118,9 +117,7 @@ class KikoeruApiService {
     _subtitle = subtitle;
   }
 
-  void setSeed(int seed) {
-    _seed = seed;
-  }
+
 
   // Check network connectivity
   Future<bool> isConnected() async {

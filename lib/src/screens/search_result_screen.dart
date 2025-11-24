@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/sort_options.dart';
 import '../providers/search_result_provider.dart';
-import '../services/kikoeru_api_service.dart' hide kikoeruApiServiceProvider;
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
 import '../widgets/works_grid_view.dart';

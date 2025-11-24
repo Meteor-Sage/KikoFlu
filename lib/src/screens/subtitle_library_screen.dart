@@ -26,7 +26,6 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   LibraryStats? _stats;
-  final Set<String> _expandedFolders = {};
   bool _isSelectionMode = false;
   final Set<String> _selectedPaths = {}; // 选中的文件/文件夹路径
 
@@ -1162,16 +1161,6 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
         );
       }
     }
-  }
-
-  void _toggleFolder(String path) {
-    setState(() {
-      if (_expandedFolders.contains(path)) {
-        _expandedFolders.remove(path);
-      } else {
-        _expandedFolders.add(path);
-      }
-    });
   }
 
   List<Map<String, dynamic>> _filterFiles(
