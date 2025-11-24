@@ -391,7 +391,7 @@ class _PlayerControlsWidgetState extends ConsumerState<PlayerControlsWidget> {
                 Icons.picture_in_picture_alt,
                 color: isEnabled ? Theme.of(context).colorScheme.primary : null,
               ),
-              title: const Text('悬浮歌词'),
+              title: const Text('悬浮字幕'),
               trailing: Transform.scale(
                 scale: 0.8,
                 alignment: Alignment.centerRight,

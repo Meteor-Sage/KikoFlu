@@ -6,7 +6,7 @@ import '../../providers/audio_provider.dart';
 import '../../providers/lyric_provider.dart';
 import '../../providers/player_lyric_style_provider.dart';
 
-/// 小歌词显示组件（在封面下方显示当前歌词）
+/// 小字幕显示组件（在封面下方显示当前字幕）
 class LyricDisplay extends ConsumerWidget {
   final String? albumName;
 
@@ -18,7 +18,7 @@ class LyricDisplay extends ConsumerWidget {
     final lyricState = ref.watch(lyricControllerProvider);
     final lyricSettings = ref.watch(playerLyricSettingsProvider);
 
-    // 如果有歌词，显示歌词
+    // 如果有字幕，显示字幕
     if (lyricState.lyrics.isNotEmpty) {
       return Container(
         constraints: const BoxConstraints(
@@ -45,7 +45,7 @@ class LyricDisplay extends ConsumerWidget {
       );
     }
 
-    // 没有歌词时显示专辑名
+    // 没有字幕时显示专辑名
     if (albumName != null) {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
@@ -65,7 +65,7 @@ class LyricDisplay extends ConsumerWidget {
   }
 }
 
-/// 全屏歌词显示组件（横屏或竖屏全屏模式）
+/// 全屏字幕显示组件（横屏或竖屏全屏模式）
 class FullLyricDisplay extends ConsumerStatefulWidget {
   final Duration? seekingPosition;
   final bool isPortrait;
@@ -109,7 +109,7 @@ class _FullLyricDisplayState extends ConsumerState<FullLyricDisplay> {
     return -1;
   }
 
-  /// 估算单个歌词 item 的高度
+  /// 估算单个字幕 item 的高度
   double _estimateItemHeight(String text, BuildContext context, bool isActive) {
     final lyricSettings = ref.read(playerLyricSettingsProvider);
     const double verticalPadding = 24.0;
@@ -234,7 +234,7 @@ class _FullLyricDisplayState extends ConsumerState<FullLyricDisplay> {
 
     return position.when(
       data: (pos) {
-        // 使用调整后的歌词
+        // 使用调整后的字幕
         final adjustedLyrics = lyricState.adjustedLyrics;
         final displayPosition = widget.seekingPosition ?? pos;
         final currentIndex =

@@ -563,16 +563,16 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
     final hash = audioFile['hash'];
     final title = audioFile['title'] ?? audioFile['name'] ?? '未知';
 
-    // 获取当前作品的完整文件树（用于歌词查找）
+    // 获取当前作品的完整文件树（用于字幕查找）
     try {
       final apiService = ref.read(kikoeruApiServiceProvider);
       final allFiles = await apiService.getWorkTracks(widget.work.id);
 
-      // 只在播放音频时更新全局文件列表，这样歌词才能正确关联
+      // 只在播放音频时更新全局文件列表，这样字幕才能正确关联
       ref.read(fileListControllerProvider.notifier).updateFiles(allFiles);
     } catch (e) {
       print('获取完整文件树失败 $e');
-      // 即使获取失败也继续播放，只是可能没有歌词
+      // 即使获取失败也继续播放，只是可能没有字幕
     }
 
     // 获取同一目录下的所有音频文件（不递归子文件夹）
@@ -694,7 +694,7 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
           startIndex: startIndex,
         );
 
-    // 注意：歌词会通过 lyricAutoLoaderProvider 自动加载
+    // 注意：字幕会通过 lyricAutoLoaderProvider 自动加载
     // 不需要手动调用 loadLyricForTrack
 
     // 显示提示

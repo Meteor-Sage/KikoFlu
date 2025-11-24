@@ -141,7 +141,7 @@ class _KikoeruAppState extends ConsumerState<KikoeruApp> with WindowListener {
   @override
   void onWindowClose() async {
     if (Platform.isWindows) {
-      // 关闭主窗口时，同时关闭悬浮歌词窗口
+      // 关闭主窗口时，同时关闭悬浮字幕窗口
       await FloatingLyricService.instance.hide();
     }
     super.onWindowClose();

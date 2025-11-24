@@ -22,7 +22,7 @@ class _LyricPlayerScreenState extends ConsumerState<LyricPlayerScreen> {
   @override
   void initState() {
     super.initState();
-    // 界面加载完成后，滚动到当前歌词位置
+    // 界面加载完成后，滚动到当前字幕位置
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _performInitialScroll();
     });
@@ -153,7 +153,7 @@ class _LyricPlayerScreenState extends ConsumerState<LyricPlayerScreen> {
     // 使用精确估算计算目标位置
     final targetOffset = _calculateOffsetToIndex(index, adjustedLyrics);
 
-    // 减去半个屏幕高度，让目标歌词居中
+    // 减去半个屏幕高度，让目标字幕居中
     final centeredOffset = targetOffset - screenHeight / 2;
 
     final clampedOffset = centeredOffset.clamp(
@@ -183,7 +183,7 @@ class _LyricPlayerScreenState extends ConsumerState<LyricPlayerScreen> {
     return -1;
   }
 
-  /// 估算单个歌词 item 的高度
+  /// 估算单个字幕 item 的高度
   double _estimateItemHeight(String text, bool isActive, bool isPlaceholder) {
     // 基础组件高度
     const double verticalPadding = 24.0; // Container padding: 12 * 2
@@ -244,7 +244,7 @@ class _LyricPlayerScreenState extends ConsumerState<LyricPlayerScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('歌词'),
+        title: const Text('字幕'),
         backgroundColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
@@ -278,7 +278,7 @@ class _LyricPlayerScreenState extends ConsumerState<LyricPlayerScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    '暂无歌词',
+                    '暂无字幕',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
@@ -290,11 +290,11 @@ class _LyricPlayerScreenState extends ConsumerState<LyricPlayerScreen> {
 
           return position.when(
             data: (pos) {
-              // 使用调整后的歌词
+              // 使用调整后的字幕
               final adjustedLyrics = lyricState.adjustedLyrics;
               final currentIndex = _getCurrentLyricIndex(pos, adjustedLyrics);
 
-              // 自动滚动到当前歌词
+              // 自动滚动到当前字幕
               if (currentIndex != _currentLyricIndex && currentIndex >= 0) {
                 _currentLyricIndex = currentIndex;
                 WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -326,7 +326,7 @@ class _LyricPlayerScreenState extends ConsumerState<LyricPlayerScreen> {
                       onTap: isPlaceholder
                           ? null
                           : () {
-                              // 点击歌词跳转到对应位置
+                              // 点击字幕跳转到对应位置
                               ref
                                   .read(audioPlayerControllerProvider.notifier)
                                   .seek(lyric.startTime);

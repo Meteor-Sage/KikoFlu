@@ -47,8 +47,8 @@ class UiSettingsScreen extends ConsumerWidget {
                 ListTile(
                   leading: Icon(Icons.lyrics,
                       color: Theme.of(context).colorScheme.primary),
-                  title: const Text('播放器歌词样式'),
-                  subtitle: const Text('自定义迷你播放器和全屏播放器的歌词样式'),
+                  title: const Text('播放器字幕样式'),
+                  subtitle: const Text('自定义迷你播放器和全屏播放器的字幕样式'),
                   trailing: const Icon(Icons.arrow_forward_ios),
                   onTap: () {
                     Navigator.of(context).push(

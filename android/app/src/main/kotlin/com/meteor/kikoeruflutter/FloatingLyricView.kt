@@ -12,7 +12,7 @@ import android.widget.FrameLayout
 import android.widget.TextView
 
 /**
- * 悬浮歌词视图
+ * 悬浮字幕视图
  * 美观、简洁、现代化的设计，支持拖动
  */
 class FloatingLyricView(

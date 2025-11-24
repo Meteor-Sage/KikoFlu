@@ -4,8 +4,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 
-/// 悬浮歌词服务
-/// 负责管理桌面悬浮窗显示和歌词更新
+/// 悬浮字幕服务
+/// 负责管理桌面悬浮窗显示和字幕更新
 class FloatingLyricService {
   static const _platform = MethodChannel('com.kikoeru.flutter/floating_lyric');
 

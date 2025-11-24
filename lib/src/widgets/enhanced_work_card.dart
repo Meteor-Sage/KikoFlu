@@ -151,8 +151,11 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                     child: _buildRjTag(),
                   ),
                   // 字幕标签 (左下角)
-                  if (widget.work.hasSubtitle == true ||
-                      ref.watch(subtitleLibraryProvider).contains(widget.work.id))
+                  if (displaySettings.showSubtitleTag &&
+                      (widget.work.hasSubtitle == true ||
+                          ref
+                              .watch(subtitleLibraryProvider)
+                              .contains(widget.work.id)))
                     Positioned(
                       bottom: 4,
                       left: 4,
@@ -233,8 +236,11 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                     child: _buildRjTag(),
                   ),
                   // 字幕标签 (左下角)
-                  if (widget.work.hasSubtitle == true ||
-                      ref.watch(subtitleLibraryProvider).contains(widget.work.id))
+                  if (displaySettings.showSubtitleTag &&
+                      (widget.work.hasSubtitle == true ||
+                          ref
+                              .watch(subtitleLibraryProvider)
+                              .contains(widget.work.id)))
                     Positioned(
                       bottom: 6,
                       left: 6,
@@ -332,12 +338,14 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                         ),
                         const SizedBox(width: 2),
                         Text(
-                          formatDuration(Duration(seconds: widget.work.duration!)),
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.blue[700],
-                                fontSize: bodyFontSize,
-                                fontWeight: FontWeight.w500,
-                              ),
+                          formatDuration(
+                              Duration(seconds: widget.work.duration!)),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Colors.blue[700],
+                                    fontSize: bodyFontSize,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                         ),
                       ],
                     ),
@@ -413,10 +421,11 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                           ),
                         ),
                         // 字幕标签 (左下角)
-                        if (widget.work.hasSubtitle == true ||
-                            ref
-                                .watch(subtitleLibraryProvider)
-                                .contains(widget.work.id))
+                        if (displaySettings.showSubtitleTag &&
+                            (widget.work.hasSubtitle == true ||
+                                ref
+                                    .watch(subtitleLibraryProvider)
+                                    .contains(widget.work.id)))
                           Positioned(
                             bottom: 2,
                             left: 2,
@@ -524,11 +533,13 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                         ),
                         const SizedBox(width: 2),
                         Text(
-                          formatDuration(Duration(seconds: widget.work.duration!)),
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.blue[700],
-                                fontWeight: FontWeight.w500,
-                              ),
+                          formatDuration(
+                              Duration(seconds: widget.work.duration!)),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Colors.blue[700],
+                                    fontWeight: FontWeight.w500,
+                                  ),
                         ),
                       ],
                       const Spacer(),
@@ -677,7 +688,9 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: isLocal ? Colors.green.withOpacity(0.9) : Colors.black.withOpacity(0.7),
+        color: isLocal
+            ? Colors.green.withOpacity(0.9)
+            : Colors.black.withOpacity(0.7),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Icon(

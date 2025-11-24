@@ -8,7 +8,7 @@ import '../models/lyric.dart';
 import 'lyric_provider.dart';
 import 'floating_lyric_style_provider.dart';
 
-/// 悬浮歌词开关状态
+/// 悬浮字幕开关状态
 /// 使用后台 Stream 监听机制自动更新，无需依赖 UI Provider
 final floatingLyricEnabledProvider =
     StateNotifierProvider<FloatingLyricEnabledNotifier, bool>((ref) {
@@ -123,10 +123,10 @@ class FloatingLyricEnabledNotifier extends StateNotifier<bool> {
     _stopBackgroundUpdate();
     print('[FloatingLyric] 启动后台更新监听');
 
-    // 确保歌词自动加载器始终激活（即使在后台）
+    // 确保字幕自动加载器始终激活（即使在后台）
     ref.read(lyricAutoLoaderProvider);
 
-    // 监听播放位置变化，每次变化都更新歌词
+    // 监听播放位置变化，每次变化都更新字幕
     _positionSubscription =
         AudioPlayerService.instance.positionStream.listen((_) {
       _updateLyricInBackground();
@@ -147,19 +147,19 @@ class FloatingLyricEnabledNotifier extends StateNotifier<bool> {
         _lastTrackId = track?.id;
         print('[FloatingLyric] ✓ 音轨切换确认: ${track?.title}');
         // 音轨切换时先显示"加载中"
-        FloatingLyricService.instance.updateText('♪ 加载歌词中 ♪');
+        FloatingLyricService.instance.updateText('♪ 加载字幕中 ♪');
 
-        // 触发歌词加载
+        // 触发字幕加载
         if (track != null) {
           final fileListState = ref.read(fileListControllerProvider);
           if (fileListState.files.isNotEmpty) {
-            print('[FloatingLyric] 主动触发歌词加载');
+            print('[FloatingLyric] 主动触发字幕加载');
             ref.read(lyricControllerProvider.notifier).loadLyricForTrack(
                   track,
                   fileListState.files,
                 );
           } else {
-            print('[FloatingLyric] 文件列表为空，无法加载歌词');
+            print('[FloatingLyric] 文件列表为空，无法加载字幕');
           }
         }
       } else {
@@ -167,18 +167,18 @@ class FloatingLyricEnabledNotifier extends StateNotifier<bool> {
       }
     });
 
-    // 监听歌词状态变化 - 当歌词加载完成或变化时更新
+    // 监听字幕状态变化 - 当字幕加载完成或变化时更新
     _lyricStateSubscription = ref.listen<LyricState>(
       lyricControllerProvider,
       (previous, next) {
-        // 当歌词加载完成（isLoading 从 true 变为 false）时更新
+        // 当字幕加载完成（isLoading 从 true 变为 false）时更新
         if (previous?.isLoading == true && next.isLoading == false) {
-          print('[FloatingLyric] 歌词加载完成，更新悬浮窗');
+          print('[FloatingLyric] 字幕加载完成，更新悬浮窗');
           _updateLyricInBackground();
         }
-        // 或者歌词内容发生变化时也更新
+        // 或者字幕内容发生变化时也更新
         else if (previous?.lyrics != next.lyrics && !next.isLoading) {
-          print('[FloatingLyric] 歌词内容变化，更新悬浮窗');
+          print('[FloatingLyric] 字幕内容变化，更新悬浮窗');
           _updateLyricInBackground();
         }
       },
@@ -197,7 +197,7 @@ class FloatingLyricEnabledNotifier extends StateNotifier<bool> {
     _lyricStateSubscription = null;
   }
 
-  /// 在后台更新歌词（不依赖 Provider watch）
+  /// 在后台更新字幕（不依赖 Provider watch）
   void _updateLyricInBackground() {
     final isPlaying = AudioPlayerService.instance.playing;
     final lyricState = ref.read(lyricControllerProvider);
@@ -207,7 +207,7 @@ class FloatingLyricEnabledNotifier extends StateNotifier<bool> {
     if (!isPlaying) {
       displayText = '♪ - ♪';
     } else if (lyricState.lyrics.isNotEmpty) {
-      // 使用调整后的歌词
+      // 使用调整后的字幕
       final adjustedLyrics = lyricState.adjustedLyrics;
       final currentLyric =
           LyricParser.getCurrentLyric(adjustedLyrics, currentPosition);
@@ -224,7 +224,7 @@ class FloatingLyricEnabledNotifier extends StateNotifier<bool> {
     FloatingLyricService.instance.updateText(displayText);
   }
 
-  /// 更新悬浮歌词文本
+  /// 更新悬浮字幕文本
   Future<void> updateText(String text) async {
     if (state) {
       await FloatingLyricService.instance.updateText(text);

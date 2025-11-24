@@ -17,7 +17,7 @@ import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 
 /**
- * 悬浮歌词插件
+ * 悬浮字幕插件
  * 负责管理悬浮窗的显示、隐藏和更新
  */
 class FloatingLyricPlugin(private val context: Context) : MethodCallHandler {

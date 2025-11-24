@@ -144,7 +144,7 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
 
-    // 启用自动歌词加载器
+    // 启用自动字幕加载器
     ref.watch(lyricAutoLoaderProvider);
 
     // 根据主题亮度设置状态栏图标颜色
@@ -524,7 +524,7 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
               ),
             ),
             const VerticalDivider(width: 1, thickness: 1),
-            // 右侧：歌词
+            // 右侧：字幕
             Expanded(
               flex: 3,
               child: Consumer(
@@ -547,7 +547,7 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            '暂无歌词',
+                            '暂无字幕',
                             style:
                                 Theme.of(context).textTheme.bodyLarge?.copyWith(
                                       color: Theme.of(context)
@@ -637,7 +637,7 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      '点击封面或标题可以进入歌词界面',
+                      '点击封面或标题可以进入字幕界面',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Theme.of(context)
                                 .colorScheme

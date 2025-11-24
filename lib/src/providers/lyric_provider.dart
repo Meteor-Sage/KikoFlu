@@ -10,7 +10,7 @@ import 'auth_provider.dart';
 import 'audio_provider.dart';
 import 'settings_provider.dart';
 
-// 歌词状态
+// 字幕状态
 class LyricState {
   final List<LyricLine> lyrics;
   final bool isLoading;
@@ -42,7 +42,7 @@ class LyricState {
     );
   }
 
-  /// 获取应用了时间轴偏移后的歌词列表
+  /// 获取应用了时间轴偏移后的字幕列表
   List<LyricLine> get adjustedLyrics {
     if (timelineOffset == Duration.zero) {
       return lyrics;
@@ -51,13 +51,13 @@ class LyricState {
   }
 }
 
-// 歌词控制器
+// 字幕控制器
 class LyricController extends StateNotifier<LyricState> {
   final Ref ref;
 
   LyricController(this.ref) : super(LyricState());
 
-  // 根据音频轨道查找并加载歌词
+  // 根据音频轨道查找并加载字幕
   Future<void> loadLyricForTrack(
       AudioTrack track, List<dynamic> allFiles) async {
     print(
@@ -82,7 +82,7 @@ class LyricController extends StateNotifier<LyricState> {
         }
       }
 
-      // 从完整文件树查找歌词文件
+      // 从完整文件树查找字幕文件
       final lyricFile = _findLyricFile(track, allFiles);
 
       if (lyricFile == null) {
@@ -97,13 +97,13 @@ class LyricController extends StateNotifier<LyricState> {
           }
         }
 
-        print('[Lyric] 未找到匹配歌词: track="${track.title}"');
+        print('[Lyric] 未找到匹配字幕: track="${track.title}"');
         state = LyricState(lyrics: [], isLoading: false);
         return;
       }
 
       print(
-          '[Lyric] 找到匹配歌词: title="${lyricFile['title']}", type="${lyricFile['type']}", hash=${lyricFile['hash']}');
+          '[Lyric] 找到匹配字幕: title="${lyricFile['title']}", type="${lyricFile['type']}", hash=${lyricFile['hash']}');
 
       // 获取认证信息
       final authState = ref.read(authProvider);
@@ -118,7 +118,7 @@ class LyricController extends StateNotifier<LyricState> {
         return;
       }
 
-      // 构建歌词 URL
+      // 构建字幕 URL
       String normalizedUrl = host;
       if (!host.startsWith('http://') && !host.startsWith('https://')) {
         normalizedUrl = 'https://$host';
@@ -135,11 +135,11 @@ class LyricController extends StateNotifier<LyricState> {
       );
 
       if (cachedContent != null) {
-        print('[Lyric] 从缓存加载歌词: $hash');
+        print('[Lyric] 从缓存加载字幕: $hash');
         content = cachedContent;
       } else {
         // 2. 缓存未命中，从网络下载
-        print('[Lyric] 从网络下载歌词: $hash');
+        print('[Lyric] 从网络下载字幕: $hash');
         final dio = Dio();
         final response = await dio.get(
           lyricUrl,
@@ -152,7 +152,7 @@ class LyricController extends StateNotifier<LyricState> {
         if (response.statusCode == 200) {
           content = response.data as String;
 
-          // 3. 缓存歌词内容
+          // 3. 缓存字幕内容
           await CacheService.cacheTextContent(
             workId: workId,
             hash: hash,
@@ -168,9 +168,9 @@ class LyricController extends StateNotifier<LyricState> {
         }
       }
 
-      // 4. 解析歌词
+      // 4. 解析字幕
       final lyrics = LyricParser.parse(content); // 自动检测格式
-      print('[Lyric] 解析完成: ${lyrics.length} 行歌词');
+      print('[Lyric] 解析完成: ${lyrics.length} 行字幕');
       state = LyricState(
         lyrics: lyrics,
         isLoading: false,
@@ -181,7 +181,7 @@ class LyricController extends StateNotifier<LyricState> {
       state = LyricState(
         lyrics: [],
         isLoading: false,
-        error: '加载歌词失败: $e',
+        error: '加载字幕失败: $e',
       );
     }
   }
@@ -277,12 +277,12 @@ class LyricController extends StateNotifier<LyricState> {
     return null;
   }
 
-  // 查找歌词文件
+  // 查找字幕文件
   dynamic _findLyricFile(AudioTrack track, List<dynamic> allFiles) {
     // 获取音频文件名
     final trackTitle = track.title;
 
-    // 递归搜索歌词文件
+    // 递归搜索字幕文件
     dynamic searchInFiles(List<dynamic> files) {
       for (final file in files) {
         final fileType = file['type'] ?? '';
@@ -306,7 +306,7 @@ class LyricController extends StateNotifier<LyricState> {
     return searchInFiles(allFiles);
   }
 
-  // 清空歌词
+  // 清空字幕
   void clearLyrics() {
     state = LyricState();
   }
@@ -383,7 +383,7 @@ class LyricController extends StateNotifier<LyricState> {
 
       final content = await file.readAsString();
 
-      // 解析歌词
+      // 解析字幕
       final lyrics = LyricParser.parse(content);
       state = LyricState(
         lyrics: lyrics,
@@ -422,7 +422,7 @@ class LyricController extends StateNotifier<LyricState> {
         return;
       }
 
-      // 构建歌词 URL
+      // 构建字幕 URL
       String normalizedUrl = host;
       if (!host.startsWith('http://') && !host.startsWith('https://')) {
         normalizedUrl = 'https://$host';
@@ -450,11 +450,11 @@ class LyricController extends StateNotifier<LyricState> {
           : null;
 
       if (cachedContent != null) {
-        print('[Lyric] 手动加载 - 从缓存加载歌词: $hash');
+        print('[Lyric] 手动加载 - 从缓存加载字幕: $hash');
         content = cachedContent;
       } else {
         // 2. 缓存未命中，从网络下载
-        print('[Lyric] 手动加载 - 从网络下载歌词: $hash');
+        print('[Lyric] 手动加载 - 从网络下载字幕: $hash');
         final dio = Dio();
         final response = await dio.get(
           lyricUrl,
@@ -467,7 +467,7 @@ class LyricController extends StateNotifier<LyricState> {
         if (response.statusCode == 200) {
           content = response.data as String;
 
-          // 3. 缓存歌词内容
+          // 3. 缓存字幕内容
           if (effectiveWorkId != null) {
             await CacheService.cacheTextContent(
               workId: effectiveWorkId,
@@ -485,7 +485,7 @@ class LyricController extends StateNotifier<LyricState> {
         }
       }
 
-      // 4. 解析歌词
+      // 4. 解析字幕
       final lyrics = LyricParser.parse(content);
       state = LyricState(
         lyrics: lyrics,
@@ -503,7 +503,7 @@ class LyricController extends StateNotifier<LyricState> {
   }
 }
 
-// 存储当前工作的文件列表（用于查找歌词）
+// 存储当前工作的文件列表（用于查找字幕）
 class FileListState {
   final List<dynamic> files;
 
@@ -533,7 +533,7 @@ final lyricControllerProvider =
   return LyricController(ref);
 });
 
-// 监听曲目变化，自动重新加载歌词
+// 监听曲目变化，自动重新加载字幕
 final lyricAutoLoaderProvider = Provider<void>((ref) {
   final currentTrack = ref.watch(currentTrackProvider);
   final fileListState = ref.watch(fileListControllerProvider);
@@ -548,20 +548,20 @@ final lyricAutoLoaderProvider = Provider<void>((ref) {
             );
       });
     } else if (track == null) {
-      // 没有播放时清空歌词
+      // 没有播放时清空字幕
       ref.read(lyricControllerProvider.notifier).clearLyrics();
     }
   });
 });
 
-// 当前歌词文本 Provider（根据播放位置）
+// 当前字幕文本 Provider（根据播放位置）
 final currentLyricTextProvider = Provider<String?>((ref) {
   final lyricState = ref.watch(lyricControllerProvider);
   final position = ref.watch(positionProvider);
 
   if (lyricState.lyrics.isEmpty) return null;
 
-  // 使用调整后的歌词
+  // 使用调整后的字幕
   final adjustedLyrics = lyricState.adjustedLyrics;
 
   return position.when(
