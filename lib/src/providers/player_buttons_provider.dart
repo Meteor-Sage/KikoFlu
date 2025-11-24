@@ -32,9 +32,9 @@ class PlayerButtonsConfig {
     buttonOrder: [
       PlayerButtonType.seekBackward,
       PlayerButtonType.seekForward,
-      PlayerButtonType.mark,
       PlayerButtonType.floatingLyric,
       PlayerButtonType.sleepTimer,
+      PlayerButtonType.mark,
       PlayerButtonType.speed,
       PlayerButtonType.repeat,
       PlayerButtonType.subtitleAdjustment,
