@@ -22,6 +22,7 @@ import 'src/providers/audio_provider.dart';
 import 'src/providers/auth_provider.dart';
 import 'src/providers/theme_provider.dart';
 import 'src/providers/update_provider.dart';
+import 'src/utils/global_keys.dart';
 
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -190,6 +191,7 @@ class _KikoeruAppState extends ConsumerState<KikoeruApp> with WindowListener {
         };
 
         return MaterialApp(
+          scaffoldMessengerKey: rootScaffoldMessengerKey,
           title: 'Kikoeru',
           debugShowCheckedModeBanner: false,
           theme:

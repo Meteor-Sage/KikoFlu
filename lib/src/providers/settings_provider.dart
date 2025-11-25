@@ -85,10 +85,10 @@ enum AudioFormat {
 
 /// 翻译源
 enum TranslationSource {
-  google('Google翻译', 'google'),
-  youdao('Youdao翻译', 'youdao'),
-  microsoft('Microsoft翻译', 'microsoft'),
-  llm('LLM翻译', 'llm');
+  google('Google 翻译', 'google'),
+  youdao('Youdao 翻译', 'youdao'),
+  microsoft('Microsoft 翻译', 'microsoft'),
+  llm('LLM 翻译', 'llm');
 
   final String displayName;
   final String value;

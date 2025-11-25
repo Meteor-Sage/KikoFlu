@@ -1,9 +1,11 @@
 import 'package:translator/translator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'youdao_translator.dart';
 import 'microsoft_translator.dart';
 import 'llm_translator.dart';
+import '../utils/global_keys.dart';
 
 class TranslationService {
   static final TranslationService _instance = TranslationService._internal();
@@ -27,37 +29,85 @@ class TranslationService {
       return cachedTranslation;
     }
 
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final source = prefs.getString('translation_source') ?? 'google';
+    final prefs = await SharedPreferences.getInstance();
+    final selectedSource = prefs.getString('translation_source') ?? 'google';
 
-      String result;
-      if (source == 'youdao') {
-        result =
-            await _youdaoTranslator.translate(text, sourceLang: sourceLang);
-      } else if (source == 'microsoft') {
-        result =
-            await _microsoftTranslator.translate(text, sourceLang: sourceLang);
-      } else if (source == 'llm') {
-        result = await _llmTranslator.translate(text, sourceLang: sourceLang);
-      } else {
-        // Google 翻译
-        final translation = await _googleTranslator.translate(
-          text,
-          from: sourceLang ?? 'auto',
-          to: _targetLang,
-        );
-        result = translation.text;
+    // 构建尝试列表
+    final sourcesToTry = <String>[selectedSource];
+
+    // 默认回退顺序
+    final fallbackOrder = ['youdao', 'microsoft', 'google', 'llm'];
+
+    for (final source in fallbackOrder) {
+      if (source == selectedSource) continue;
+
+      // 特殊检查 LLM
+      if (source == 'llm') {
+        final apiKey = prefs.getString('llm_settings_api_key') ?? '';
+        if (apiKey.isEmpty) continue;
       }
 
-      // 缓存结果
-      await _cacheTranslation(text, result, sourceLang);
-
-      return result;
-    } catch (e) {
-      print('Translation error: $e');
-      return text; // 翻译失败返回原文
+      sourcesToTry.add(source);
     }
+
+    for (final source in sourcesToTry) {
+      try {
+        String result;
+        if (source == 'youdao') {
+          result =
+              await _youdaoTranslator.translate(text, sourceLang: sourceLang);
+        } else if (source == 'microsoft') {
+          result = await _microsoftTranslator.translate(text,
+              sourceLang: sourceLang);
+        } else if (source == 'llm') {
+          result = await _llmTranslator.translate(text, sourceLang: sourceLang);
+        } else {
+          // Google 翻译
+          final translation = await _googleTranslator.translate(
+            text,
+            from: sourceLang ?? 'auto',
+            to: _targetLang,
+          );
+          result = translation.text;
+        }
+
+        // 如果成功且不是首选源，提示用户
+        if (source != selectedSource) {
+          _showFallbackNotification(source);
+        }
+
+        // 缓存结果
+        await _cacheTranslation(text, result, sourceLang);
+
+        return result;
+      } catch (e) {
+        print('Translation error with $source: $e');
+        // 继续尝试下一个
+      }
+    }
+
+    return text; // 所有尝试都失败，返回原文
+  }
+
+  void _showFallbackNotification(String sourceName) {
+    String displayName = sourceName;
+    if (sourceName == 'youdao') {
+      displayName = 'Youdao 翻译';
+    } else if (sourceName == 'microsoft') {
+      displayName = 'Microsoft 翻译';
+    } else if (sourceName == 'google') {
+      displayName = 'Google 翻译';
+    } else if (sourceName == 'llm') {
+      displayName = 'LLM 翻译';
+    }
+
+    rootScaffoldMessengerKey.currentState?.showSnackBar(
+      SnackBar(
+        content: Text('翻译失败，已自动切换至 $displayName'),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   /// 批量翻译
