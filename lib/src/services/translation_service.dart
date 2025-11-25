@@ -2,6 +2,8 @@ import 'package:translator/translator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'youdao_translator.dart';
+import 'microsoft_translator.dart';
+import 'llm_translator.dart';
 
 class TranslationService {
   static final TranslationService _instance = TranslationService._internal();
@@ -10,6 +12,8 @@ class TranslationService {
 
   final GoogleTranslator _googleTranslator = GoogleTranslator();
   final YoudaoTranslator _youdaoTranslator = YoudaoTranslator();
+  final MicrosoftTranslator _microsoftTranslator = MicrosoftTranslator();
+  final LLMTranslator _llmTranslator = LLMTranslator();
   static const String _cachePrefix = 'translation_cache_';
   static const String _targetLang = 'zh-cn'; // 目标语言：简体中文
 
@@ -31,6 +35,11 @@ class TranslationService {
       if (source == 'youdao') {
         result =
             await _youdaoTranslator.translate(text, sourceLang: sourceLang);
+      } else if (source == 'microsoft') {
+        result =
+            await _microsoftTranslator.translate(text, sourceLang: sourceLang);
+      } else if (source == 'llm') {
+        result = await _llmTranslator.translate(text, sourceLang: sourceLang);
       } else {
         // Google 翻译
         final translation = await _googleTranslator.translate(
@@ -54,11 +63,39 @@ class TranslationService {
   /// 批量翻译
   Future<List<String>> translateBatch(List<String> texts,
       {String? sourceLang}) async {
-    final results = <String>[];
-    for (final text in texts) {
-      final translated = await translate(text, sourceLang: sourceLang);
-      results.add(translated);
+    if (texts.isEmpty) return [];
+
+    // 获取并发设置
+    final prefs = await SharedPreferences.getInstance();
+    final source = prefs.getString('translation_source') ?? 'google';
+    int concurrency = 1;
+    if (source == 'llm') {
+      concurrency = prefs.getInt('llm_settings_concurrency') ?? 3;
     }
+
+    final results = List<String>.filled(texts.length, '');
+    int currentIndex = 0;
+
+    Future<void> worker() async {
+      while (true) {
+        int index;
+        if (currentIndex >= texts.length) return;
+        index = currentIndex++;
+
+        try {
+          final translated =
+              await translate(texts[index], sourceLang: sourceLang);
+          results[index] = translated;
+        } catch (e) {
+          print('Translation batch item $index failed: $e');
+          results[index] = texts[index];
+        }
+      }
+    }
+
+    final workers = List.generate(concurrency, (_) => worker());
+    await Future.wait(workers);
+
     return results;
   }
 
@@ -112,21 +149,43 @@ class TranslationService {
       chunks.add(currentChunk);
     }
 
-    // 分块翻译
-    final translatedChunks = <String>[];
-    for (int i = 0; i < chunks.length; i++) {
-      onProgress?.call(i + 1, chunks.length);
-      try {
-        final translated = await translate(chunks[i], sourceLang: sourceLang);
-        translatedChunks.add(translated);
-      } catch (e) {
-        print('Translation chunk $i failed: $e');
-        // 翻译失败时保留原文
-        translatedChunks.add(chunks[i]);
+    // 获取并发设置
+    final prefs = await SharedPreferences.getInstance();
+    final source = prefs.getString('translation_source') ?? 'google';
+    int concurrency = 1;
+    if (source == 'llm') {
+      concurrency = prefs.getInt('llm_settings_concurrency') ?? 3;
+    }
+
+    // 并发翻译
+    final results = List<String>.filled(chunks.length, '');
+    int currentIndex = 0;
+    int completedCount = 0;
+
+    Future<void> worker() async {
+      while (true) {
+        int index;
+        if (currentIndex >= chunks.length) return;
+        index = currentIndex++;
+
+        try {
+          final translated =
+              await translate(chunks[index], sourceLang: sourceLang);
+          results[index] = translated;
+        } catch (e) {
+          print('Translation chunk $index failed: $e');
+          results[index] = chunks[index];
+        } finally {
+          completedCount++;
+          onProgress?.call(completedCount, chunks.length);
+        }
       }
     }
 
-    return translatedChunks.join('\n');
+    final workers = List.generate(concurrency, (_) => worker());
+    await Future.wait(workers);
+
+    return results.join('\n');
   }
 
   /// 获取缓存的翻译

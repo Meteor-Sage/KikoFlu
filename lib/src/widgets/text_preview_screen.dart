@@ -156,6 +156,18 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
     } catch (e) {
       // UTF-8 解码失败，继续尝试其他编码
     }
+    // 4. 尝试 Shift-JIS 解码（日文）
+    try {
+      final decoded = shiftJis.decode(bytes);
+      // 简单验证：检查是否有乱码
+      if (decoded.isNotEmpty && !decoded.contains('�')) {
+        print('[TextPreview] 使用 Shift-JIS 编码');
+        _detectedEncoding = 'Shift-JIS';
+        return decoded;
+      }
+    } catch (e) {
+      // Shift-JIS 解码失败
+    }
 
     // 5. 尝试 GBK 解码（简体中文）
     try {
@@ -170,20 +182,7 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
       // GBK 解码失败
     }
 
-    // 4. 尝试 Shift-JIS 解码（日文）
-    try {
-      final decoded = shiftJis.decode(bytes);
-      // 简单验证：检查是否有乱码
-      if (decoded.isNotEmpty && !decoded.contains('�')) {
-        print('[TextPreview] 使用 Shift-JIS 编码');
-        _detectedEncoding = 'Shift-JIS';
-        return decoded;
-      }
-    } catch (e) {
-      // Shift-JIS 解码失败
-    }
-
-    // 5. 最后尝试 Latin1（不会失败，但可能显示乱码）
+    // 6. 最后尝试 Latin1（不会失败，但可能显示乱码）
     try {
       print('[TextPreview] 使用 Latin1 编码（降级处理）');
       _detectedEncoding = 'Latin1';
