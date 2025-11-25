@@ -1,13 +1,15 @@
 import 'package:translator/translator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'youdao_translator.dart';
 
 class TranslationService {
   static final TranslationService _instance = TranslationService._internal();
   factory TranslationService() => _instance;
   TranslationService._internal();
 
-  final GoogleTranslator _translator = GoogleTranslator();
+  final GoogleTranslator _googleTranslator = GoogleTranslator();
+  final YoudaoTranslator _youdaoTranslator = YoudaoTranslator();
   static const String _cachePrefix = 'translation_cache_';
   static const String _targetLang = 'zh-cn'; // 目标语言：简体中文
 
@@ -22,14 +24,22 @@ class TranslationService {
     }
 
     try {
-      // 执行翻译
-      final translation = await _translator.translate(
-        text,
-        from: sourceLang ?? 'auto',
-        to: _targetLang,
-      );
+      final prefs = await SharedPreferences.getInstance();
+      final source = prefs.getString('translation_source') ?? 'google';
 
-      final result = translation.text;
+      String result;
+      if (source == 'youdao') {
+        result =
+            await _youdaoTranslator.translate(text, sourceLang: sourceLang);
+      } else {
+        // Google 翻译
+        final translation = await _googleTranslator.translate(
+          text,
+          from: sourceLang ?? 'auto',
+          to: _targetLang,
+        );
+        result = translation.text;
+      }
 
       // 缓存结果
       await _cacheTranslation(text, result, sourceLang);
@@ -180,7 +190,7 @@ class TranslationService {
   /// 检测语言
   Future<String> detectLanguage(String text) async {
     try {
-      final translation = await _translator.translate(text, from: 'auto');
+      final translation = await _googleTranslator.translate(text, from: 'auto');
       return translation.sourceLanguage.code;
     } catch (e) {
       print('Language detection error: $e');

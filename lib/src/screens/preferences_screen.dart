@@ -97,10 +97,70 @@ class PreferencesScreen extends ConsumerWidget {
     );
   }
 
+  void _showTranslationSourceDialog(BuildContext context, WidgetRef ref) {
+    final currentSource = ref.read(translationSourceProvider);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          '翻译源设置',
+          style: TextStyle(fontSize: 18),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '选择翻译服务提供商：',
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            ...TranslationSource.values.map((source) {
+              return RadioListTile<TranslationSource>(
+                title: Text(source.displayName),
+                subtitle: Text(
+                  source == TranslationSource.google
+                      ? 'Google 翻译 (需要网络环境支持)'
+                      : '有道翻译 (无需 API Key)',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                value: source,
+                groupValue: currentSource,
+                onChanged: (value) {
+                  if (value != null) {
+                    ref
+                        .read(translationSourceProvider.notifier)
+                        .updateSource(value);
+                    Navigator.pop(context);
+                    SnackBarUtil.showSuccess(
+                      context,
+                      '已设置为: ${value.displayName}',
+                    );
+                  }
+                },
+              );
+            }),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('关闭'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final priority = ref.watch(subtitleLibraryPriorityProvider);
     final defaultSort = ref.watch(defaultSortProvider);
+    final translationSource = ref.watch(translationSourceProvider);
 
     return Scaffold(
       appBar: const ScrollableAppBar(
@@ -132,6 +192,17 @@ class PreferencesScreen extends ConsumerWidget {
                   trailing: const Icon(Icons.arrow_forward_ios),
                   onTap: () {
                     _showDefaultSortDialog(context, ref);
+                  },
+                ),
+                Divider(color: Theme.of(context).colorScheme.outlineVariant),
+                ListTile(
+                  leading: Icon(Icons.translate,
+                      color: Theme.of(context).colorScheme.primary),
+                  title: const Text('翻译源'),
+                  subtitle: Text('当前: ${translationSource.displayName}'),
+                  trailing: const Icon(Icons.arrow_forward_ios),
+                  onTap: () {
+                    _showTranslationSourceDialog(context, ref);
                   },
                 ),
                 Divider(color: Theme.of(context).colorScheme.outlineVariant),

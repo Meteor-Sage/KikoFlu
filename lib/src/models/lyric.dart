@@ -172,7 +172,35 @@ class LyricParser {
       text: lyrics[lastIndex].text,
     ));
 
-    return finalLyrics;
+    return _mergeEmptyLines(finalLyrics);
+  }
+
+  static List<LyricLine> _mergeEmptyLines(List<LyricLine> lyrics) {
+    if (lyrics.isEmpty) return [];
+
+    final List<LyricLine> mergedLyrics = [];
+
+    for (final line in lyrics) {
+      if (mergedLyrics.isEmpty) {
+        mergedLyrics.add(line);
+        continue;
+      }
+
+      final lastLine = mergedLyrics.last;
+      final isEmpty = line.text.trim().isEmpty;
+      final duration = line.endTime - line.startTime;
+      final isShort = duration < const Duration(seconds: 3);
+
+      if (isEmpty && isShort) {
+        // 合并到上一行：更新上一行的结束时间
+        mergedLyrics.removeLast();
+        mergedLyrics.add(lastLine.copyWith(endTime: line.endTime));
+      } else {
+        mergedLyrics.add(line);
+      }
+    }
+
+    return mergedLyrics;
   }
 
   static Duration _parseTime(int hours, int minutes, double seconds) {

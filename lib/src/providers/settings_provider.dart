@@ -83,6 +83,57 @@ enum AudioFormat {
   const AudioFormat(this.displayName, this.extension);
 }
 
+/// 翻译源
+enum TranslationSource {
+  google('Google 翻译', 'google'),
+  youdao('有道翻译', 'youdao');
+
+  final String displayName;
+  final String value;
+  const TranslationSource(this.displayName, this.value);
+}
+
+/// 翻译源设置
+class TranslationSourceNotifier extends StateNotifier<TranslationSource> {
+  static const String _preferenceKey = 'translation_source';
+
+  TranslationSourceNotifier() : super(TranslationSource.google) {
+    _loadPreference();
+  }
+
+  Future<void> _loadPreference() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedValue = prefs.getString(_preferenceKey);
+
+      if (savedValue != null) {
+        final source = TranslationSource.values.firstWhere(
+          (s) => s.value == savedValue,
+          orElse: () => TranslationSource.google,
+        );
+        state = source;
+      }
+    } catch (e) {
+      state = TranslationSource.google;
+    }
+  }
+
+  Future<void> updateSource(TranslationSource source) async {
+    state = source;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_preferenceKey, state.value);
+    } catch (e) {
+      // ignore
+    }
+  }
+}
+
+final translationSourceProvider =
+    StateNotifierProvider<TranslationSourceNotifier, TranslationSource>((ref) {
+  return TranslationSourceNotifier();
+});
+
 /// 音频格式优先级设置
 class AudioFormatPreference {
   final List<AudioFormat> priority;
@@ -262,6 +313,7 @@ final privacyModeSettingsProvider =
         (ref) {
   return PrivacyModeSettingsNotifier();
 });
+
 /// 分页大小设置
 class PageSizeNotifier extends StateNotifier<int> {
   static const String _preferenceKey = 'page_size_preference';
@@ -299,6 +351,7 @@ class PageSizeNotifier extends StateNotifier<int> {
 final pageSizeProvider = StateNotifierProvider<PageSizeNotifier, int>((ref) {
   return PageSizeNotifier();
 });
+
 /// 默认排序设置状态
 class DefaultSortState {
   final SortOrder order;
