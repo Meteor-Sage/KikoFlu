@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'audio_format_settings_screen.dart';
+import 'llm_settings_screen.dart';
 import '../models/sort_options.dart';
 import '../providers/settings_provider.dart';
 import '../utils/snackbar_util.dart';
@@ -120,9 +121,7 @@ class PreferencesScreen extends ConsumerWidget {
               return RadioListTile<TranslationSource>(
                 title: Text(source.displayName),
                 subtitle: Text(
-                  source == TranslationSource.google
-                      ? 'Google 翻译 (需要网络环境支持)'
-                      : '有道翻译 (无需 API Key)',
+                  _getTranslationSourceDescription(source),
                   style: TextStyle(
                     fontSize: 12,
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -132,6 +131,41 @@ class PreferencesScreen extends ConsumerWidget {
                 groupValue: currentSource,
                 onChanged: (value) {
                   if (value != null) {
+                    if (value == TranslationSource.llm) {
+                      final llmSettings = ref.read(llmSettingsProvider);
+                      if (llmSettings.apiKey.isEmpty) {
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('需要配置'),
+                            content:
+                                const Text('使用LLM翻译需要配置 API Key。请先前往设置进行配置。'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text('取消'),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(context); // Close alert dialog
+                                  Navigator.pop(
+                                      context); // Close source selection dialog
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const LLMSettingsScreen(),
+                                    ),
+                                  );
+                                },
+                                child: const Text('去配置'),
+                              ),
+                            ],
+                          ),
+                        );
+                        return;
+                      }
+                    }
+
                     ref
                         .read(translationSourceProvider.notifier)
                         .updateSource(value);
@@ -154,6 +188,19 @@ class PreferencesScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  String _getTranslationSourceDescription(TranslationSource source) {
+    switch (source) {
+      case TranslationSource.google:
+        return '需要网络环境支持';
+      case TranslationSource.youdao:
+        return '支持默认网络环境';
+      case TranslationSource.microsoft:
+        return '支持默认网络环境';
+      case TranslationSource.llm:
+        return 'OpenAI 兼容接口, 需要手动配置API Key';
+    }
   }
 
   @override
@@ -205,6 +252,23 @@ class PreferencesScreen extends ConsumerWidget {
                     _showTranslationSourceDialog(context, ref);
                   },
                 ),
+                if (translationSource == TranslationSource.llm) ...[
+                  Divider(color: Theme.of(context).colorScheme.outlineVariant),
+                  ListTile(
+                    leading: Icon(Icons.settings_input_component,
+                        color: Theme.of(context).colorScheme.primary),
+                    title: const Text('LLM设置'),
+                    subtitle: const Text('配置 API 地址、Key 和模型'),
+                    trailing: const Icon(Icons.arrow_forward_ios),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const LLMSettingsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ],
                 Divider(color: Theme.of(context).colorScheme.outlineVariant),
                 ListTile(
                   leading: Icon(Icons.audio_file,

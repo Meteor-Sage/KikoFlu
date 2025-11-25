@@ -85,13 +85,90 @@ enum AudioFormat {
 
 /// 翻译源
 enum TranslationSource {
-  google('Google 翻译', 'google'),
-  youdao('有道翻译', 'youdao');
+  google('Google翻译', 'google'),
+  youdao('Youdao翻译', 'youdao'),
+  microsoft('Microsoft翻译', 'microsoft'),
+  llm('LLM翻译', 'llm');
 
   final String displayName;
   final String value;
   const TranslationSource(this.displayName, this.value);
 }
+
+class LLMSettings {
+  final String apiUrl;
+  final String apiKey;
+  final String model;
+  final String prompt;
+  final int concurrency;
+
+  const LLMSettings({
+    this.apiUrl = 'https://api.openai.com/v1/chat/completions',
+    this.apiKey = '',
+    this.model = 'gpt-3.5-turbo',
+    this.prompt =
+        'You are a professional translator. Translate the following text into Simplified Chinese (zh-CN). Output ONLY the translated text without any explanations, notes, or markdown code blocks.',
+    this.concurrency = 3,
+  });
+
+  LLMSettings copyWith({
+    String? apiUrl,
+    String? apiKey,
+    String? model,
+    String? prompt,
+    int? concurrency,
+  }) {
+    return LLMSettings(
+      apiUrl: apiUrl ?? this.apiUrl,
+      apiKey: apiKey ?? this.apiKey,
+      model: model ?? this.model,
+      prompt: prompt ?? this.prompt,
+      concurrency: concurrency ?? this.concurrency,
+    );
+  }
+}
+
+class LLMSettingsNotifier extends StateNotifier<LLMSettings> {
+  static const String _prefix = 'llm_settings_';
+
+  LLMSettingsNotifier() : super(const LLMSettings()) {
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      state = LLMSettings(
+        apiUrl: prefs.getString('${_prefix}api_url') ?? state.apiUrl,
+        apiKey: prefs.getString('${_prefix}api_key') ?? state.apiKey,
+        model: prefs.getString('${_prefix}model') ?? state.model,
+        prompt: prefs.getString('${_prefix}prompt') ?? state.prompt,
+        concurrency: prefs.getInt('${_prefix}concurrency') ?? state.concurrency,
+      );
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  Future<void> updateSettings(LLMSettings settings) async {
+    state = settings;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('${_prefix}api_url', settings.apiUrl);
+      await prefs.setString('${_prefix}api_key', settings.apiKey);
+      await prefs.setString('${_prefix}model', settings.model);
+      await prefs.setString('${_prefix}prompt', settings.prompt);
+      await prefs.setInt('${_prefix}concurrency', settings.concurrency);
+    } catch (e) {
+      // ignore
+    }
+  }
+}
+
+final llmSettingsProvider =
+    StateNotifierProvider<LLMSettingsNotifier, LLMSettings>((ref) {
+  return LLMSettingsNotifier();
+});
 
 /// 翻译源设置
 class TranslationSourceNotifier extends StateNotifier<TranslationSource> {
