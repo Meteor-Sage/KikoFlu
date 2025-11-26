@@ -84,7 +84,7 @@ jobs:
         
       - name: Rename MSIX
         run: |
-          Get-ChildItem -Path build/windows -Filter *.msix -Recurse | Rename-Item -NewName "kikoeru-windows.msix"
+          Get-ChildItem -Path build/windows -Filter *.msix -Recurse | Rename-Item -NewName "KikoFlu-windows.msix"
 
       - name: Upload Windows Artifacts
         uses: actions/upload-artifact@v4
@@ -92,7 +92,7 @@ jobs:
           name: windows-release
           path: |
             build/windows/x64/runner/Release/KikoFlu-windows.zip
-            build/windows/**/kikoeru-windows.msix
+            build/windows/**/KikoFlu-windows.msix
 
   ios:
     name: iOS Build (Unsigned)
