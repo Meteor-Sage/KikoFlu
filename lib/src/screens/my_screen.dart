@@ -13,6 +13,7 @@ import 'downloads_screen.dart';
 import 'local_downloads_screen.dart';
 import 'subtitle_library_screen.dart';
 import 'playlists_screen.dart';
+import 'history_screen.dart';
 import '../widgets/sort_dialog.dart';
 import '../models/sort_options.dart';
 export '../providers/my_reviews_provider.dart' show MyReviewLayoutType;
@@ -46,6 +47,13 @@ class _MyScreenState extends ConsumerState<MyScreen>
         fabWidget: const DownloadFab(),
       ));
     }
+
+    // 历史记录
+    tabs.add(_TabInfo(
+      title: '历史记录',
+      index: tabs.length,
+      widget: const HistoryScreen(),
+    ));
 
     if (settings.showPlaylists) {
       tabs.add(_TabInfo(

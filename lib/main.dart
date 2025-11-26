@@ -8,6 +8,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'src/screens/login_screen.dart';
 import 'src/screens/main_screen.dart';
@@ -46,6 +47,12 @@ void main(List<String> args) async {
   // Initialize just_audio_media_kit for desktop platforms
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     JustAudioMediaKit.ensureInitialized();
+  }
+
+  if (Platform.isWindows || Platform.isLinux) {
+    // Initialize FFI
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
   }
 
   // Set minimum window size for desktop platforms

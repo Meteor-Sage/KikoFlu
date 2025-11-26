@@ -692,6 +692,7 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
     ref.read(audioPlayerControllerProvider.notifier).playTracks(
           audioTracks,
           startIndex: startIndex,
+          work: widget.work,
         );
 
     // 注意：字幕会通过 lyricAutoLoaderProvider 自动加载

@@ -663,6 +663,7 @@ class _OfflineFileExplorerWidgetState
     ref.read(audioPlayerControllerProvider.notifier).playTracks(
           audioTracks,
           startIndex: startIndex,
+          work: widget.work,
         );
 
     SnackBarUtil.showInfo(

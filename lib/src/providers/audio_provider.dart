@@ -4,8 +4,10 @@ import 'package:just_audio/just_audio.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../models/audio_track.dart';
+import '../models/work.dart';
 import '../services/audio_player_service.dart';
 import 'settings_provider.dart';
+import 'history_provider.dart';
 
 // Audio Player Service Provider
 final audioPlayerServiceProvider = Provider<AudioPlayerService>((ref) {
@@ -120,7 +122,8 @@ class AudioPlayerController extends StateNotifier<AudioPlayerState> {
     await _service.play();
   }
 
-  Future<void> playTracks(List<AudioTrack> tracks, {int startIndex = 0}) async {
+  Future<void> playTracks(List<AudioTrack> tracks,
+      {int startIndex = 0, Work? work}) async {
     print(
         '[AudioController] playTracks调用: ${tracks.length}个轨道, startIndex=$startIndex');
     print(
@@ -129,6 +132,10 @@ class AudioPlayerController extends StateNotifier<AudioPlayerState> {
     print('[AudioController] updateQueue完成');
     await _service.play();
     print('[AudioController] play完成');
+
+    if (work != null) {
+      _ref.read(historyProvider.notifier).addOrUpdate(work);
+    }
   }
 
   Future<void> play() async {

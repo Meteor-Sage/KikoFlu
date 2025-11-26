@@ -235,7 +235,7 @@ class AudioPlayerService {
 
   Future<void> _loadTrack(AudioTrack track) async {
     print('[Audio] _loadTrack: title="${track.title}", url="${track.url}"');
-    
+
     // Set switching flag and update state to buffering immediately
     _isSwitchingTrack = true;
     _updatePlaybackState();
