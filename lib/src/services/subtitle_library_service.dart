@@ -29,10 +29,9 @@ class SubtitleLibraryService {
   static final _cacheUpdateController = StreamController<void>.broadcast();
   static Stream<void> get onCacheUpdated => _cacheUpdateController.stream;
 
-  /// 检查字幕文件是否匹配音频文件
-  /// [subtitleFileName] 字幕文件名（包含扩展名）
-  /// [audioFileName] 音频文件名（包含扩展名）
-  static bool isSubtitleForAudio(
+  /// 检查匹配结果
+  /// 返回 (是否匹配, 相似度分数)
+  static (bool, double) checkMatch(
       String subtitleFileName, String audioFileName) {
     final lowerSubtitle = subtitleFileName.toLowerCase();
     final lowerAudio = audioFileName.toLowerCase();
@@ -51,23 +50,18 @@ class SubtitleLibraryService {
     }
 
     if (subtitleContentName == null) {
-      return false;
+      return (false, 0.0);
     }
 
     // 2. 获取音频文件的基础名称（去掉扩展名）
-    // 例如: audio.wav -> audio
     final audioBaseName = removeAudioExtension(lowerAudio);
 
     // 3. 获取字幕文件的基础名称（尝试去掉音频扩展名）
-    // 这一步是为了处理 audio.mp3.vtt 匹配 audio.wav 的情况
-    // subtitleContentName 此时可能是 "audio.mp3" (规则1情况) 或 "audio" (规则2情况)
-    // 如果是 "audio.mp3"，removeAudioExtension 会将其变为 "audio"
-    // 如果是 "audio"，removeAudioExtension 会保持原样 "audio"
     final subtitleBaseName = removeAudioExtension(subtitleContentName);
 
     // 4. 比较基础名称
     if (audioBaseName == subtitleBaseName) {
-      return true;
+      return (true, 1.0);
     }
 
     // 5. 尝试模糊匹配
@@ -76,12 +70,12 @@ class SubtitleLibraryService {
     final normalizedSubtitle = _normalizeForMatching(subtitleBaseName);
 
     if (normalizedAudio.isEmpty || normalizedSubtitle.isEmpty) {
-      return false;
+      return (false, 0.0);
     }
 
     // 如果归一化后相等，直接匹配
     if (normalizedAudio == normalizedSubtitle) {
-      return true;
+      return (true, 1.0);
     }
 
     // 5.2 计算相似度（Levenshtein距离）
@@ -93,7 +87,15 @@ class SubtitleLibraryService {
     // 对于长文件名，允许一定容错（0.85）
     final threshold = normalizedAudio.length < 10 ? 0.9 : 0.85;
 
-    return similarity >= threshold;
+    return (similarity >= threshold, similarity);
+  }
+
+  /// 检查字幕文件是否匹配音频文件
+  /// [subtitleFileName] 字幕文件名（包含扩展名）
+  /// [audioFileName] 音频文件名（包含扩展名）
+  static bool isSubtitleForAudio(
+      String subtitleFileName, String audioFileName) {
+    return checkMatch(subtitleFileName, audioFileName).$1;
   }
 
   /// 归一化文件名用于匹配
@@ -112,21 +114,22 @@ class SubtitleLibraryService {
     // 例如: "_SE无", "_NoSE"
     final suffixesToRemove = [
       '_se无',
+      '_se',
+      '_se有',
       '_seなし',
       '_nose',
       '_se無し',
-      '_SE无',
-      '_SEなし',
-      '_NOSE',
-      '_SE無し',
+      '_se有り',
+      '_seあり',
+      '_se_off',
       'se无',
+      'se有',
       'seなし',
       'nose',
       'se無し',
-      'SE无',
-      'SEなし',
-      'NOSE',
-      'SE無し',
+      'se有り',
+      'seあり',
+      'se_off',
     ];
 
     for (final suffix in suffixesToRemove) {
@@ -1065,7 +1068,13 @@ class SubtitleLibraryService {
     // 检查是否需要刷新缓存
     final hasChanged = await _hasDirectoryChanged(libraryDir);
 
-    if (!forceRefresh && !hasChanged && _cachedFileTree != null) {
+    // 如果缓存为空，强制刷新（解决Windows下时间戳可能不更新导致无法检测到新文件的问题）
+    final isCacheEmpty = _cachedFileTree != null && _cachedFileTree!.isEmpty;
+
+    if (!forceRefresh &&
+        !hasChanged &&
+        _cachedFileTree != null &&
+        !isCacheEmpty) {
       print('[SubtitleLibrary] 使用缓存的文件树');
       return _cachedFileTree!;
     }
@@ -1600,7 +1609,10 @@ class SubtitleLibraryService {
     // 检查是否需要刷新缓存
     final hasChanged = await _hasDirectoryChanged(libraryDir);
 
-    if (!forceRefresh && !hasChanged && _cachedStats != null) {
+    // 如果缓存显示0个文件，强制刷新（解决Windows下时间戳可能不更新导致无法检测到新文件的问题）
+    final isCacheEmpty = _cachedStats != null && _cachedStats!.totalFiles == 0;
+
+    if (!forceRefresh && !hasChanged && _cachedStats != null && !isCacheEmpty) {
       print('[SubtitleLibrary] 使用缓存的统计信息');
       return _cachedStats!;
     }

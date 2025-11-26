@@ -261,49 +261,136 @@ class LyricController extends StateNotifier<LyricState> {
     Directory folder,
     String trackTitle,
   ) async {
+    String? bestMatchPath;
+    double bestScore = 0.0;
+
     try {
       await for (final entity in folder.list(recursive: true)) {
         if (entity is File) {
           final fileName = entity.path.split(Platform.pathSeparator).last;
+          final (isMatch, score) =
+              SubtitleLibraryService.checkMatch(fileName, trackTitle);
 
-          if (SubtitleLibraryService.isSubtitleForAudio(fileName, trackTitle)) {
-            return entity.path;
+          if (isMatch) {
+            if (score > bestScore) {
+              bestScore = score;
+              bestMatchPath = entity.path;
+              // 如果是完美匹配，直接返回
+              if (score == 1.0) return entity.path;
+            }
           }
         }
       }
     } catch (e) {
       // 忽略权限错误等
     }
-    return null;
+    return bestMatchPath;
   }
 
   // 查找字幕文件
   dynamic _findLyricFile(AudioTrack track, List<dynamic> allFiles) {
     // 获取音频文件名
     final trackTitle = track.title;
+    // 尝试获取音频文件的相对路径（如果AudioTrack中有保存的话，目前AudioTrack结构里可能没有直接保存相对路径，
+    // 但我们可以尝试通过遍历allFiles找到track对应的文件对象来获取其父路径，或者简化处理：
+    // 由于AudioTrack通常是从allFiles构建的，我们可以在遍历时比较层级结构。
+    // 但为了简化，我们这里定义"真完美匹配"为：文件名完全匹配(score=1.0) 且 位于同一目录下。
+    // 由于我们是在递归遍历allFiles，我们可以记录当前遍历的文件夹路径。
 
-    // 递归搜索字幕文件
-    dynamic searchInFiles(List<dynamic> files) {
+    // 实际上，AudioTrack对象中并没有保存其在文件树中的位置信息，只保存了url/hash等。
+    // 如果要实现"相对文件树路径也一致"，我们需要知道AudioTrack的原始路径。
+    // 现有的AudioTrack结构：id, url, title, artist, album, artworkUrl, duration, workId, hash.
+    // 我们可以尝试通过hash在allFiles中找到原始音频文件对象，从而确定其路径。
+
+    // 1. 先找到音频文件在文件树中的位置（父文件夹路径）
+    String? audioParentPath;
+
+    String? findAudioPath(List<dynamic> files, String currentPath) {
       for (final file in files) {
         final fileType = file['type'] ?? '';
         final fileName = file['title'] ?? file['name'] ?? '';
 
-        // 如果是文件夹，递归搜索
         if (fileType == 'folder' && file['children'] != null) {
-          final result = searchInFiles(file['children']);
+          final path =
+              currentPath.isEmpty ? fileName : '$currentPath/$fileName';
+          final result = findAudioPath(file['children'], path);
           if (result != null) return result;
-          continue;
-        }
-
-        if (SubtitleLibraryService.isSubtitleForAudio(fileName, trackTitle)) {
-          print('[Lyric] 找到匹配: track="${track.title}", lyric="$fileName"');
-          return file;
+        } else {
+          // 通过hash匹配（如果track有hash）或者title匹配
+          if ((track.hash != null && file['hash'] == track.hash) ||
+              (track.hash == null && fileName == trackTitle)) {
+            return currentPath;
+          }
         }
       }
       return null;
     }
 
-    return searchInFiles(allFiles);
+    audioParentPath = findAudioPath(allFiles, '');
+    // print('[Lyric] 音频文件路径: $audioParentPath');
+
+    dynamic bestMatchFile;
+    double bestScore = 0.0;
+    bool foundTruePerfectMatch = false;
+
+    // 递归搜索字幕文件
+    void searchInFiles(List<dynamic> files, String currentPath) {
+      for (final file in files) {
+        // 如果已经找到真完美匹配，停止搜索
+        if (foundTruePerfectMatch) return;
+
+        final fileType = file['type'] ?? '';
+        final fileName = file['title'] ?? file['name'] ?? '';
+
+        // 如果是文件夹，递归搜索
+        if (fileType == 'folder' && file['children'] != null) {
+          final path =
+              currentPath.isEmpty ? fileName : '$currentPath/$fileName';
+          searchInFiles(file['children'], path);
+          continue;
+        }
+
+        final (isMatch, score) =
+            SubtitleLibraryService.checkMatch(fileName, trackTitle);
+
+        if (isMatch) {
+          // 检查是否是"真完美匹配"：分数1.0 且 路径相同
+          final isSamePath =
+              audioParentPath != null && currentPath == audioParentPath;
+          final isTruePerfect = score == 1.0 && isSamePath;
+
+          if (isTruePerfect) {
+            bestScore = 1.0;
+            bestMatchFile = file;
+            foundTruePerfectMatch = true;
+            print('[Lyric] 找到真完美匹配(同目录): $fileName');
+            return;
+          }
+
+          // 如果不是真完美匹配，但分数更高，或者分数相同但之前没有找到过1.0的匹配
+          // 注意：如果之前已经找到了一个score=1.0的（非同目录），我们不应该被低分的覆盖
+          // 但如果找到了另一个score=1.0的（非同目录），我们可以保留任意一个，或者保留第一个
+          if (score > bestScore) {
+            bestScore = score;
+            bestMatchFile = file;
+            print('[Lyric] 找到更佳匹配: lyric="$fileName", score=$score');
+          } else if (score == 1.0 && bestScore == 1.0) {
+            // 已经有一个完美匹配了，但不是同目录的（否则上面就return了）
+            // 当前这个也是完美匹配，也不是同目录的（否则上面就return了）
+            // 保持原样，或者根据其他规则（如文件名长度？）
+          }
+        }
+      }
+    }
+
+    searchInFiles(allFiles, '');
+
+    if (bestMatchFile != null) {
+      print(
+          '[Lyric] 最终匹配: track="${track.title}", lyric="${bestMatchFile['title'] ?? bestMatchFile['name']}", score=$bestScore, isTruePerfect=$foundTruePerfectMatch');
+    }
+
+    return bestMatchFile;
   }
 
   // 清空字幕
