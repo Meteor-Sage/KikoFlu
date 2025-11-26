@@ -19,6 +19,7 @@ import '../widgets/circle_chip.dart';
 import '../widgets/offline_file_explorer_widget.dart';
 import '../widgets/global_audio_player_wrapper.dart';
 import '../widgets/download_fab.dart';
+import '../utils/string_utils.dart';
 
 /// 离线作品详情页 - 使用下载时保存的元数据展示作品信息
 /// 不依赖网络请求，完全离线可用
@@ -169,7 +170,7 @@ class _OfflineWorkDetailScreenState
       if (!mounted) return; // 选择目录后再次检查
 
       // 生成文件名
-      final fileName = 'RJ${widget.work.id}.zip';
+      final fileName = '${formatRJCode(widget.work.id)}.zip';
       final savePath = path.join(directoryPath, fileName);
 
       // 写入文件
@@ -274,12 +275,12 @@ class _OfflineWorkDetailScreenState
               ),
             ],
             title: GestureDetector(
-              onLongPress: () => _copyToClipboard('RJ${widget.work.id}', 'RJ号'),
+              onLongPress: () => _copyToClipboard(formatRJCode(widget.work.id), 'RJ号'),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'RJ${widget.work.id}',
+                    formatRJCode(widget.work.id),
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           fontSize: 18,

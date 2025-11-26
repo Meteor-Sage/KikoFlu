@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -9,7 +8,6 @@ import '../providers/history_provider.dart';
 import '../services/audio_player_service.dart';
 import '../services/download_service.dart';
 import '../services/cache_service.dart';
-import '../services/kikoeru_api_service.dart' hide kikoeruApiServiceProvider;
 import '../screens/work_detail_screen.dart';
 import '../utils/string_utils.dart';
 import '../providers/lyric_provider.dart';
@@ -122,10 +120,10 @@ class HistoryWorkCard extends ConsumerWidget {
                           customBorder: const CircleBorder(),
                           onTap: () => _resumePlayback(context, ref),
                           child: Padding(
-                            padding: const EdgeInsets.all(8.0),
+                            padding: const EdgeInsets.all(10.0),
                             child: Icon(
                               Icons.play_arrow,
-                              size: 20,
+                              size: 24,
                               color: Theme.of(context).colorScheme.onPrimary,
                             ),
                           ),

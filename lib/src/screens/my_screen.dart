@@ -291,6 +291,8 @@ class _MyScreenState extends ConsumerState<MyScreen>
         toolbarHeight: 0,
         bottom: TabBar(
           controller: _tabController,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
           tabs: tabs.map((tab) => Tab(text: tab.title)).toList(),
         ),
       ),

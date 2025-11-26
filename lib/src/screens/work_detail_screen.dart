@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../utils/string_utils.dart';
 
 import '../models/work.dart';
 import '../providers/auth_provider.dart';
@@ -539,9 +540,10 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
           systemOverlayStyle: systemOverlayStyle,
           // RJ号作为标题,支持长按复制
           title: GestureDetector(
-            onLongPress: () => _copyToClipboard('RJ${widget.work.id}', 'RJ号'),
+            onLongPress: () =>
+                _copyToClipboard(formatRJCode(widget.work.id), 'RJ号'),
             child: Text(
-              'RJ${widget.work.id}',
+              formatRJCode(widget.work.id),
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                     fontSize: 18,

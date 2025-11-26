@@ -21,3 +21,13 @@ String formatDuration(Duration duration) {
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 }
+
+String formatRJCode(int id) {
+  String code = id.toString();
+  if (code.length == 5) {
+    code = '0$code';
+  } else if (code.length == 7) {
+    code = '0$code';
+  }
+  return 'RJ$code';
+}

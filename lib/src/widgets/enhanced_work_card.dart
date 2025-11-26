@@ -411,7 +411,7 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                               borderRadius: BorderRadius.circular(3),
                             ),
                             child: Text(
-                              'RJ${widget.work.id}',
+                              formatRJCode(widget.work.id),
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: rjFontSize,
@@ -648,7 +648,7 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
-        'RJ${widget.work.id}',
+        formatRJCode(widget.work.id),
         style: TextStyle(
           color: Colors.white,
           fontSize: fontSize,

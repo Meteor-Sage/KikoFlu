@@ -60,7 +60,6 @@ class _SearchResultContent extends ConsumerStatefulWidget {
   final Map<String, dynamic>? searchParams;
 
   const _SearchResultContent({
-    super.key,
     required this.keyword,
     this.searchTypeLabel,
     this.searchParams,

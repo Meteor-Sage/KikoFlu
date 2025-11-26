@@ -6,14 +6,50 @@ import '../models/audio_track.dart';
 import '../services/history_database.dart';
 import '../services/audio_player_service.dart';
 
+class HistoryState {
+  final List<HistoryRecord> records;
+  final bool isLoading;
+  final int currentPage;
+  final int totalCount;
+  final int pageSize;
+  final bool hasMore;
+
+  const HistoryState({
+    this.records = const [],
+    this.isLoading = false,
+    this.currentPage = 1,
+    this.totalCount = 0,
+    this.pageSize = 20,
+    this.hasMore = true,
+  });
+
+  HistoryState copyWith({
+    List<HistoryRecord>? records,
+    bool? isLoading,
+    int? currentPage,
+    int? totalCount,
+    int? pageSize,
+    bool? hasMore,
+  }) {
+    return HistoryState(
+      records: records ?? this.records,
+      isLoading: isLoading ?? this.isLoading,
+      currentPage: currentPage ?? this.currentPage,
+      totalCount: totalCount ?? this.totalCount,
+      pageSize: pageSize ?? this.pageSize,
+      hasMore: hasMore ?? this.hasMore,
+    );
+  }
+}
+
 final historyProvider =
-    StateNotifierProvider<HistoryNotifier, List<HistoryRecord>>((ref) {
+    StateNotifierProvider<HistoryNotifier, HistoryState>((ref) {
   return HistoryNotifier();
 });
 
-class HistoryNotifier extends StateNotifier<List<HistoryRecord>> {
-  HistoryNotifier() : super([]) {
-    load();
+class HistoryNotifier extends StateNotifier<HistoryState> {
+  HistoryNotifier() : super(const HistoryState()) {
+    load(refresh: true);
     _initPlaybackListener();
   }
 
@@ -21,9 +57,56 @@ class HistoryNotifier extends StateNotifier<List<HistoryRecord>> {
   StreamSubscription? _trackSubscription;
   DateTime _lastUpdateTime = DateTime.now();
 
-  Future<void> load() async {
-    final history = await HistoryDatabase.instance.getAllHistory();
-    state = history;
+  Future<void> load({bool refresh = false}) async {
+    if (state.isLoading) return;
+
+    final page = refresh ? 1 : state.currentPage;
+
+    state = state.copyWith(isLoading: true, currentPage: page);
+
+    try {
+      final offset = (page - 1) * state.pageSize;
+      final records = await HistoryDatabase.instance.getAllHistory(
+        limit: state.pageSize,
+        offset: offset,
+      );
+      final totalCount = await HistoryDatabase.instance.getHistoryCount();
+
+      state = state.copyWith(
+        records: records,
+        currentPage: page,
+        totalCount: totalCount,
+        hasMore: (offset + records.length) < totalCount,
+        isLoading: false,
+      );
+    } catch (e) {
+      state = state.copyWith(isLoading: false);
+      print('Failed to load history: $e');
+    }
+  }
+
+  Future<void> refresh() async {
+    await load(refresh: true);
+  }
+
+  Future<void> nextPage() async {
+    if (state.hasMore && !state.isLoading) {
+      state = state.copyWith(currentPage: state.currentPage + 1);
+      await load();
+    }
+  }
+
+  Future<void> previousPage() async {
+    if (state.currentPage > 1 && !state.isLoading) {
+      state = state.copyWith(currentPage: state.currentPage - 1);
+      await load();
+    }
+  }
+
+  Future<void> goToPage(int page) async {
+    if (state.isLoading || page == state.currentPage) return;
+    state = state.copyWith(currentPage: page);
+    await load();
   }
 
   Future<void> addOrUpdate(Work work,
@@ -40,12 +123,16 @@ class HistoryNotifier extends StateNotifier<List<HistoryRecord>> {
       playlistTotal = audioService.queue.length;
     }
 
-    // Find existing record
-    final existingIndex = state.indexWhere((r) => r.work.id == work.id);
+    // Find existing record in current list (might not be in list if on other page)
+    // But we should check DB first? No, just update DB and reload current page.
+
+    // Actually, we need to get the existing record from DB to preserve other fields if not provided
+    // But for simplicity, we can try to find in state first.
+    final existingIndex = state.records.indexWhere((r) => r.work.id == work.id);
     HistoryRecord record;
 
     if (existingIndex >= 0) {
-      final existing = state[existingIndex];
+      final existing = state.records[existingIndex];
       record = existing.copyWith(
         work: work,
         lastPlayedTime: now,
@@ -57,6 +144,13 @@ class HistoryNotifier extends StateNotifier<List<HistoryRecord>> {
             playlistTotal > 0 ? playlistTotal : existing.playlistTotal,
       );
     } else {
+      // If not in current list, we should try to fetch from DB or create new.
+      // Since we are playing it now, it will become the most recent one.
+      // We can just create a new record object, but we might lose previous progress if we don't fetch.
+      // Ideally we should fetch from DB.
+      // But `addOrUpdate` in DB handles replace.
+      // So we just need to make sure we have the correct data.
+      // If we don't have track/position, we assume 0/null.
       record = HistoryRecord(
         work: work,
         lastPlayedTime: now,
@@ -69,18 +163,18 @@ class HistoryNotifier extends StateNotifier<List<HistoryRecord>> {
 
     await HistoryDatabase.instance.addOrUpdate(record);
 
-    // Reload to ensure sort order
+    // Reload current page to reflect changes
     await load();
   }
 
   Future<void> remove(int workId) async {
     await HistoryDatabase.instance.delete(workId);
-    await load();
+    await load(); // Reload current page
   }
 
   Future<void> clear() async {
     await HistoryDatabase.instance.clear();
-    state = [];
+    state = state.copyWith(records: [], totalCount: 0, currentPage: 1);
   }
 
   void _initPlaybackListener() {
@@ -113,11 +207,12 @@ class HistoryNotifier extends StateNotifier<List<HistoryRecord>> {
 
     // We need the Work object.
     // We check if the work is already in history.
-    final existingIndex = state.indexWhere((r) => r.work.id == track.workId);
+    final existingIndex =
+        state.records.indexWhere((r) => r.work.id == track.workId);
 
     if (existingIndex >= 0) {
       // Update existing record
-      final existing = state[existingIndex];
+      final existing = state.records[existingIndex];
       await addOrUpdate(existing.work,
           track: track, positionMs: position?.inMilliseconds);
     } else {

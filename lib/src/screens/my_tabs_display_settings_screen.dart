@@ -37,6 +37,25 @@ class MyTabsDisplaySettingsScreen extends ConsumerWidget {
                   onChanged: (value) => notifier.setShowOnlineMarks(value),
                 ),
                 Divider(color: Theme.of(context).colorScheme.outlineVariant),
+                ListTile(
+                  enabled: false,
+                  leading: Icon(
+                    Icons.download,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  title: const Text('历史记录'),
+                  subtitle: Text(
+                    '不可关闭',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  trailing: Switch(
+                    value: true,
+                    onChanged: null,
+                  ),
+                ),
+                Divider(color: Theme.of(context).colorScheme.outlineVariant),
                 SwitchListTile(
                   secondary: Icon(
                     Icons.playlist_play,

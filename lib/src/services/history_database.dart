@@ -80,10 +80,24 @@ class HistoryDatabase {
     );
   }
 
-  Future<List<HistoryRecord>> getAllHistory() async {
+  Future<List<HistoryRecord>> getAllHistory({
+    int? limit,
+    int? offset,
+  }) async {
     final db = await instance.database;
-    final result = await db.query('history', orderBy: 'last_played_time DESC');
+    final result = await db.query(
+      'history',
+      orderBy: 'last_played_time DESC',
+      limit: limit,
+      offset: offset,
+    );
     return result.map((json) => HistoryRecord.fromMap(json)).toList();
+  }
+
+  Future<int> getHistoryCount() async {
+    final db = await instance.database;
+    final result = await db.rawQuery('SELECT COUNT(*) as count FROM history');
+    return Sqflite.firstIntValue(result) ?? 0;
   }
 
   Future<void> delete(int workId) async {
