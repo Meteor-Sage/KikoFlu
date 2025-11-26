@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'auth_provider.dart' show kikoeruApiServiceProvider;
 import '../models/work.dart';
 import '../models/history_record.dart';
 import '../models/audio_track.dart';
@@ -44,11 +45,13 @@ class HistoryState {
 
 final historyProvider =
     StateNotifierProvider<HistoryNotifier, HistoryState>((ref) {
-  return HistoryNotifier();
+  return HistoryNotifier(ref);
 });
 
 class HistoryNotifier extends StateNotifier<HistoryState> {
-  HistoryNotifier() : super(const HistoryState()) {
+  final Ref _ref;
+
+  HistoryNotifier(this._ref) : super(const HistoryState()) {
     load(refresh: true);
     _initPlaybackListener();
   }
@@ -57,8 +60,8 @@ class HistoryNotifier extends StateNotifier<HistoryState> {
   StreamSubscription? _trackSubscription;
   DateTime _lastUpdateTime = DateTime.now();
 
-  Future<void> load({bool refresh = false}) async {
-    if (state.isLoading) return;
+  Future<void> load({bool refresh = false, bool force = false}) async {
+    if (state.isLoading && !force) return;
 
     final page = refresh ? 1 : state.currentPage;
 
@@ -163,13 +166,13 @@ class HistoryNotifier extends StateNotifier<HistoryState> {
 
     await HistoryDatabase.instance.addOrUpdate(record);
 
-    // Reload current page to reflect changes
-    await load();
+    // Reload current page to reflect changes; force reload if another load is running
+    await load(force: true);
   }
 
   Future<void> remove(int workId) async {
     await HistoryDatabase.instance.delete(workId);
-    await load(); // Reload current page
+    await load(force: true); // Reload current page (force)
   }
 
   Future<void> clear() async {
@@ -216,8 +219,18 @@ class HistoryNotifier extends StateNotifier<HistoryState> {
       await addOrUpdate(existing.work,
           track: track, positionMs: position?.inMilliseconds);
     } else {
-      // If not in history, we can't add it because we don't have the Work object.
-      // The UI is responsible for adding the Work to history when playback starts.
+      // If not in history, try fetching the Work details from API and add it.
+      try {
+        final api = _ref.read(kikoeruApiServiceProvider);
+        final json = await api.getWork(track.workId!);
+        final work = Work.fromJson(json);
+        await addOrUpdate(work,
+            track: track, positionMs: position?.inMilliseconds);
+      } catch (e) {
+        // If fetching fails, log and do nothing. UI or other flows may add later.
+        print(
+            'Failed to fetch work for history update (id=${track.workId}): $e');
+      }
     }
   }
 
