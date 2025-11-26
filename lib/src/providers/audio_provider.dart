@@ -8,6 +8,7 @@ import '../models/work.dart';
 import '../services/audio_player_service.dart';
 import 'settings_provider.dart';
 import 'history_provider.dart';
+import 'auth_provider.dart' show kikoeruApiServiceProvider;
 
 // Audio Player Service Provider
 final audioPlayerServiceProvider = Provider<AudioPlayerService>((ref) {
@@ -120,6 +121,20 @@ class AudioPlayerController extends StateNotifier<AudioPlayerState> {
   Future<void> playTrack(AudioTrack track) async {
     await _service.updateQueue([track]);
     await _service.play();
+    // Ensure single-track plays are recorded to history.
+    if (track.workId != null) {
+      try {
+        final api = _ref.read(kikoeruApiServiceProvider);
+        final json = await api.getWork(track.workId!);
+        final work = Work.fromJson(json);
+        // Fire-and-forget: record history (don't block the UI)
+        _ref.read(historyProvider.notifier).addOrUpdate(work,
+            track: track, positionMs: _service.position.inMilliseconds);
+      } catch (e) {
+        print(
+            'Failed to record history for playTrack (id=${track.workId}): $e');
+      }
+    }
   }
 
   Future<void> playTracks(List<AudioTrack> tracks,
