@@ -213,10 +213,19 @@ class HistoryNotifier extends StateNotifier<HistoryState> {
     final existingIndex =
         state.records.indexWhere((r) => r.work.id == track.workId);
 
+    HistoryRecord? dbRecord;
+    if (existingIndex < 0) {
+      dbRecord =
+          await HistoryDatabase.instance.getHistoryByWorkId(track.workId!);
+    }
+
     if (existingIndex >= 0) {
       // Update existing record
       final existing = state.records[existingIndex];
       await addOrUpdate(existing.work,
+          track: track, positionMs: position?.inMilliseconds);
+    } else if (dbRecord != null) {
+      await addOrUpdate(dbRecord.work,
           track: track, positionMs: position?.inMilliseconds);
     } else {
       // If not in history, try fetching the Work details from API and add it.
