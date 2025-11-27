@@ -25,8 +25,9 @@ class GlobalAudioPlayerWrapper extends ConsumerWidget {
           Expanded(child: child),
           if (showMiniPlayer) ...[
             currentTrack.when(
-              data: (track) =>
-                  track != null ? const MiniPlayer() : const SizedBox.shrink(),
+              data: (track) => track != null
+                  ? const MiniPlayer(enableArtworkHero: false)
+                  : const SizedBox.shrink(),
               loading: () => const SizedBox.shrink(),
               error: (_, __) => const SizedBox.shrink(),
             ),

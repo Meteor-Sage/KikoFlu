@@ -150,53 +150,71 @@ class HistoryWorkCard extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  if (record.lastTrack != null) ...[
-                    Text(
-                      record.lastTrack!.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Theme.of(context).colorScheme.secondary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '${formatDuration(Duration(milliseconds: record.lastPositionMs))} / ${formatDuration(record.lastTrack!.duration ?? Duration.zero)}',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w500,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                        if (record.playlistTotal > 0)
-                          Text(
-                            '${record.playlistIndex + 1} / ${record.playlistTotal}',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Theme.of(context).colorScheme.outline,
+                  if (record.lastTrack != null)
+                    Builder(
+                      builder: (context) {
+                        final lastTrack = record.lastTrack!;
+                        final int? trackDurationMs =
+                            lastTrack.duration?.inMilliseconds;
+                        final double progressValue =
+                            trackDurationMs != null && trackDurationMs > 0
+                                ? (record.lastPositionMs / trackDurationMs)
+                                    .clamp(0.0, 1.0)
+                                : 0.0;
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              lastTrack.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color:
+                                    Theme.of(context).colorScheme.secondary,
+                              ),
                             ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    LinearProgressIndicator(
-                      value: (record.lastTrack!.duration?.inMilliseconds ?? 1) >
-                              0
-                          ? (record.lastPositionMs /
-                                  record.lastTrack!.duration!.inMilliseconds)
-                              .clamp(0.0, 1.0)
-                          : 0.0,
-                      backgroundColor:
-                          Theme.of(context).colorScheme.surfaceContainerHighest,
-                      color: Theme.of(context).colorScheme.primary,
-                      minHeight: 3,
-                      borderRadius: BorderRadius.circular(1.5),
-                    ),
-                  ] else
+                            const SizedBox(height: 4),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  '${formatDuration(Duration(milliseconds: record.lastPositionMs))} / ${formatDuration(lastTrack.duration ?? Duration.zero)}',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w500,
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                  ),
+                                ),
+                                if (record.playlistTotal > 0)
+                                  Text(
+                                    '${record.playlistIndex + 1} / ${record.playlistTotal}',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .outline,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            LinearProgressIndicator(
+                              value: progressValue,
+                              backgroundColor: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest,
+                              color: Theme.of(context).colorScheme.primary,
+                              minHeight: 3,
+                              borderRadius: BorderRadius.circular(1.5),
+                            ),
+                          ],
+                        );
+                      },
+                    )
+                  else
                     Text(
                       '尚未播放',
                       style: TextStyle(

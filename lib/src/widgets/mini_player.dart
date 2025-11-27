@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
+import '../models/audio_track.dart';
 import '../providers/audio_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/lyric_provider.dart';
@@ -11,7 +12,9 @@ import '../screens/audio_player_screen.dart';
 import 'volume_control.dart';
 
 class MiniPlayer extends ConsumerStatefulWidget {
-  const MiniPlayer({super.key});
+  final bool enableArtworkHero;
+
+  const MiniPlayer({super.key, this.enableArtworkHero = true});
 
   @override
   ConsumerState<MiniPlayer> createState() => _MiniPlayerState();
@@ -344,74 +347,11 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
                                 },
                                 child: Row(
                                   children: [
-                                    // Album art (use work cover) with Hero animation
-                                    Hero(
-                                      tag: 'audio_player_artwork_${track.id}',
-                                      child: Container(
-                                        width: 48,
-                                        height: 48,
-                                        decoration: BoxDecoration(
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .surfaceContainerHighest,
-                                        ),
-                                        child: (workCoverUrl ??
-                                                    track.artworkUrl) !=
-                                                null
-                                            ? ClipRRect(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                                child: (workCoverUrl ??
-                                                                track
-                                                                    .artworkUrl)
-                                                            ?.startsWith(
-                                                                'file://') ??
-                                                        false
-                                                    ? Image.file(
-                                                        File((workCoverUrl ??
-                                                                track
-                                                                    .artworkUrl)!
-                                                            .replaceFirst(
-                                                                'file://', '')),
-                                                        fit: BoxFit.cover,
-                                                        errorBuilder: (context,
-                                                            error, stackTrace) {
-                                                          return const Icon(
-                                                              Icons.album,
-                                                              size: 32);
-                                                        },
-                                                      )
-                                                    : CachedNetworkImage(
-                                                        imageUrl: (workCoverUrl ??
-                                                            track.artworkUrl)!,
-                                                        // 使用workId作为cacheKey，与作品详情页保持一致
-                                                        cacheKey: track
-                                                                    .workId !=
-                                                                null
-                                                            ? 'work_cover_${track.workId}'
-                                                            : null,
-                                                        fit: BoxFit.cover,
-                                                        errorWidget: (context,
-                                                            url, error) {
-                                                          return const Icon(
-                                                              Icons.album,
-                                                              size: 32);
-                                                        },
-                                                        placeholder:
-                                                            (context, url) =>
-                                                                const Center(
-                                                          child:
-                                                              CircularProgressIndicator(),
-                                                        ),
-                                                      ),
-                                              )
-                                            : const Icon(
-                                                Icons.album,
-                                                size: 32,
-                                              ),
-                                      ),
+                                    // Album art (use work cover) with optional Hero animation
+                                    _buildArtwork(
+                                      context,
+                                      track,
+                                      workCoverUrl: workCoverUrl,
                                     ),
                                     const SizedBox(width: 12),
                                     // Track info
@@ -570,6 +510,60 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
       },
       loading: () => const SizedBox.shrink(),
       error: (error, stack) => const SizedBox.shrink(),
+    );
+  }
+
+  Widget _buildArtwork(
+    BuildContext context,
+    AudioTrack track, {
+    String? workCoverUrl,
+  }) {
+    final image = Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      ),
+      child: (workCoverUrl ?? track.artworkUrl) != null
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: (workCoverUrl ?? track.artworkUrl)?.startsWith('file://') ??
+                      false
+                  ? Image.file(
+                      File((workCoverUrl ?? track.artworkUrl)!
+                          .replaceFirst('file://', '')),
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(Icons.album, size: 32);
+                      },
+                    )
+                  : CachedNetworkImage(
+                      imageUrl: (workCoverUrl ?? track.artworkUrl)!,
+                      cacheKey: track.workId != null
+                          ? 'work_cover_${track.workId}'
+                          : null,
+                      fit: BoxFit.cover,
+                      errorWidget: (context, url, error) =>
+                          const Icon(Icons.album, size: 32),
+                      placeholder: (context, url) => const Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                    ),
+            )
+          : const Icon(
+              Icons.album,
+              size: 32,
+            ),
+    );
+
+    if (!widget.enableArtworkHero) {
+      return image;
+    }
+
+    return Hero(
+      tag: 'audio_player_artwork_${track.id}',
+      child: image,
     );
   }
 }

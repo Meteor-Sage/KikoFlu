@@ -94,6 +94,18 @@ class HistoryDatabase {
     return result.map((json) => HistoryRecord.fromMap(json)).toList();
   }
 
+  Future<HistoryRecord?> getHistoryByWorkId(int workId) async {
+    final db = await instance.database;
+    final result = await db.query(
+      'history',
+      where: 'work_id = ?',
+      whereArgs: [workId],
+      limit: 1,
+    );
+    if (result.isEmpty) return null;
+    return HistoryRecord.fromMap(result.first);
+  }
+
   Future<int> getHistoryCount() async {
     final db = await instance.database;
     final result = await db.rawQuery('SELECT COUNT(*) as count FROM history');

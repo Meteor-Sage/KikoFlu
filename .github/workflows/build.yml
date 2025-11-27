@@ -29,6 +29,32 @@ jobs:
           
       - name: Get Dependencies
         run: flutter pub get
+      
+      - name: Decode debug keystore
+        env:
+          ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+        run: |
+          python - <<'PY'
+          import base64
+          import os
+
+          data = os.environ["ANDROID_KEYSTORE_B64"].encode()
+          with open("android/app/debug.keystore", "wb") as fh:
+              fh.write(base64.b64decode(data))
+          PY
+      
+      - name: Write key.properties
+        env:
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          cat <<'EOF' > android/key.properties
+          storeFile=app/debug.keystore
+          storePassword=$STORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
         
       - name: Build Universal APK
         run: flutter build apk --release
