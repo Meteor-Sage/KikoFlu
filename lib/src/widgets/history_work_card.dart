@@ -11,6 +11,7 @@ import '../services/cache_service.dart';
 import '../screens/work_detail_screen.dart';
 import '../utils/string_utils.dart';
 import '../providers/lyric_provider.dart';
+import 'privacy_blur_cover.dart';
 
 class HistoryWorkCard extends ConsumerWidget {
   final HistoryRecord record;
@@ -74,18 +75,21 @@ class HistoryWorkCard extends ConsumerWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  CachedNetworkImage(
-                    imageUrl: work.getCoverImageUrl(host, token: token),
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(
-                      color: Colors.grey[200],
-                      child: const Center(
-                          child: Icon(Icons.image, color: Colors.grey)),
-                    ),
-                    errorWidget: (context, url, error) => Container(
-                      color: Colors.grey[200],
-                      child: const Center(
-                          child: Icon(Icons.broken_image, color: Colors.grey)),
+                  PrivacyBlurCover(
+                    child: CachedNetworkImage(
+                      imageUrl: work.getCoverImageUrl(host, token: token),
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
+                        color: Colors.grey[200],
+                        child: const Center(
+                            child: Icon(Icons.image, color: Colors.grey)),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        color: Colors.grey[200],
+                        child: const Center(
+                            child:
+                                Icon(Icons.broken_image, color: Colors.grey)),
+                      ),
                     ),
                   ),
                   // Gradient

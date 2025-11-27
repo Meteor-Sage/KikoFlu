@@ -22,6 +22,7 @@ import '../widgets/rating_detail_popup.dart';
 import '../services/translation_service.dart';
 import '../widgets/download_fab.dart';
 import '../providers/work_detail_display_provider.dart';
+import '../widgets/privacy_blur_cover.dart';
 
 class WorkDetailScreen extends ConsumerStatefulWidget {
   final Work work;
@@ -644,75 +645,79 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                   ? MediaQuery.of(context).size.width * 0.45
                   : double.infinity,
             ),
-            child: Stack(
-              fit: StackFit.passthrough,
-              children: [
-                // 底层：缓存图片，始终显示
-                CachedNetworkImage(
-                  imageUrl: work.getCoverImageUrl(host, token: token),
-                  cacheKey: 'work_cover_${widget.work.id}',
-                  fit: BoxFit.contain,
-                  placeholder: (context, url) => Container(
-                    height: 300,
-                    color: Colors.grey[300],
-                    child: const Center(
-                      child: CircularProgressIndicator(),
-                    ),
-                  ),
-                  errorWidget: (context, url, error) => Container(
-                    height: 300,
-                    color: Colors.grey[300],
-                    child: const Icon(
-                      Icons.image_not_supported,
-                      size: 64,
-                      color: Colors.grey,
-                    ),
-                  ),
-                ),
-                // 顶层：高清图，加载完成后覆盖
-                if (_showHDImage && _hdImageProvider != null)
-                  Image(
-                    image: _hdImageProvider!,
+            child: PrivacyBlurCover(
+              borderRadius: BorderRadius.circular(12),
+              child: Stack(
+                fit: StackFit.passthrough,
+                children: [
+                  // 底层：缓存图片，始终显示
+                  CachedNetworkImage(
+                    imageUrl: work.getCoverImageUrl(host, token: token),
+                    cacheKey: 'work_cover_${widget.work.id}',
                     fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const SizedBox.shrink(); // 出错时不显示，保持底层缓存图
-                    },
+                    placeholder: (context, url) => Container(
+                      height: 300,
+                      color: Colors.grey[300],
+                      child: const Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      height: 300,
+                      color: Colors.grey[300],
+                      child: const Icon(
+                        Icons.image_not_supported,
+                        size: 64,
+                        color: Colors.grey,
+                      ),
+                    ),
                   ),
-                // 字幕标签 - 浮动在右下角
-                if (ref.watch(workDetailDisplayProvider).showSubtitleTag &&
-                    work.hasSubtitle == true)
-                  Positioned(
-                    right: 12,
-                    bottom: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary,
-                        borderRadius: BorderRadius.circular(6),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.3),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
+                  // 顶层：高清图，加载完成后覆盖
+                  if (_showHDImage && _hdImageProvider != null)
+                    Image(
+                      image: _hdImageProvider!,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const SizedBox
+                            .shrink(); // 出错时不显示，保持底层缓存图
+                      },
+                    ),
+                  // 字幕标签 - 浮动在右下角
+                  if (ref.watch(workDetailDisplayProvider).showSubtitleTag &&
+                      work.hasSubtitle == true)
+                    Positioned(
+                      right: 12,
+                      bottom: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary,
+                          borderRadius: BorderRadius.circular(6),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.3),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          '字幕',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onPrimary,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            height: 1.1,
+                            letterSpacing: 0.5,
                           ),
-                        ],
-                      ),
-                      child: Text(
-                        '字幕',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onPrimary,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          height: 1.1,
-                          letterSpacing: 0.5,
                         ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

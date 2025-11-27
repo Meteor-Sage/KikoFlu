@@ -9,6 +9,7 @@ import '../providers/auth_provider.dart';
 import '../providers/lyric_provider.dart';
 import '../providers/player_lyric_style_provider.dart';
 import '../screens/audio_player_screen.dart';
+import 'privacy_blur_cover.dart';
 import 'volume_control.dart';
 
 class MiniPlayer extends ConsumerStatefulWidget {
@@ -526,30 +527,33 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
       ),
       child: (workCoverUrl ?? track.artworkUrl) != null
-          ? ClipRRect(
+          ? PrivacyBlurCover(
               borderRadius: BorderRadius.circular(8),
-              child: (workCoverUrl ?? track.artworkUrl)?.startsWith('file://') ??
-                      false
-                  ? Image.file(
-                      File((workCoverUrl ?? track.artworkUrl)!
-                          .replaceFirst('file://', '')),
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Icon(Icons.album, size: 32);
-                      },
-                    )
-                  : CachedNetworkImage(
-                      imageUrl: (workCoverUrl ?? track.artworkUrl)!,
-                      cacheKey: track.workId != null
-                          ? 'work_cover_${track.workId}'
-                          : null,
-                      fit: BoxFit.cover,
-                      errorWidget: (context, url, error) =>
-                          const Icon(Icons.album, size: 32),
-                      placeholder: (context, url) => const Center(
-                        child: CircularProgressIndicator(),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: (workCoverUrl ?? track.artworkUrl)?.startsWith('file://') ??
+                        false
+                    ? Image.file(
+                        File((workCoverUrl ?? track.artworkUrl)!
+                            .replaceFirst('file://', '')),
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Icon(Icons.album, size: 32);
+                        },
+                      )
+                    : CachedNetworkImage(
+                        imageUrl: (workCoverUrl ?? track.artworkUrl)!,
+                        cacheKey: track.workId != null
+                            ? 'work_cover_${track.workId}'
+                            : null,
+                        fit: BoxFit.cover,
+                        errorWidget: (context, url, error) =>
+                            const Icon(Icons.album, size: 32),
+                        placeholder: (context, url) => const Center(
+                          child: CircularProgressIndicator(),
+                        ),
                       ),
-                    ),
+              ),
             )
           : const Icon(
               Icons.album,

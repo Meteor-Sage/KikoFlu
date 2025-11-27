@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../providers/audio_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../privacy_blur_cover.dart';
 
 /// 播放列表对话框
 class PlaylistDialog extends ConsumerWidget {
@@ -104,35 +105,41 @@ class PlaylistDialog extends ConsumerWidget {
                                 .surfaceContainerHighest,
                           ),
                           child: (workCoverUrl ?? track.artworkUrl) != null
-                              ? ClipRRect(
+                              ? PrivacyBlurCover(
                                   borderRadius: BorderRadius.circular(4),
-                                  child: (workCoverUrl ?? track.artworkUrl)
-                                              ?.startsWith('file://') ??
-                                          false
-                                      ? Image.file(
-                                          File((workCoverUrl ??
-                                                  track.artworkUrl)!
-                                              .replaceFirst('file://', '')),
-                                          fit: BoxFit.cover,
-                                          errorBuilder:
-                                              (context, error, stackTrace) {
-                                            return const Icon(Icons.music_note,
-                                                size: 24);
-                                          },
-                                        )
-                                      : CachedNetworkImage(
-                                          imageUrl: (workCoverUrl ??
-                                              track.artworkUrl)!,
-                                          fit: BoxFit.cover,
-                                          errorWidget: (context, url, error) {
-                                            return const Icon(Icons.music_note,
-                                                size: 24);
-                                          },
-                                          placeholder: (context, url) =>
-                                              const Center(
-                                            child: CircularProgressIndicator(),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(4),
+                                    child: (workCoverUrl ?? track.artworkUrl)
+                                                ?.startsWith('file://') ??
+                                            false
+                                        ? Image.file(
+                                            File((workCoverUrl ??
+                                                    track.artworkUrl)!
+                                                .replaceFirst('file://', '')),
+                                            fit: BoxFit.cover,
+                                            errorBuilder:
+                                                (context, error, stackTrace) {
+                                              return const Icon(
+                                                  Icons.music_note,
+                                                  size: 24);
+                                            },
+                                          )
+                                        : CachedNetworkImage(
+                                            imageUrl: (workCoverUrl ??
+                                                track.artworkUrl)!,
+                                            fit: BoxFit.cover,
+                                            errorWidget: (context, url, error) {
+                                              return const Icon(
+                                                  Icons.music_note,
+                                                  size: 24);
+                                            },
+                                            placeholder: (context, url) =>
+                                                const Center(
+                                              child:
+                                                  CircularProgressIndicator(),
+                                            ),
                                           ),
-                                        ),
+                                  ),
                                 )
                               : const Icon(Icons.music_note, size: 24),
                         ),

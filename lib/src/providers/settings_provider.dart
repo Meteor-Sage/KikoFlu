@@ -302,12 +302,14 @@ final audioFormatPreferenceProvider =
 class PrivacyModeSettings {
   final bool enabled;
   final bool blurCover;
+  final bool blurCoverInApp;
   final bool maskTitle;
   final String customTitle;
 
   const PrivacyModeSettings({
     this.enabled = false,
     this.blurCover = true,
+    this.blurCoverInApp = false,
     this.maskTitle = false,
     this.customTitle = '正在播放音频',
   });
@@ -315,12 +317,14 @@ class PrivacyModeSettings {
   PrivacyModeSettings copyWith({
     bool? enabled,
     bool? blurCover,
+    bool? blurCoverInApp,
     bool? maskTitle,
     String? customTitle,
   }) {
     return PrivacyModeSettings(
       enabled: enabled ?? this.enabled,
       blurCover: blurCover ?? this.blurCover,
+      blurCoverInApp: blurCoverInApp ?? this.blurCoverInApp,
       maskTitle: maskTitle ?? this.maskTitle,
       customTitle: customTitle ?? this.customTitle,
     );
@@ -331,6 +335,7 @@ class PrivacyModeSettings {
 class PrivacyModeSettingsNotifier extends StateNotifier<PrivacyModeSettings> {
   static const String _enabledKey = 'privacy_mode_enabled';
   static const String _blurCoverKey = 'privacy_mode_blur_cover';
+  static const String _blurCoverInAppKey = 'privacy_mode_blur_cover_in_app';
   static const String _maskTitleKey = 'privacy_mode_mask_title';
   static const String _customTitleKey = 'privacy_mode_custom_title';
 
@@ -341,9 +346,14 @@ class PrivacyModeSettingsNotifier extends StateNotifier<PrivacyModeSettings> {
   Future<void> _loadPreferences() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final blurCover = prefs.getBool(_blurCoverKey) ?? true;
+      final blurCoverInApp =
+          prefs.getBool(_blurCoverInAppKey) ?? false;
+
       state = PrivacyModeSettings(
         enabled: prefs.getBool(_enabledKey) ?? false,
-        blurCover: prefs.getBool(_blurCoverKey) ?? true,
+        blurCover: blurCover,
+        blurCoverInApp: blurCoverInApp,
         maskTitle: prefs.getBool(_maskTitleKey) ?? false,
         customTitle: prefs.getString(_customTitleKey) ?? '正在播放音频',
       );
@@ -361,6 +371,11 @@ class PrivacyModeSettingsNotifier extends StateNotifier<PrivacyModeSettings> {
   Future<void> setBlurCover(bool blur) async {
     state = state.copyWith(blurCover: blur);
     await _savePreference(_blurCoverKey, blur);
+  }
+
+  Future<void> setBlurCoverInApp(bool blur) async {
+    state = state.copyWith(blurCoverInApp: blur);
+    await _savePreference(_blurCoverInAppKey, blur);
   }
 
   Future<void> setMaskTitle(bool mask) async {

@@ -190,20 +190,39 @@ class _PrivacyModeSettingsScreenState
                   ),
                 ),
 
-                // 封面模糊
+                // 通知封面模糊
                 SwitchListTile(
                   secondary: Icon(
-                    Icons.blur_on,
+                    Icons.notifications_outlined,
                     color: Theme.of(context).colorScheme.primary,
                   ),
-                  title: const Text('模糊封面'),
-                  subtitle: const Text('对封面图片应用高斯模糊效果'),
+                  title: const Text('模糊通知封面'),
+                  subtitle: const Text('对系统通知、锁屏或控制中心中的封面应用模糊'),
                   value: settings.blurCover,
                   onChanged: settings.enabled
                       ? (value) {
                           ref
                               .read(privacyModeSettingsProvider.notifier)
                               .setBlurCover(value);
+                        }
+                      : null,
+                ),
+                Divider(color: Theme.of(context).colorScheme.outlineVariant),
+
+                // 应用内封面模糊
+                SwitchListTile(
+                  secondary: Icon(
+                    Icons.blur_on,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  title: const Text('模糊应用内封面'),
+                  subtitle: const Text('在播放器、列表等界面中模糊封面图片'),
+                  value: settings.blurCoverInApp,
+                  onChanged: settings.enabled
+                      ? (value) {
+                          ref
+                              .read(privacyModeSettingsProvider.notifier)
+                              .setBlurCoverInApp(value);
                         }
                       : null,
                 ),

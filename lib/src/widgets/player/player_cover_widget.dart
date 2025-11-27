@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../models/audio_track.dart';
+import '../privacy_blur_cover.dart';
 
 /// 播放器封面组件
 class PlayerCoverWidget extends StatelessWidget {
@@ -59,49 +60,52 @@ class PlayerCoverWidget extends StatelessWidget {
                 ],
               ),
               child: (workCoverUrl ?? track.artworkUrl) != null
-                  ? ClipRRect(
+                  ? PrivacyBlurCover(
                       borderRadius: BorderRadius.circular(16),
-                      child: _isLocalFile(workCoverUrl ?? track.artworkUrl)
-                          ? Image.file(
-                              File(_getLocalPath(
-                                  (workCoverUrl ?? track.artworkUrl)!)),
-                              fit: BoxFit.contain,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Padding(
-                                  padding: const EdgeInsets.all(40),
-                                  child: Icon(
-                                    Icons.album,
-                                    size: isLandscape ? 80 : 120,
-                                  ),
-                                );
-                              },
-                            )
-                          : CachedNetworkImage(
-                              imageUrl: (workCoverUrl ?? track.artworkUrl)!,
-                              // 使用workId作为cacheKey，与作品详情页保持一致，避免token变化导致重新下载
-                              cacheKey: track.workId != null
-                                  ? 'work_cover_${track.workId}'
-                                  : null,
-                              fit: BoxFit.contain,
-                              errorWidget: (context, url, error) {
-                                return Padding(
-                                  padding: const EdgeInsets.all(40),
-                                  child: Icon(
-                                    Icons.album,
-                                    size: isLandscape ? 80 : 120,
-                                  ),
-                                );
-                              },
-                              placeholder: (context, url) {
-                                return Padding(
-                                  padding: const EdgeInsets.all(40),
-                                  child: Icon(
-                                    Icons.album,
-                                    size: isLandscape ? 80 : 120,
-                                  ),
-                                );
-                              },
-                            ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: _isLocalFile(workCoverUrl ?? track.artworkUrl)
+                            ? Image.file(
+                                File(_getLocalPath(
+                                    (workCoverUrl ?? track.artworkUrl)!)),
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Padding(
+                                    padding: const EdgeInsets.all(40),
+                                    child: Icon(
+                                      Icons.album,
+                                      size: isLandscape ? 80 : 120,
+                                    ),
+                                  );
+                                },
+                              )
+                            : CachedNetworkImage(
+                                imageUrl: (workCoverUrl ?? track.artworkUrl)!,
+                                // 使用workId作为cacheKey，与作品详情页保持一致，避免token变化导致重新下载
+                                cacheKey: track.workId != null
+                                    ? 'work_cover_${track.workId}'
+                                    : null,
+                                fit: BoxFit.contain,
+                                errorWidget: (context, url, error) {
+                                  return Padding(
+                                    padding: const EdgeInsets.all(40),
+                                    child: Icon(
+                                      Icons.album,
+                                      size: isLandscape ? 80 : 120,
+                                    ),
+                                  );
+                                },
+                                placeholder: (context, url) {
+                                  return Padding(
+                                    padding: const EdgeInsets.all(40),
+                                    child: Icon(
+                                      Icons.album,
+                                      size: isLandscape ? 80 : 120,
+                                    ),
+                                  );
+                                },
+                              ),
+                      ),
                     )
                   : Padding(
                       padding: const EdgeInsets.all(40),

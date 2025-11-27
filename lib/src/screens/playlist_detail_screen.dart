@@ -10,6 +10,7 @@ import '../utils/snackbar_util.dart';
 import '../screens/work_detail_screen.dart';
 import '../widgets/overscroll_next_page_detector.dart';
 import '../utils/string_utils.dart';
+import '../widgets/privacy_blur_cover.dart';
 
 class PlaylistDetailScreen extends ConsumerStatefulWidget {
   final String playlistId;
@@ -1048,31 +1049,34 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
             // 封面图 - 使用 Hero 动画和统一的图片源
             Hero(
               tag: 'work_cover_${work.id}',
-              child: ClipRRect(
+              child: PrivacyBlurCover(
                 borderRadius: BorderRadius.circular(4),
-                child: CachedNetworkImage(
-                  imageUrl: work.getCoverImageUrl(host, token: token),
-                  cacheKey: 'work_cover_${work.id}',
-                  width: 56,
-                  height: 56,
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => Container(
-                    color: colorScheme.surfaceContainerHighest,
-                    child: Center(
-                      child: Icon(
-                        Icons.image,
-                        color: colorScheme.onSurfaceVariant,
-                        size: 24,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: CachedNetworkImage(
+                    imageUrl: work.getCoverImageUrl(host, token: token),
+                    cacheKey: 'work_cover_${work.id}',
+                    width: 56,
+                    height: 56,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => Container(
+                      color: colorScheme.surfaceContainerHighest,
+                      child: Center(
+                        child: Icon(
+                          Icons.image,
+                          color: colorScheme.onSurfaceVariant,
+                          size: 24,
+                        ),
                       ),
                     ),
-                  ),
-                  errorWidget: (context, url, error) => Container(
-                    color: colorScheme.surfaceContainerHighest,
-                    child: Center(
-                      child: Icon(
-                        Icons.broken_image,
-                        color: colorScheme.onSurfaceVariant,
-                        size: 24,
+                    errorWidget: (context, url, error) => Container(
+                      color: colorScheme.surfaceContainerHighest,
+                      child: Center(
+                        child: Icon(
+                          Icons.broken_image,
+                          color: colorScheme.onSurfaceVariant,
+                          size: 24,
+                        ),
                       ),
                     ),
                   ),

@@ -20,6 +20,7 @@ import '../widgets/offline_file_explorer_widget.dart';
 import '../widgets/global_audio_player_wrapper.dart';
 import '../widgets/download_fab.dart';
 import '../utils/string_utils.dart';
+import '../widgets/privacy_blur_cover.dart';
 
 /// 离线作品详情页 - 使用下载时保存的元数据展示作品信息
 /// 不依赖网络请求，完全离线可用
@@ -353,24 +354,27 @@ class _OfflineWorkDetailScreenState
                   ? MediaQuery.of(context).size.width * 0.45
                   : double.infinity,
             ),
-            child: Stack(
-              fit: StackFit.passthrough,
-              children: [
-                // 优先使用本地封面图片
-                if (widget.localCoverPath != null &&
-                    File(widget.localCoverPath!).existsSync())
-                  Image.file(
-                    File(widget.localCoverPath!),
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      // 如果本地图片加载失败，回退到网络图片
-                      return _buildNetworkCover(work, host, token);
-                    },
-                  )
-                else
-                  // 回退到网络图片（缓存）
-                  _buildNetworkCover(work, host, token),
-              ],
+            child: PrivacyBlurCover(
+              borderRadius: BorderRadius.circular(12),
+              child: Stack(
+                fit: StackFit.passthrough,
+                children: [
+                  // 优先使用本地封面图片
+                  if (widget.localCoverPath != null &&
+                      File(widget.localCoverPath!).existsSync())
+                    Image.file(
+                      File(widget.localCoverPath!),
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        // 如果本地图片加载失败，回退到网络图片
+                        return _buildNetworkCover(work, host, token);
+                      },
+                    )
+                  else
+                    // 回退到网络图片（缓存）
+                    _buildNetworkCover(work, host, token),
+                ],
+              ),
             ),
           ),
         ),

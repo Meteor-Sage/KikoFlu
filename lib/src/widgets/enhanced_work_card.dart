@@ -11,6 +11,7 @@ import '../utils/string_utils.dart';
 import 'tag_chip.dart';
 import 'va_chip.dart';
 import 'work_bookmark_manager.dart';
+import 'privacy_blur_cover.dart';
 
 class EnhancedWorkCard extends ConsumerStatefulWidget {
   final Work work;
@@ -596,22 +597,25 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
 
     return Hero(
       tag: 'work_cover_${widget.work.id}',
-      child: RepaintBoundary(
-        child: CachedNetworkImage(
-          imageUrl: url,
-          cacheKey: 'work_cover_${widget.work.id}',
-          memCacheWidth: targetWidth, // 降低解码分辨率，减少 GPU / CPU 压力
-          fadeInDuration: const Duration(milliseconds: 120),
-          fadeOutDuration: const Duration(milliseconds: 90),
-          placeholderFadeInDuration: const Duration(milliseconds: 80),
-          placeholder: (context, _) => _buildPlaceholder(context),
-          errorWidget: (context, _, __) => _buildPlaceholder(context),
-          imageBuilder: (context, imageProvider) => Container(
-            decoration: BoxDecoration(
-              image: DecorationImage(
-                image: imageProvider,
-                fit: BoxFit.cover,
-                filterQuality: FilterQuality.low, // 优化滚动时的重采样性能
+      child: PrivacyBlurCover(
+        borderRadius: BorderRadius.circular(4),
+        child: RepaintBoundary(
+          child: CachedNetworkImage(
+            imageUrl: url,
+            cacheKey: 'work_cover_${widget.work.id}',
+            memCacheWidth: targetWidth, // 降低解码分辨率，减少 GPU / CPU 压力
+            fadeInDuration: const Duration(milliseconds: 120),
+            fadeOutDuration: const Duration(milliseconds: 90),
+            placeholderFadeInDuration: const Duration(milliseconds: 80),
+            placeholder: (context, _) => _buildPlaceholder(context),
+            errorWidget: (context, _, __) => _buildPlaceholder(context),
+            imageBuilder: (context, imageProvider) => Container(
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: imageProvider,
+                  fit: BoxFit.cover,
+                  filterQuality: FilterQuality.low, // 优化滚动时的重采样性能
+                ),
               ),
             ),
           ),

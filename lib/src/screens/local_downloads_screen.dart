@@ -13,6 +13,7 @@ import '../providers/auth_provider.dart';
 import '../widgets/pagination_bar.dart';
 import 'offline_work_detail_screen.dart';
 import '../widgets/overscroll_next_page_detector.dart';
+import '../widgets/privacy_blur_cover.dart';
 
 /// 本地下载屏幕 - 显示已完成的下载内容
 class LocalDownloadsScreen extends ConsumerStatefulWidget {
@@ -959,10 +960,13 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
               if (coverFile.existsSync()) {
                 return Hero(
                   tag: 'offline_work_cover_$workId',
-                  child: Image.file(
-                    coverFile,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
+                  child: PrivacyBlurCover(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.file(
+                      coverFile,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                    ),
                   ),
                 );
               }
@@ -977,10 +981,13 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
     if (work != null && host.isNotEmpty) {
       return Hero(
         tag: 'offline_work_cover_$workId',
-        child: CachedNetworkImage(
-          imageUrl: work.getCoverImageUrl(host, token: token),
-          fit: BoxFit.cover,
-          errorWidget: (context, url, error) => _buildPlaceholder(),
+        child: PrivacyBlurCover(
+          borderRadius: BorderRadius.circular(8),
+          child: CachedNetworkImage(
+            imageUrl: work.getCoverImageUrl(host, token: token),
+            fit: BoxFit.cover,
+            errorWidget: (context, url, error) => _buildPlaceholder(),
+          ),
         ),
       );
     }
