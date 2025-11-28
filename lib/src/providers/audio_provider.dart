@@ -94,6 +94,16 @@ class AudioPlayerController extends StateNotifier<AudioPlayerState> {
         );
       },
     );
+
+    // 监听音频直通设置变化
+    _ref.listen<bool>(
+      audioPassthroughProvider,
+      (previous, next) {
+        if (previous != next) {
+          _service.updateAudioSessionConfig(next);
+        }
+      },
+    );
   }
 
   Future<void> initialize() async {

@@ -68,6 +68,7 @@ dependencies:
   msix: ^3.16.12
   window_manager: ^0.4.3
   desktop_multi_window: ^0.3.0
+  audio_session: ^0.1.25
 
 dev_dependencies:
   flutter_test:

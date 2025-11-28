@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_service/audio_service.dart';
+import 'package:audio_session/audio_session.dart';
 import 'package:path/path.dart' as p;
 import 'package:smtc_windows/smtc_windows.dart';
 
@@ -113,6 +114,65 @@ class AudioPlayerService {
       _smtc!.enableSmtc();
     }
 
+    _setupPlayerListeners();
+  }
+
+  /// 更新音频会话配置（直通/独占模式）
+  Future<void> updateAudioSessionConfig(bool enablePassthrough) async {
+    if (!Platform.isAndroid && !Platform.isIOS) return;
+
+    // iOS 平台如果用户认为不支持，则不应用直通配置，或者仅应用基础配置
+    // 这里根据需求，如果是在 iOS 上，我们可能不希望开启 "movie" 模式，或者保持默认
+    // 但为了代码一致性，我们还是允许配置，但可以通过平台判断来调整参数
+    if (Platform.isIOS && enablePassthrough) {
+      // 如果用户明确说 iOS 不支持，我们可以选择在这里直接返回，或者应用一个"无害"的配置
+      // 暂时保持与 Android 一致的逻辑，但如果用户反馈有问题，可以随时禁用
+      // print('[AudioPlayerService] iOS passthrough requested but might not be fully supported.');
+    }
+
+    try {
+      print(
+          '[AudioPlayerService] Updating AudioSession config. Passthrough enabled: $enablePassthrough');
+      final session = await AudioSession.instance;
+
+      if (enablePassthrough) {
+        // 开启直通/独占模式配置 (Movie/Media)
+        await session.configure(const AudioSessionConfiguration(
+          avAudioSessionCategory: AVAudioSessionCategory.playback,
+          avAudioSessionCategoryOptions:
+              AVAudioSessionCategoryOptions.duckOthers,
+          avAudioSessionMode: AVAudioSessionMode.moviePlayback,
+          androidAudioAttributes: AndroidAudioAttributes(
+            contentType: AndroidAudioContentType.movie,
+            flags: AndroidAudioFlags.audibilityEnforced,
+            usage: AndroidAudioUsage.media,
+          ),
+          androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
+          androidWillPauseWhenDucked: true,
+        ));
+      } else {
+        // 恢复默认配置 (Music/Media) - 适合普通音乐播放
+        await session.configure(const AudioSessionConfiguration(
+          avAudioSessionCategory: AVAudioSessionCategory.playback,
+          avAudioSessionCategoryOptions:
+              AVAudioSessionCategoryOptions.duckOthers,
+          avAudioSessionMode: AVAudioSessionMode.defaultMode,
+          androidAudioAttributes: AndroidAudioAttributes(
+            contentType: AndroidAudioContentType.music,
+            flags: AndroidAudioFlags.none,
+            usage: AndroidAudioUsage.media,
+          ),
+          androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
+          androidWillPauseWhenDucked: true,
+        ));
+      }
+      print('[AudioPlayerService] AudioSession updated successfully.');
+    } catch (e) {
+      print('[AudioPlayerService] Error updating AudioSession: $e');
+    }
+  }
+
+  void _setupPlayerListeners() {
     // Listen to player state changes
     _player.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
