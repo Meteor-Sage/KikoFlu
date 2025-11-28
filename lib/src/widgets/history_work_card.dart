@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/history_record.dart';
 import '../models/audio_track.dart';
+import '../models/download_task.dart';
 import '../providers/auth_provider.dart';
 import '../providers/history_provider.dart';
 import '../services/audio_player_service.dart';
@@ -254,16 +255,48 @@ class HistoryWorkCard extends ConsumerWidget {
       ref.read(fileListControllerProvider.notifier).updateFiles(allFiles);
     } catch (e) {
       print('Failed to update file list: $e');
+
+      // 尝试从已下载的任务中构建文件列表
+      try {
+        final tasks = await DownloadService.instance.getWorkTasks(work.id);
+        if (tasks.isNotEmpty) {
+          final downloadedFiles = tasks
+              .where((t) => t.status == DownloadStatus.completed)
+              .map((t) => {
+                    'title': t.fileName,
+                    'name': t.fileName,
+                    'hash': t.hash,
+                    'type': 'file',
+                  })
+              .toList();
+
+          if (downloadedFiles.isNotEmpty) {
+            allFiles = downloadedFiles;
+            ref.read(fileListControllerProvider.notifier).updateFiles(allFiles);
+          }
+        }
+      } catch (e2) {
+        print('Failed to load downloaded files: $e2');
+      }
     }
 
     if (allFiles.isEmpty) {
       // Fallback to single track if list fetch fails
       if (record.lastTrack != null) {
-        await AudioPlayerService.instance.updateQueue([record.lastTrack!]);
-        await AudioPlayerService.instance
-            .seek(Duration(milliseconds: record.lastPositionMs));
-        await AudioPlayerService.instance.play();
-        ref.read(historyProvider.notifier).addOrUpdate(work);
+        try {
+          await AudioPlayerService.instance.updateQueue([record.lastTrack!]);
+          await AudioPlayerService.instance
+              .seek(Duration(milliseconds: record.lastPositionMs));
+          await AudioPlayerService.instance.play();
+          ref.read(historyProvider.notifier).addOrUpdate(work);
+        } catch (e) {
+          print('Failed to resume playback: $e');
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('播放失败: $e')),
+            );
+          }
+        }
       }
       return;
     }
@@ -436,11 +469,21 @@ class HistoryWorkCard extends ConsumerWidget {
 
     // 5. Play
     if (tracks.isNotEmpty) {
-      await AudioPlayerService.instance.updateQueue(tracks, startIndex: index);
-      await AudioPlayerService.instance
-          .seek(Duration(milliseconds: record.lastPositionMs));
-      await AudioPlayerService.instance.play();
-      ref.read(historyProvider.notifier).addOrUpdate(work);
+      try {
+        await AudioPlayerService.instance
+            .updateQueue(tracks, startIndex: index);
+        await AudioPlayerService.instance
+            .seek(Duration(milliseconds: record.lastPositionMs));
+        await AudioPlayerService.instance.play();
+        ref.read(historyProvider.notifier).addOrUpdate(work);
+      } catch (e) {
+        print('Failed to resume playback: $e');
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('播放失败: $e')),
+          );
+        }
+      }
     }
   }
 }
