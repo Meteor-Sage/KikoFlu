@@ -9,6 +9,10 @@ import 'package:path_provider/path_provider.dart';
 import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path/path.dart' as p;
+import 'dart:ffi' as ffi;
+import 'package:ffi/ffi.dart';
 
 import 'src/screens/login_screen.dart';
 import 'src/screens/main_screen.dart';
@@ -24,6 +28,62 @@ import 'src/providers/auth_provider.dart';
 import 'src/providers/theme_provider.dart';
 import 'src/providers/update_provider.dart';
 import 'src/utils/global_keys.dart';
+
+void _setEnv(String key, String value) {
+  if (!Platform.isWindows) return;
+  final keyNative = key.toNativeUtf16();
+  final valueNative = value.toNativeUtf16();
+  final SetEnvironmentVariable = ffi.DynamicLibrary.open('kernel32.dll')
+      .lookupFunction<
+          ffi.Int32 Function(ffi.Pointer<Utf16>, ffi.Pointer<Utf16>),
+          int Function(ffi.Pointer<Utf16>,
+              ffi.Pointer<Utf16>)>('SetEnvironmentVariableW');
+  SetEnvironmentVariable(keyNative, valueNative);
+  calloc.free(keyNative);
+  calloc.free(valueNative);
+}
+
+Future<void> _configureMpv() async {
+  if (!Platform.isWindows) return;
+
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final passthrough = prefs.getBool('audio_passthrough_enabled') ?? false;
+
+    final exePath = Platform.resolvedExecutable;
+    final exeDir = p.dirname(exePath);
+    final configDir = Directory(p.join(exeDir, 'portable_config'));
+
+    if (!await configDir.exists()) {
+      await configDir.create();
+    }
+
+    final configFile = File(p.join(configDir.path, 'mpv.conf'));
+
+    // Force set MPV_HOME to ensure config is read
+    _setEnv('MPV_HOME', configDir.path);
+    print('[Audio] Set MPV_HOME to: \${configDir.path}');
+
+    if (passthrough) {
+      const configContent = '''
+ao=wasapi
+audio-exclusive=yes
+audio-spdif=ac3,dts,eac3
+log-file=mpv_debug.log
+msg-level=all=v
+''';
+      await configFile.writeAsString(configContent);
+      print('[Audio] Updated mpv.conf: Exclusive Mode ENABLED (Forced)');
+    } else {
+      if (await configFile.exists()) {
+        await configFile.delete();
+        print('[Audio] Updated mpv.conf: Exclusive Mode DISABLED');
+      }
+    }
+  } catch (e) {
+    print('[Audio] Error configuring mpv: \$e');
+  }
+}
 
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,6 +106,7 @@ void main(List<String> args) async {
 
   // Initialize just_audio_media_kit for desktop platforms
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    await _configureMpv();
     JustAudioMediaKit.ensureInitialized();
   }
 
@@ -90,10 +151,10 @@ void main(List<String> args) async {
 
   // 启动时检查并清理缓存（如果超过上限）
   CacheService.checkAndCleanCache(force: true).catchError((e) {
-    print('[Cache] 启动时检查缓存失败: $e');
+    print('[Cache] 启动时检查缓存失�? $e');
   });
 
-  // 初始化下载服务
+  // 初始化下载服�?
   await DownloadService.instance.initialize();
 
   // Set system UI overlay style
@@ -104,7 +165,7 @@ void main(List<String> args) async {
     ),
   );
 
-  // 允许横竖屏旋转
+  // 允许横竖屏旋�?
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
@@ -149,7 +210,7 @@ class _KikoeruAppState extends ConsumerState<KikoeruApp> with WindowListener {
   @override
   void onWindowClose() async {
     if (Platform.isWindows) {
-      // 关闭主窗口时，同时关闭悬浮字幕窗口
+      // 关闭主窗口时，同时关闭悬浮字幕窗�?
       await FloatingLyricService.instance.hide();
     }
     super.onWindowClose();
@@ -180,7 +241,7 @@ class _KikoeruAppState extends ConsumerState<KikoeruApp> with WindowListener {
 
     return DynamicColorBuilder(
       builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
-        // 根据用户设置决定是否使用动态颜色
+        // 根据用户设置决定是否使用动态颜�?
         final ColorScheme? lightScheme =
             themeSettings.colorSchemeType == ColorSchemeType.dynamic
                 ? lightDynamic
@@ -216,7 +277,7 @@ class _KikoeruAppState extends ConsumerState<KikoeruApp> with WindowListener {
     final authState = ref.watch(authProvider);
 
     // 如果有用户信息（包括离线模式），显示主页
-    // 这样用户可以访问本地下载的内容
+    // 这样用户可以访问本地下载的内�?
     if (authState.currentUser != null) {
       return const MainScreen();
     } else {

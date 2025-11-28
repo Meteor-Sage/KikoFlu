@@ -300,23 +300,31 @@ class PreferencesScreen extends ConsumerWidget {
                     );
                   },
                 ),
-                // 仅在 Android 平台上显示音频直通设置
-                if (Theme.of(context).platform == TargetPlatform.android) ...[
+                // 仅在 Android 和 Windows 平台上显示音频直通设置
+                if (Theme.of(context).platform == TargetPlatform.android ||
+                    Theme.of(context).platform == TargetPlatform.windows) ...[
                   Divider(color: Theme.of(context).colorScheme.outlineVariant),
                   SwitchListTile(
                     secondary: Icon(Icons.surround_sound,
                         color: Theme.of(context).colorScheme.primary),
                     title: const Text('音频直通/独占模式'),
-                    subtitle: const Text(
-                      '允许输出原始比特流 (AC3/DTS) 到外部解码器。可能会独占音频设备。',
-                      style: TextStyle(fontSize: 12),
+                    subtitle: Text(
+                      Theme.of(context).platform == TargetPlatform.windows
+                          ? '使用 WASAPI 独占模式输出音频。需要重启应用生效。'
+                          : '允许输出原始比特流 (AC3/DTS) 到外部解码器。可能会独占音频设备。',
+                      style: const TextStyle(fontSize: 12),
                     ),
                     value: ref.watch(audioPassthroughProvider),
                     onChanged: (value) {
                       ref.read(audioPassthroughProvider.notifier).toggle(value);
                       SnackBarUtil.showSuccess(
                         context,
-                        value ? '已开启音频直通模式' : '已关闭音频直通模式',
+                        value
+                            ? (Theme.of(context).platform ==
+                                    TargetPlatform.windows
+                                ? '已开启独占模式 (重启生效)'
+                                : '已开启音频直通模式')
+                            : '已关闭音频直通模式',
                       );
                     },
                   ),
