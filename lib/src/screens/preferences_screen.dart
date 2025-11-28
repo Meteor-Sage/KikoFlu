@@ -308,7 +308,7 @@ class PreferencesScreen extends ConsumerWidget {
                   SwitchListTile(
                     secondary: Icon(Icons.surround_sound,
                         color: Theme.of(context).colorScheme.primary),
-                    title: const Text('音频直通'),
+                    title: const Text('音频直通(Beta)'),
                     subtitle: Text(
                       (Theme.of(context).platform == TargetPlatform.windows ||
                               Theme.of(context).platform ==
