@@ -7,7 +7,6 @@ import com.ryanheise.audioservice.AudioServiceActivity
 
 class MainActivity : AudioServiceActivity() {
     private var floatingLyricPlugin: FloatingLyricPlugin? = null
-    private var dacExclusivePlugin: DacExclusivePlugin? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -18,19 +17,11 @@ class MainActivity : AudioServiceActivity() {
             flutterEngine.dartExecutor.binaryMessenger,
             FloatingLyricPlugin.CHANNEL
         ).setMethodCallHandler(floatingLyricPlugin)
-
-        // 注册 DAC 独占插件
-        dacExclusivePlugin = DacExclusivePlugin(this)
-        MethodChannel(
-            flutterEngine.dartExecutor.binaryMessenger,
-            DacExclusivePlugin.CHANNEL
-        ).setMethodCallHandler(dacExclusivePlugin)
     }
 
     override fun onDestroy() {
         // 清理悬浮窗资源
         floatingLyricPlugin?.cleanup()
-        dacExclusivePlugin?.cleanup()
         super.onDestroy()
     }
 }
