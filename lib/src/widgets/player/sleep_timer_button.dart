@@ -31,7 +31,9 @@ class SleepTimerButton extends ConsumerWidget {
               IconButton(
                 onPressed: () => SleepTimerDialog.show(context),
                 icon: Icon(
-                  Icons.timer,
+                  timerState.waitingForTrackEnd
+                      ? Icons.hourglass_bottom
+                      : Icons.timer,
                   color: Theme.of(context).colorScheme.primary,
                 ),
                 iconSize: iconSize,

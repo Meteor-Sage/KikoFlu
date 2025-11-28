@@ -23,6 +23,7 @@ class SleepTimerDialog extends ConsumerStatefulWidget {
 
 class _SleepTimerDialogState extends ConsumerState<SleepTimerDialog> {
   bool _isTimeMode = false; // false: 时长模式, true: 指定时间模式
+  bool _finishCurrentTrack = false;
   TimeOfDay _selectedTime = TimeOfDay.now();
 
   @override
@@ -46,13 +47,15 @@ class _SleepTimerDialogState extends ConsumerState<SleepTimerDialog> {
                 child: Column(
                   children: [
                     Icon(
-                      Icons.timer,
+                      timerState.waitingForTrackEnd
+                          ? Icons.hourglass_bottom
+                          : Icons.timer,
                       size: 48,
                       color: Theme.of(context).colorScheme.onPrimaryContainer,
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      '剩余时间',
+                      timerState.waitingForTrackEnd ? '即将停止' : '剩余时间',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: Theme.of(context)
                                 .colorScheme
@@ -65,11 +68,53 @@ class _SleepTimerDialogState extends ConsumerState<SleepTimerDialog> {
                       style: Theme.of(context).textTheme.displaySmall?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: Theme.of(context).colorScheme.onPrimaryContainer,
+                        fontSize: timerState.waitingForTrackEnd ? 32 : null,
                         fontFeatures: const [
                           FontFeature.tabularFigures(),
                         ],
                       ),
                     ),
+                    if (timerState.finishCurrentTrack &&
+                        !timerState.waitingForTrackEnd) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surface
+                              .withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.queue_music,
+                              size: 14,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onPrimaryContainer,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '完整播完后停止',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onPrimaryContainer,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -148,6 +193,7 @@ class _SleepTimerDialogState extends ConsumerState<SleepTimerDialog> {
                 ),
                 const SizedBox(height: 16),
                 _buildTimeGrid(context, ref),
+                _buildWaitingForTrackEndSection(context, ref),
               ],
             ],
           ],
@@ -159,6 +205,46 @@ class _SleepTimerDialogState extends ConsumerState<SleepTimerDialog> {
           child: const Text('关闭'),
         ),
       ],
+    );
+  }
+
+  Widget _buildWaitingForTrackEndSection(BuildContext context, WidgetRef ref) {
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _finishCurrentTrack = !_finishCurrentTrack;
+        });
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: Checkbox(
+                value: _finishCurrentTrack,
+                onChanged: (value) {
+                  setState(() {
+                    _finishCurrentTrack = value ?? false;
+                  });
+                },
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '完整播完后停止',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -237,7 +323,10 @@ class _SleepTimerDialogState extends ConsumerState<SleepTimerDialog> {
                 ? targetTime.add(const Duration(days: 1))
                 : targetTime;
 
-            ref.read(sleepTimerProvider.notifier).setTimerUntil(finalTime);
+            ref.read(sleepTimerProvider.notifier).setTimerUntil(
+                  finalTime,
+                  finishCurrentTrack: _finishCurrentTrack,
+                );
             Navigator.of(context).pop();
           },
           icon: const Icon(Icons.check),
@@ -283,7 +372,10 @@ class _SleepTimerDialogState extends ConsumerState<SleepTimerDialog> {
   }) {
     return InkWell(
       onTap: () {
-        ref.read(sleepTimerProvider.notifier).setTimer(duration);
+        ref.read(sleepTimerProvider.notifier).setTimer(
+              duration,
+              finishCurrentTrack: _finishCurrentTrack,
+            );
       },
       borderRadius: BorderRadius.circular(12),
       child: Container(
