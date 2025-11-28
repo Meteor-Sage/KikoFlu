@@ -283,22 +283,23 @@ class SleepTimerController extends StateNotifier<SleepTimerState> {
   final Ref _ref;
   Timer? _timer;
   Timer? _countdownTimer;
+  StreamSubscription? _trackSubscription;
 
   SleepTimerController(this._ref) : super(const SleepTimerState());
 
   /// 设置定时器（按时长）
-  void setTimer(Duration duration) {
+  void setTimer(Duration duration, {bool finishCurrentTrack = false}) {
     final endTime = DateTime.now().add(duration);
-    _setTimerInternal(endTime);
+    _setTimerInternal(endTime, finishCurrentTrack: finishCurrentTrack);
   }
 
   /// 设置定时器（按指定时间）
-  void setTimerUntil(DateTime targetTime) {
-    _setTimerInternal(targetTime);
+  void setTimerUntil(DateTime targetTime, {bool finishCurrentTrack = false}) {
+    _setTimerInternal(targetTime, finishCurrentTrack: finishCurrentTrack);
   }
 
   /// 内部方法：设置定时器到指定时间
-  void _setTimerInternal(DateTime endTime) {
+  void _setTimerInternal(DateTime endTime, {bool finishCurrentTrack = false}) {
     // 取消现有定时器
     cancelTimer();
 
@@ -311,13 +312,15 @@ class SleepTimerController extends StateNotifier<SleepTimerState> {
 
     // 设置主定时器 - 到时间后暂停播放
     _timer = Timer(duration, () {
-      final audioController = _ref.read(audioPlayerControllerProvider.notifier);
-      audioController.pause();
-      // 定时器结束后重置状态
-      state = const SleepTimerState();
-      _timer = null;
-      _countdownTimer?.cancel();
-      _countdownTimer = null;
+      if (state.finishCurrentTrack) {
+        _waitForTrackEndAndPause();
+      } else {
+        final audioController =
+            _ref.read(audioPlayerControllerProvider.notifier);
+        audioController.pause();
+        // 定时器结束后重置状态
+        cancelTimer();
+      }
     });
 
     // 设置倒计时更新定时器 - 每秒更新一次剩余时间
@@ -331,6 +334,7 @@ class SleepTimerController extends StateNotifier<SleepTimerState> {
         isActive: true,
         endTime: endTime,
         remainingTime: remaining,
+        finishCurrentTrack: finishCurrentTrack,
       );
     });
 
@@ -338,6 +342,39 @@ class SleepTimerController extends StateNotifier<SleepTimerState> {
       isActive: true,
       endTime: endTime,
       remainingTime: duration,
+      finishCurrentTrack: finishCurrentTrack,
+    );
+  }
+
+  /// 等待当前音轨播放结束并暂停
+  void _waitForTrackEndAndPause() {
+    _timer?.cancel();
+    _timer = null;
+    _countdownTimer?.cancel();
+    _countdownTimer = null;
+
+    final audioController = _ref.read(audioPlayerControllerProvider.notifier);
+    final initialTrack = audioController.currentTrack;
+
+    if (initialTrack == null) {
+      cancelTimer();
+      return;
+    }
+
+    state = state.copyWith(
+      waitingForTrackEnd: true,
+      remainingTime: Duration.zero,
+    );
+
+    _trackSubscription?.cancel();
+    _trackSubscription = audioController.currentTrackStream.listen(
+      (track) {
+        // 当音轨发生变化（切换到下一首或停止）时暂停
+        if (track?.id != initialTrack.id) {
+          audioController.pause();
+          cancelTimer();
+        }
+      },
     );
   }
 
@@ -347,6 +384,8 @@ class SleepTimerController extends StateNotifier<SleepTimerState> {
     _timer = null;
     _countdownTimer?.cancel();
     _countdownTimer = null;
+    _trackSubscription?.cancel();
+    _trackSubscription = null;
     state = const SleepTimerState();
   }
 
@@ -356,8 +395,11 @@ class SleepTimerController extends StateNotifier<SleepTimerState> {
       final newEndTime = state.endTime!.add(duration);
       final newRemaining = newEndTime.difference(DateTime.now());
 
-      // 重新设置定时器
-      setTimer(newRemaining);
+      // 重新设置定时器，并保持当前的"播完暂停"状态
+      setTimer(
+        newRemaining,
+        finishCurrentTrack: state.finishCurrentTrack,
+      );
     }
   }
 
@@ -365,6 +407,7 @@ class SleepTimerController extends StateNotifier<SleepTimerState> {
   void dispose() {
     _timer?.cancel();
     _countdownTimer?.cancel();
+    _trackSubscription?.cancel();
     super.dispose();
   }
 }
@@ -374,12 +417,32 @@ class SleepTimerState {
   final bool isActive;
   final DateTime? endTime;
   final Duration? remainingTime;
+  final bool finishCurrentTrack;
+  final bool waitingForTrackEnd;
 
   const SleepTimerState({
     this.isActive = false,
     this.endTime,
     this.remainingTime,
+    this.finishCurrentTrack = false,
+    this.waitingForTrackEnd = false,
   });
+
+  SleepTimerState copyWith({
+    bool? isActive,
+    DateTime? endTime,
+    Duration? remainingTime,
+    bool? finishCurrentTrack,
+    bool? waitingForTrackEnd,
+  }) {
+    return SleepTimerState(
+      isActive: isActive ?? this.isActive,
+      endTime: endTime ?? this.endTime,
+      remainingTime: remainingTime ?? this.remainingTime,
+      finishCurrentTrack: finishCurrentTrack ?? this.finishCurrentTrack,
+      waitingForTrackEnd: waitingForTrackEnd ?? this.waitingForTrackEnd,
+    );
+  }
 
   String get formattedTime {
     if (remainingTime == null) return '';
