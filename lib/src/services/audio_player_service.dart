@@ -6,7 +6,6 @@ import 'package:path/path.dart' as p;
 import 'package:smtc_windows/smtc_windows.dart';
 
 import '../models/audio_track.dart';
-import 'android_dac_exclusive_service.dart';
 import 'cache_service.dart';
 import 'caching_stream_audio_source.dart';
 import '../utils/image_blur_util.dart';
@@ -48,8 +47,6 @@ class AudioPlayerService {
   bool _privacyBlurCover = true;
   bool _privacyMaskTitle = true;
   String _privacyCustomTitle = '正在播放音频';
-  bool _androidExclusiveRequested = false;
-  bool _androidExclusiveActive = false;
 
   // Stream controllers
   final StreamController<List<AudioTrack>> _queueController =
@@ -446,7 +443,6 @@ class AudioPlayerService {
       _startCompletionCheckTimer();
     }
 
-    await _maybeEnableAndroidExclusive();
     await _player.play();
     _updatePlaybackState();
 
@@ -464,13 +460,11 @@ class AudioPlayerService {
 
   Future<void> pause() async {
     await _player.pause();
-    await _disableAndroidExclusive();
     _updatePlaybackState();
   }
 
   Future<void> stop() async {
     await _player.stop();
-    await _disableAndroidExclusive();
     _updatePlaybackState();
   }
 
@@ -569,22 +563,11 @@ class AudioPlayerService {
   }
 
   Future<void> setVolume(double volume) async {
-    await _player.setVolume(volume.clamp(0.0, 1.0).toDouble());
+    await _player.setVolume(volume.clamp(0.0, 1.0));
   }
 
   Future<void> setSpeed(double speed) async {
-    await _player.setSpeed(speed.clamp(0.5, 2.0).toDouble());
-  }
-
-  Future<void> updateAndroidExclusiveMode(bool enabled) async {
-    if (!Platform.isAndroid) return;
-
-    _androidExclusiveRequested = enabled;
-    if (!enabled) {
-      await _disableAndroidExclusive();
-    } else if (_player.playing) {
-      await _maybeEnableAndroidExclusive();
-    }
+    await _player.setSpeed(speed.clamp(0.5, 2.0));
   }
 
   // Privacy mode settings
@@ -612,29 +595,12 @@ class AudioPlayerService {
     }
   }
 
-  Future<void> _maybeEnableAndroidExclusive() async {
-    if (!Platform.isAndroid) return;
-    if (!_androidExclusiveRequested || _androidExclusiveActive) return;
-
-    final enabled = await AndroidDacExclusiveService.instance.enable();
-    _androidExclusiveActive = enabled;
-  }
-
-  Future<void> _disableAndroidExclusive() async {
-    if (!Platform.isAndroid) return;
-    if (!_androidExclusiveActive) return;
-
-    await AndroidDacExclusiveService.instance.disable();
-    _androidExclusiveActive = false;
-  }
-
   // Cleanup
   Future<void> dispose() async {
     _completionCheckTimer?.cancel();
     await _cleanupTempPlaybackFile();
     await _queueController.close();
     await _currentTrackController.close();
-    await _disableAndroidExclusive();
     await _player.dispose();
   }
 
