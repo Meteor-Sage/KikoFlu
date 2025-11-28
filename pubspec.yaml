@@ -36,6 +36,7 @@ dependencies:
   
   # Local Storage
   shared_preferences: ^2.2.2
+  path: ^1.8.3
   sqflite: ^2.3.0
   sqflite_common_ffi: ^2.3.0
   hive: ^2.2.3
@@ -69,6 +70,7 @@ dependencies:
   window_manager: ^0.4.3
   desktop_multi_window: ^0.3.0
   audio_session: ^0.1.25
+  ffi: ^2.1.4
 
 dev_dependencies:
   flutter_test:
