@@ -347,8 +347,7 @@ class PrivacyModeSettingsNotifier extends StateNotifier<PrivacyModeSettings> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final blurCover = prefs.getBool(_blurCoverKey) ?? true;
-      final blurCoverInApp =
-          prefs.getBool(_blurCoverInAppKey) ?? false;
+      final blurCoverInApp = prefs.getBool(_blurCoverInAppKey) ?? false;
 
       state = PrivacyModeSettings(
         enabled: prefs.getBool(_enabledKey) ?? false,
@@ -454,6 +453,40 @@ class DefaultSortState {
     this.direction = SortDirection.desc,
   });
 }
+
+/// 音频直通模式设置
+class AudioPassthroughNotifier extends StateNotifier<bool> {
+  static const String _preferenceKey = 'audio_passthrough_enabled';
+
+  AudioPassthroughNotifier() : super(false) {
+    _loadPreference();
+  }
+
+  Future<void> _loadPreference() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      state = prefs.getBool(_preferenceKey) ?? false;
+    } catch (e) {
+      state = false;
+    }
+  }
+
+  Future<void> toggle(bool enabled) async {
+    state = enabled;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_preferenceKey, enabled);
+    } catch (e) {
+      // ignore
+    }
+  }
+}
+
+/// 音频直通模式提供者
+final audioPassthroughProvider =
+    StateNotifierProvider<AudioPassthroughNotifier, bool>((ref) {
+  return AudioPassthroughNotifier();
+});
 
 /// 默认排序设置
 class DefaultSortNotifier extends StateNotifier<DefaultSortState> {
