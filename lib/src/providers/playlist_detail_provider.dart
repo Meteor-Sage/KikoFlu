@@ -254,15 +254,34 @@ class PlaylistDetailNotifier extends StateNotifier<PlaylistDetailState> {
   Future<void> removeWork(int workId) async {
     if (state.metadata == null) return;
 
+    // 乐观更新：先从本地列表中移除
+    final previousWorks = state.works;
+    final previousTotalCount = state.totalCount;
+
+    final updatedWorks = state.works.where((w) => w.id != workId).toList();
+
+    // 如果列表没有变化（说明没找到），则不进行后续操作
+    if (updatedWorks.length == previousWorks.length) return;
+
+    state = state.copyWith(
+      works: updatedWorks,
+      totalCount: state.totalCount > 0 ? state.totalCount - 1 : 0,
+    );
+
     try {
       await _apiService.removeWorksFromPlaylist(
         playlistId: state.metadata!.id,
         works: [workId],
       );
 
-      // 刷新列表以更新显示
-      await refresh();
+      // 移除成功，不需要刷新整个列表，因为本地已经更新了
+      // 这样可以避免重新加载导致的等待
     } catch (e) {
+      // 失败回滚
+      state = state.copyWith(
+        works: previousWorks,
+        totalCount: previousTotalCount,
+      );
       rethrow;
     }
   }

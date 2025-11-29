@@ -590,9 +590,8 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
   /// 移除作品
   Future<void> _removeWork(int workId) async {
     try {
-      // 显示加载提示
-      if (!mounted) return;
-      SnackBarUtil.showLoading(context, '正在移除...');
+      // 乐观更新，UI会立即反应，不需要显示"正在移除"的阻塞式提示
+      // 这样可以避免快速操作时SnackBar堆积导致显示延迟
 
       await ref
           .read(playlistDetailProvider(widget.playlistId).notifier)
@@ -600,11 +599,12 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
 
       if (!mounted) return;
 
-      // 隐藏加载提示
-      SnackBarUtil.hide(context);
+      // 清除之前的提示，避免堆积
+      SnackBarUtil.clearAll(context);
 
-      // 显示成功提示
-      SnackBarUtil.showSuccess(context, '移除成功');
+      // 显示成功提示，缩短显示时间
+      SnackBarUtil.showSuccess(context, '移除成功',
+          duration: const Duration(seconds: 1));
     } catch (e) {
       if (!mounted) return;
 
