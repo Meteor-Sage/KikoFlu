@@ -512,7 +512,13 @@ class LyricController extends StateNotifier<LyricState> {
       // 构建字幕 URL
       String normalizedUrl = host;
       if (!host.startsWith('http://') && !host.startsWith('https://')) {
-        normalizedUrl = 'https://$host';
+        if (host.contains('localhost') ||
+            host.startsWith('127.0.0.1') ||
+            host.startsWith('192.168.')) {
+          normalizedUrl = 'http://$host';
+        } else {
+          normalizedUrl = 'https://$host';
+        }
       }
       final lyricUrl = '$normalizedUrl/api/media/stream/$hash?token=$token';
 

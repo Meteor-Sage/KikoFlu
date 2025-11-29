@@ -156,7 +156,10 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
 
     collectHashes(_rootFiles, '');
 
-    for (final hash in _downloadedFiles.keys) {
+    // 创建一个副本进行遍历，避免 Concurrent modification 错误
+    final hashesToCheck = List<String>.from(_downloadedFiles.keys);
+
+    for (final hash in hashesToCheck) {
       final filePath =
           await downloadService.getDownloadedFilePath(widget.work.id, hash);
       if (filePath != null) {

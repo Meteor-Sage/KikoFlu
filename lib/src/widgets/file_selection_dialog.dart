@@ -55,7 +55,10 @@ class _FileSelectionDialogState extends ConsumerState<FileSelectionDialog> {
   Future<void> _checkDownloadedFiles() async {
     final downloadService = DownloadService.instance;
 
-    for (final hash in _downloadedFiles.keys) {
+    // 创建副本以避免并发修改错误
+    final hashesToCheck = List<String>.from(_downloadedFiles.keys);
+
+    for (final hash in hashesToCheck) {
       final filePath =
           await downloadService.getDownloadedFilePath(widget.work.id, hash);
       if (filePath != null) {
@@ -253,11 +256,53 @@ class _FileSelectionDialogState extends ConsumerState<FileSelectionDialog> {
       final fullFileName =
           relativePath.isEmpty ? file.title : '$relativePath/${file.title}';
 
+      // 处理下载 URL
+      String downloadUrl = file.mediaDownloadUrl ?? '';
+      if (downloadUrl.isNotEmpty) {
+        // 如果是相对路径，拼接 Host
+        if (downloadUrl.startsWith('/') && host.isNotEmpty) {
+          String normalizedHost = host;
+          if (!host.startsWith('http://') && !host.startsWith('https://')) {
+            if (host.contains('localhost') ||
+                host.startsWith('127.0.0.1') ||
+                host.startsWith('192.168.')) {
+              normalizedHost = 'http://$host';
+            } else {
+              normalizedHost = 'https://$host';
+            }
+          }
+          downloadUrl = '$normalizedHost$downloadUrl';
+        }
+
+        // 如果 URL 中没有 token 且 token 存在，追加 token
+        if (token.isNotEmpty && !downloadUrl.contains('token=')) {
+          if (downloadUrl.contains('?')) {
+            downloadUrl = '$downloadUrl&token=$token';
+          } else {
+            downloadUrl = '$downloadUrl?token=$token';
+          }
+        }
+      } else if (host.isNotEmpty && file.hash != null) {
+        // 如果没有 mediaDownloadUrl，尝试构造默认下载链接
+        String normalizedHost = host;
+        if (!host.startsWith('http://') && !host.startsWith('https://')) {
+          if (host.contains('localhost') ||
+              host.startsWith('127.0.0.1') ||
+              host.startsWith('192.168.')) {
+            normalizedHost = 'http://$host';
+          } else {
+            normalizedHost = 'https://$host';
+          }
+        }
+        downloadUrl =
+            '$normalizedHost/api/media/download/${file.hash}/${Uri.encodeComponent(file.title)}?token=$token';
+      }
+
       await downloadService.addTask(
         workId: widget.work.id,
         workTitle: widget.work.title,
         fileName: fullFileName, // 使用包含路径的文件名
-        downloadUrl: file.mediaDownloadUrl ?? '',
+        downloadUrl: downloadUrl,
         hash: file.hash,
         totalBytes: file.size,
         workMetadata: workMetadata,
