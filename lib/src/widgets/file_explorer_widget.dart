@@ -640,6 +640,30 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
         if (file['mediaStreamUrl'] != null &&
             file['mediaStreamUrl'].toString().isNotEmpty) {
           audioUrl = file['mediaStreamUrl'];
+
+          // 如果是相对路径，拼接 Host
+          if (audioUrl.startsWith('/') && host.isNotEmpty) {
+            String normalizedHost = host;
+            if (!host.startsWith('http://') && !host.startsWith('https://')) {
+              if (host.contains('localhost') ||
+                  host.startsWith('127.0.0.1') ||
+                  host.startsWith('192.168.')) {
+                normalizedHost = 'http://$host';
+              } else {
+                normalizedHost = 'https://$host';
+              }
+            }
+            audioUrl = '$normalizedHost$audioUrl';
+          }
+
+          // 如果 URL 中没有 token 且 token 存在，追加 token
+          if (token.isNotEmpty && !audioUrl.contains('token=')) {
+            if (audioUrl.contains('?')) {
+              audioUrl = '$audioUrl&token=$token';
+            } else {
+              audioUrl = '$audioUrl?token=$token';
+            }
+          }
         } else if (host.isNotEmpty && fileHash != null) {
           String normalizedUrl = host;
           if (!host.startsWith('http://') && !host.startsWith('https://')) {
