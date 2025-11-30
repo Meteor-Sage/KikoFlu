@@ -758,6 +758,7 @@ class KikoeruApiService {
     String? order,
     String? sort,
     int? subtitle,
+    int? seed,
     bool includeTranslationWorks = true,
   }) async {
     if (_isOfficialServer) {
@@ -778,6 +779,7 @@ class KikoeruApiService {
         order: order,
         sort: sort,
         subtitle: subtitle,
+        seed: seed,
         includeTranslationWorks: includeTranslationWorks,
       );
     }
@@ -822,6 +824,7 @@ class KikoeruApiService {
     String? order,
     String? sort,
     int? subtitle,
+    int? seed,
     bool includeTranslationWorks = true,
   }) async {
     try {
@@ -832,23 +835,150 @@ class KikoeruApiService {
       }
 
       // Construct the JSON keyword structure for custom backend
-      // t=1 means simple text keyword
-      final keywordJson = jsonEncode([
-        {
-          't': 1,
-          'd': keyword,
-          'name': keyword,
+      dynamic keywordValue;
+      try {
+        // 尝试解析 keyword 是否已经是 JSON 格式 (例如聚合搜索的结构)
+        // 如果是合法的 JSON 列表，则直接使用，不再封装
+        final decoded = jsonDecode(keyword);
+        if (decoded is List) {
+          keywordValue = keyword;
+        } else {
+          throw FormatException('Not a list');
         }
-      ]);
+      } catch (_) {
+        // 解析自定义格式，如 "$tag:value$ $circle:value$ keyword"
+        final List<Map<String, dynamic>> conditions = [];
+        final regex = RegExp(r'\$(-?)([a-zA-Z]+):([^$]+)\$');
+        String remainingText = keyword;
+
+        final matches = regex.allMatches(keyword);
+        for (final match in matches) {
+          final isExclude = match.group(1) == '-';
+          final type = match.group(2);
+          final value = match.group(3);
+
+          // 目前仅处理包含逻辑，排除逻辑因后端格式未知暂跳过
+          if (!isExclude && value != null) {
+            if (type == 'tag') {
+              // t=3: Tag, d=0 (placeholder for ID), name=TagName
+              conditions.add({'t': 3, 'd': 0, 'name': value});
+            } else if (type == 'va' || type == 'circle') {
+              // t=2: VA/Circle, d="0" (placeholder for UUID), name=Name
+              conditions.add({'t': 2, 'd': "0", 'name': value});
+            }
+          }
+
+          remainingText = remainingText.replaceFirst(match.group(0)!, '');
+        }
+
+        final plainText = remainingText.trim();
+        if (plainText.isNotEmpty) {
+          conditions.add({'t': 1, 'd': plainText, 'name': plainText});
+        }
+
+        // 如果解析后为空（例如只有排除条件或无匹配），且原关键词不为空，则作为普通文本搜索
+        if (conditions.isEmpty && keyword.isNotEmpty) {
+          conditions.add({'t': 1, 'd': keyword, 'name': keyword});
+        }
+
+        // 尝试解析 ID (Tag/VA/Circle)
+        // 因为后端搜索需要具体的 ID (d字段)，而不仅仅是名称
+        if (conditions.isNotEmpty) {
+          // 预加载所有 Tags 和 VAs (如果需要)
+          // 注意：这可能会有性能影响，但在搜索时通常可以接受
+          List<Tag>? allTags;
+          List<Va>? allVas;
+          List<dynamic>? allCircles;
+
+          for (var i = 0; i < conditions.length; i++) {
+            final condition = conditions[i];
+            final name = condition['name'] as String;
+
+            // Resolve Tag ID
+            if (condition['t'] == 3 && condition['d'] == 0) {
+              try {
+                // Lazy load tags
+                if (allTags == null) {
+                  final tagsData = await getAllTags();
+                  allTags = tagsData.map((json) => Tag.fromJson(json)).toList();
+                }
+
+                // Find exact match (case-insensitive)
+                final tag = allTags.firstWhere(
+                  (t) => t.name.toLowerCase() == name.toLowerCase(),
+                  orElse: () => throw Exception('Tag not found'),
+                );
+                condition['d'] = tag.id;
+              } catch (e) {
+                print('[API] Failed to resolve tag ID for "$name": $e');
+                // Fallback to text search if tag not found
+                condition['t'] = 1;
+                condition['d'] = name;
+              }
+            }
+            // Resolve VA/Circle ID
+            else if (condition['t'] == 2 && condition['d'] == "0") {
+              // Try VA first
+              bool resolved = false;
+              try {
+                if (allVas == null) {
+                  final vasData = await getAllVas();
+                  allVas = vasData.map((json) => Va.fromJson(json)).toList();
+                }
+
+                final va = allVas.firstWhere(
+                  (v) => v.name.toLowerCase() == name.toLowerCase(),
+                  orElse: () => throw Exception('VA not found'),
+                );
+                condition['d'] = va.id;
+                resolved = true;
+              } catch (_) {
+                // Not a VA, try Circle
+              }
+
+              if (!resolved) {
+                try {
+                  if (allCircles == null) {
+                    allCircles = await getAllCircles();
+                  }
+
+                  final circleJson = allCircles.firstWhere(
+                    (c) =>
+                        c['name'].toString().toLowerCase() ==
+                        name.toLowerCase(),
+                    orElse: () => throw Exception('Circle not found'),
+                  );
+                  print(
+                      '[API] Circle resolution not fully supported for t=2, falling back to text for "$name"');
+                } catch (_) {
+                  // Not found
+                }
+
+                if (!resolved) {
+                  print(
+                      '[API] Failed to resolve VA/Circle ID for "$name", falling back to text');
+                  condition['t'] = 1;
+                  condition['d'] = name;
+                }
+              }
+            }
+          }
+        }
+
+        keywordValue = jsonEncode(conditions);
+      }
 
       final queryParams = <String, dynamic>{
-        'keyword': keywordJson,
+        'keyword': keywordValue,
         'page': page,
         'pageSize': pageSize,
         'order': effectiveOrder,
         'sort': sort ?? _sort,
         'subtitle': subtitle ?? _subtitle,
         'isAdvance': 1, // Enable advanced search mode
+        'nsfw': 0, // Default nsfw setting
+        'lyric': '', // Default empty lyric
+        'seed': seed ?? 0, // Default seed
         // 'includeTranslationWorks': includeTranslationWorks, // Not supported by local backend
       };
 
