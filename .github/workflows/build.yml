@@ -92,8 +92,13 @@ jobs:
       - name: Build Windows Release
         run: flutter build windows --release
           
+      - name: Decode Certificate
+        run: |
+          $pfx_cert_byte = [System.Convert]::FromBase64String("${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}")
+          [IO.File]::WriteAllBytes("certificate.pfx", $pfx_cert_byte)
+
       - name: Create MSIX
-        run: flutter pub run msix:create --install-certificate false
+        run: flutter pub run msix:create --certificate-path certificate.pfx --certificate-password "${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}" --install-certificate false
         
       - name: Rename MSIX
         run: |
