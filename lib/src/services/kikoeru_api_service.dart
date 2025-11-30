@@ -1011,68 +1011,6 @@ class KikoeruApiService {
     }
   }
 
-  Future<Map<String, dynamic>> submitReview(
-    int workId, {
-    String? text,
-    int? rating,
-    bool? recommend,
-  }) async {
-    if (_isOfficialServer) {
-      return _submitReviewOfficial(workId,
-          text: text, rating: rating, recommend: recommend);
-    } else {
-      return _submitReviewCustom(workId,
-          text: text, rating: rating, recommend: recommend);
-    }
-  }
-
-  Future<Map<String, dynamic>> _submitReviewOfficial(
-    int workId, {
-    String? text,
-    int? rating,
-    bool? recommend,
-  }) async {
-    try {
-      final data = <String, dynamic>{};
-      if (text != null) data['text'] = text;
-      if (rating != null) data['rating'] = rating;
-      if (recommend != null) data['recommend'] = recommend;
-
-      final response = await _dio.put(
-        '/api/review/$workId',
-        data: data,
-      );
-      return response.data;
-    } catch (e) {
-      throw KikoeruApiException('Failed to submit review', e);
-    }
-  }
-
-  Future<Map<String, dynamic>> _submitReviewCustom(
-    int workId, {
-    String? text,
-    int? rating,
-    bool? recommend,
-  }) async {
-    try {
-      final data = <String, dynamic>{
-        'work_id': workId,
-      };
-      if (text != null) data['review_text'] = text;
-      if (rating != null) data['rating'] = rating;
-      // Local backend doesn't seem to have 'recommend' field in PUT /api/review
-      // It has 'progress', 'starOnly', 'progressOnly'
-
-      final response = await _dio.put(
-        '/api/review',
-        data: data,
-      );
-      return response.data;
-    } catch (e) {
-      throw KikoeruApiException('Failed to submit review', e);
-    }
-  }
-
   /// 更新作品的收藏/进度状态
   Future<Map<String, dynamic>> updateReviewProgress(
     int workId, {
@@ -1125,12 +1063,14 @@ class KikoeruApiService {
       final data = <String, dynamic>{
         'work_id': workId,
       };
-      if (progress != null) {
-        data['progress'] = progress;
-        data['progressOnly'] = true;
-      }
-      if (rating != null) data['rating'] = rating;
+      if (progress != null) {data['progress'] = progress;}
+      else {data['starOnly'] = true;}
+      if (rating != null) {data['rating'] = rating;}
+      else {data['progressOnly'] = true;}
       if (reviewText != null) data['review_text'] = reviewText;
+      if ((progress != null && rating != null) || reviewText != null) {
+        data['starOnly'] = false;
+      }
 
       final response = await _dio.put(
         '/api/review',
