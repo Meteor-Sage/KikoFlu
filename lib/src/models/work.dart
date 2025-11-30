@@ -82,7 +82,42 @@ class Work extends Equatable {
     this.otherLanguageEditions,
   });
 
-  factory Work.fromJson(Map<String, dynamic> json) => _$WorkFromJson(json);
+  factory Work.fromJson(Map<String, dynamic> json) {
+    Map<String, dynamic> processingJson = json;
+    bool isModified = false;
+
+    // 兼容 custom 服务端：如果 duration 为空，尝试从 memo.totalDuration 获取
+    if (processingJson['duration'] == null || processingJson['duration'] == 0) {
+      if (processingJson['memo'] != null && processingJson['memo'] is Map) {
+        final memo = processingJson['memo'] as Map;
+        if (memo['totalDuration'] != null && memo['totalDuration'] is num) {
+          if (!isModified) {
+            processingJson = Map<String, dynamic>.from(json);
+            isModified = true;
+          }
+          processingJson['duration'] = (memo['totalDuration'] as num).toInt();
+        }
+      }
+    }
+
+    // 兼容 custom 服务端：lyric_status 字段
+    // 仅当 has_subtitle 为 null 时才检查 lyric_status
+    // 如果 has_subtitle 明确为 false，则表示无字幕，不应被覆盖
+    if (processingJson['has_subtitle'] == null) {
+      final lyricStatus = processingJson['lyric_status'];
+      if (lyricStatus != null &&
+          lyricStatus is String &&
+          lyricStatus.isNotEmpty) {
+        if (!isModified) {
+          processingJson = Map<String, dynamic>.from(json);
+          isModified = true;
+        }
+        processingJson['has_subtitle'] = true;
+      }
+    }
+
+    return _$WorkFromJson(processingJson);
+  }
 
   Map<String, dynamic> toJson() => _$WorkToJson(this);
 

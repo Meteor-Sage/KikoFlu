@@ -652,7 +652,7 @@ class KikoeruApiService {
 
       // 2. 缓存未命中，从网络获取
       print('[API] 作品详情缓存未命中，从网络获取: $workId');
-      final response = await _dio.get('/api/work/$workId');
+      final response = await _dio.get('/api/work/$workId?v=2');
       final data = response.data as Map<String, dynamic>;
 
       // 3. 保存到缓存
@@ -675,21 +675,8 @@ class KikoeruApiService {
 
       // 2. 缓存未命中，从网络获取
       print('[API] 作品详情缓存未命中，从网络获取: $workId');
-
-      // Fetch metadata
       final metadataResponse = await _dio.get('/api/work/$workId');
       final data = metadataResponse.data as Map<String, dynamic>;
-
-      // Fetch tracks (file tree)
-      try {
-        final tracksResponse = await _dio.get('/api/tracks/$workId');
-        if (tracksResponse.data is List) {
-          data['children'] = tracksResponse.data;
-        }
-      } catch (e) {
-        print('Failed to get tracks for work $workId: $e');
-        // Don't fail the whole request if tracks fail, just log it
-      }
 
       // 3. 保存到缓存
       await CacheService.cacheWorkDetail(workId, data);
