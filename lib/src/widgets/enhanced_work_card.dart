@@ -303,7 +303,8 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                   if (displaySettings.showRating &&
                       widget.work.rateAverage != null &&
                       widget.work.rateCount != null &&
-                      widget.work.rateCount! > 0) ...[
+                      (widget.work.rateCount! > 0 ||
+                          widget.work.rateAverage! != 0)) ...[
                     const SizedBox(height: 3),
                     Row(
                       children: [

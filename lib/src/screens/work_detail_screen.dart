@@ -884,7 +884,8 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                               Text(
                                 (work.rateAverage != null &&
                                         work.rateCount != null &&
-                                        work.rateCount! > 0)
+                                        (work.rateCount! > 0 ||
+                                            work.rateAverage! != 0))
                                     ? work.rateAverage!.toStringAsFixed(1)
                                     : '-',
                                 style: const TextStyle(
