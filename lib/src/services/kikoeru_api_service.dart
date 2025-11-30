@@ -26,6 +26,14 @@ class KikoeruApiService {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
+          // 模拟浏览器环境以加速访问和避免被拦截
+          options.headers['User-Agent'] =
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36';
+          options.headers['Referer'] = 'https://www.asmr.one/';
+          options.headers['Origin'] = 'https://www.asmr.one';
+          // Dart HttpClient 默认支持 gzip，显式声明可确保服务器知晓
+          options.headers['Accept-Encoding'] = 'gzip';
+
           // Add Authorization header if token exists
           // Only exclude for POST requests to auth endpoints (login/register)
           if (_token != null && _token!.isNotEmpty) {
