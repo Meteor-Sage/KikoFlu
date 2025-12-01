@@ -158,6 +158,78 @@ class KikoeruApiService {
   bool get isOfficialServer => ServerUtils.isOfficialServer(_host);
   bool get _isOfficialServer => isOfficialServer;
 
+  // Helper to fetch combined pages for custom server
+  Future<Map<String, dynamic>> _fetchCombinedPages({
+    required int page,
+    required int pageSize,
+    required Future<Map<String, dynamic>> Function(int page) fetcher,
+    String listKey = 'works',
+  }) async {
+    const int serverPageSize = 12;
+
+    // Calculate item range
+    final startItemIndex = (page - 1) * pageSize;
+    final endItemIndex = startItemIndex + pageSize;
+
+    // Calculate server pages
+    final startServerPage = (startItemIndex / serverPageSize).floor() + 1;
+    final endServerPage = ((endItemIndex - 1) / serverPageSize).floor() + 1;
+
+    List<dynamic> combinedList = [];
+    int totalCount = 0;
+
+    // Fetch pages
+    final futures = <Future<Map<String, dynamic>>>[];
+    for (int p = startServerPage; p <= endServerPage; p++) {
+      futures.add(fetcher(p));
+    }
+
+    final results = await Future.wait(futures);
+
+    // Merge results
+    for (var result in results) {
+      // Try to find the list with the given key, or fallback to common keys
+      List<dynamic> list = [];
+      if (result[listKey] != null) {
+        list = (result[listKey] as List?) ?? [];
+      } else if (result['works'] != null) {
+        list = (result['works'] as List?) ?? [];
+      } else if (result['reviews'] != null) {
+        list = (result['reviews'] as List?) ?? [];
+      }
+
+      combinedList.addAll(list);
+
+      // Try to get total count from any valid response
+      if (result['pagination'] != null &&
+          result['pagination']['totalCount'] != null) {
+        totalCount = result['pagination']['totalCount'];
+      }
+    }
+
+    // Slice the combined list to match requested page
+    final globalStartIndex = (startServerPage - 1) * serverPageSize;
+    final localStartIndex = startItemIndex - globalStartIndex;
+
+    List<dynamic> finalItems = [];
+    if (localStartIndex < combinedList.length) {
+      final localEndIndex = localStartIndex + pageSize;
+      final actualEndIndex = localEndIndex > combinedList.length
+          ? combinedList.length
+          : localEndIndex;
+      finalItems = combinedList.sublist(localStartIndex, actualEndIndex);
+    }
+
+    return {
+      listKey: finalItems,
+      'pagination': {
+        'currentPage': page,
+        'pageSize': pageSize,
+        'totalCount': totalCount,
+      }
+    };
+  }
+
   // Authentication APIs
   Future<Map<String, dynamic>> login(
       String username, String password, String host) async {
@@ -439,36 +511,42 @@ class KikoeruApiService {
     int? subtitle,
     int? seed,
   }) async {
-    try {
-      // Handle local backend compatibility for sort order
-      String effectiveOrder = order ?? _order;
-      int? nsfwParam;
+    return _fetchCombinedPages(
+      page: page,
+      pageSize: pageSize,
+      fetcher: (p) async {
+        try {
+          // Handle local backend compatibility for sort order
+          String effectiveOrder = order ?? _order;
+          int? nsfwParam;
 
-      if (effectiveOrder == 'create_date') {
-        effectiveOrder = 'release';
-      } else if (effectiveOrder == 'nsfw') {
-        effectiveOrder = 'release';
-        nsfwParam = 1;
-      }
+          if (effectiveOrder == 'create_date') {
+            effectiveOrder = 'release';
+          } else if (effectiveOrder == 'nsfw') {
+            effectiveOrder = 'release';
+            nsfwParam = 1;
+          }
 
-      final queryParams = {
-        'page': page,
-        'pageSize': pageSize,
-        'order': effectiveOrder,
-        'sort': sort ?? _sort,
-        'lyric': (subtitle ?? _subtitle) == 1 ? 'local' : '',
-        'seed': seed ?? (21),
-        if (nsfwParam != null) 'nsfw': nsfwParam,
-      };
+          final queryParams = {
+            'page': p,
+            'pageSize': 12, // Force 12 for custom server
+            'order': effectiveOrder,
+            'sort': sort ?? _sort,
+            'lyric': (subtitle ?? _subtitle) == 1 ? 'local' : '',
+            'seed': seed ?? (21),
+            if (nsfwParam != null) 'nsfw': nsfwParam,
+          };
 
-      final response = await _dio.get(
-        '/api/works',
-        queryParameters: queryParams,
-      );
-      return response.data;
-    } catch (e) {
-      throw KikoeruApiException('Failed to get works', e);
-    }
+          final response = await _dio.get(
+            '/api/works',
+            queryParameters: queryParams,
+          );
+          return response.data;
+        } catch (e) {
+          throw KikoeruApiException('Failed to get works', e);
+        }
+      },
+    );
   }
 
   // Get popular recommended works (max 100 items, no sorting)
@@ -532,24 +610,30 @@ class KikoeruApiService {
     int? subtitle,
     List<String>? withPlaylistStatus,
   }) async {
-    try {
-      // Custom backend doesn't have recommender, use /api/works with dl_count sort
-      final queryParams = {
-        'page': page,
-        'pageSize': pageSize,
-        'order': 'dl_count',
-        'sort': 'desc',
-        'lyric': (subtitle ?? 0) == 1 ? 'local' : '',
-      };
+    return _fetchCombinedPages(
+      page: page,
+      pageSize: pageSize,
+      fetcher: (p) async {
+        try {
+          // Custom backend doesn't have recommender, use /api/works with dl_count sort
+          final queryParams = {
+            'page': p,
+            'pageSize': 12, // Force 12 for custom server
+            'order': 'dl_count',
+            'sort': 'desc',
+            'lyric': (subtitle ?? 0) == 1 ? 'local' : '',
+          };
 
-      final response = await _dio.get(
-        '/api/works',
-        queryParameters: queryParams,
-      );
-      return response.data;
-    } catch (e) {
-      throw KikoeruApiException('Failed to get popular works', e);
-    }
+          final response = await _dio.get(
+            '/api/works',
+            queryParameters: queryParams,
+          );
+          return response.data;
+        } catch (e) {
+          throw KikoeruApiException('Failed to get popular works', e);
+        }
+      },
+    );
   }
 
   // Get recommended works for user (max 100 items, no sorting)
@@ -619,25 +703,31 @@ class KikoeruApiService {
     int? subtitle,
     List<String>? withPlaylistStatus,
   }) async {
-    try {
-      // Custom backend doesn't have recommender, use /api/works with random sort
-      final queryParams = {
-        'page': page,
-        'pageSize': pageSize,
-        'order': 'random',
-        'sort': 'desc',
-        'lyric': (subtitle ?? 0) == 1 ? 'local' : '',
-        'seed': DateTime.now().millisecondsSinceEpoch % 1000, // Random seed
-      };
+    return _fetchCombinedPages(
+      page: page,
+      pageSize: pageSize,
+      fetcher: (p) async {
+        try {
+          // Custom backend doesn't have recommender, use /api/works with random sort
+          final queryParams = {
+            'page': p,
+            'pageSize': 12, // Force 12 for custom server
+            'order': 'random',
+            'sort': 'desc',
+            'lyric': (subtitle ?? 0) == 1 ? 'local' : '',
+            'seed': DateTime.now().millisecondsSinceEpoch % 1000, // Random seed
+          };
 
-      final response = await _dio.get(
-        '/api/works',
-        queryParameters: queryParams,
-      );
-      return response.data;
-    } catch (e) {
-      throw KikoeruApiException('Failed to get recommended works', e);
-    }
+          final response = await _dio.get(
+            '/api/works',
+            queryParameters: queryParams,
+          );
+          return response.data;
+        } catch (e) {
+          throw KikoeruApiException('Failed to get recommended works', e);
+        }
+      },
+    );
   }
 
   Future<Map<String, dynamic>> getWork(int workId) async {
@@ -703,15 +793,40 @@ class KikoeruApiService {
     int? subtitle,
     int? seed,
   }) async {
+    if (!_isOfficialServer) {
+      return _fetchCombinedPages(
+        page: page,
+        pageSize: pageSize,
+        fetcher: (p) async {
+          try {
+            final queryParams = {
+              'page': p,
+              'pageSize': 12, // Force 12 for custom server
+              'order': order ?? _order,
+              'sort': sort ?? _sort,
+              'lyric': (subtitle ?? _subtitle) == 1 ? 'local' : '',
+              'seed': seed ?? (21),
+            };
+
+            final response = await _dio.get(
+              '/api/tags/$tagId/works',
+              queryParameters: queryParams,
+            );
+            return response.data;
+          } catch (e) {
+            throw KikoeruApiException('Failed to get works by tag', e);
+          }
+        },
+      );
+    }
+
     try {
       final queryParams = {
         'page': page,
         'pageSize': pageSize,
         'order': order ?? _order,
         'sort': sort ?? _sort,
-        if (_isOfficialServer) 'subtitle': subtitle ?? _subtitle,
-        if (!_isOfficialServer)
-          'lyric': (subtitle ?? _subtitle) == 1 ? 'local' : '',
+        'subtitle': subtitle ?? _subtitle,
         'seed': seed ?? (21),
       };
 
@@ -734,15 +849,40 @@ class KikoeruApiService {
     int? subtitle,
     int? seed,
   }) async {
+    if (!_isOfficialServer) {
+      return _fetchCombinedPages(
+        page: page,
+        pageSize: pageSize,
+        fetcher: (p) async {
+          try {
+            final queryParams = {
+              'page': p,
+              'pageSize': 12, // Force 12 for custom server
+              'order': order ?? _order,
+              'sort': sort ?? _sort,
+              'lyric': (subtitle ?? _subtitle) == 1 ? 'local' : '',
+              'seed': seed ?? (21),
+            };
+
+            final response = await _dio.get(
+              '/api/vas/$vaId/works',
+              queryParameters: queryParams,
+            );
+            return response.data;
+          } catch (e) {
+            throw KikoeruApiException('Failed to get works by VA', e);
+          }
+        },
+      );
+    }
+
     try {
       final queryParams = {
         'page': page,
         'pageSize': pageSize,
         'order': order ?? _order,
         'sort': sort ?? _sort,
-        if (_isOfficialServer) 'subtitle': subtitle ?? _subtitle,
-        if (!_isOfficialServer)
-          'lyric': (subtitle ?? _subtitle) == 1 ? 'local' : '',
+        'subtitle': subtitle ?? _subtitle,
         'seed': seed ?? (21),
       };
 
@@ -977,24 +1117,29 @@ class KikoeruApiService {
         keywordValue = jsonEncode(conditions);
       }
 
-      final queryParams = <String, dynamic>{
-        'keyword': keywordValue,
-        'page': page,
-        'pageSize': pageSize,
-        'order': effectiveOrder,
-        'sort': sort ?? _sort,
-        'isAdvance': 1, // Enable advanced search mode
-        if (nsfwParam != null) 'nsfw': nsfwParam,
-        'lyric': (subtitle ?? _subtitle) == 1 ? 'local' : '',
-        'seed': seed ?? 0, // Default seed
-        // 'includeTranslationWorks': includeTranslationWorks, // Not supported by local backend
-      };
+      return _fetchCombinedPages(
+        page: page,
+        pageSize: pageSize,
+        fetcher: (p) async {
+          final queryParams = <String, dynamic>{
+            'keyword': keywordValue,
+            'page': p,
+            'pageSize': 12, // Force 12 for custom server
+            'order': effectiveOrder,
+            'sort': sort ?? _sort,
+            'isAdvance': 1, // Enable advanced search mode
+            if (nsfwParam != null) 'nsfw': nsfwParam,
+            'lyric': (subtitle ?? _subtitle) == 1 ? 'local' : '',
+            'seed': seed ?? 0, // Default seed
+          };
 
-      final response = await _dio.get(
-        '/api/search',
-        queryParameters: queryParams,
+          final response = await _dio.get(
+            '/api/search',
+            queryParameters: queryParams,
+          );
+          return response.data;
+        },
       );
-      return response.data;
     } catch (e) {
       throw KikoeruApiException('Failed to search works', e);
     }
@@ -1134,6 +1279,33 @@ class KikoeruApiService {
     String order = 'updated_at',
     String sort = 'desc',
   }) async {
+    if (!_isOfficialServer) {
+      return _fetchCombinedPages(
+        page: page,
+        pageSize: pageSize,
+        fetcher: (p) async {
+          try {
+            final query = <String, dynamic>{
+              'page': p,
+              'pageSize': 12, // Force 12 for custom server
+              'order': order,
+              'sort': sort,
+            };
+            if (filter != null && filter.isNotEmpty) {
+              query['filter'] = filter;
+            }
+            final response = await _dio.get(
+              '/api/review',
+              queryParameters: query,
+            );
+            return response.data;
+          } catch (e) {
+            throw KikoeruApiException('Failed to get my reviews', e);
+          }
+        },
+      );
+    }
+
     try {
       final query = <String, dynamic>{
         'page': page,
@@ -1342,6 +1514,27 @@ class KikoeruApiService {
   // Favorites API
   Future<Map<String, dynamic>> getFavorites(
       {int page = 1, int pageSize = 20}) async {
+    if (!_isOfficialServer) {
+      return _fetchCombinedPages(
+        page: page,
+        pageSize: pageSize,
+        fetcher: (p) async {
+          try {
+            final response = await _dio.get(
+              '/api/favourites',
+              queryParameters: {
+                'page': p,
+                'pageSize': 12, // Force 12 for custom server
+              },
+            );
+            return response.data;
+          } catch (e) {
+            throw KikoeruApiException('Failed to get favorites', e);
+          }
+        },
+      );
+    }
+
     try {
       final response = await _dio.get(
         '/api/favourites',
