@@ -218,7 +218,6 @@ class _VolumeControlState extends State<VolumeControl> {
           icon: Icon(_getVolumeIcon(widget.volume)),
           iconSize: widget.iconSize ?? 24,
           color: widget.iconColor,
-          tooltip: '音量',
         ),
       ),
     );
