@@ -32,6 +32,7 @@ extension SearchLayoutTypeExtension on SearchLayoutType {
 // Search result state
 class SearchResultState extends Equatable {
   final List<Work> works;
+  final List<Work> rawWorks;
   final bool isLoading;
   final String? error;
   final int currentPage;
@@ -47,6 +48,7 @@ class SearchResultState extends Equatable {
 
   const SearchResultState({
     this.works = const [],
+    this.rawWorks = const [],
     this.isLoading = false,
     this.error,
     this.currentPage = 1,
@@ -63,6 +65,7 @@ class SearchResultState extends Equatable {
 
   SearchResultState copyWith({
     List<Work>? works,
+    List<Work>? rawWorks,
     bool? isLoading,
     String? error,
     int? currentPage,
@@ -78,6 +81,7 @@ class SearchResultState extends Equatable {
   }) {
     return SearchResultState(
       works: works ?? this.works,
+      rawWorks: rawWorks ?? this.rawWorks,
       isLoading: isLoading ?? this.isLoading,
       error: error,
       currentPage: currentPage ?? this.currentPage,
@@ -96,6 +100,7 @@ class SearchResultState extends Equatable {
   @override
   List<Object?> get props => [
         works,
+        rawWorks,
         isLoading,
         error,
         currentPage,
@@ -192,25 +197,7 @@ class SearchResultNotifier extends StateNotifier<SearchResultState> {
 
       // Apply blocked items filter
       final blockedItems = _ref.read(blockedItemsProvider);
-      final filteredWorks = works.where((work) {
-        // Check tags
-        if (work.tags != null) {
-          for (final tag in work.tags!) {
-            if (blockedItems.tags.contains(tag.name)) return false;
-          }
-        }
-        // Check CVs
-        if (work.vas != null) {
-          for (final va in work.vas!) {
-            if (blockedItems.cvs.contains(va.name)) return false;
-          }
-        }
-        // Check Circle
-        if (work.name != null && blockedItems.circles.contains(work.name)) {
-          return false;
-        }
-        return true;
-      }).toList();
+      final filteredWorks = _filterWorks(works, blockedItems);
 
       final pagination = result['pagination'] as Map<String, dynamic>?;
       final totalCount = pagination?['totalCount'] ?? works.length;
@@ -222,6 +209,7 @@ class SearchResultNotifier extends StateNotifier<SearchResultState> {
 
       state = state.copyWith(
         works: filteredWorks,
+        rawWorks: works,
         currentPage: page,
         totalCount: totalCount,
         hasMore: hasMorePages,
@@ -233,6 +221,34 @@ class SearchResultNotifier extends StateNotifier<SearchResultState> {
         error: e.toString(),
       );
     }
+  }
+
+  void reapplyFilters() {
+    final blockedItems = _ref.read(blockedItemsProvider);
+    final filteredWorks = _filterWorks(state.rawWorks, blockedItems);
+    state = state.copyWith(works: filteredWorks);
+  }
+
+  List<Work> _filterWorks(List<Work> works, BlockedItemsState blockedItems) {
+    return works.where((work) {
+      // Check tags
+      if (work.tags != null) {
+        for (final tag in work.tags!) {
+          if (blockedItems.tags.contains(tag.name)) return false;
+        }
+      }
+      // Check CVs
+      if (work.vas != null) {
+        for (final va in work.vas!) {
+          if (blockedItems.cvs.contains(va.name)) return false;
+        }
+      }
+      // Check Circle
+      if (work.name != null && blockedItems.circles.contains(work.name)) {
+        return false;
+      }
+      return true;
+    }).toList();
   }
 
   Future<void> goToPage(int page) async {
@@ -284,6 +300,13 @@ final searchResultProvider =
   ref.listen(pageSizeProvider, (previous, next) {
     if (previous != next) {
       notifier.updatePageSize(next);
+    }
+  });
+
+  // 监听屏蔽列表变化，重新过滤
+  ref.listen(blockedItemsProvider, (previous, next) {
+    if (previous != next) {
+      notifier.reapplyFilters();
     }
   });
 
