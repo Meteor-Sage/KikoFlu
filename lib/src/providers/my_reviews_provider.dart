@@ -170,6 +170,7 @@ class MyReviewsNotifier extends StateNotifier<MyReviewsState> {
   // 跳转到指定页
   Future<void> goToPage(int page) async {
     if (page < 1 || state.isLoading) return;
+    state = state.copyWith(currentPage: page);
     await load(refresh: false);
   }
 
