@@ -960,25 +960,12 @@ class KikoeruApiService {
 
               if (!resolved) {
                 try {
-                  if (allCircles == null) {
-                    allCircles = await getAllCircles();
-                  }
-
-                  final circleJson = allCircles.firstWhere(
-                    (c) =>
-                        c['name'].toString().toLowerCase() ==
-                        name.toLowerCase(),
-                    orElse: () => throw Exception('Circle not found'),
-                  );
-                  print(
-                      '[API] Circle resolution not fully supported for t=2, falling back to text for "$name"');
+                  allCircles ??= await getAllCircles();
                 } catch (_) {
                   // Not found
                 }
 
                 if (!resolved) {
-                  print(
-                      '[API] Failed to resolve VA/Circle ID for "$name", falling back to text');
                   condition['t'] = 1;
                   condition['d'] = name;
                 }
