@@ -543,3 +543,105 @@ final defaultSortProvider =
     StateNotifierProvider<DefaultSortNotifier, DefaultSortState>((ref) {
   return DefaultSortNotifier();
 });
+
+/// 屏蔽列表状态
+class BlockedItemsState {
+  final List<String> tags;
+  final List<String> cvs;
+  final List<String> circles;
+
+  const BlockedItemsState({
+    this.tags = const [],
+    this.cvs = const [],
+    this.circles = const [],
+  });
+
+  BlockedItemsState copyWith({
+    List<String>? tags,
+    List<String>? cvs,
+    List<String>? circles,
+  }) {
+    return BlockedItemsState(
+      tags: tags ?? this.tags,
+      cvs: cvs ?? this.cvs,
+      circles: circles ?? this.circles,
+    );
+  }
+}
+
+/// 屏蔽列表通知器
+class BlockedItemsNotifier extends StateNotifier<BlockedItemsState> {
+  static const String _tagsKey = 'blocked_tags';
+  static const String _cvsKey = 'blocked_cvs';
+  static const String _circlesKey = 'blocked_circles';
+
+  BlockedItemsNotifier() : super(const BlockedItemsState()) {
+    _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final tags = prefs.getStringList(_tagsKey) ?? [];
+      final cvs = prefs.getStringList(_cvsKey) ?? [];
+      final circles = prefs.getStringList(_circlesKey) ?? [];
+      state = BlockedItemsState(tags: tags, cvs: cvs, circles: circles);
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  Future<void> _savePreferences() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_tagsKey, state.tags);
+      await prefs.setStringList(_cvsKey, state.cvs);
+      await prefs.setStringList(_circlesKey, state.circles);
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  Future<void> addTag(String tag) async {
+    if (!state.tags.contains(tag)) {
+      state = state.copyWith(tags: [...state.tags, tag]);
+      await _savePreferences();
+    }
+  }
+
+  Future<void> removeTag(String tag) async {
+    state = state.copyWith(tags: state.tags.where((t) => t != tag).toList());
+    await _savePreferences();
+  }
+
+  Future<void> addCv(String cv) async {
+    if (!state.cvs.contains(cv)) {
+      state = state.copyWith(cvs: [...state.cvs, cv]);
+      await _savePreferences();
+    }
+  }
+
+  Future<void> removeCv(String cv) async {
+    state = state.copyWith(cvs: state.cvs.where((c) => c != cv).toList());
+    await _savePreferences();
+  }
+
+  Future<void> addCircle(String circle) async {
+    if (!state.circles.contains(circle)) {
+      state = state.copyWith(circles: [...state.circles, circle]);
+      await _savePreferences();
+    }
+  }
+
+  Future<void> removeCircle(String circle) async {
+    state = state.copyWith(
+        circles: state.circles.where((c) => c != circle).toList());
+    await _savePreferences();
+  }
+}
+
+/// 屏蔽列表提供者
+final blockedItemsProvider =
+    StateNotifierProvider<BlockedItemsNotifier, BlockedItemsState>((ref) {
+  return BlockedItemsNotifier();
+});

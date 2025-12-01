@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'audio_format_settings_screen.dart';
+import 'blocked_items_screen.dart';
 import 'llm_settings_screen.dart';
 import '../models/sort_options.dart';
 import '../providers/settings_provider.dart';
@@ -296,6 +297,21 @@ class PreferencesScreen extends ConsumerWidget {
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (context) => const AudioFormatSettingsScreen(),
+                      ),
+                    );
+                  },
+                ),
+                Divider(color: Theme.of(context).colorScheme.outlineVariant),
+                ListTile(
+                  leading: Icon(Icons.block,
+                      color: Theme.of(context).colorScheme.primary),
+                  title: const Text('屏蔽设置'),
+                  subtitle: const Text('管理屏蔽的标签、声优和社团'),
+                  trailing: const Icon(Icons.arrow_forward_ios),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const BlockedItemsScreen(),
                       ),
                     );
                   },

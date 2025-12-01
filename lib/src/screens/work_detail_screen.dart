@@ -23,6 +23,7 @@ import '../services/translation_service.dart';
 import '../widgets/download_fab.dart';
 import '../providers/work_detail_display_provider.dart';
 import '../widgets/privacy_blur_cover.dart';
+import '../providers/settings_provider.dart';
 
 class WorkDetailScreen extends ConsumerStatefulWidget {
   final Work work;
@@ -1615,6 +1616,72 @@ class _TagVoteDialogState extends ConsumerState<_TagVoteDialog> {
                       height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // 屏蔽标签按钮
+          InkWell(
+            onTap: () {
+              // 获取 notifier 和 messenger，避免在 dispose 后使用 ref 和 context
+              final notifier = ref.read(blockedItemsProvider.notifier);
+              final messenger = ScaffoldMessenger.of(context);
+              final tagName = _currentTag.name;
+
+              // 添加到屏蔽列表
+              notifier.addTag(tagName);
+              Navigator.pop(context);
+
+              messenger.clearSnackBars();
+              final controller = messenger.showSnackBar(
+                SnackBar(
+                  content: Text('已屏蔽标签: $tagName'),
+                  duration: const Duration(seconds: 2),
+                  behavior: SnackBarBehavior.floating,
+                  action: SnackBarAction(
+                    label: '撤销',
+                    onPressed: () {
+                      notifier.removeTag(tagName);
+                    },
+                  ),
+                ),
+              );
+
+              // 强制在3秒后关闭，解决桌面端鼠标悬停导致不消失的问题
+              Future.delayed(const Duration(seconds: 3), () {
+                try {
+                  controller.close();
+                } catch (_) {}
+              });
+            },
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Colors.grey.withOpacity(0.3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.block,
+                    color: Colors.red,
+                    size: 22,
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      '屏蔽此标签',
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Colors.red,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),

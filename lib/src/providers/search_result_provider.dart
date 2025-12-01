@@ -114,8 +114,9 @@ class SearchResultState extends Equatable {
 // Search result notifier
 class SearchResultNotifier extends StateNotifier<SearchResultState> {
   final KikoeruApiService _apiService;
+  final Ref _ref;
 
-  SearchResultNotifier(this._apiService, {int initialPageSize = 20})
+  SearchResultNotifier(this._apiService, this._ref, {int initialPageSize = 20})
       : super(SearchResultState(pageSize: initialPageSize));
 
   Future<void> initializeSearch({
@@ -189,6 +190,28 @@ class SearchResultNotifier extends StateNotifier<SearchResultState> {
       final works =
           (result['works'] as List).map((json) => Work.fromJson(json)).toList();
 
+      // Apply blocked items filter
+      final blockedItems = _ref.read(blockedItemsProvider);
+      final filteredWorks = works.where((work) {
+        // Check tags
+        if (work.tags != null) {
+          for (final tag in work.tags!) {
+            if (blockedItems.tags.contains(tag.name)) return false;
+          }
+        }
+        // Check CVs
+        if (work.vas != null) {
+          for (final va in work.vas!) {
+            if (blockedItems.cvs.contains(va.name)) return false;
+          }
+        }
+        // Check Circle
+        if (work.name != null && blockedItems.circles.contains(work.name)) {
+          return false;
+        }
+        return true;
+      }).toList();
+
       final pagination = result['pagination'] as Map<String, dynamic>?;
       final totalCount = pagination?['totalCount'] ?? works.length;
 
@@ -198,7 +221,7 @@ class SearchResultNotifier extends StateNotifier<SearchResultState> {
       final hasMorePages = page < totalPages;
 
       state = state.copyWith(
-        works: works,
+        works: filteredWorks,
         currentPage: page,
         totalCount: totalCount,
         hasMore: hasMorePages,
@@ -255,7 +278,8 @@ final searchResultProvider =
     StateNotifierProvider<SearchResultNotifier, SearchResultState>((ref) {
   final apiService = ref.watch(kikoeruApiServiceProvider);
   final pageSize = ref.read(pageSizeProvider);
-  final notifier = SearchResultNotifier(apiService, initialPageSize: pageSize);
+  final notifier =
+      SearchResultNotifier(apiService, ref, initialPageSize: pageSize);
 
   ref.listen(pageSizeProvider, (previous, next) {
     if (previous != next) {

@@ -28,6 +28,7 @@ enum LayoutType {
 // Works state
 class WorksState extends Equatable {
   final List<Work> works;
+  final List<Work> rawWorks;
   final bool isLoading;
   final String? error;
   final int currentPage;
@@ -43,6 +44,7 @@ class WorksState extends Equatable {
 
   const WorksState({
     this.works = const [],
+    this.rawWorks = const [],
     this.isLoading = false,
     this.error,
     this.currentPage = 1,
@@ -59,6 +61,7 @@ class WorksState extends Equatable {
 
   WorksState copyWith({
     List<Work>? works,
+    List<Work>? rawWorks,
     bool? isLoading,
     String? error,
     int? currentPage,
@@ -74,6 +77,7 @@ class WorksState extends Equatable {
   }) {
     return WorksState(
       works: works ?? this.works,
+      rawWorks: rawWorks ?? this.rawWorks,
       isLoading: isLoading ?? this.isLoading,
       error: error,
       currentPage: currentPage ?? this.currentPage,
@@ -92,6 +96,7 @@ class WorksState extends Equatable {
   @override
   List<Object?> get props => [
         works,
+        rawWorks,
         isLoading,
         error,
         currentPage,
@@ -197,6 +202,14 @@ class WorksNotifier extends StateNotifier<WorksState> {
           .map((workJson) => Work.fromJson(workJson as Map<String, dynamic>))
           .toList();
 
+      // Calculate new raw works
+      final newRawWorks =
+          isAllMode || refresh ? works : [...state.rawWorks, ...works];
+
+      // Apply blocked items filter
+      final blockedItems = _ref.read(blockedItemsProvider);
+      final filteredWorks = _filterWorks(newRawWorks, blockedItems);
+
       final totalCount = pagination?['totalCount'] as int? ?? 0;
       final currentPage = pagination?['currentPage'] as int? ?? page;
 
@@ -206,27 +219,23 @@ class WorksNotifier extends StateNotifier<WorksState> {
       if (state.displayMode == DisplayMode.popular ||
           state.displayMode == DisplayMode.recommended) {
         // 热门/推荐模式: 滚动加载,最多100条
-        final currentTotal =
-            refresh ? works.length : state.works.length + works.length;
+        final currentTotal = filteredWorks.length;
         hasMore = works.length >= pageSize &&
             currentTotal < 100 &&
             currentTotal < totalCount;
-        isLastPage = !hasMore && works.isNotEmpty;
+        isLastPage = !hasMore && filteredWorks.isNotEmpty;
       } else {
         // 全部模式: 分页
         hasMore = (currentPage * pageSize) < totalCount;
-        isLastPage = !hasMore && works.isNotEmpty;
+        isLastPage = !hasMore && filteredWorks.isNotEmpty;
       }
 
-      // 全部模式:替换数据; 热门/推荐:累加数据
-      final newWorks =
-          isAllMode || refresh ? works : [...state.works, ...works];
-
       print(
-          '[WorksProvider] Loaded ${works.length} works, total: ${newWorks.length}, hasMore: $hasMore, currentPage: $currentPage');
+          '[WorksProvider] Loaded ${filteredWorks.length} works (filtered from ${newRawWorks.length}), total: ${filteredWorks.length}, hasMore: $hasMore, currentPage: $currentPage');
 
       state = state.copyWith(
-        works: newWorks,
+        works: filteredWorks,
+        rawWorks: newRawWorks,
         isLoading: false,
         currentPage: currentPage,
         totalCount: totalCount,
@@ -333,6 +342,34 @@ class WorksNotifier extends StateNotifier<WorksState> {
     state = state.copyWith(subtitleFilter: newFilter);
     refresh();
   }
+
+  void reapplyFilters() {
+    final blockedItems = _ref.read(blockedItemsProvider);
+    final filteredWorks = _filterWorks(state.rawWorks, blockedItems);
+    state = state.copyWith(works: filteredWorks);
+  }
+
+  List<Work> _filterWorks(List<Work> works, BlockedItemsState blockedItems) {
+    return works.where((work) {
+      // Check tags
+      if (work.tags != null) {
+        for (final tag in work.tags!) {
+          if (blockedItems.tags.contains(tag.name)) return false;
+        }
+      }
+      // Check CVs
+      if (work.vas != null) {
+        for (final va in work.vas!) {
+          if (blockedItems.cvs.contains(va.name)) return false;
+        }
+      }
+      // Check Circle
+      if (work.name != null && blockedItems.circles.contains(work.name)) {
+        return false;
+      }
+      return true;
+    }).toList();
+  }
 }
 
 // Provider
@@ -370,6 +407,13 @@ final worksProvider = StateNotifierProvider<WorksNotifier, WorksState>((ref) {
     if (prevUser?.name != nextUser?.name || prevUser?.host != nextUser?.host) {
       print('[WorksProvider] User changed, refreshing works list');
       notifier.refresh();
+    }
+  });
+
+  // 监听屏蔽列表变化，重新过滤
+  ref.listen(blockedItemsProvider, (previous, next) {
+    if (previous != next) {
+      notifier.reapplyFilters();
     }
   });
 

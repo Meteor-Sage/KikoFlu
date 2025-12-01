@@ -34,7 +34,7 @@ class SearchResultScreen extends StatelessWidget {
           final apiService = ref.watch(kikoeruApiServiceProvider);
           final pageSize = ref.read(pageSizeProvider);
           final notifier =
-              SearchResultNotifier(apiService, initialPageSize: pageSize);
+              SearchResultNotifier(apiService, ref, initialPageSize: pageSize);
 
           ref.listen(pageSizeProvider, (previous, next) {
             if (previous != next) {
