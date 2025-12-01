@@ -489,29 +489,43 @@ class _SearchResultContentState extends ConsumerState<_SearchResultContent> {
   }
 
   Widget _buildPaginationBar(SearchResultState searchState) {
-    return PaginationBar(
-      currentPage: searchState.currentPage,
-      pageSize: searchState.pageSize,
-      totalCount: searchState.totalCount,
-      hasMore: searchState.hasMore,
-      isLoading: searchState.isLoading,
-      onPreviousPage: () {
-        ref
-            .read(searchResultProvider.notifier)
-            .goToPage(searchState.currentPage - 1);
-        _scrollToTop();
-      },
-      onNextPage: () {
-        ref
-            .read(searchResultProvider.notifier)
-            .goToPage(searchState.currentPage + 1);
-        _scrollToTop();
-      },
-      onGoToPage: (page) {
-        ref.read(searchResultProvider.notifier).goToPage(page);
-      },
-      onScrollToTop: _scrollToTop,
-      endMessage: '已经到底啦~杂库~',
+    return Column(
+      children: [
+        PaginationBar(
+          currentPage: searchState.currentPage,
+          pageSize: searchState.pageSize,
+          totalCount: searchState.totalCount,
+          hasMore: searchState.hasMore,
+          isLoading: searchState.isLoading,
+          onPreviousPage: () {
+            ref
+                .read(searchResultProvider.notifier)
+                .goToPage(searchState.currentPage - 1);
+            _scrollToTop();
+          },
+          onNextPage: () {
+            ref
+                .read(searchResultProvider.notifier)
+                .goToPage(searchState.currentPage + 1);
+            _scrollToTop();
+          },
+          onGoToPage: (page) {
+            ref.read(searchResultProvider.notifier).goToPage(page);
+          },
+          onScrollToTop: _scrollToTop,
+          endMessage: '已经到底啦~杂库~',
+        ),
+        if (searchState.rawWorks.length > searchState.works.length) ...[
+          const SizedBox(height: 8),
+          Text(
+            '本页已排除 ${searchState.rawWorks.length - searchState.works.length} 个作品',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ],
     );
   }
 

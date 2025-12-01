@@ -566,22 +566,36 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
           SliverToBoxAdapter(
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              child: Column(
                 children: [
-                  Icon(
-                    Icons.check_circle_outline,
-                    size: 16,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.check_circle_outline,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '已经到底啦~杂库~',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '已经到底啦~杂库~',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      fontSize: 14,
+                  if (worksState.rawWorks.length > worksState.works.length) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      '已排除 ${worksState.rawWorks.length - worksState.works.length} 个作品',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -592,24 +606,38 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
           SliverPadding(
             padding: EdgeInsets.fromLTRB(padding, spacing, padding, 24),
             sliver: SliverToBoxAdapter(
-              child: PaginationBar(
-                currentPage: worksState.currentPage,
-                totalCount: worksState.totalCount,
-                pageSize: worksState.pageSize,
-                hasMore: worksState.hasMore,
-                isLoading: worksState.isLoading,
-                onPreviousPage: () {
-                  ref.read(worksProvider.notifier).previousPage();
-                  _scrollToTop();
-                },
-                onNextPage: () {
-                  ref.read(worksProvider.notifier).nextPage();
-                  _scrollToTop();
-                },
-                onGoToPage: (page) {
-                  ref.read(worksProvider.notifier).goToPage(page);
-                  _scrollToTop();
-                },
+              child: Column(
+                children: [
+                  PaginationBar(
+                    currentPage: worksState.currentPage,
+                    totalCount: worksState.totalCount,
+                    pageSize: worksState.pageSize,
+                    hasMore: worksState.hasMore,
+                    isLoading: worksState.isLoading,
+                    onPreviousPage: () {
+                      ref.read(worksProvider.notifier).previousPage();
+                      _scrollToTop();
+                    },
+                    onNextPage: () {
+                      ref.read(worksProvider.notifier).nextPage();
+                      _scrollToTop();
+                    },
+                    onGoToPage: (page) {
+                      ref.read(worksProvider.notifier).goToPage(page);
+                      _scrollToTop();
+                    },
+                  ),
+                  if (worksState.rawWorks.length > worksState.works.length) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      '本页已排除 ${worksState.rawWorks.length - worksState.works.length} 个作品',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           ),
