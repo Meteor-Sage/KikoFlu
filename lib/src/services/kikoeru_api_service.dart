@@ -1086,20 +1086,23 @@ class KikoeruApiService {
 
   // Reviews API
   Future<Map<String, dynamic>> getWorkReviews(int workId,
-      {int page = 1}) async {
+      {int page = 1, int pageSize = 20}) async {
     if (_isOfficialServer) {
-      return _getWorkReviewsOfficial(workId, page: page);
+      return _getWorkReviewsOfficial(workId, page: page, pageSize: pageSize);
     } else {
-      return _getWorkReviewsCustom(workId, page: page);
+      return _getWorkReviewsCustom(workId, page: page, pageSize: pageSize);
     }
   }
 
   Future<Map<String, dynamic>> _getWorkReviewsOfficial(int workId,
-      {int page = 1}) async {
+      {int page = 1, int pageSize = 20}) async {
     try {
       final response = await _dio.get(
         '/api/review/$workId',
-        queryParameters: {'page': page},
+        queryParameters: {
+          'page': page,
+          'pageSize': pageSize,
+        },
       );
       return response.data;
     } catch (e) {
@@ -1108,14 +1111,14 @@ class KikoeruApiService {
   }
 
   Future<Map<String, dynamic>> _getWorkReviewsCustom(int workId,
-      {int page = 1}) async {
+      {int page = 1, int pageSize = 20}) async {
     // Local backend does not support getting reviews for a specific work
     // Return empty structure to avoid errors
     return {
       'reviews': [],
       'pagination': {
         'currentPage': 1,
-        'pageSize': 20,
+        'pageSize': pageSize,
         'totalCount': 0,
       }
     };
@@ -1126,6 +1129,7 @@ class KikoeruApiService {
   /// 传入 null 或空字符串时为全部
   Future<Map<String, dynamic>> getMyReviews({
     int page = 1,
+    int pageSize = 20,
     String? filter,
     String order = 'updated_at',
     String sort = 'desc',
@@ -1133,6 +1137,7 @@ class KikoeruApiService {
     try {
       final query = <String, dynamic>{
         'page': page,
+        'pageSize': pageSize,
         'order': order,
         'sort': sort,
       };
@@ -1335,11 +1340,15 @@ class KikoeruApiService {
   }
 
   // Favorites API
-  Future<Map<String, dynamic>> getFavorites({int page = 1}) async {
+  Future<Map<String, dynamic>> getFavorites(
+      {int page = 1, int pageSize = 20}) async {
     try {
       final response = await _dio.get(
         '/api/favourites',
-        queryParameters: {'page': page},
+        queryParameters: {
+          'page': page,
+          'pageSize': pageSize,
+        },
       );
       return response.data;
     } catch (e) {
