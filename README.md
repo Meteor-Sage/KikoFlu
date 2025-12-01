@@ -81,16 +81,14 @@ flutter pub get
 
 ### Android
 ```bash
-flutter build apk --release
-
 flutter build apk --release --split-per-abi
+
+flutter build apk --release
 ```
 
 ### Windows
 ```bash
 flutter build windows --release
-
-flutter pub run msix:create
 ```
 
 ### iOS
