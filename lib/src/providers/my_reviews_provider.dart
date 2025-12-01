@@ -119,6 +119,7 @@ class MyReviewsNotifier extends StateNotifier<MyReviewsState> {
     try {
       final result = await _apiService.getMyReviews(
         page: page,
+        pageSize: state.pageSize,
         filter: state.filter.value,
         order: state.sortType.value,
         sort: state.sortOrder.value,
