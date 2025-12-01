@@ -127,7 +127,7 @@ jobs:
           name: windows-release
           path: |
             build/windows/x64/runner/Release/KikoFlu-windows.zip
-            Output/KikoFlu-Setup.exe
+            Output/KikoFlu-windows-setup.exe
 
   ios:
     name: iOS Build (Unsigned)
