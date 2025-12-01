@@ -91,19 +91,12 @@ jobs:
         
       - name: Build Windows Release
         run: flutter build windows --release
-          
-      - name: Decode Certificate
-        run: |
-          $pfx_cert_byte = [System.Convert]::FromBase64String("${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}")
-          [IO.File]::WriteAllBytes("certificate.pfx", $pfx_cert_byte)
 
-      - name: Create MSIX
-        run: flutter pub run msix:create --certificate-path certificate.pfx --certificate-password "${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}" --install-certificate false
-        
-      - name: Rename MSIX
-        run: |
-          Get-ChildItem -Path build/windows -Filter *.msix -Recurse | Rename-Item -NewName "KikoFlu-windows.msix"
-      
+      - name: Create Installer via Inno Setup
+        uses: Minionguyjosh/inno-setup-action@v1.2.2
+        with:
+          path: installer_script.iss
+
       - name: Create Zip
         uses: thedoctor0/zip-release@0.7.6
         with:
@@ -117,7 +110,7 @@ jobs:
           name: windows-release
           path: |
             build/windows/x64/runner/Release/KikoFlu-windows.zip
-            build/windows/**/KikoFlu-windows.msix
+            Output/KikoFlu-Setup.exe
 
   ios:
     name: iOS Build (Unsigned)
