@@ -10,7 +10,6 @@ import '../widgets/pagination_bar.dart';
 import '../utils/responsive_grid_helper.dart';
 import '../widgets/download_fab.dart';
 import '../services/download_service.dart';
-import '../services/kikoeru_api_service.dart' hide kikoeruApiServiceProvider;
 import '../models/download_task.dart';
 import 'downloads_screen.dart';
 import 'local_downloads_screen.dart';
