@@ -149,7 +149,7 @@ class AudioPlayerService {
           avAudioSessionMode: AVAudioSessionMode.moviePlayback,
           androidAudioAttributes: AndroidAudioAttributes(
             contentType: AndroidAudioContentType.movie,
-            flags: AndroidAudioFlags.audibilityEnforced,
+            flags: AndroidAudioFlags.none,
             usage: AndroidAudioUsage.media,
           ),
           androidAudioFocusGainType: AndroidAudioFocusGainType.gain,

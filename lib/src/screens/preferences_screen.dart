@@ -334,19 +334,46 @@ class PreferencesScreen extends ConsumerWidget {
                       style: const TextStyle(fontSize: 12),
                     ),
                     value: ref.watch(audioPassthroughProvider),
-                    onChanged: (value) {
+                    onChanged: (value) async {
+                      if (value) {
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('警告'),
+                            content:
+                                const Text('此功能未经完全测试，可能会带来意外外放等风险。确定要开启吗？'),
+                            actions: [
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.of(context).pop(false),
+                                child: const Text('取消'),
+                              ),
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.of(context).pop(true),
+                                child: const Text('确定'),
+                              ),
+                            ],
+                          ),
+                        );
+
+                        if (confirmed != true) return;
+                      }
+
                       ref.read(audioPassthroughProvider.notifier).toggle(value);
-                      SnackBarUtil.showSuccess(
-                        context,
-                        value
-                            ? ((Theme.of(context).platform ==
-                                        TargetPlatform.windows ||
-                                    Theme.of(context).platform ==
-                                        TargetPlatform.macOS)
-                                ? '已开启独占模式 (重启生效)'
-                                : '已开启音频直通模式')
-                            : '已关闭音频直通模式',
-                      );
+                      if (context.mounted) {
+                        SnackBarUtil.showSuccess(
+                          context,
+                          value
+                              ? ((Theme.of(context).platform ==
+                                          TargetPlatform.windows ||
+                                      Theme.of(context).platform ==
+                                          TargetPlatform.macOS)
+                                  ? '已开启独占模式 (重启生效)'
+                                  : '已开启音频直通模式')
+                              : '已关闭音频直通模式',
+                        );
+                      }
                     },
                   ),
                 ],
