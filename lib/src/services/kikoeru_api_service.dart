@@ -155,7 +155,8 @@ class KikoeruApiService {
   }
 
   // Helper to check if we are using the official server
-  bool get _isOfficialServer => ServerUtils.isOfficialServer(_host);
+  bool get isOfficialServer => ServerUtils.isOfficialServer(_host);
+  bool get _isOfficialServer => isOfficialServer;
 
   // Authentication APIs
   Future<Map<String, dynamic>> login(

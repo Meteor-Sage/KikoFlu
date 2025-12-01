@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/my_tabs_display_provider.dart';
+import '../providers/auth_provider.dart';
+import '../utils/server_utils.dart';
 import '../widgets/scrollable_appbar.dart';
 
 class MyTabsDisplaySettingsScreen extends ConsumerWidget {
@@ -11,6 +13,8 @@ class MyTabsDisplaySettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(myTabsDisplayProvider);
     final notifier = ref.read(myTabsDisplayProvider.notifier);
+    final authState = ref.watch(authProvider);
+    final isOfficialServer = ServerUtils.isOfficialServer(authState.host);
 
     return Scaffold(
       appBar: const ScrollableAppBar(
@@ -55,17 +59,19 @@ class MyTabsDisplaySettingsScreen extends ConsumerWidget {
                     onChanged: null,
                   ),
                 ),
-                Divider(color: Theme.of(context).colorScheme.outlineVariant),
-                SwitchListTile(
-                  secondary: Icon(
-                    Icons.playlist_play,
-                    color: Theme.of(context).colorScheme.primary,
+                if (isOfficialServer) ...[
+                  Divider(color: Theme.of(context).colorScheme.outlineVariant),
+                  SwitchListTile(
+                    secondary: Icon(
+                      Icons.playlist_play,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    title: const Text('播放列表'),
+                    subtitle: const Text('显示创建的播放列表'),
+                    value: settings.showPlaylists,
+                    onChanged: (value) => notifier.setShowPlaylists(value),
                   ),
-                  title: const Text('播放列表'),
-                  subtitle: const Text('显示创建的播放列表'),
-                  value: settings.showPlaylists,
-                  onChanged: (value) => notifier.setShowPlaylists(value),
-                ),
+                ],
                 Divider(color: Theme.of(context).colorScheme.outlineVariant),
                 SwitchListTile(
                   secondary: Icon(

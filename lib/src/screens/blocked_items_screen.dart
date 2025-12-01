@@ -13,7 +13,7 @@ class BlockedItemsScreen extends ConsumerWidget {
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('屏蔽设置'),
+          title: const Text('屏蔽设置', style: TextStyle(fontSize: 18)),
           bottom: const TabBar(
             tabs: [
               Tab(text: '标签'),

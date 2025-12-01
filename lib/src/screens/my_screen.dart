@@ -3,11 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import '../providers/my_reviews_provider.dart';
 import '../providers/my_tabs_display_provider.dart';
+import '../providers/auth_provider.dart';
+import '../utils/server_utils.dart';
 import '../widgets/enhanced_work_card.dart';
 import '../widgets/pagination_bar.dart';
 import '../utils/responsive_grid_helper.dart';
 import '../widgets/download_fab.dart';
 import '../services/download_service.dart';
+import '../services/kikoeru_api_service.dart' hide kikoeruApiServiceProvider;
 import '../models/download_task.dart';
 import 'downloads_screen.dart';
 import 'local_downloads_screen.dart';
@@ -37,6 +40,8 @@ class _MyScreenState extends ConsumerState<MyScreen>
 
   List<_TabInfo> _buildTabList(MyTabsDisplaySettings settings) {
     final tabs = <_TabInfo>[];
+    final authState = ref.watch(authProvider);
+    final isOfficialServer = ServerUtils.isOfficialServer(authState.host);
 
     if (settings.showOnlineMarks) {
       tabs.add(_TabInfo(
@@ -55,7 +60,7 @@ class _MyScreenState extends ConsumerState<MyScreen>
       widget: const HistoryScreen(),
     ));
 
-    if (settings.showPlaylists) {
+    if (settings.showPlaylists && isOfficialServer) {
       tabs.add(_TabInfo(
         title: '播放列表',
         index: 1,
