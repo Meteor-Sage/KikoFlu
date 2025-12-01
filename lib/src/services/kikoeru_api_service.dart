@@ -164,9 +164,8 @@ class KikoeruApiService {
     required int pageSize,
     required Future<Map<String, dynamic>> Function(int page) fetcher,
     String listKey = 'works',
+    int serverPageSize = 12,
   }) async {
-    const int serverPageSize = 12;
-
     // Calculate item range
     final startItemIndex = (page - 1) * pageSize;
     final endItemIndex = startItemIndex + pageSize;
@@ -1306,24 +1305,32 @@ class KikoeruApiService {
       );
     }
 
-    try {
-      final query = <String, dynamic>{
-        'page': page,
-        'pageSize': pageSize,
-        'order': order,
-        'sort': sort,
-      };
-      if (filter != null && filter.isNotEmpty) {
-        query['filter'] = filter;
-      }
-      final response = await _dio.get(
-        '/api/review',
-        queryParameters: query,
-      );
-      return response.data;
-    } catch (e) {
-      throw KikoeruApiException('Failed to get my reviews', e);
-    }
+    // Official server also has a limit of 20 items per page for reviews
+    return _fetchCombinedPages(
+      page: page,
+      pageSize: pageSize,
+      serverPageSize: 20,
+      fetcher: (p) async {
+        try {
+          final query = <String, dynamic>{
+            'page': p,
+            'pageSize': 20, // Force 20 for official server
+            'order': order,
+            'sort': sort,
+          };
+          if (filter != null && filter.isNotEmpty) {
+            query['filter'] = filter;
+          }
+          final response = await _dio.get(
+            '/api/review',
+            queryParameters: query,
+          );
+          return response.data;
+        } catch (e) {
+          throw KikoeruApiException('Failed to get my reviews', e);
+        }
+      },
+    );
   }
 
   /// 更新作品的收藏/进度状态
@@ -1535,18 +1542,26 @@ class KikoeruApiService {
       );
     }
 
-    try {
-      final response = await _dio.get(
-        '/api/favourites',
-        queryParameters: {
-          'page': page,
-          'pageSize': pageSize,
-        },
-      );
-      return response.data;
-    } catch (e) {
-      throw KikoeruApiException('Failed to get favorites', e);
-    }
+    // Official server might also have a limit for favorites, applying similar logic
+    return _fetchCombinedPages(
+      page: page,
+      pageSize: pageSize,
+      serverPageSize: 20,
+      fetcher: (p) async {
+        try {
+          final response = await _dio.get(
+            '/api/favourites',
+            queryParameters: {
+              'page': p,
+              'pageSize': 20, // Force 20 for official server
+            },
+          );
+          return response.data;
+        } catch (e) {
+          throw KikoeruApiException('Failed to get favorites', e);
+        }
+      },
+    );
   }
 
   Future<void> addToFavorites(int workId) async {
