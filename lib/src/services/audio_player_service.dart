@@ -75,43 +75,48 @@ class AudioPlayerService {
 
     // Initialize Windows SMTC (System Media Transport Controls)
     if (Platform.isWindows) {
-      _smtc = SMTCWindows(
-        config: const SMTCConfig(
-          fastForwardEnabled: false,
-          nextEnabled: true,
-          pauseEnabled: true,
-          playEnabled: true,
-          rewindEnabled: false,
-          prevEnabled: true,
-          stopEnabled: true,
-        ),
-      );
+      try {
+        _smtc = SMTCWindows(
+          config: const SMTCConfig(
+            fastForwardEnabled: false,
+            nextEnabled: true,
+            pauseEnabled: true,
+            playEnabled: true,
+            rewindEnabled: false,
+            prevEnabled: true,
+            stopEnabled: true,
+          ),
+        );
 
-      // Register SMTC button callbacks
-      _smtc!.buttonPressStream.listen((button) {
-        switch (button) {
-          case PressedButton.play:
-            play();
-            break;
-          case PressedButton.pause:
-            pause();
-            break;
-          case PressedButton.next:
-            skipToNext();
-            break;
-          case PressedButton.previous:
-            skipToPrevious();
-            break;
-          case PressedButton.stop:
-            stop();
-            break;
-          default:
-            break;
-        }
-      });
+        // Register SMTC button callbacks
+        _smtc!.buttonPressStream.listen((button) {
+          if (_instance == null) return; // Prevent callback after disposal
+          switch (button) {
+            case PressedButton.play:
+              play();
+              break;
+            case PressedButton.pause:
+              pause();
+              break;
+            case PressedButton.next:
+              skipToNext();
+              break;
+            case PressedButton.previous:
+              skipToPrevious();
+              break;
+            case PressedButton.stop:
+              stop();
+              break;
+            default:
+              break;
+          }
+        });
 
-      // Enable SMTC
-      _smtc!.enableSmtc();
+        // Enable SMTC
+        _smtc!.enableSmtc();
+      } catch (e) {
+        print('[AudioPlayerService] Failed to initialize SMTC: $e');
+      }
     }
 
     _setupPlayerListeners();

@@ -60,16 +60,20 @@ class _DesktopFloatingLyricState extends State<DesktopFloatingLyric>
   }
 
   Future<void> _initWindow() async {
-    await windowManager.setAsFrameless();
-    await windowManager.setAlwaysOnTop(true);
-    await windowManager.setBackgroundColor(Colors.transparent);
-    await windowManager.setHasShadow(false);
-    // 设置一个合理的默认大小
-    await windowManager.setSize(const Size(800, 120));
+    try {
+      await windowManager.setAsFrameless();
+      await windowManager.setAlwaysOnTop(true);
+      await windowManager.setBackgroundColor(Colors.transparent);
+      await windowManager.setHasShadow(false);
+      // 设置一个合理的默认大小
+      await windowManager.setSize(const Size(800, 120));
 
-    // Setup method handler
-    final controller = await WindowController.fromCurrentEngine();
-    controller.setWindowMethodHandler(_handleMethodCall);
+      // Setup method handler
+      final controller = await WindowController.fromCurrentEngine();
+      controller.setWindowMethodHandler(_handleMethodCall);
+    } catch (e) {
+      print('[DesktopFloatingLyric] Failed to init window: $e');
+    }
   }
 
   @override

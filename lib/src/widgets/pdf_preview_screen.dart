@@ -274,6 +274,36 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
       return const Center(child: Text('PDF文件路径无效'));
     }
 
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.desktop_access_disabled,
+                size: 64, color: Colors.grey),
+            const SizedBox(height: 16),
+            const Text('桌面端暂不支持直接预览 PDF'),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () async {
+                final Uri uri = Uri.file(_localFilePath!);
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri);
+                } else {
+                  // Fallback for Windows if canLaunchUrl fails for file URI
+                  if (Platform.isWindows) {
+                    await Process.run('explorer', [_localFilePath!]);
+                  }
+                }
+              },
+              icon: const Icon(Icons.open_in_new),
+              label: const Text('使用系统默认应用打开'),
+            ),
+          ],
+        ),
+      );
+    }
+
     return PDFView(
       filePath: _localFilePath!,
       enableSwipe: true,

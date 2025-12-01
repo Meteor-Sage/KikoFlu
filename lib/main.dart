@@ -89,6 +89,7 @@ audio-exclusive=yes
 audio-spdif=ac3,dts,eac3
 log-file=mpv_debug.log
 msg-level=all=v
+video=no
 ''';
       } else {
         configContent = '''
@@ -97,16 +98,30 @@ audio-exclusive=yes
 audio-spdif=ac3,dts,eac3
 log-file=${p.join(configDir.path, 'mpv_debug.log')}
 msg-level=all=v
+video=no
 ''';
       }
 
       await configFile.writeAsString(configContent);
       print('[Audio] Updated mpv.conf: Exclusive Mode ENABLED (Forced)');
     } else {
-      if (await configFile.exists()) {
-        await configFile.delete();
-        print('[Audio] Updated mpv.conf: Exclusive Mode DISABLED');
+      // 即使不开启直通，也建议禁用视频输出以避免 Texture 崩溃
+      String configContent;
+      if (Platform.isWindows) {
+        configContent = '''
+log-file=mpv_debug.log
+msg-level=all=v
+video=no
+''';
+      } else {
+        configContent = '''
+log-file=${p.join(configDir.path, 'mpv_debug.log')}
+msg-level=all=v
+video=no
+''';
       }
+      await configFile.writeAsString(configContent);
+      print('[Audio] Updated mpv.conf: Video Disabled');
     }
   } catch (e) {
     print('[Audio] Error configuring mpv: $e');
