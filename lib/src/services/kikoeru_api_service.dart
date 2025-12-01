@@ -441,8 +441,13 @@ class KikoeruApiService {
     try {
       // Handle local backend compatibility for sort order
       String effectiveOrder = order ?? _order;
+      int? nsfwParam;
+
       if (effectiveOrder == 'create_date') {
         effectiveOrder = 'release';
+      } else if (effectiveOrder == 'nsfw') {
+        effectiveOrder = 'release';
+        nsfwParam = 1;
       }
 
       final queryParams = {
@@ -450,8 +455,9 @@ class KikoeruApiService {
         'pageSize': pageSize,
         'order': effectiveOrder,
         'sort': sort ?? _sort,
-        'subtitle': subtitle ?? _subtitle,
+        'lyric': (subtitle ?? _subtitle) == 1 ? 'local' : '',
         'seed': seed ?? (21),
+        if (nsfwParam != null) 'nsfw': nsfwParam,
       };
 
       final response = await _dio.get(
@@ -532,7 +538,7 @@ class KikoeruApiService {
         'pageSize': pageSize,
         'order': 'dl_count',
         'sort': 'desc',
-        'subtitle': subtitle ?? 0,
+        'lyric': (subtitle ?? 0) == 1 ? 'local' : '',
       };
 
       final response = await _dio.get(
@@ -619,7 +625,7 @@ class KikoeruApiService {
         'pageSize': pageSize,
         'order': 'random',
         'sort': 'desc',
-        'subtitle': subtitle ?? 0,
+        'lyric': (subtitle ?? 0) == 1 ? 'local' : '',
         'seed': DateTime.now().millisecondsSinceEpoch % 1000, // Random seed
       };
 
@@ -702,7 +708,9 @@ class KikoeruApiService {
         'pageSize': pageSize,
         'order': order ?? _order,
         'sort': sort ?? _sort,
-        'subtitle': subtitle ?? _subtitle,
+        if (_isOfficialServer) 'subtitle': subtitle ?? _subtitle,
+        if (!_isOfficialServer)
+          'lyric': (subtitle ?? _subtitle) == 1 ? 'local' : '',
         'seed': seed ?? (21),
       };
 
@@ -731,7 +739,9 @@ class KikoeruApiService {
         'pageSize': pageSize,
         'order': order ?? _order,
         'sort': sort ?? _sort,
-        'subtitle': subtitle ?? _subtitle,
+        if (_isOfficialServer) 'subtitle': subtitle ?? _subtitle,
+        if (!_isOfficialServer)
+          'lyric': (subtitle ?? _subtitle) == 1 ? 'local' : '',
         'seed': seed ?? (21),
       };
 
@@ -831,6 +841,8 @@ class KikoeruApiService {
 
       // Construct the JSON keyword structure for custom backend
       dynamic keywordValue;
+      int? nsfwParam = 0; // 默认为空
+
       try {
         // 尝试解析 keyword 是否已经是 JSON 格式 (例如聚合搜索的结构)
         // 如果是合法的 JSON 列表，则直接使用，不再封装
@@ -860,6 +872,13 @@ class KikoeruApiService {
             } else if (type == 'va' || type == 'circle') {
               // t=2: VA/Circle, d="0" (placeholder for UUID), name=Name
               conditions.add({'t': 2, 'd': "0", 'name': value});
+            } else if (type == 'age') {
+              if (value == 'general') {
+                nsfwParam = 1;
+              } else if (value == 'adult') {
+                nsfwParam = 2;
+              }
+              // r15 不支持，忽略
             }
           }
 
@@ -868,7 +887,14 @@ class KikoeruApiService {
 
         final plainText = remainingText.trim();
         if (plainText.isNotEmpty) {
-          conditions.add({'t': 1, 'd': plainText, 'name': plainText});
+          // Check if it is an RJ number
+          if (RegExp(r'^[Rr][Jj]\d+$', caseSensitive: false)
+              .hasMatch(plainText)) {
+            conditions
+                .add({'t': 5, 'd': plainText.toUpperCase(), 'name': plainText});
+          } else {
+            conditions.add({'t': 1, 'd': plainText, 'name': plainText});
+          }
         }
 
         // 如果解析后为空（例如只有排除条件或无匹配），且原关键词不为空，则作为普通文本搜索
@@ -969,10 +995,9 @@ class KikoeruApiService {
         'pageSize': pageSize,
         'order': effectiveOrder,
         'sort': sort ?? _sort,
-        'subtitle': subtitle ?? _subtitle,
         'isAdvance': 1, // Enable advanced search mode
-        'nsfw': 0, // Default nsfw setting
-        'lyric': '', // Default empty lyric
+        if (nsfwParam != null) 'nsfw': nsfwParam,
+        'lyric': (subtitle ?? _subtitle) == 1 ? 'local' : '',
         'seed': seed ?? 0, // Default seed
         // 'includeTranslationWorks': includeTranslationWorks, // Not supported by local backend
       };
