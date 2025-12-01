@@ -488,7 +488,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Image.asset(
-                      'assets/icons/app_icon.ico',
+                      'assets/icons/app_icon_login.png',
                       width: 64,
                       height: 64,
                       errorBuilder: (context, error, stackTrace) {
@@ -535,7 +535,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Image.asset(
-                    'assets/icons/app_icon.ico',
+                    'assets/icons/app_icon_login.png',
                     width: 80,
                     height: 80,
                     errorBuilder: (context, error, stackTrace) {

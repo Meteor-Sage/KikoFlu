@@ -2,7 +2,9 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "KikoFlu"
-#define MyAppVersion "2.2.1"
+#ifndef MyAppVersion
+  #define MyAppVersion "1.0.0"
+#endif
 #define MyAppPublisher "KikoFlu Dev"
 #define MyAppURL "https://github.com/Meteor-Sage/KikoFlu"
 #define MyAppExeName "KikoFlu.exe"
