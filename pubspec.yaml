@@ -106,7 +106,7 @@ flutter_launcher_icons:
   remove_alpha_ios: true
   macos:
     generate: true
-    image_path: "assets/icons/app_icon.png"
+    image_path: "assets/icons/app_icon_opaque.png"
 
 msix_config:
   display_name: KikoFlu
