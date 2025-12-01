@@ -154,7 +154,7 @@ class _AccountManagementScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const ScrollableAppBar(
-        title: Text('账户管理'),
+        title: Text('账户管理', style: TextStyle(fontSize: 18)),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

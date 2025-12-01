@@ -390,7 +390,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             leading: Icon(Icons.dashboard_customize,
                 color: Theme.of(context).colorScheme.primary),
             title: const Text('界面设置'),
-            subtitle: const Text('播放器、详情页、卡片界面'),
+            subtitle: const Text('播放器、详情页、卡片等'),
             trailing: const Icon(Icons.arrow_forward_ios),
             onTap: () {
               Navigator.of(context).push(
@@ -405,7 +405,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             leading:
                 Icon(Icons.tune, color: Theme.of(context).colorScheme.primary),
             title: const Text('偏好设置'),
-            subtitle: const Text('字幕库、默认排序、音频偏好'),
+            subtitle: const Text('翻译源、屏蔽、音频偏好等'),
             trailing: const Icon(Icons.arrow_forward_ios),
             onTap: () {
               Navigator.of(context).push(

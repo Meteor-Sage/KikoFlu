@@ -66,7 +66,7 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const ScrollableAppBar(
-        title: Text('关于'),
+        title: Text('关于', style: TextStyle(fontSize: 18)),
       ),
       body: FutureBuilder<_AboutData>(
         future: _aboutFuture,

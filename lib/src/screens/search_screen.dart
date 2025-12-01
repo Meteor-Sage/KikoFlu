@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/search_type.dart';
 import '../providers/auth_provider.dart';
+import '../utils/server_utils.dart';
 import '../utils/snackbar_util.dart';
 import '../widgets/scrollable_appbar.dart';
 import '../widgets/download_fab.dart';
@@ -691,34 +692,38 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
 
   List<Widget> _buildAdvancedFilterSections() {
     final theme = Theme.of(context);
+    final authState = ref.watch(authProvider);
+    final isOfficialServer = ServerUtils.isOfficialServer(authState.host);
 
     return [
-      Row(
-        children: [
-          const Icon(Icons.star, size: 20),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '最低评分: ${_minRate.toStringAsFixed(2)} 星',
-                  style: theme.textTheme.bodyMedium,
-                ),
-                Slider(
-                  value: _minRate,
-                  min: 0,
-                  max: 5,
-                  divisions: 20,
-                  label: _minRate.toStringAsFixed(2),
-                  onChanged: (value) => setState(() => _minRate = value),
-                ),
-              ],
+      if (isOfficialServer) ...[
+        Row(
+          children: [
+            const Icon(Icons.star, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '最低评分: ${_minRate.toStringAsFixed(2)} 星',
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                  Slider(
+                    value: _minRate,
+                    min: 0,
+                    max: 5,
+                    divisions: 20,
+                    label: _minRate.toStringAsFixed(2),
+                    onChanged: (value) => setState(() => _minRate = value),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
-      const SizedBox(height: 12),
+          ],
+        ),
+        const SizedBox(height: 12),
+      ],
       Row(
         children: [
           Expanded(
@@ -737,7 +742,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                 ),
                 isDense: true,
               ),
-              items: AgeRating.values.map((rating) {
+              items: AgeRating.values
+                  .where(
+                      (rating) => isOfficialServer || rating != AgeRating.r15)
+                  .map((rating) {
                 return DropdownMenuItem(
                   value: rating,
                   child: Text(rating.label),
@@ -747,33 +755,35 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                   setState(() => _ageRating = value ?? AgeRating.all),
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: DropdownButtonFormField<SalesRange>(
-              value: _salesRange,
-              decoration: InputDecoration(
-                labelText: '销量',
-                prefixIcon: const Icon(Icons.trending_up),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+          if (isOfficialServer) ...[
+            const SizedBox(width: 12),
+            Expanded(
+              child: DropdownButtonFormField<SalesRange>(
+                value: _salesRange,
+                decoration: InputDecoration(
+                  labelText: '销量',
+                  prefixIcon: const Icon(Icons.trending_up),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  isDense: true,
                 ),
-                filled: true,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                isDense: true,
+                items: SalesRange.values.map((range) {
+                  return DropdownMenuItem(
+                    value: range,
+                    child: Text(range.label),
+                  );
+                }).toList(),
+                onChanged: (value) =>
+                    setState(() => _salesRange = value ?? SalesRange.all),
               ),
-              items: SalesRange.values.map((range) {
-                return DropdownMenuItem(
-                  value: range,
-                  child: Text(range.label),
-                );
-              }).toList(),
-              onChanged: (value) =>
-                  setState(() => _salesRange = value ?? SalesRange.all),
             ),
-          ),
+          ],
         ],
       ),
       const SizedBox(height: 12),

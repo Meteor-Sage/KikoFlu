@@ -1,6 +1,9 @@
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/my_reviews_provider.dart';
+import '../providers/auth_provider.dart';
+import '../utils/server_utils.dart';
 import 'add_to_playlist_dialog.dart';
 import 'responsive_dialog.dart';
 
@@ -40,6 +43,9 @@ class ReviewProgressDialog {
       MyReviewFilter.replay,
       MyReviewFilter.postponed,
     ];
+
+    final authState = ProviderScope.containerOf(context).read(authProvider);
+    final isOfficialServer = ServerUtils.isOfficialServer(authState.host);
 
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
@@ -103,7 +109,9 @@ class ReviewProgressDialog {
                               );
                             }),
                             const Spacer(),
-                            if (workId != null && workTitle != null)
+                            if (workId != null &&
+                                workTitle != null &&
+                                isOfficialServer)
                               IconButton(
                                 icon: const Icon(Icons.playlist_add),
                                 onPressed: () async {
@@ -337,16 +345,19 @@ class ReviewProgressDialog {
                                   ),
                                   onPressed: () {
                                     setState(() {
-                                      selectedRating = selectedRating == starValue
-                                          ? null
-                                          : starValue;
+                                      selectedRating =
+                                          selectedRating == starValue
+                                              ? null
+                                              : starValue;
                                     });
                                   },
                                   tooltip: '$starValue 星',
                                 );
                               }),
                               const Spacer(),
-                              if (workId != null && workTitle != null)
+                              if (workId != null &&
+                                  workTitle != null &&
+                                  isOfficialServer)
                                 IconButton(
                                   icon: const Icon(Icons.playlist_add),
                                   onPressed: () async {
@@ -362,7 +373,8 @@ class ReviewProgressDialog {
                                 const SizedBox(
                                   height: 20,
                                   width: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
                                 ),
                             ],
                           ),
