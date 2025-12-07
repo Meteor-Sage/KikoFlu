@@ -21,15 +21,20 @@ class PlaylistDialog extends ConsumerWidget {
     final audioService = ref.read(audioPlayerServiceProvider);
     final currentQueue = audioService.queue;
 
+    final borderRadius = BorderRadius.circular(18);
+
     return Dialog(
-      child: Container(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.7,
-          maxWidth: MediaQuery.of(context).size.width * 0.9,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+      shape: RoundedRectangleBorder(borderRadius: borderRadius),
+      child: ClipRRect(
+        borderRadius: borderRadius,
+        child: Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.7,
+            maxWidth: MediaQuery.of(context).size.width * 0.9,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
             // Header
             Padding(
               padding: const EdgeInsets.all(16),
@@ -51,7 +56,7 @@ class PlaylistDialog extends ConsumerWidget {
             ),
             const Divider(height: 1),
             // Playlist
-            Flexible(
+            Expanded(
               child: Builder(
                 builder: (context) {
                   final tracks = queueAsync.valueOrNull ?? currentQueue;
@@ -65,9 +70,15 @@ class PlaylistDialog extends ConsumerWidget {
                     );
                   }
 
-                  return ListView.builder(
-                    shrinkWrap: true,
+                  return ReorderableListView.builder(
+                    padding: EdgeInsets.zero,
                     itemCount: tracks.length,
+                    buildDefaultDragHandles: false,
+                    onReorder: (oldIndex, newIndex) {
+                      ref
+                          .read(audioPlayerControllerProvider.notifier)
+                          .moveTrack(oldIndex, newIndex);
+                    },
                     itemBuilder: (context, index) {
                       final track = tracks[index];
                       final isCurrentTrack =
@@ -94,94 +105,195 @@ class PlaylistDialog extends ConsumerWidget {
                         }
                       }
 
-                      return ListTile(
-                        leading: Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(4),
-                            color: Theme.of(context)
-                                .colorScheme
-                                .surfaceContainerHighest,
-                          ),
-                          child: (workCoverUrl ?? track.artworkUrl) != null
-                              ? PrivacyBlurCover(
-                                  borderRadius: BorderRadius.circular(4),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(4),
-                                    child: (workCoverUrl ?? track.artworkUrl)
-                                                ?.startsWith('file://') ??
-                                            false
-                                        ? Image.file(
-                                            File((workCoverUrl ??
-                                                    track.artworkUrl)!
-                                                .replaceFirst('file://', '')),
-                                            fit: BoxFit.cover,
-                                            errorBuilder:
-                                                (context, error, stackTrace) {
-                                              return const Icon(
-                                                  Icons.music_note,
-                                                  size: 24);
-                                            },
+                      final resolvedCover = workCoverUrl ?? track.artworkUrl;
+
+                      return LayoutBuilder(
+                        key: ValueKey(track.id),
+                        builder: (context, constraints) {
+                          final isCompact = constraints.maxWidth < 480;
+                          final actionButtons = Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (isCurrentTrack)
+                                Icon(
+                                  Icons.music_note,
+                                  color: Theme.of(context).colorScheme.primary,
+                                  size: 18,
+                                ),
+                              IconButton(
+                                tooltip: '移除',
+                                icon: const Icon(Icons.delete_outline, size: 20),
+                                onPressed: () {
+                                  ref
+                                      .read(audioPlayerControllerProvider
+                                          .notifier)
+                                      .removeTrackAt(index);
+                                },
+                              ),
+                              ReorderableDragStartListener(
+                                index: index,
+                                child: const Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 4),
+                                  child: Icon(Icons.drag_handle, size: 20),
+                                ),
+                              ),
+                            ],
+                          );
+
+                          return InkWell(
+                            onTap: () async {
+                              await ref
+                                  .read(audioPlayerControllerProvider.notifier)
+                                  .skipToIndex(index);
+                              if (context.mounted) {
+                                Navigator.of(context).pop();
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                gradient: isCurrentTrack
+                                    ? LinearGradient(
+                                        colors: [
+                                          Theme.of(context)
+                                              .colorScheme
+                                              .primaryContainer
+                                              .withValues(alpha: 0.4),
+                                          Theme.of(context)
+                                              .colorScheme
+                                              .primaryContainer
+                                              .withValues(alpha: 0.2),
+                                        ],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      )
+                                    : null,
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    width: 48,
+                                    height: 48,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(6),
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .surfaceContainerHighest,
+                                    ),
+                                    child: resolvedCover != null
+                                        ? PrivacyBlurCover(
+                                            borderRadius:
+                                                BorderRadius.circular(6),
+                                            child: ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                              child: resolvedCover.startsWith(
+                                                      'file://')
+                                                  ? Image.file(
+                                                      File(resolvedCover.replaceFirst(
+                                                          'file://', '')),
+                                                      fit: BoxFit.cover,
+                                                      errorBuilder: (context,
+                                                          error, stackTrace) {
+                                                        return const Icon(
+                                                            Icons.music_note,
+                                                            size: 24);
+                                                      },
+                                                    )
+                                                  : CachedNetworkImage(
+                                                      imageUrl: resolvedCover,
+                                                      fit: BoxFit.cover,
+                                                      errorWidget:
+                                                          (context, url, error) {
+                                                        return const Icon(
+                                                            Icons.music_note,
+                                                            size: 24);
+                                                      },
+                                                      placeholder:
+                                                          (context, url) =>
+                                                              const Center(
+                                                        child:
+                                                            CircularProgressIndicator(),
+                                                      ),
+                                                    ),
+                                            ),
                                           )
-                                        : CachedNetworkImage(
-                                            imageUrl: (workCoverUrl ??
-                                                track.artworkUrl)!,
-                                            fit: BoxFit.cover,
-                                            errorWidget: (context, url, error) {
-                                              return const Icon(
-                                                  Icons.music_note,
-                                                  size: 24);
-                                            },
-                                            placeholder: (context, url) =>
-                                                const Center(
-                                              child:
-                                                  CircularProgressIndicator(),
+                                        : const Icon(Icons.music_note,
+                                            size: 24),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                track.title,
+                                                style: TextStyle(
+                                                  fontWeight: isCurrentTrack
+                                                      ? FontWeight.bold
+                                                      : FontWeight.normal,
+                                                  color: isCurrentTrack
+                                                      ? Theme.of(context)
+                                                          .colorScheme.primary
+                                                      : null,
+                                                ),
+                                                maxLines: 1,
+                                                overflow:
+                                                    TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                            if (!isCompact)
+                                              Padding(
+                                                padding: const EdgeInsets.only(
+                                                    bottom: 4),
+                                                child: actionButtons,
+                                              ),
+                                          ],
+                                        ),
+                                        if (track.artist != null)
+                                          Padding(
+                                            padding:
+                                                const EdgeInsets.only(top: 2),
+                                            child: Text(
+                                              track.artist!,
+                                              maxLines: 1,
+                                              overflow:
+                                                  TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                color: isCurrentTrack
+                                                    ? Theme.of(context)
+                                                        .colorScheme.primary
+                                                    : Theme.of(context)
+                                                        .textTheme
+                                                        .bodySmall
+                                                        ?.color,
+                                              ),
                                             ),
                                           ),
+                                        if (isCompact)
+                                          Align(
+                                            alignment: Alignment.centerRight,
+                                            child: Padding(
+                                              padding: const EdgeInsets.only(
+                                                  top: 2),
+                                              child: actionButtons,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
                                   ),
-                                )
-                              : const Icon(Icons.music_note, size: 24),
-                        ),
-                        title: Text(
-                          track.title,
-                          style: TextStyle(
-                            fontWeight: isCurrentTrack
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                            color: isCurrentTrack
-                                ? Theme.of(context).colorScheme.primary
-                                : null,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        subtitle: track.artist != null
-                            ? Text(
-                                track.artist!,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: isCurrentTrack
-                                      ? Theme.of(context).colorScheme.primary
-                                      : null,
-                                ),
-                              )
-                            : null,
-                        trailing: isCurrentTrack
-                            ? Icon(
-                                Icons.music_note,
-                                color: Theme.of(context).colorScheme.primary,
-                              )
-                            : null,
-                        selected: isCurrentTrack,
-                        onTap: () async {
-                          await ref
-                              .read(audioPlayerControllerProvider.notifier)
-                              .skipToIndex(index);
-                          if (context.mounted) {
-                            Navigator.of(context).pop();
-                          }
+                                ],
+                              ),
+                            ),
+                          );
                         },
                       );
                     },
@@ -192,7 +304,7 @@ class PlaylistDialog extends ConsumerWidget {
           ],
         ),
       ),
-    );
+    ),);
   }
 
   /// 显示播放列表对话框

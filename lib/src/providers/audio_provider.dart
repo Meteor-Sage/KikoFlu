@@ -199,6 +199,14 @@ class AudioPlayerController extends StateNotifier<AudioPlayerState> {
     await _service.skipToIndex(index);
   }
 
+  Future<void> removeTrackAt(int index) async {
+    await _service.removeTrackAt(index);
+  }
+
+  Future<void> moveTrack(int oldIndex, int newIndex) async {
+    await _service.moveTrack(oldIndex, newIndex);
+  }
+
   Future<void> setRepeatMode(LoopMode mode) async {
     await _service.setRepeatMode(mode);
     state = state.copyWith(repeatMode: mode);

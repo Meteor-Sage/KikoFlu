@@ -591,6 +591,77 @@ class AudioPlayerService {
     }
   }
 
+  Future<void> removeTrackAt(int index) async {
+    if (index < 0 || index >= _queue.length) return;
+
+    final wasCurrent = index == _currentIndex;
+    final currentTrackId =
+        (_queue.isNotEmpty && _currentIndex < _queue.length)
+            ? _queue[_currentIndex].id
+            : null;
+
+    _queue.removeAt(index);
+    _queueController.add(List.from(_queue));
+
+    if (_queue.isEmpty) {
+      _currentIndex = 0;
+      await stop();
+      _currentTrackController.add(null);
+      return;
+    }
+
+    if (wasCurrent) {
+      if (_currentIndex >= _queue.length) {
+        _currentIndex = _queue.length - 1;
+      }
+      await _loadTrack(_queue[_currentIndex]);
+      await play();
+      return;
+    }
+
+    if (currentTrackId != null) {
+      final updatedIndex =
+          _queue.indexWhere((track) => track.id == currentTrackId);
+      if (updatedIndex != -1) {
+        _currentIndex = updatedIndex;
+      }
+    }
+  }
+
+  Future<void> moveTrack(int oldIndex, int newIndex) async {
+    if (oldIndex < 0 || oldIndex >= _queue.length) return;
+
+    if (newIndex < 0) {
+      newIndex = 0;
+    } else if (newIndex > _queue.length) {
+      newIndex = _queue.length;
+    }
+
+    if (newIndex > oldIndex) {
+      newIndex -= 1;
+    }
+
+    if (oldIndex == newIndex) return;
+
+    final currentTrackId =
+        (_queue.isNotEmpty && _currentIndex < _queue.length)
+            ? _queue[_currentIndex].id
+            : null;
+
+    final track = _queue.removeAt(oldIndex);
+    _queue.insert(newIndex, track);
+
+    if (currentTrackId != null) {
+      final updatedIndex =
+          _queue.indexWhere((element) => element.id == currentTrackId);
+      if (updatedIndex != -1) {
+        _currentIndex = updatedIndex;
+      }
+    }
+
+    _queueController.add(List.from(_queue));
+  }
+
   // Getters and Streams
   Stream<PlayerState> get playerStateStream => _player.playerStateStream;
   Stream<Duration> get positionStream => _player.positionStream;
