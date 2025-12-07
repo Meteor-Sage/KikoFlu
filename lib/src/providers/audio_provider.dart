@@ -129,8 +129,18 @@ class AudioPlayerController extends StateNotifier<AudioPlayerState> {
   }
 
   Future<void> playTrack(AudioTrack track) async {
-    await _service.updateQueue([track]);
-    await _service.play();
+    final shouldAppend = state.appendMode && queue.isNotEmpty;
+
+    if (shouldAppend) {
+      final indexMap = await _service.appendTracks([track]);
+      final targetIndex = indexMap[track.id];
+      if (targetIndex != null) {
+        await _service.skipToIndex(targetIndex);
+      }
+    } else {
+      await _service.updateQueue([track]);
+      await _service.play();
+    }
     // Ensure single-track plays are recorded to history.
     if (track.workId != null) {
       try {
@@ -153,10 +163,22 @@ class AudioPlayerController extends StateNotifier<AudioPlayerState> {
         '[AudioController] playTracks调用: ${tracks.length}个轨道, startIndex=$startIndex');
     print(
         '[AudioController] 第一个轨道: title="${tracks.first.title}", url="${tracks.first.url}"');
-    await _service.updateQueue(tracks, startIndex: startIndex);
-    print('[AudioController] updateQueue完成');
-    await _service.play();
-    print('[AudioController] play完成');
+
+    final shouldAppend = state.appendMode && queue.isNotEmpty;
+
+    if (shouldAppend) {
+      final indexMap = await _service.appendTracks(tracks);
+      final targetTrack = tracks[startIndex.clamp(0, tracks.length - 1)];
+      final targetIndex = indexMap[targetTrack.id];
+      if (targetIndex != null) {
+        await _service.skipToIndex(targetIndex);
+      }
+    } else {
+      await _service.updateQueue(tracks, startIndex: startIndex);
+      print('[AudioController] updateQueue完成');
+      await _service.play();
+      print('[AudioController] play完成');
+    }
 
     if (work != null) {
       _ref.read(historyProvider.notifier).addOrUpdate(work);
@@ -217,6 +239,16 @@ class AudioPlayerController extends StateNotifier<AudioPlayerState> {
     state = state.copyWith(shuffleMode: enabled);
   }
 
+  bool toggleAppendMode() {
+    final newValue = !state.appendMode;
+    final shouldShowHint = newValue && !state.hasShownAppendHint;
+    state = state.copyWith(
+      appendMode: newValue,
+      hasShownAppendHint: state.hasShownAppendHint || shouldShowHint,
+    );
+    return shouldShowHint;
+  }
+
   Future<void> setVolume(double volume) async {
     await _service.setVolume(volume);
     state = state.copyWith(volume: volume);
@@ -242,12 +274,16 @@ class AudioPlayerState {
   final bool shuffleMode;
   final double volume;
   final double speed;
+  final bool appendMode;
+  final bool hasShownAppendHint;
 
   const AudioPlayerState({
     this.repeatMode = LoopMode.off,
     this.shuffleMode = false,
     this.volume = 1.0,
     this.speed = 1.0,
+    this.appendMode = false,
+    this.hasShownAppendHint = false,
   });
 
   AudioPlayerState copyWith({
@@ -255,12 +291,16 @@ class AudioPlayerState {
     bool? shuffleMode,
     double? volume,
     double? speed,
+    bool? appendMode,
+    bool? hasShownAppendHint,
   }) {
     return AudioPlayerState(
       repeatMode: repeatMode ?? this.repeatMode,
       shuffleMode: shuffleMode ?? this.shuffleMode,
       volume: volume ?? this.volume,
       speed: speed ?? this.speed,
+      appendMode: appendMode ?? this.appendMode,
+      hasShownAppendHint: hasShownAppendHint ?? this.hasShownAppendHint,
     );
   }
 }

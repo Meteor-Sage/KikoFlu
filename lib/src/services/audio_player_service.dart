@@ -662,6 +662,51 @@ class AudioPlayerService {
     _queueController.add(List.from(_queue));
   }
 
+  Future<Map<String, int>> appendTracks(List<AudioTrack> tracks) async {
+    final indexMap = <String, int>{};
+    if (tracks.isEmpty) return indexMap;
+
+    if (_queue.isEmpty) {
+      await updateQueue(tracks);
+      for (var i = 0; i < _queue.length; i++) {
+        indexMap[_queue[i].id] = i;
+      }
+      return indexMap;
+    }
+
+    final existingIndex = <String, int>{};
+    for (var i = 0; i < _queue.length; i++) {
+      existingIndex[_queue[i].id] = i;
+    }
+
+    bool appended = false;
+    for (final track in tracks) {
+      final existing = existingIndex[track.id];
+      if (existing != null) {
+        indexMap[track.id] = existing;
+        continue;
+      }
+
+      _queue.add(track);
+      final newIndex = _queue.length - 1;
+      existingIndex[track.id] = newIndex;
+      indexMap[track.id] = newIndex;
+      appended = true;
+    }
+
+    if (appended) {
+      _queueController.add(List.from(_queue));
+    }
+
+    // Ensure we still report indexes for tracks that already existed
+    for (final track in tracks) {
+      indexMap[track.id] ??= existingIndex[track.id] ??
+          _queue.indexWhere((element) => element.id == track.id);
+    }
+
+    return indexMap;
+  }
+
   // Getters and Streams
   Stream<PlayerState> get playerStateStream => _player.playerStateStream;
   Stream<Duration> get positionStream => _player.positionStream;
