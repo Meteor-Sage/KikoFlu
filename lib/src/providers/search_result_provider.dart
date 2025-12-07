@@ -256,7 +256,7 @@ class SearchResultNotifier extends StateNotifier<SearchResultState> {
   }
 
   Future<void> refresh() async {
-    await loadResults(targetPage: 1);
+    await loadResults(targetPage: state.currentPage);
   }
 
   void toggleLayoutType() {

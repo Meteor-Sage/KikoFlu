@@ -31,6 +31,10 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
   Timer? _scrollDebouncer;
   bool _isLoadingMore = false;
   double _lastScrollPosition = 0;
+  int _slideDirection = 0;
+  final Map<DisplayMode, double> _scrollPositions = {
+    for (final mode in DisplayMode.values) mode: 0.0,
+  };
 
   @override
   bool get wantKeepAlive => true; // 保持状态不被销毁
@@ -67,6 +71,7 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
     _lastScrollPosition = currentPosition;
 
     final worksState = ref.read(worksProvider);
+    _scrollPositions[worksState.displayMode] = currentPosition;
     final isNearBottom = currentPosition >= maxScrollExtent - 50;
 
     // 取消之前的防抖计时器
@@ -156,12 +161,34 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
     }
   }
 
+  void _changeDisplayMode(DisplayMode mode) {
+    final currentMode = ref.read(worksProvider).displayMode;
+    if (currentMode == mode) return;
+
+    if (_scrollController.hasClients) {
+      _scrollPositions[currentMode] = _scrollController.offset;
+    }
+
+    ref.read(worksProvider.notifier).setDisplayMode(mode);
+  }
+
+  void _restoreScrollPosition(DisplayMode mode) {
+    final targetOffset = _scrollPositions[mode] ?? 0;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!_scrollController.hasClients) return;
+      final maxExtent = _scrollController.position.maxScrollExtent;
+      final safeMax = maxExtent.isFinite ? maxExtent : targetOffset;
+      final clamped = targetOffset.clamp(0.0, safeMax).toDouble();
+      _scrollController.jumpTo(clamped);
+    });
+  }
+
   void _handleSwipe(DragEndDetails details) {
     if (details.primaryVelocity == null) return;
 
     final velocity = details.primaryVelocity!;
     final worksState = ref.read(worksProvider);
-    final notifier = ref.read(worksProvider.notifier);
 
     // Sensitivity threshold
     if (velocity.abs() < 500) return;
@@ -169,20 +196,16 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
     if (velocity < 0) {
       // Swipe Left (Next Tab)
       if (worksState.displayMode == DisplayMode.all) {
-        notifier.setDisplayMode(DisplayMode.popular);
-        _scrollToTop();
+        _changeDisplayMode(DisplayMode.popular);
       } else if (worksState.displayMode == DisplayMode.popular) {
-        notifier.setDisplayMode(DisplayMode.recommended);
-        _scrollToTop();
+        _changeDisplayMode(DisplayMode.recommended);
       }
     } else {
       // Swipe Right (Previous Tab)
       if (worksState.displayMode == DisplayMode.recommended) {
-        notifier.setDisplayMode(DisplayMode.popular);
-        _scrollToTop();
+        _changeDisplayMode(DisplayMode.popular);
       } else if (worksState.displayMode == DisplayMode.popular) {
-        notifier.setDisplayMode(DisplayMode.all);
-        _scrollToTop();
+        _changeDisplayMode(DisplayMode.all);
       }
     }
   }
@@ -190,6 +213,23 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context); // 必须调用以保持状态
+    ref.listen<WorksState>(
+      worksProvider,
+      (previous, next) {
+        if (!mounted) return;
+        if (previous == null) return;
+        if (previous.displayMode == next.displayMode) return;
+
+        final prevIndex = DisplayMode.values.indexOf(previous.displayMode);
+        final nextIndex = DisplayMode.values.indexOf(next.displayMode);
+
+        setState(() {
+          _slideDirection = nextIndex >= prevIndex ? 1 : -1;
+        });
+
+        _restoreScrollPosition(next.displayMode);
+      },
+    );
     final worksState = ref.watch(worksProvider);
     final isRecommendMode = worksState.displayMode == DisplayMode.popular ||
         worksState.displayMode == DisplayMode.recommended;
@@ -274,15 +314,37 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
       ),
       body: GestureDetector(
         onHorizontalDragEnd: _handleSwipe,
-        child: _buildBody(worksState),
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 250),
+          switchInCurve: Curves.easeOut,
+          switchOutCurve: Curves.easeIn,
+          transitionBuilder: (child, animation) {
+            final direction = _slideDirection == 0
+                ? 0.0
+                : (_slideDirection > 0 ? 0.12 : -0.12);
+            final offsetAnimation = Tween<Offset>(
+              begin: Offset(direction, 0),
+              end: Offset.zero,
+            ).animate(animation);
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: offsetAnimation,
+                child: child,
+              ),
+            );
+          },
+          child: KeyedSubtree(
+            key: ValueKey(worksState.displayMode),
+            child: _buildBody(worksState),
+          ),
+        ),
       ),
     );
   }
 
   /// ===== 构建「全部 / 热门 / 推荐」按钮组 =====
   Widget _buildModeButtons(BuildContext context, WorksState worksState) {
-    final notifier = ref.read(worksProvider.notifier);
-
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -293,10 +355,7 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
           isSelected: worksState.displayMode == DisplayMode.all,
           index: 0,
           total: 3,
-          onTap: () {
-            notifier.setDisplayMode(DisplayMode.all);
-            _scrollToTop();
-          },
+          onTap: () => _changeDisplayMode(DisplayMode.all),
         ),
         _buildModeButton(
           context: context,
@@ -305,10 +364,7 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
           isSelected: worksState.displayMode == DisplayMode.popular,
           index: 1,
           total: 3,
-          onTap: () {
-            notifier.setDisplayMode(DisplayMode.popular);
-            _scrollToTop();
-          },
+          onTap: () => _changeDisplayMode(DisplayMode.popular),
         ),
         _buildModeButton(
           context: context,
@@ -317,10 +373,7 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
           isSelected: worksState.displayMode == DisplayMode.recommended,
           index: 2,
           total: 3,
-          onTap: () {
-            notifier.setDisplayMode(DisplayMode.recommended);
-            _scrollToTop();
-          },
+          onTap: () => _changeDisplayMode(DisplayMode.recommended),
         ),
       ],
     );

@@ -25,8 +25,9 @@ enum LayoutType {
   bigGrid // 大网格布局 (2列)
 }
 
-// Works state
-class WorksState extends Equatable {
+class WorksModeSnapshot extends Equatable {
+  static const _noValue = Object();
+
   final List<Work> works;
   final List<Work> rawWorks;
   final bool isLoading;
@@ -34,15 +35,9 @@ class WorksState extends Equatable {
   final int currentPage;
   final int totalCount;
   final bool hasMore;
-  final LayoutType layoutType;
-  final SortOrder sortOption;
-  final SortDirection sortDirection;
-  final DisplayMode displayMode;
-  final int subtitleFilter; // 0: 全部, 1: 仅带字幕
-  final int pageSize; // 每页数量
-  final bool isLastPage; // 是否是最后一页(用于热门/推荐的100条限制提示)
+  final bool isLastPage;
 
-  const WorksState({
+  const WorksModeSnapshot({
     this.works = const [],
     this.rawWorks = const [],
     this.isLoading = false,
@@ -50,45 +45,27 @@ class WorksState extends Equatable {
     this.currentPage = 1,
     this.totalCount = 0,
     this.hasMore = true,
-    this.layoutType = LayoutType.bigGrid, // 默认大网格布局
-    this.sortOption = SortOrder.release,
-    this.sortDirection = SortDirection.desc,
-    this.displayMode = DisplayMode.all, // 默认显示全部作品
-    this.subtitleFilter = 0, // 默认显示全部
-    this.pageSize = 40, // 全部模式每页40条
     this.isLastPage = false,
   });
 
-  WorksState copyWith({
+  WorksModeSnapshot copyWith({
     List<Work>? works,
     List<Work>? rawWorks,
     bool? isLoading,
-    String? error,
+    Object? error = _noValue,
     int? currentPage,
     int? totalCount,
     bool? hasMore,
-    LayoutType? layoutType,
-    SortOrder? sortOption,
-    SortDirection? sortDirection,
-    DisplayMode? displayMode,
-    int? subtitleFilter,
-    int? pageSize,
     bool? isLastPage,
   }) {
-    return WorksState(
+    return WorksModeSnapshot(
       works: works ?? this.works,
       rawWorks: rawWorks ?? this.rawWorks,
       isLoading: isLoading ?? this.isLoading,
-      error: error,
+      error: error == _noValue ? this.error : error as String?,
       currentPage: currentPage ?? this.currentPage,
       totalCount: totalCount ?? this.totalCount,
       hasMore: hasMore ?? this.hasMore,
-      layoutType: layoutType ?? this.layoutType,
-      sortOption: sortOption ?? this.sortOption,
-      sortDirection: sortDirection ?? this.sortDirection,
-      displayMode: displayMode ?? this.displayMode,
-      subtitleFilter: subtitleFilter ?? this.subtitleFilter,
-      pageSize: pageSize ?? this.pageSize,
       isLastPage: isLastPage ?? this.isLastPage,
     );
   }
@@ -102,13 +79,77 @@ class WorksState extends Equatable {
         currentPage,
         totalCount,
         hasMore,
+        isLastPage,
+      ];
+}
+
+// Works state
+class WorksState extends Equatable {
+  final LayoutType layoutType;
+  final SortOrder sortOption;
+  final SortDirection sortDirection;
+  final DisplayMode displayMode;
+  final int subtitleFilter; // 0: 全部, 1: 仅带字幕
+  final int pageSize; // 每页数量
+  final Map<DisplayMode, WorksModeSnapshot> modeStates;
+
+  WorksState({
+    this.layoutType = LayoutType.bigGrid, // 默认大网格布局
+    this.sortOption = SortOrder.release,
+    this.sortDirection = SortDirection.desc,
+    this.displayMode = DisplayMode.all, // 默认显示全部作品
+    this.subtitleFilter = 0, // 默认显示全部
+    this.pageSize = 40, // 全部模式每页40条
+    Map<DisplayMode, WorksModeSnapshot>? modeStates,
+  }) : modeStates = modeStates ?? _createInitialModeStates();
+
+  WorksState copyWith({
+    LayoutType? layoutType,
+    SortOrder? sortOption,
+    SortDirection? sortDirection,
+    DisplayMode? displayMode,
+    int? subtitleFilter,
+    int? pageSize,
+    Map<DisplayMode, WorksModeSnapshot>? modeStates,
+  }) {
+    return WorksState(
+      layoutType: layoutType ?? this.layoutType,
+      sortOption: sortOption ?? this.sortOption,
+      sortDirection: sortDirection ?? this.sortDirection,
+      displayMode: displayMode ?? this.displayMode,
+      subtitleFilter: subtitleFilter ?? this.subtitleFilter,
+      pageSize: pageSize ?? this.pageSize,
+      modeStates: modeStates ?? this.modeStates,
+    );
+  }
+
+  WorksModeSnapshot get _currentModeState =>
+      modeStates[displayMode] ?? const WorksModeSnapshot();
+
+  List<Work> get works => _currentModeState.works;
+  List<Work> get rawWorks => _currentModeState.rawWorks;
+  bool get isLoading => _currentModeState.isLoading;
+  String? get error => _currentModeState.error;
+  int get currentPage => _currentModeState.currentPage;
+  int get totalCount => _currentModeState.totalCount;
+  bool get hasMore => _currentModeState.hasMore;
+  bool get isLastPage => _currentModeState.isLastPage;
+
+  static Map<DisplayMode, WorksModeSnapshot> _createInitialModeStates() {
+    return {
+      for (final mode in DisplayMode.values) mode: const WorksModeSnapshot(),
+    };
+  }
+
+  @override
+  List<Object?> get props => [
         layoutType,
         sortOption,
         sortDirection,
         displayMode,
         subtitleFilter,
         pageSize,
-        isLastPage,
+        modeStates,
       ];
 }
 
@@ -129,46 +170,71 @@ class WorksNotifier extends StateNotifier<WorksState> {
           sortDirection: initialSortDirection,
         ));
 
+  WorksModeSnapshot _getModeState(DisplayMode mode) {
+    return state.modeStates[mode] ?? const WorksModeSnapshot();
+  }
+
+  void _updateModeState(
+    DisplayMode mode,
+    WorksModeSnapshot Function(WorksModeSnapshot current) updater,
+  ) {
+    final updatedStates =
+        Map<DisplayMode, WorksModeSnapshot>.from(state.modeStates);
+    final currentSnapshot = _getModeState(mode);
+    updatedStates[mode] = updater(currentSnapshot);
+    state = state.copyWith(modeStates: updatedStates);
+  }
+
+  void _updateActiveModeState(
+    WorksModeSnapshot Function(WorksModeSnapshot current) updater,
+  ) {
+    _updateModeState(state.displayMode, updater);
+  }
+
   void updatePageSize(int newSize) {
     if (state.pageSize == newSize) return;
     state = state.copyWith(pageSize: newSize);
-    loadWorks(refresh: true);
+    loadWorks(targetPage: 1);
   }
 
   Future<void> loadWorks({bool refresh = false, int? targetPage}) async {
-    if (state.isLoading) {
+    final mode = state.displayMode;
+    final modeState = _getModeState(mode);
+
+    if (modeState.isLoading) {
       print('[WorksProvider] Already loading, skipping');
       return;
     }
 
-    // 全部模式使用分页,热门/推荐使用滚动加载
-    final isAllMode = state.displayMode == DisplayMode.all;
-    final page = isAllMode
-        ? (targetPage ?? (refresh ? 1 : state.currentPage))
-        : (refresh ? 1 : (state.currentPage + 1));
+    final isAllMode = mode == DisplayMode.all;
+    final previousPage = modeState.currentPage;
+
+    final page = targetPage ??
+        (isAllMode ? previousPage : (refresh ? 1 : (previousPage + 1)));
 
     print(
-        '[WorksProvider] Loading works - mode: ${state.displayMode}, page: $page, refresh: $refresh, currentPage: ${state.currentPage}');
+        '[WorksProvider] Loading works - mode: $mode, page: $page, refresh: $refresh, currentPage: $previousPage, targetPage: $targetPage');
 
-    state = state.copyWith(
-      isLoading: true,
-      error: null,
+    _updateModeState(
+      mode,
+      (snapshot) => snapshot.copyWith(isLoading: true, error: null),
     );
 
     try {
       Map<String, dynamic> response;
 
-      // 使用设置的每页数量
       final pageSize = state.pageSize;
+      final subtitleFilter = state.subtitleFilter;
+      final sortOption = state.sortOption;
+      final sortDirection = state.sortDirection;
 
-      // 根据显示模式选择不同的API
-      if (state.displayMode == DisplayMode.popular) {
+      if (mode == DisplayMode.popular) {
         response = await _apiService.getPopularWorks(
           page: page,
           pageSize: pageSize,
-          subtitle: state.subtitleFilter,
+          subtitle: subtitleFilter,
         );
-      } else if (state.displayMode == DisplayMode.recommended) {
+      } else if (mode == DisplayMode.recommended) {
         final currentUser = _ref.read(authProvider).currentUser;
         final recommenderUuid = currentUser?.recommenderUuid ??
             '766cc58d-7f1e-4958-9a93-913400f378dc';
@@ -177,17 +243,15 @@ class WorksNotifier extends StateNotifier<WorksState> {
           recommenderUuid: recommenderUuid,
           page: page,
           pageSize: pageSize,
-          subtitle: state.subtitleFilter,
+          subtitle: subtitleFilter,
         );
       } else {
         response = await _apiService.getWorks(
           page: page,
-          order: state.sortOption.value,
-          sort: state.sortOption == SortOrder.nsfw
-              ? 'asc'
-              : state.sortDirection.value,
-          subtitle: state.subtitleFilter,
-          pageSize: pageSize, // 传递 pageSize
+          order: sortOption.value,
+          sort: sortOption == SortOrder.nsfw ? 'asc' : sortDirection.value,
+          subtitle: subtitleFilter,
+          pageSize: pageSize,
         );
       }
 
@@ -202,11 +266,10 @@ class WorksNotifier extends StateNotifier<WorksState> {
           .map((workJson) => Work.fromJson(workJson as Map<String, dynamic>))
           .toList();
 
-      // Calculate new raw works
+      final shouldReplace = isAllMode || page == 1;
       final newRawWorks =
-          isAllMode || refresh ? works : [...state.rawWorks, ...works];
+          shouldReplace ? works : [...modeState.rawWorks, ...works];
 
-      // Apply blocked items filter
       final blockedItems = _ref.read(blockedItemsProvider);
       final filteredWorks = _filterWorks(newRawWorks, blockedItems);
 
@@ -216,16 +279,13 @@ class WorksNotifier extends StateNotifier<WorksState> {
       bool hasMore;
       bool isLastPage = false;
 
-      if (state.displayMode == DisplayMode.popular ||
-          state.displayMode == DisplayMode.recommended) {
-        // 热门/推荐模式: 滚动加载,最多100条
+      if (mode == DisplayMode.popular || mode == DisplayMode.recommended) {
         final currentTotal = filteredWorks.length;
         hasMore = works.length >= pageSize &&
             currentTotal < 100 &&
             currentTotal < totalCount;
         isLastPage = !hasMore && filteredWorks.isNotEmpty;
       } else {
-        // 全部模式: 分页
         hasMore = (currentPage * pageSize) < totalCount;
         isLastPage = !hasMore && filteredWorks.isNotEmpty;
       }
@@ -233,28 +293,40 @@ class WorksNotifier extends StateNotifier<WorksState> {
       print(
           '[WorksProvider] Loaded ${filteredWorks.length} works (filtered from ${newRawWorks.length}), total: ${filteredWorks.length}, hasMore: $hasMore, currentPage: $currentPage');
 
-      state = state.copyWith(
-        works: filteredWorks,
-        rawWorks: newRawWorks,
-        isLoading: false,
-        currentPage: currentPage,
-        totalCount: totalCount,
-        hasMore: hasMore,
-        pageSize: pageSize,
-        isLastPage: isLastPage,
+      _updateModeState(
+        mode,
+        (snapshot) => snapshot.copyWith(
+          works: filteredWorks,
+          rawWorks: newRawWorks,
+          isLoading: false,
+          currentPage: currentPage,
+          totalCount: totalCount,
+          hasMore: hasMore,
+          isLastPage: isLastPage,
+          error: null,
+        ),
       );
+      state = state.copyWith(pageSize: pageSize);
     } catch (e) {
       print('Failed to load works: $e');
 
-      state = state.copyWith(
-        isLoading: false,
-        error: '加载失败: ${e.toString()}',
+      _updateModeState(
+        mode,
+        (snapshot) => snapshot.copyWith(
+          isLoading: false,
+          error: '加载失败: ${e.toString()}',
+        ),
       );
     }
   }
 
-  Future<void> refresh() async {
-    await loadWorks(refresh: true);
+  Future<void> refresh({bool resetPage = false}) async {
+    if (resetPage) {
+      await loadWorks(targetPage: 1);
+    } else {
+      // 保持当前页刷新，无论是哪种模式
+      await loadWorks(targetPage: state.currentPage);
+    }
   }
 
   // 跳转到指定页(仅全部模式)
@@ -286,14 +358,14 @@ class WorksNotifier extends StateNotifier<WorksState> {
   void setSortOption(SortOrder option) {
     if (state.sortOption != option) {
       state = state.copyWith(sortOption: option);
-      refresh();
+      refresh(resetPage: true);
     }
   }
 
   void setSortDirection(SortDirection direction) {
     if (state.sortDirection != direction) {
       state = state.copyWith(sortDirection: direction);
-      refresh();
+      refresh(resetPage: true);
     }
   }
 
@@ -325,14 +397,21 @@ class WorksNotifier extends StateNotifier<WorksState> {
   }
 
   void clearError() {
-    state = state.copyWith(error: null);
+    _updateActiveModeState((modeState) => modeState.copyWith(error: null));
   }
 
   // Switch between all works and popular works
   void setDisplayMode(DisplayMode mode) {
-    if (state.displayMode != mode) {
-      state = state.copyWith(displayMode: mode);
-      refresh();
+    if (state.displayMode == mode) return;
+
+    state = state.copyWith(displayMode: mode);
+
+    final targetState = _getModeState(mode);
+    final shouldLoadInitial =
+        targetState.works.isEmpty && !targetState.isLoading;
+
+    if (shouldLoadInitial) {
+      refresh(resetPage: true);
     }
   }
 
@@ -340,13 +419,16 @@ class WorksNotifier extends StateNotifier<WorksState> {
   void toggleSubtitleFilter() {
     final newFilter = state.subtitleFilter == 0 ? 1 : 0;
     state = state.copyWith(subtitleFilter: newFilter);
-    refresh();
+    refresh(resetPage: true);
   }
 
   void reapplyFilters() {
     final blockedItems = _ref.read(blockedItemsProvider);
-    final filteredWorks = _filterWorks(state.rawWorks, blockedItems);
-    state = state.copyWith(works: filteredWorks);
+    final updatedStates = state.modeStates.map((mode, snapshot) {
+      final filteredWorks = _filterWorks(snapshot.rawWorks, blockedItems);
+      return MapEntry(mode, snapshot.copyWith(works: filteredWorks));
+    });
+    state = state.copyWith(modeStates: updatedStates);
   }
 
   List<Work> _filterWorks(List<Work> works, BlockedItemsState blockedItems) {

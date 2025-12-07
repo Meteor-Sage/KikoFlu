@@ -66,12 +66,12 @@ class PlaylistsNotifier extends StateNotifier<PlaylistsState> {
   void updatePageSize(int newSize) {
     if (state.pageSize == newSize) return;
     state = state.copyWith(pageSize: newSize);
-    load(refresh: true);
+    load(targetPage: 1);
   }
 
-  Future<void> load({bool refresh = false}) async {
+  Future<void> load({bool refresh = false, int? targetPage}) async {
     if (state.isLoading) return;
-    final page = refresh ? 1 : state.currentPage;
+    final page = targetPage ?? state.currentPage;
 
     state = state.copyWith(isLoading: true, error: null, currentPage: page);
 
@@ -113,16 +113,14 @@ class PlaylistsNotifier extends StateNotifier<PlaylistsState> {
   // 跳转到指定页
   Future<void> goToPage(int page) async {
     if (page < 1 || state.isLoading) return;
-    state = state.copyWith(currentPage: page);
-    await load(refresh: false);
+    await load(targetPage: page);
   }
 
   // 上一页
   Future<void> previousPage() async {
     if (state.currentPage > 1) {
       final prevPage = state.currentPage - 1;
-      state = state.copyWith(currentPage: prevPage);
-      await load(refresh: false);
+      await load(targetPage: prevPage);
     }
   }
 
@@ -130,8 +128,7 @@ class PlaylistsNotifier extends StateNotifier<PlaylistsState> {
   Future<void> nextPage() async {
     if (state.hasMore) {
       final nextPage = state.currentPage + 1;
-      state = state.copyWith(currentPage: nextPage);
-      await load(refresh: false);
+      await load(targetPage: nextPage);
     }
   }
 
@@ -164,7 +161,7 @@ class PlaylistsNotifier extends StateNotifier<PlaylistsState> {
     }
   }
 
-  void refresh() => load(refresh: true);
+  void refresh() => load();
 }
 
 final playlistsProvider =

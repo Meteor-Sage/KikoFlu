@@ -107,12 +107,12 @@ class MyReviewsNotifier extends StateNotifier<MyReviewsState> {
   void updatePageSize(int newSize) {
     if (state.pageSize == newSize) return;
     state = state.copyWith(pageSize: newSize);
-    load(refresh: true);
+    load(targetPage: 1);
   }
 
-  Future<void> load({bool refresh = false}) async {
+  Future<void> load({bool refresh = false, int? targetPage}) async {
     if (state.isLoading) return;
-    final page = refresh ? 1 : state.currentPage;
+    final page = targetPage ?? state.currentPage;
 
     state = state.copyWith(isLoading: true, error: null, currentPage: page);
 
@@ -170,16 +170,14 @@ class MyReviewsNotifier extends StateNotifier<MyReviewsState> {
   // 跳转到指定页
   Future<void> goToPage(int page) async {
     if (page < 1 || state.isLoading) return;
-    state = state.copyWith(currentPage: page);
-    await load(refresh: false);
+    await load(targetPage: page);
   }
 
   // 上一页
   Future<void> previousPage() async {
     if (state.currentPage > 1) {
       final prevPage = state.currentPage - 1;
-      state = state.copyWith(currentPage: prevPage);
-      await load(refresh: false);
+      await load(targetPage: prevPage);
     }
   }
 
@@ -187,14 +185,13 @@ class MyReviewsNotifier extends StateNotifier<MyReviewsState> {
   Future<void> nextPage() async {
     if (state.hasMore) {
       final nextPage = state.currentPage + 1;
-      state = state.copyWith(currentPage: nextPage);
-      await load(refresh: false);
+      await load(targetPage: nextPage);
     }
   }
 
   void changeFilter(MyReviewFilter filter) {
     state = state.copyWith(filter: filter, currentPage: 1, totalCount: 0);
-    load(refresh: true);
+    load(targetPage: 1);
   }
 
   void changeSort(SortOrder sortType, SortDirection sortOrder) {
@@ -205,7 +202,7 @@ class MyReviewsNotifier extends StateNotifier<MyReviewsState> {
       currentPage: 1,
       totalCount: 0,
     );
-    load(refresh: true);
+    load(targetPage: 1);
   }
 
   // 切换布局类型
@@ -218,7 +215,7 @@ class MyReviewsNotifier extends StateNotifier<MyReviewsState> {
     state = state.copyWith(layoutType: nextLayout);
   }
 
-  void refresh() => load(refresh: true);
+  void refresh() => load();
 }
 
 final myReviewsProvider =
