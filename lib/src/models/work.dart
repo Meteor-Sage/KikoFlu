@@ -137,6 +137,60 @@ class Work extends Equatable {
 
   String get circleTitle => name ?? '';
 
+  /// 创建 Work 的副本，可选择性地覆盖某些字段
+  Work copyWith({
+    int? id,
+    String? title,
+    int? circleId,
+    String? name,
+    List<Va>? vas,
+    List<Tag>? tags,
+    String? age,
+    String? release,
+    int? dlCount,
+    int? price,
+    int? reviewCount,
+    int? rateCount,
+    double? rateAverage,
+    bool? hasSubtitle,
+    int? duration,
+    String? progress,
+    int? userRating,
+    List<RatingDetail>? rateCountDetail,
+    List<String>? images,
+    String? description,
+    List<AudioFile>? children,
+    String? sourceUrl,
+    List<OtherLanguageEdition>? otherLanguageEditions,
+  }) {
+    return Work(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      circleId: circleId ?? this.circleId,
+      name: name ?? this.name,
+      vas: vas ?? this.vas,
+      tags: tags ?? this.tags,
+      age: age ?? this.age,
+      release: release ?? this.release,
+      dlCount: dlCount ?? this.dlCount,
+      price: price ?? this.price,
+      reviewCount: reviewCount ?? this.reviewCount,
+      rateCount: rateCount ?? this.rateCount,
+      rateAverage: rateAverage ?? this.rateAverage,
+      hasSubtitle: hasSubtitle ?? this.hasSubtitle,
+      duration: duration ?? this.duration,
+      progress: progress ?? this.progress,
+      userRating: userRating ?? this.userRating,
+      rateCountDetail: rateCountDetail ?? this.rateCountDetail,
+      images: images ?? this.images,
+      description: description ?? this.description,
+      children: children ?? this.children,
+      sourceUrl: sourceUrl ?? this.sourceUrl,
+      otherLanguageEditions:
+          otherLanguageEditions ?? this.otherLanguageEditions,
+    );
+  }
+
   @override
   List<Object?> get props => [
         id,
