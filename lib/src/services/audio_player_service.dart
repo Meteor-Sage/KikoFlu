@@ -595,10 +595,9 @@ class AudioPlayerService {
     if (index < 0 || index >= _queue.length) return;
 
     final wasCurrent = index == _currentIndex;
-    final currentTrackId =
-        (_queue.isNotEmpty && _currentIndex < _queue.length)
-            ? _queue[_currentIndex].id
-            : null;
+    final currentTrackId = (_queue.isNotEmpty && _currentIndex < _queue.length)
+        ? _queue[_currentIndex].id
+        : null;
 
     _queue.removeAt(index);
     _queueController.add(List.from(_queue));
@@ -643,10 +642,9 @@ class AudioPlayerService {
 
     if (oldIndex == newIndex) return;
 
-    final currentTrackId =
-        (_queue.isNotEmpty && _currentIndex < _queue.length)
-            ? _queue[_currentIndex].id
-            : null;
+    final currentTrackId = (_queue.isNotEmpty && _currentIndex < _queue.length)
+        ? _queue[_currentIndex].id
+        : null;
 
     final track = _queue.removeAt(oldIndex);
     _queue.insert(newIndex, track);

@@ -729,7 +729,17 @@ class _PlayerControlsWidgetState extends ConsumerState<PlayerControlsWidget> {
               onPressed: () {
                 ref.read(audioPlayerControllerProvider.notifier).skipToNext();
               },
-              icon: const Icon(Icons.skip_next),
+              icon: Consumer(
+                builder: (context, ref, child) {
+                  final canSkipNext = ref.watch(canSkipNextProvider);
+                  final baseColor = Theme.of(context).colorScheme.onSurface;
+                  return Icon(
+                    Icons.skip_next,
+                    color:
+                        canSkipNext ? null : baseColor.withValues(alpha: 0.3),
+                  );
+                },
+              ),
               iconSize: iconSize,
             ),
           ],
