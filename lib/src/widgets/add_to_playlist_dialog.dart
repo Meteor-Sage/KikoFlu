@@ -53,14 +53,71 @@ class AddToPlaylistDialog extends ConsumerStatefulWidget {
 
 class _AddToPlaylistDialogState extends ConsumerState<AddToPlaylistDialog> {
   bool _isAdding = false;
+  bool _isCheckingMembership = false;
+
+  /// 记录作品已存在于哪些播放列表（playlistId -> true）
+  final Set<String> _inPlaylists = {};
 
   @override
   void initState() {
     super.initState();
     // 加载播放列表
-    Future.microtask(() {
-      ref.read(playlistsProvider.notifier).load(refresh: true);
+    Future.microtask(() async {
+      await ref.read(playlistsProvider.notifier).load(refresh: true);
+      // 加载完播放列表后，检查作品在哪些播放列表中
+      _checkWorkMembership();
     });
+  }
+
+  /// 检查作品在哪些播放列表中
+  Future<void> _checkWorkMembership() async {
+    final playlists = ref.read(playlistsProvider).playlists;
+    if (playlists.isEmpty) return;
+
+    setState(() => _isCheckingMembership = true);
+
+    try {
+      final apiService = ref.read(kikoeruApiServiceProvider);
+
+      // 并行检查所有播放列表
+      final results = await Future.wait(
+        playlists.map((playlist) async {
+          try {
+            // 加载播放列表的所有作品来检查
+            // 为了效率，只加载第一页，通常用户不会有太多播放列表
+            final response = await apiService.getPlaylistWorks(
+              playlistId: playlist.id,
+              page: 1,
+              pageSize: 100, // 加载较多以提高准确性
+            );
+
+            final works = response['works'] as List;
+            final containsWork =
+                works.any((work) => work['id'] == widget.workId);
+
+            return MapEntry(playlist.id, containsWork);
+          } catch (e) {
+            return MapEntry(playlist.id, false);
+          }
+        }),
+      );
+
+      if (mounted) {
+        setState(() {
+          _inPlaylists.clear();
+          for (final entry in results) {
+            if (entry.value) {
+              _inPlaylists.add(entry.key);
+            }
+          }
+          _isCheckingMembership = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isCheckingMembership = false);
+      }
+    }
   }
 
   Future<void> _addToPlaylist(Playlist playlist) async {
@@ -82,15 +139,60 @@ class _AddToPlaylistDialogState extends ConsumerState<AddToPlaylistDialog> {
         // 刷新播放列表列表（更新作品数量等信息）
         ref.read(playlistsProvider.notifier).refresh();
 
+        // 更新本地状态
+        setState(() {
+          _inPlaylists.add(playlist.id);
+        });
+
         SnackBarUtil.showSuccess(
           context,
           '已添加到播放列表「${playlist.displayName}」',
         );
-        Navigator.of(context).pop(true);
       }
     } catch (e) {
       if (mounted) {
         SnackBarUtil.showError(context, '添加失败: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isAdding = false);
+      }
+    }
+  }
+
+  /// 从播放列表中移除作品
+  Future<void> _removeFromPlaylist(Playlist playlist) async {
+    if (_isAdding) return;
+
+    setState(() => _isAdding = true);
+
+    try {
+      final apiService = ref.read(kikoeruApiServiceProvider);
+      await apiService.removeWorksFromPlaylist(
+        playlistId: playlist.id,
+        works: [widget.workId],
+      );
+
+      if (mounted) {
+        // 刷新播放列表详情
+        ref.invalidate(playlistDetailProvider(playlist.id));
+
+        // 刷新播放列表列表
+        ref.read(playlistsProvider.notifier).refresh();
+
+        // 更新本地状态
+        setState(() {
+          _inPlaylists.remove(playlist.id);
+        });
+
+        SnackBarUtil.showSuccess(
+          context,
+          '已从播放列表「${playlist.displayName}」中移除',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackBarUtil.showError(context, '移除失败: $e');
       }
     } finally {
       if (mounted) {
@@ -215,27 +317,115 @@ class _AddToPlaylistDialogState extends ConsumerState<AddToPlaylistDialog> {
               itemCount: playlistsState.playlists.length,
               itemBuilder: (context, index) {
                 final playlist = playlistsState.playlists[index];
+                final isInPlaylist = _inPlaylists.contains(playlist.id);
+
                 return ListTile(
-                  leading: CircleAvatar(
-                    child: Icon(
-                      playlist.privacy == PlaylistPrivacy.private.value
-                          ? Icons.lock
-                          : playlist.privacy == PlaylistPrivacy.unlisted.value
-                              ? Icons.link
-                              : Icons.public,
-                    ),
+                  leading: Stack(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: isInPlaylist
+                            ? Theme.of(context).colorScheme.primaryContainer
+                            : null,
+                        child: Icon(
+                          playlist.privacy == PlaylistPrivacy.private.value
+                              ? Icons.lock
+                              : playlist.privacy ==
+                                      PlaylistPrivacy.unlisted.value
+                                  ? Icons.link
+                                  : Icons.public,
+                          color: isInPlaylist
+                              ? Theme.of(context).colorScheme.primary
+                              : null,
+                        ),
+                      ),
+                      if (isInPlaylist)
+                        Positioned(
+                          right: 0,
+                          bottom: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.primary,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.check,
+                              size: 10,
+                              color: Theme.of(context).colorScheme.onPrimary,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                   title: Text(
                     playlist.displayName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  subtitle: Text(
-                    '${playlist.worksCount} 个作品',
-                    style: Theme.of(context).textTheme.bodySmall,
+                  subtitle: Row(
+                    children: [
+                      Text(
+                        '${playlist.worksCount} 个作品',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      if (isInPlaylist) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                Theme.of(context).colorScheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            '已收藏',
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
+                  trailing: _isCheckingMembership
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : isInPlaylist
+                          ? IconButton(
+                              icon: Icon(
+                                Icons.remove_circle_outline,
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                              onPressed: _isAdding
+                                  ? null
+                                  : () => _removeFromPlaylist(playlist),
+                              tooltip: '从播放列表移除',
+                            )
+                          : IconButton(
+                              icon: Icon(
+                                Icons.add_circle_outline,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                              onPressed: _isAdding
+                                  ? null
+                                  : () => _addToPlaylist(playlist),
+                              tooltip: '添加到播放列表',
+                            ),
                   enabled: !_isAdding,
-                  onTap: () => _addToPlaylist(playlist),
+                  onTap: _isAdding
+                      ? null
+                      : isInPlaylist
+                          ? () => _removeFromPlaylist(playlist)
+                          : () => _addToPlaylist(playlist),
                 );
               },
             ),
