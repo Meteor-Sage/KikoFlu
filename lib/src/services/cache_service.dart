@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'storage_service.dart';
 import 'download_service.dart';
 import '../models/download_task.dart';
+import '../utils/encoding_utils.dart';
 
 class CacheService {
   // 缓存时长（过期后自动删除）
@@ -412,7 +413,8 @@ class CacheService {
         final file = File(downloadedFile);
         if (await file.exists()) {
           print('[Cache] 从已下载的文件读取文本内容: $hash');
-          return await file.readAsString();
+          // 使用智能编码检测读取文件
+          return await EncodingUtils.readFileAsString(file);
         }
       }
 
@@ -432,7 +434,8 @@ class CacheService {
         if (cacheTime != null) {
           final cacheDateTime = DateTime.fromMillisecondsSinceEpoch(cacheTime);
           if (DateTime.now().difference(cacheDateTime) < fileCacheDuration) {
-            return await file.readAsString(); // 未过期
+            // 使用智能编码检测读取缓存文件
+            return await EncodingUtils.readFileAsString(file); // 未过期
           }
         }
 

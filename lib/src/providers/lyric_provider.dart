@@ -6,6 +6,7 @@ import '../models/lyric.dart';
 import '../models/audio_track.dart';
 import '../services/cache_service.dart';
 import '../services/subtitle_library_service.dart';
+import '../utils/encoding_utils.dart';
 import 'auth_provider.dart';
 import 'audio_provider.dart';
 import 'settings_provider.dart';
@@ -141,16 +142,20 @@ class LyricController extends StateNotifier<LyricState> {
         // 2. 缓存未命中，从网络下载
         print('[Lyric] 从网络下载字幕: $hash');
         final dio = Dio();
-        final response = await dio.get(
+        final response = await dio.get<List<int>>(
           lyricUrl,
           options: Options(
-            responseType: ResponseType.plain,
+            responseType: ResponseType.bytes,
             receiveTimeout: const Duration(seconds: 30),
           ),
         );
 
         if (response.statusCode == 200) {
-          content = response.data as String;
+          // 使用智能编码检测解码字节
+          final (decodedContent, encoding) =
+              EncodingUtils.decodeBytes(response.data!);
+          print('[Lyric] 网络字幕编码: $encoding');
+          content = decodedContent;
 
           // 3. 缓存字幕内容
           await CacheService.cacheTextContent(
@@ -468,7 +473,10 @@ class LyricController extends StateNotifier<LyricState> {
         return;
       }
 
-      final content = await file.readAsString();
+      // 使用智能编码检测读取文件
+      final (content, encoding) =
+          await EncodingUtils.readFileWithEncoding(file);
+      print('[Lyric] 检测到文件编码: $encoding');
 
       // 解析字幕
       final lyrics = LyricParser.parse(content);
@@ -549,16 +557,20 @@ class LyricController extends StateNotifier<LyricState> {
         // 2. 缓存未命中，从网络下载
         print('[Lyric] 手动加载 - 从网络下载字幕: $hash');
         final dio = Dio();
-        final response = await dio.get(
+        final response = await dio.get<List<int>>(
           lyricUrl,
           options: Options(
-            responseType: ResponseType.plain,
+            responseType: ResponseType.bytes,
             receiveTimeout: const Duration(seconds: 30),
           ),
         );
 
         if (response.statusCode == 200) {
-          content = response.data as String;
+          // 使用智能编码检测解码字节
+          final (decodedContent, encoding) =
+              EncodingUtils.decodeBytes(response.data!);
+          print('[Lyric] 手动加载 - 网络字幕编码: $encoding');
+          content = decodedContent;
 
           // 3. 缓存字幕内容
           if (effectiveWorkId != null) {
