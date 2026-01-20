@@ -32,10 +32,54 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
   Duration? _seekingPosition;
   bool _showLyricView = false;
 
+  // 全屏锁定状态
+  bool _isLyricLocked = false;
+  bool _showUnlockButton = false;
+
   @override
   void initState() {
     super.initState();
     _checkAndShowLyricHint();
+  }
+
+  /// 进入全屏锁定模式
+  void _enterLyricFullscreen() {
+    setState(() {
+      _isLyricLocked = true;
+      _showUnlockButton = false;
+    });
+    // 隐藏状态栏和导航栏
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+  }
+
+  /// 退出全屏锁定模式
+  void _exitLyricFullscreen() {
+    setState(() {
+      _isLyricLocked = false;
+      _showUnlockButton = false;
+    });
+    // 恢复系统UI
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.manual,
+      overlays: SystemUiOverlay.values,
+    );
+  }
+
+  /// 处理锁定状态下的点击
+  void _handleLockedTap() {
+    setState(() {
+      _showUnlockButton = !_showUnlockButton;
+    });
+    // 如果显示解锁按钮，3秒后自动隐藏
+    if (_showUnlockButton) {
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted && _showUnlockButton) {
+          setState(() {
+            _showUnlockButton = false;
+          });
+        }
+      });
+    }
   }
 
   Future<void> _checkAndShowLyricHint() async {
@@ -155,6 +199,13 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
           brightness == Brightness.light ? Brightness.dark : Brightness.light,
       systemNavigationBarColor: Colors.transparent,
     );
+
+    // 全屏锁定模式：隐藏所有UI，只显示歌词
+    if (_isLyricLocked) {
+      return Scaffold(
+        body: _buildPortraitLyricView(),
+      );
+    }
 
     return Scaffold(
       appBar: _buildAppBar(context, systemOverlayStyle, currentTrack),
@@ -575,11 +626,90 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
   }
 
   Widget _buildPortraitLyricView() {
+    final theme = Theme.of(context);
+
+    // 全屏锁定模式
+    if (_isLyricLocked) {
+      return GestureDetector(
+        onTap: _handleLockedTap,
+        onLongPress: _handleLockedTap,
+        child: Stack(
+          children: [
+            FullLyricDisplay(
+              seekingPosition: _seekingPosition,
+              isPortrait: true,
+              isLocked: true,
+            ),
+            // 解锁按钮
+            if (_showUnlockButton)
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 16,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: AnimatedOpacity(
+                    opacity: _showUnlockButton ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHighest
+                            .withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: _exitLyricFullscreen,
+                          borderRadius: BorderRadius.circular(24),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.lock_open,
+                                  size: 20,
+                                  color: theme.colorScheme.primary,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '解锁',
+                                  style: theme.textTheme.labelLarge?.copyWith(
+                                    color: theme.colorScheme.primary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+    }
+
+    // 正常模式
     return Stack(
       children: [
         FullLyricDisplay(
           seekingPosition: _seekingPosition,
           isPortrait: true,
+          onLongPress: _enterLyricFullscreen,
         ),
         Positioned(
           right: 16,

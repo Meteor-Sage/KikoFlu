@@ -69,11 +69,15 @@ class LyricDisplay extends ConsumerWidget {
 class FullLyricDisplay extends ConsumerStatefulWidget {
   final Duration? seekingPosition;
   final bool isPortrait;
+  final bool isLocked;
+  final VoidCallback? onLongPress;
 
   const FullLyricDisplay({
     super.key,
     this.seekingPosition,
     this.isPortrait = false,
+    this.isLocked = false,
+    this.onLongPress,
   });
 
   @override
@@ -252,56 +256,60 @@ class _FullLyricDisplayState extends ConsumerState<FullLyricDisplay> {
           });
         }
 
-        return ListView.builder(
-          controller: _scrollController,
-          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
-          itemCount: adjustedLyrics.length,
-          itemBuilder: (context, index) {
-            final lyric = adjustedLyrics[index];
-            final isActive = index == currentIndex;
-            final isPast = index < currentIndex;
+        return GestureDetector(
+          onLongPress: widget.onLongPress,
+          child: ListView.builder(
+            controller: _scrollController,
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+            itemCount: adjustedLyrics.length,
+            itemBuilder: (context, index) {
+              final lyric = adjustedLyrics[index];
+              final isActive = index == currentIndex;
+              final isPast = index < currentIndex;
 
-            return GestureDetector(
-              key: _getKeyForIndex(index),
-              onTap: () => _onLyricTap(index),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                margin: const EdgeInsets.symmetric(vertical: 4),
-                decoration: BoxDecoration(
-                  color: isActive
-                      ? Theme.of(context)
-                          .colorScheme
-                          .primaryContainer
-                          .withOpacity(0.3)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(8),
+              return GestureDetector(
+                key: _getKeyForIndex(index),
+                onTap: widget.isLocked ? null : () => _onLyricTap(index),
+                onLongPress: widget.onLongPress,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isActive
+                        ? Theme.of(context)
+                            .colorScheme
+                            .primaryContainer
+                            .withOpacity(0.3)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    lyric.text,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: isActive
+                              ? Theme.of(context).colorScheme.primary
+                              : isPast
+                                  ? Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant
+                                      .withOpacity(0.5)
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                          fontWeight:
+                              isActive ? FontWeight.bold : FontWeight.normal,
+                          fontSize: isActive
+                              ? lyricSettings.fullActiveFontSize
+                              : lyricSettings.fullInactiveFontSize,
+                          height: lyricSettings.fullLineHeight,
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
-                child: Text(
-                  lyric.text,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: isActive
-                            ? Theme.of(context).colorScheme.primary
-                            : isPast
-                                ? Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant
-                                    .withOpacity(0.5)
-                                : Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
-                        fontWeight:
-                            isActive ? FontWeight.bold : FontWeight.normal,
-                        fontSize: isActive
-                            ? lyricSettings.fullActiveFontSize
-                            : lyricSettings.fullInactiveFontSize,
-                        height: lyricSettings.fullLineHeight,
-                      ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
