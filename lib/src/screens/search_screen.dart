@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/search_type.dart';
 import '../providers/auth_provider.dart';
+import '../providers/search_history_provider.dart';
 import '../utils/server_utils.dart';
 import '../utils/snackbar_util.dart';
 import '../widgets/scrollable_appbar.dart';
@@ -230,6 +231,21 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
       searchParams['salesRange'] = _salesRange.label;
     }
 
+    // 构建可读的显示文本
+    final displayParts = _searchConditions.map((c) {
+      final prefix = c.isExclude ? '排除 ' : '';
+      final value = c.type == SearchType.rjNumber ? 'RJ${c.value}' : c.value;
+      return '$prefix${c.type.label}: $value';
+    }).toList();
+    final displayText = displayParts.join(', ');
+
+    // 保存搜索历史
+    ref.read(searchHistoryProvider.notifier).addHistory(
+          keyword: searchKeyword,
+          displayText: displayText,
+          searchParams: searchParams,
+        );
+
     // 跳转到搜索结果页面
     if (mounted) {
       Navigator.push(
@@ -243,6 +259,20 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
         ),
       );
     }
+  }
+
+  /// 从历史记录执行搜索
+  void _searchFromHistory(SearchHistoryItem historyItem) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SearchResultScreen(
+          keyword: historyItem.keyword,
+          searchTypeLabel: null,
+          searchParams: historyItem.searchParams,
+        ),
+      ),
+    );
   }
 
   @override
@@ -687,7 +717,129 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
           ),
         ),
       ),
+      // 搜索历史
+      ..._buildSearchHistory(theme),
     ];
+  }
+
+  /// 构建搜索历史部分
+  List<Widget> _buildSearchHistory(ThemeData theme) {
+    final historyState = ref.watch(searchHistoryProvider);
+
+    if (historyState.isLoading) {
+      return [];
+    }
+
+    if (historyState.items.isEmpty) {
+      return [];
+    }
+
+    return [
+      const SizedBox(height: 24),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            '搜索历史',
+            style: theme.textTheme.titleSmall,
+          ),
+          TextButton.icon(
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('清空搜索历史'),
+                  content: const Text('确定要清空所有搜索历史记录吗？'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('取消'),
+                    ),
+                    FilledButton(
+                      onPressed: () {
+                        ref.read(searchHistoryProvider.notifier).clearHistory();
+                        Navigator.pop(context);
+                      },
+                      child: const Text('确定'),
+                    ),
+                  ],
+                ),
+              );
+            },
+            icon: const Icon(Icons.delete_outline, size: 18),
+            label: const Text('清空'),
+            style: TextButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 8),
+      ...historyState.items.take(10).map((item) {
+        return Dismissible(
+          key: Key(item.id),
+          direction: DismissDirection.endToStart,
+          background: Container(
+            alignment: Alignment.centerRight,
+            padding: const EdgeInsets.only(right: 16),
+            color: theme.colorScheme.errorContainer,
+            child: Icon(
+              Icons.delete,
+              color: theme.colorScheme.error,
+            ),
+          ),
+          onDismissed: (_) {
+            ref.read(searchHistoryProvider.notifier).removeHistory(item.id);
+          },
+          child: ListTile(
+            leading: Icon(
+              Icons.history,
+              color: theme.colorScheme.outline,
+            ),
+            title: Text(
+              item.displayText,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            subtitle: Text(
+              _formatTimestamp(item.timestamp),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
+            ),
+            trailing: IconButton(
+              icon: const Icon(Icons.close, size: 18),
+              onPressed: () {
+                ref.read(searchHistoryProvider.notifier).removeHistory(item.id);
+              },
+              tooltip: '删除',
+            ),
+            contentPadding: EdgeInsets.zero,
+            visualDensity: VisualDensity.compact,
+            onTap: () => _searchFromHistory(item),
+          ),
+        );
+      }),
+    ];
+  }
+
+  /// 格式化时间戳
+  String _formatTimestamp(DateTime timestamp) {
+    final now = DateTime.now();
+    final diff = now.difference(timestamp);
+
+    if (diff.inMinutes < 1) {
+      return '刚刚';
+    } else if (diff.inHours < 1) {
+      return '${diff.inMinutes} 分钟前';
+    } else if (diff.inDays < 1) {
+      return '${diff.inHours} 小时前';
+    } else if (diff.inDays < 7) {
+      return '${diff.inDays} 天前';
+    } else {
+      return '${timestamp.month}/${timestamp.day}';
+    }
   }
 
   List<Widget> _buildAdvancedFilterSections() {
