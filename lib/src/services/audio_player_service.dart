@@ -328,7 +328,9 @@ class AudioPlayerService {
 
       // 优先检查是否是本地文件（file:// 协议）
       if (track.url.startsWith('file://')) {
-        final localPath = track.url.substring(7); // 移除 'file://' 前缀
+        // 移除 'file://' 前缀，并规范化路径分隔符
+        final rawPath = track.url.substring(7);
+        final localPath = p.normalize(rawPath);
         final localFile = File(localPath);
         print('[Audio] 检查本地文件: $localPath');
 
@@ -815,20 +817,43 @@ class AudioPlayerService {
     final file = File(originalPath);
     final directory = file.parent;
     final baseName = p.basenameWithoutExtension(originalPath);
+    final ext = p.extension(originalPath);
 
-    for (final ext in _lyricExtensions) {
-      final lyricPath = p.join(directory.path, '$baseName$ext');
+    // 检查文件名是否包含非 ASCII 字符（可能导致 MPV 崩溃）
+    final hasNonAscii = baseName.codeUnits.any((c) => c > 127);
+
+    // 检查是否有同名字幕文件
+    bool hasLyricFile = false;
+    for (final lyricExt in _lyricExtensions) {
+      final lyricPath = p.join(directory.path, '$baseName$lyricExt');
       final lyricFile = File(lyricPath);
       if (await lyricFile.exists()) {
+        hasLyricFile = true;
         print('[Audio] 检测到同名字幕文件: $lyricPath');
-        final tempDir = await _getTempAudioDirectory();
-        final newName =
-            '${baseName}_${DateTime.now().millisecondsSinceEpoch}${p.extension(originalPath)}';
-        final tempPath = p.join(tempDir.path, newName);
+        break;
+      }
+    }
+
+    // 如果有非 ASCII 字符或同名字幕文件，复制到临时目录使用纯 ASCII 文件名
+    if (hasNonAscii || hasLyricFile) {
+      final reason = hasNonAscii ? '文件名含非ASCII字符' : '存在同名字幕文件';
+      print('[Audio] $reason，需要使用临时文件');
+
+      final tempDir = await _getTempAudioDirectory();
+      // 使用纯 ASCII 文件名：时间戳 + 简单哈希
+      final hash = originalPath.hashCode.abs().toRadixString(16);
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final newName = 'audio_${timestamp}_$hash$ext';
+      final tempPath = p.join(tempDir.path, newName);
+
+      try {
         await file.copy(tempPath);
         _tempPlaybackFilePath = tempPath;
         print('[Audio] 已复制音频到临时路径: $tempPath');
         return tempPath;
+      } catch (e) {
+        print('[Audio] 复制文件失败: $e');
+        return null;
       }
     }
 

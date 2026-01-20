@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 import 'storage_service.dart';
 import 'download_service.dart';
 import '../models/download_task.dart';
@@ -1039,7 +1040,8 @@ class CacheService {
       if (fileName != null && fileName.isNotEmpty) {
         try {
           final downloadDir = await downloadService.getDownloadDirectory();
-          final workDir = Directory('${downloadDir.path}/$workId');
+          final workDir =
+              Directory(p.join(downloadDir.path, workId.toString()));
 
           if (await workDir.exists()) {
             // 递归查找匹配文件名的文件

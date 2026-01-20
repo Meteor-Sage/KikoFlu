@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:path/path.dart' as p;
 
 import '../models/work.dart';
 import '../models/audio_track.dart';
@@ -170,8 +171,8 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
       final relativePath = _fileRelativePaths[hash];
       if (relativePath != null) {
         final downloadDir = await downloadService.getDownloadDirectory();
-        final localFile =
-            File('${downloadDir.path}/${widget.work.id}/$relativePath');
+        final localFile = File(
+            p.join(downloadDir.path, widget.work.id.toString(), relativePath));
         if (await localFile.exists()) {
           _downloadedFiles[hash] = true;
         }
@@ -619,8 +620,8 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
           final relativePath = _fileRelativePaths[fileHash];
           if (relativePath != null) {
             final downloadDir = await downloadService.getDownloadDirectory();
-            final localFile =
-                File('${downloadDir.path}/${widget.work.id}/$relativePath');
+            final localFile = File(p.join(
+                downloadDir.path, widget.work.id.toString(), relativePath));
             if (await localFile.exists()) {
               audioUrl = 'file://${localFile.path}';
               print('[FileExplorer] 使用手动复制的音频: $fileHash');
@@ -1062,7 +1063,7 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
           final downloadService = DownloadService.instance;
           final downloadDir = await downloadService.getDownloadDirectory();
           final localPath =
-              '${downloadDir.path}/${widget.work.id}/$relativePath';
+              p.join(downloadDir.path, widget.work.id.toString(), relativePath);
           final localFile = File(localPath);
 
           if (await localFile.exists()) {
@@ -1211,7 +1212,8 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
       try {
         final downloadService = DownloadService.instance;
         final downloadDir = await downloadService.getDownloadDirectory();
-        final localPath = '${downloadDir.path}/${widget.work.id}/$relativePath';
+        final localPath =
+            p.join(downloadDir.path, widget.work.id.toString(), relativePath);
         final localFile = File(localPath);
 
         if (await localFile.exists()) {
@@ -1282,7 +1284,8 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
       try {
         final downloadService = DownloadService.instance;
         final downloadDir = await downloadService.getDownloadDirectory();
-        final localPath = '${downloadDir.path}/${widget.work.id}/$relativePath';
+        final localPath =
+            p.join(downloadDir.path, widget.work.id.toString(), relativePath);
         final localFile = File(localPath);
 
         if (await localFile.exists()) {

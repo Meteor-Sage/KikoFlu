@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:path/path.dart' as p;
 
 import '../models/work.dart';
 import '../services/download_path_service.dart';
@@ -85,7 +86,8 @@ class _OfflineFileExplorerWidgetState
 
     try {
       final downloadDir = await DownloadPathService.getDownloadDirectory();
-      final workDir = Directory('${downloadDir.path}/${widget.work.id}');
+      final workDir =
+          Directory(p.join(downloadDir.path, widget.work.id.toString()));
 
       if (!await workDir.exists()) {
         setState(() {
@@ -552,11 +554,14 @@ class _OfflineFileExplorerWidgetState
 
     // 如果元数据没有，从本地文件读取
     final title = _getProperty(item, 'title', defaultValue: '');
-    final relativePath = parentPath.isEmpty ? title : '$parentPath/$title';
 
     try {
       final downloadDir = await DownloadPathService.getDownloadDirectory();
-      final file = File('${downloadDir.path}/${widget.work.id}/$relativePath');
+      final workDir = p.join(downloadDir.path, widget.work.id.toString());
+      final filePath = parentPath.isEmpty
+          ? p.join(workDir, title)
+          : p.join(workDir, parentPath, title);
+      final file = File(filePath);
 
       if (await file.exists()) {
         return await file.length();
@@ -580,8 +585,10 @@ class _OfflineFileExplorerWidgetState
 
     // 获取本地文件路径
     final downloadDir = await DownloadPathService.getDownloadDirectory();
-    final relativePath = parentPath.isEmpty ? title : '$parentPath/$title';
-    final localPath = '${downloadDir.path}/${widget.work.id}/$relativePath';
+    final workDir = p.join(downloadDir.path, widget.work.id.toString());
+    final localPath = parentPath.isEmpty
+        ? p.join(workDir, title)
+        : p.join(workDir, parentPath, title);
     final localFile = File(localPath);
 
     if (!await localFile.exists()) {
@@ -592,7 +599,7 @@ class _OfflineFileExplorerWidgetState
     // 获取作品封面URL（用于播放器显示）
     String? coverUrl;
     try {
-      final coverFile = File('${downloadDir.path}/${widget.work.id}/cover.jpg');
+      final coverFile = File(p.join(workDir, 'cover.jpg'));
       if (await coverFile.exists()) {
         coverUrl = 'file://${coverFile.path}';
       }
@@ -619,11 +626,10 @@ class _OfflineFileExplorerWidgetState
 
       if (fileHash == null) continue;
 
-      // 获取本地文件路径
-      final fileRelativePath =
-          parentPath.isEmpty ? fileTitle : '$parentPath/$fileTitle';
-      final filePath =
-          '${downloadDir.path}/${widget.work.id}/$fileRelativePath';
+      // 获取本地文件路径（使用 path 包确保路径分隔符正确）
+      final filePath = parentPath.isEmpty
+          ? p.join(workDir, fileTitle)
+          : p.join(workDir, parentPath, fileTitle);
       final file2 = File(filePath);
 
       if (await file2.exists()) {
@@ -888,7 +894,7 @@ class _OfflineFileExplorerWidgetState
   // 预览图片文件（从本地）
   Future<void> _previewImageFile(dynamic file) async {
     final downloadDir = await DownloadPathService.getDownloadDirectory();
-    final workPath = '${downloadDir.path}/${widget.work.id}';
+    final workPath = p.join(downloadDir.path, widget.work.id.toString());
 
     final imageFiles = _getImageFilesFromCurrentDirectory();
     final currentIndex = imageFiles.indexWhere(
@@ -906,7 +912,7 @@ class _OfflineFileExplorerWidgetState
 
       final filePath = await _findFileFullPath(f, _localFiles, '');
       if (filePath != null) {
-        final localPath = '$workPath/$filePath';
+        final localPath = p.join(workPath, filePath);
         final localFile = File(localPath);
         if (await localFile.exists()) {
           imageItems
@@ -997,7 +1003,8 @@ class _OfflineFileExplorerWidgetState
     }
 
     final downloadDir = await DownloadPathService.getDownloadDirectory();
-    final localPath = '${downloadDir.path}/${widget.work.id}/$filePath';
+    final localPath =
+        p.join(downloadDir.path, widget.work.id.toString(), filePath);
     final localFile = File(localPath);
 
     if (!await localFile.exists()) {
@@ -1034,7 +1041,8 @@ class _OfflineFileExplorerWidgetState
     }
 
     final downloadDir = await DownloadPathService.getDownloadDirectory();
-    final localPath = '${downloadDir.path}/${widget.work.id}/$filePath';
+    final localPath =
+        p.join(downloadDir.path, widget.work.id.toString(), filePath);
     final localFile = File(localPath);
 
     if (!await localFile.exists()) {
@@ -1070,7 +1078,8 @@ class _OfflineFileExplorerWidgetState
     }
 
     final downloadDir = await DownloadPathService.getDownloadDirectory();
-    final localPath = '${downloadDir.path}/${widget.work.id}/$filePath';
+    final localPath =
+        p.join(downloadDir.path, widget.work.id.toString(), filePath);
     final localFile = File(localPath);
 
     if (!await localFile.exists()) {

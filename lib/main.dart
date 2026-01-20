@@ -90,6 +90,7 @@ audio-spdif=ac3,dts,eac3
 log-file=mpv_debug.log
 msg-level=all=v
 video=no
+sub-auto=no
 ''';
       } else {
         configContent = '''
@@ -99,6 +100,7 @@ audio-spdif=ac3,dts,eac3
 log-file=${p.join(configDir.path, 'mpv_debug.log')}
 msg-level=all=v
 video=no
+sub-auto=no
 ''';
       }
 
@@ -112,12 +114,14 @@ video=no
 log-file=mpv_debug.log
 msg-level=all=v
 video=no
+sub-auto=no
 ''';
       } else {
         configContent = '''
 log-file=${p.join(configDir.path, 'mpv_debug.log')}
 msg-level=all=v
 video=no
+sub-auto=no
 ''';
       }
       await configFile.writeAsString(configContent);
