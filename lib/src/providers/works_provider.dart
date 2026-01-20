@@ -6,6 +6,7 @@ import '../services/kikoeru_api_service.dart' hide kikoeruApiServiceProvider;
 import 'auth_provider.dart';
 import 'settings_provider.dart';
 import '../models/sort_options.dart';
+import 'subtitle_library_provider.dart';
 
 // Display mode - 展示模式
 enum DisplayMode {
@@ -90,8 +91,11 @@ class WorksState extends Equatable {
   final SortDirection sortDirection;
   final DisplayMode displayMode;
   final int subtitleFilter; // 0: 全部, 1: 仅带字幕
-  final int pageSize; // 每页数量
+  final int basePageSize; // 用户设置的基础分页大小
   final Map<DisplayMode, WorksModeSnapshot> modeStates;
+
+  // 实际使用的分页大小（字幕筛选时翻倍）
+  int get pageSize => subtitleFilter == 1 ? basePageSize * 2 : basePageSize;
 
   WorksState({
     this.layoutType = LayoutType.bigGrid, // 默认大网格布局
@@ -99,7 +103,7 @@ class WorksState extends Equatable {
     this.sortDirection = SortDirection.desc,
     this.displayMode = DisplayMode.all, // 默认显示全部作品
     this.subtitleFilter = 0, // 默认显示全部
-    this.pageSize = 40, // 全部模式每页40条
+    this.basePageSize = 40, // 全部模式每页40条
     Map<DisplayMode, WorksModeSnapshot>? modeStates,
   }) : modeStates = modeStates ?? _createInitialModeStates();
 
@@ -109,7 +113,7 @@ class WorksState extends Equatable {
     SortDirection? sortDirection,
     DisplayMode? displayMode,
     int? subtitleFilter,
-    int? pageSize,
+    int? basePageSize,
     Map<DisplayMode, WorksModeSnapshot>? modeStates,
   }) {
     return WorksState(
@@ -118,7 +122,7 @@ class WorksState extends Equatable {
       sortDirection: sortDirection ?? this.sortDirection,
       displayMode: displayMode ?? this.displayMode,
       subtitleFilter: subtitleFilter ?? this.subtitleFilter,
-      pageSize: pageSize ?? this.pageSize,
+      basePageSize: basePageSize ?? this.basePageSize,
       modeStates: modeStates ?? this.modeStates,
     );
   }
@@ -148,7 +152,7 @@ class WorksState extends Equatable {
         sortDirection,
         displayMode,
         subtitleFilter,
-        pageSize,
+        basePageSize,
         modeStates,
       ];
 }
@@ -165,7 +169,7 @@ class WorksNotifier extends StateNotifier<WorksState> {
     SortOrder initialSortOption = SortOrder.release,
     SortDirection initialSortDirection = SortDirection.desc,
   }) : super(WorksState(
-          pageSize: initialPageSize,
+          basePageSize: initialPageSize,
           sortOption: initialSortOption,
           sortDirection: initialSortDirection,
         ));
@@ -192,8 +196,8 @@ class WorksNotifier extends StateNotifier<WorksState> {
   }
 
   void updatePageSize(int newSize) {
-    if (state.pageSize == newSize) return;
-    state = state.copyWith(pageSize: newSize);
+    if (state.basePageSize == newSize) return;
+    state = state.copyWith(basePageSize: newSize);
     loadWorks(targetPage: 1);
   }
 
@@ -228,11 +232,15 @@ class WorksNotifier extends StateNotifier<WorksState> {
       final sortOption = state.sortOption;
       final sortDirection = state.sortDirection;
 
+      // 当字幕筛选开启时，不发送 subtitle 参数给服务器，而是在前端过滤
+      // 这样可以同时显示服务器有字幕 和 本地字幕库有字幕的作品
+      final serverSubtitleParam = 0; // 始终请求所有作品，前端过滤
+
       if (mode == DisplayMode.popular) {
         response = await _apiService.getPopularWorks(
           page: page,
           pageSize: pageSize,
-          subtitle: subtitleFilter,
+          subtitle: serverSubtitleParam,
         );
       } else if (mode == DisplayMode.recommended) {
         final currentUser = _ref.read(authProvider).currentUser;
@@ -243,14 +251,14 @@ class WorksNotifier extends StateNotifier<WorksState> {
           recommenderUuid: recommenderUuid,
           page: page,
           pageSize: pageSize,
-          subtitle: subtitleFilter,
+          subtitle: serverSubtitleParam,
         );
       } else {
         response = await _apiService.getWorks(
           page: page,
           order: sortOption.value,
           sort: sortOption == SortOrder.nsfw ? 'asc' : sortDirection.value,
-          subtitle: subtitleFilter,
+          subtitle: serverSubtitleParam,
           pageSize: pageSize,
         );
       }
@@ -306,7 +314,6 @@ class WorksNotifier extends StateNotifier<WorksState> {
           error: null,
         ),
       );
-      state = state.copyWith(pageSize: pageSize);
     } catch (e) {
       print('Failed to load works: $e');
 
@@ -417,9 +424,26 @@ class WorksNotifier extends StateNotifier<WorksState> {
 
   // Toggle subtitle filter
   void toggleSubtitleFilter() {
-    final newFilter = state.subtitleFilter == 0 ? 1 : 0;
+    final currentPage = state.currentPage;
+    final oldFilter = state.subtitleFilter;
+    final newFilter = oldFilter == 0 ? 1 : 0;
+
+    // 计算新的页码
+    // 开启筛选时：分页大小翻倍，所以页码需要调整
+    // 例如：原来第3页(每页40条，显示81-120条) -> 开启后第2页(每页80条，显示81-160条)
+    // 关闭筛选时：反向计算
+    int newPage;
+    if (newFilter == 1) {
+      // 开启字幕筛选：页码减半（向上取整）
+      newPage = ((currentPage + 1) / 2).ceil();
+    } else {
+      // 关闭字幕筛选：页码翻倍减1（保持大致位置）
+      newPage = (currentPage * 2) - 1;
+    }
+    newPage = newPage.clamp(1, 9999);
+
     state = state.copyWith(subtitleFilter: newFilter);
-    refresh(resetPage: true);
+    loadWorks(targetPage: newPage);
   }
 
   void reapplyFilters() {
@@ -432,7 +456,20 @@ class WorksNotifier extends StateNotifier<WorksState> {
   }
 
   List<Work> _filterWorks(List<Work> works, BlockedItemsState blockedItems) {
+    // 获取本地字幕库的作品ID
+    final localSubtitleIds = _ref.read(subtitleLibraryProvider);
+    final subtitleFilter = state.subtitleFilter;
+
     return works.where((work) {
+      // 字幕筛选：如果开启，只保留服务器有字幕 或 本地字幕库有字幕的作品
+      if (subtitleFilter == 1) {
+        final hasServerSubtitle = work.hasSubtitle == true;
+        final hasLocalSubtitle = localSubtitleIds.contains(work.id);
+        if (!hasServerSubtitle && !hasLocalSubtitle) {
+          return false;
+        }
+      }
+
       // Check tags
       if (work.tags != null) {
         for (final tag in work.tags!) {
@@ -495,6 +532,13 @@ final worksProvider = StateNotifierProvider<WorksNotifier, WorksState>((ref) {
   // 监听屏蔽列表变化，重新过滤
   ref.listen(blockedItemsProvider, (previous, next) {
     if (previous != next) {
+      notifier.reapplyFilters();
+    }
+  });
+
+  // 监听本地字幕库变化，当字幕筛选开启时重新过滤
+  ref.listen(subtitleLibraryProvider, (previous, next) {
+    if (previous != next && notifier.state.subtitleFilter == 1) {
       notifier.reapplyFilters();
     }
   });

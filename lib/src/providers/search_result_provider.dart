@@ -7,6 +7,7 @@ import '../providers/works_provider.dart';
 import '../models/sort_options.dart';
 import 'auth_provider.dart';
 import 'settings_provider.dart';
+import 'subtitle_library_provider.dart';
 
 // Layout types for search results
 enum SearchLayoutType {
@@ -42,9 +43,12 @@ class SearchResultState extends Equatable {
   final SortOrder sortOption;
   final SortDirection sortDirection;
   final int subtitleFilter;
-  final int pageSize;
+  final int basePageSize; // 用户设置的基础分页大小
   final String keyword;
   final Map<String, dynamic>? searchParams;
+
+  // 实际使用的分页大小（字幕筛选时翻倍）
+  int get pageSize => subtitleFilter == 1 ? basePageSize * 2 : basePageSize;
 
   const SearchResultState({
     this.works = const [],
@@ -58,7 +62,7 @@ class SearchResultState extends Equatable {
     this.sortOption = SortOrder.release,
     this.sortDirection = SortDirection.desc,
     this.subtitleFilter = 0,
-    this.pageSize = 40,
+    this.basePageSize = 40,
     this.keyword = '',
     this.searchParams,
   });
@@ -75,7 +79,7 @@ class SearchResultState extends Equatable {
     SortOrder? sortOption,
     SortDirection? sortDirection,
     int? subtitleFilter,
-    int? pageSize,
+    int? basePageSize,
     String? keyword,
     Map<String, dynamic>? searchParams,
   }) {
@@ -91,7 +95,7 @@ class SearchResultState extends Equatable {
       sortOption: sortOption ?? this.sortOption,
       sortDirection: sortDirection ?? this.sortDirection,
       subtitleFilter: subtitleFilter ?? this.subtitleFilter,
-      pageSize: pageSize ?? this.pageSize,
+      basePageSize: basePageSize ?? this.basePageSize,
       keyword: keyword ?? this.keyword,
       searchParams: searchParams ?? this.searchParams,
     );
@@ -110,7 +114,7 @@ class SearchResultState extends Equatable {
         sortOption,
         sortDirection,
         subtitleFilter,
-        pageSize,
+        basePageSize,
         keyword,
         searchParams,
       ];
@@ -122,7 +126,7 @@ class SearchResultNotifier extends StateNotifier<SearchResultState> {
   final Ref _ref;
 
   SearchResultNotifier(this._apiService, this._ref, {int initialPageSize = 20})
-      : super(SearchResultState(pageSize: initialPageSize));
+      : super(SearchResultState(basePageSize: initialPageSize));
 
   Future<void> initializeSearch({
     required String keyword,
@@ -138,8 +142,8 @@ class SearchResultNotifier extends StateNotifier<SearchResultState> {
   }
 
   void updatePageSize(int newSize) {
-    if (state.pageSize == newSize) return;
-    state = state.copyWith(pageSize: newSize);
+    if (state.basePageSize == newSize) return;
+    state = state.copyWith(basePageSize: newSize);
     // 如果当前有搜索内容，刷新列表
     if (state.keyword.isNotEmpty || state.searchParams != null) {
       refresh();
@@ -159,6 +163,10 @@ class SearchResultNotifier extends StateNotifier<SearchResultState> {
     try {
       Map<String, dynamic> result;
 
+      // 当字幕筛选开启时，不发送 subtitle 参数给服务器，而是在前端过滤
+      // 这样可以同时显示服务器有字幕 和 本地字幕库有字幕的作品
+      const serverSubtitleParam = 0; // 始终请求所有作品，前端过滤
+
       // 根据 searchParams 判断搜索类型
       if (state.searchParams?.containsKey('vaId') == true) {
         // 声优搜索 - 支持完整的排序和过滤参数
@@ -168,7 +176,7 @@ class SearchResultNotifier extends StateNotifier<SearchResultState> {
           pageSize: state.pageSize,
           order: state.sortOption.value,
           sort: state.sortDirection.value,
-          subtitle: state.subtitleFilter,
+          subtitle: serverSubtitleParam,
         );
       } else if (state.searchParams?.containsKey('tagId') == true) {
         // 标签搜索 - 支持完整的排序和过滤参数
@@ -178,7 +186,7 @@ class SearchResultNotifier extends StateNotifier<SearchResultState> {
           pageSize: state.pageSize,
           order: state.sortOption.value,
           sort: state.sortDirection.value,
-          subtitle: state.subtitleFilter,
+          subtitle: serverSubtitleParam,
         );
       } else {
         // 关键词搜索 - 支持完整的排序和过滤参数
@@ -188,7 +196,7 @@ class SearchResultNotifier extends StateNotifier<SearchResultState> {
           pageSize: state.pageSize,
           order: state.sortOption.value,
           sort: state.sortDirection.value,
-          subtitle: state.subtitleFilter,
+          subtitle: serverSubtitleParam,
         );
       }
 
@@ -230,7 +238,20 @@ class SearchResultNotifier extends StateNotifier<SearchResultState> {
   }
 
   List<Work> _filterWorks(List<Work> works, BlockedItemsState blockedItems) {
+    // 获取本地字幕库的作品ID
+    final localSubtitleIds = _ref.read(subtitleLibraryProvider);
+    final subtitleFilter = state.subtitleFilter;
+
     return works.where((work) {
+      // 字幕筛选：如果开启，只保留服务器有字幕 或 本地字幕库有字幕的作品
+      if (subtitleFilter == 1) {
+        final hasServerSubtitle = work.hasSubtitle == true;
+        final hasLocalSubtitle = localSubtitleIds.contains(work.id);
+        if (!hasServerSubtitle && !hasLocalSubtitle) {
+          return false;
+        }
+      }
+
       // Check tags
       if (work.tags != null) {
         for (final tag in work.tags!) {
@@ -269,13 +290,29 @@ class SearchResultNotifier extends StateNotifier<SearchResultState> {
   }
 
   void toggleSubtitleFilter() {
-    final newFilter = state.subtitleFilter == 0 ? 1 : 0;
+    final currentPage = state.currentPage;
+    final oldFilter = state.subtitleFilter;
+    final newFilter = oldFilter == 0 ? 1 : 0;
+
+    // 计算新的页码
+    // 开启筛选时：分页大小翻倍，所以页码需要调整
+    // 关闭筛选时：反向计算
+    int newPage;
+    if (newFilter == 1) {
+      // 开启字幕筛选：页码减半（向上取整）
+      newPage = ((currentPage + 1) / 2).ceil();
+    } else {
+      // 关闭字幕筛选：页码翻倍减1（保持大致位置）
+      newPage = (currentPage * 2) - 1;
+    }
+    newPage = newPage.clamp(1, 9999);
+
     state = state.copyWith(
       subtitleFilter: newFilter,
-      currentPage: 1,
+      currentPage: newPage,
       works: [],
     );
-    loadResults();
+    loadResults(targetPage: newPage);
   }
 
   void updateSort(SortOrder option, SortDirection direction) {
@@ -306,6 +343,13 @@ final searchResultProvider =
   // 监听屏蔽列表变化，重新过滤
   ref.listen(blockedItemsProvider, (previous, next) {
     if (previous != next) {
+      notifier.reapplyFilters();
+    }
+  });
+
+  // 监听本地字幕库变化，当字幕筛选开启时重新过滤
+  ref.listen(subtitleLibraryProvider, (previous, next) {
+    if (previous != next && notifier.state.subtitleFilter == 1) {
       notifier.reapplyFilters();
     }
   });
