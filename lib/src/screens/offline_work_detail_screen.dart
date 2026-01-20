@@ -21,6 +21,7 @@ import '../widgets/global_audio_player_wrapper.dart';
 import '../widgets/download_fab.dart';
 import '../utils/string_utils.dart';
 import '../widgets/privacy_blur_cover.dart';
+import '../widgets/cover_preview_dialog.dart';
 
 /// 离线作品详情页 - 使用下载时保存的元数据展示作品信息
 /// 不依赖网络请求，完全离线可用
@@ -276,7 +277,8 @@ class _OfflineWorkDetailScreenState
               ),
             ],
             title: GestureDetector(
-              onLongPress: () => _copyToClipboard(formatRJCode(widget.work.id), 'RJ号'),
+              onLongPress: () =>
+                  _copyToClipboard(formatRJCode(widget.work.id), 'RJ号'),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -337,43 +339,55 @@ class _OfflineWorkDetailScreenState
     final work = widget.work;
 
     // 封面图片组件
-    final coverWidget = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      child: Hero(
-        tag: 'offline_work_cover_${widget.work.id}',
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          clipBehavior: Clip.antiAlias,
-          child: Container(
-            width: isLandscape ? null : double.infinity,
-            constraints: BoxConstraints(
-              maxHeight:
-                  isLandscape ? MediaQuery.of(context).size.height * 0.8 : 500,
-              maxWidth: isLandscape
-                  ? MediaQuery.of(context).size.width * 0.45
-                  : double.infinity,
-            ),
-            child: PrivacyBlurCover(
-              borderRadius: BorderRadius.circular(12),
-              child: Stack(
-                fit: StackFit.passthrough,
-                children: [
-                  // 优先使用本地封面图片
-                  if (widget.localCoverPath != null &&
-                      File(widget.localCoverPath!).existsSync())
-                    Image.file(
-                      File(widget.localCoverPath!),
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) {
-                        // 如果本地图片加载失败，回退到网络图片
-                        return _buildNetworkCover(work, host, token);
-                      },
-                    )
-                  else
-                    // 回退到网络图片（缓存）
-                    _buildNetworkCover(work, host, token),
-                ],
+    final coverWidget = GestureDetector(
+      onLongPress: () {
+        CoverPreviewDialog.show(
+          context,
+          localPath: widget.localCoverPath,
+          imageUrl: '$host/api/cover/${work.id}',
+          identifier: widget.work.id.toString(),
+          heroTag: 'offline_work_cover_${widget.work.id}',
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        child: Hero(
+          tag: 'offline_work_cover_${widget.work.id}',
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            clipBehavior: Clip.antiAlias,
+            child: Container(
+              width: isLandscape ? null : double.infinity,
+              constraints: BoxConstraints(
+                maxHeight: isLandscape
+                    ? MediaQuery.of(context).size.height * 0.8
+                    : 500,
+                maxWidth: isLandscape
+                    ? MediaQuery.of(context).size.width * 0.45
+                    : double.infinity,
+              ),
+              child: PrivacyBlurCover(
+                borderRadius: BorderRadius.circular(12),
+                child: Stack(
+                  fit: StackFit.passthrough,
+                  children: [
+                    // 优先使用本地封面图片
+                    if (widget.localCoverPath != null &&
+                        File(widget.localCoverPath!).existsSync())
+                      Image.file(
+                        File(widget.localCoverPath!),
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          // 如果本地图片加载失败，回退到网络图片
+                          return _buildNetworkCover(work, host, token);
+                        },
+                      )
+                    else
+                      // 回退到网络图片（缓存）
+                      _buildNetworkCover(work, host, token),
+                  ],
+                ),
               ),
             ),
           ),
