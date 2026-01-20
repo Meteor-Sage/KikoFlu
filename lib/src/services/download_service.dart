@@ -305,7 +305,9 @@ class DownloadService {
     final workDir = await _getWorkDownloadDirectory(task.workId);
     // 使用fileName中的路径信息（如果包含/）
     final filePath = '$workDir/${task.fileName}';
+    final tempFilePath = '$filePath.downloading'; // 临时文件路径
     final file = File(filePath);
+    final tempFile = File(tempFilePath);
 
     // 确保父目录存在
     await file.parent.create(recursive: true);
@@ -348,9 +350,10 @@ class DownloadService {
       int lastUpdateTime = 0;
       const updateInterval = 500; // 500ms 更新一次
 
+      // 下载到临时文件，完成后再重命名
       await _dio.download(
         task.downloadUrl,
-        filePath,
+        tempFilePath,
         cancelToken: cancelToken,
         onReceiveProgress: (received, total) {
           if (total != -1) {
@@ -366,6 +369,9 @@ class DownloadService {
           }
         },
       );
+
+      // 下载完成，重命名临时文件为最终文件
+      await tempFile.rename(filePath);
 
       final completedTask = task.copyWith(
         status: DownloadStatus.completed,

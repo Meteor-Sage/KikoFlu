@@ -158,9 +158,13 @@ class _OfflineFileExplorerWidgetState
       } else if (hash != null) {
         // 检查文件是否存在
         final relativePath = parentPath.isEmpty ? title : '$parentPath/$title';
-        final file = File('$workDirPath/$relativePath');
+        final filePath = '$workDirPath/$relativePath';
+        final file = File(filePath);
+        final downloadingFile = File('$filePath.downloading');
 
-        if (await file.exists()) {
+        // 检查文件是否存在且没有正在下载的临时文件
+        // 如果存在 .downloading 文件，说明下载未完成，不显示
+        if (await file.exists() && !await downloadingFile.exists()) {
           _fileExists[hash] = true;
 
           // 根据文件扩展名确定正确的类型
