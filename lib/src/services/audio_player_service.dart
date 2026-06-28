@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
+import 'package:dio/dio.dart';
 import 'package:path/path.dart' as p;
 import 'package:smtc_windows/smtc_windows.dart';
 
@@ -13,6 +14,7 @@ import 'audio_haptics_service.dart';
 import 'log_service.dart';
 import 'playback_history_service.dart';
 import 'download_path_service.dart';
+import 'storage_service.dart';
 import '../utils/image_blur_util.dart';
 import '../utils/local_file_url.dart';
 
@@ -34,6 +36,11 @@ class AudioPlayerService {
   String? _tempPlaybackFilePath; // 临时音频副本路径，用于规避字幕冲突
   Directory? _tempAudioDirectory;
   bool _isSwitchingTrack = false; // Flag to indicate track switching state
+
+  // 下一首预加载：剩余时长低于此阈值时提前缓存下一首，避免切歌空档
+  // null 表示关闭预加载。默认 10 秒，可由设置更新。
+  Duration? _preloadThreshold = const Duration(seconds: 10);
+  String? _prefetchedNextHash; // 已为哪个 hash 触发过预取，避免重复
 
   static const List<String> _lyricExtensions = [
     '.lrc',
@@ -199,6 +206,11 @@ class AudioPlayerService {
   }
 
   void _setupPlayerListeners() {
+    // 预加载下一首：当前剩余时长低于阈值时，后台提前缓存队列中下一首
+    _player.positionStream.listen((position) {
+      _maybePreloadNextTrack(position, _player.duration);
+    });
+
     // Listen to player state changes
     _player.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
@@ -322,6 +334,9 @@ class AudioPlayerService {
   Future<void> _loadTrack(AudioTrack track) async {
     _log.captureOutput(
         '[Audio] _loadTrack: title="${track.title}", url="${track.url}"');
+
+    // 换曲目后清空预加载标记，让新的"下一首"可重新触发预取
+    _prefetchedNextHash = null;
 
     // Emit track immediately so MiniPlayer appears right away
     _currentTrackController.add(track);
@@ -506,6 +521,65 @@ class AudioPlayerService {
     } else {
       // Reached the end of the queue with no repeat, pause
       pause();
+    }
+  }
+
+  // 预加载下一首：当当前曲目接近播放结束（剩余 < _preloadThreshold），
+  // 在后台提前把下一首流式音频拉到缓存，切歌时即可命中本地缓存，避免卡顿空档。
+  // 单曲循环、本地文件、已缓存曲目均自动跳过，不影响正常播放逻辑。
+  void _maybePreloadNextTrack(Duration position, Duration? duration) {
+    final threshold = _preloadThreshold;
+    if (threshold == null || threshold <= Duration.zero) return;
+    if (_appLoopMode == LoopMode.one) return;
+    if (duration == null || duration <= Duration.zero) return;
+
+    final remaining = duration - position;
+    if (remaining > threshold) return;
+
+    if (!hasNext) return;
+    final nextTrack = _queue[_currentIndex + 1];
+
+    final hash = nextTrack.hash;
+    final url = nextTrack.url;
+    if (hash == null || hash.isEmpty) return;
+
+    // 本地文件 / 已预取过 / 已缓存：无需再次预取
+    if (_prefetchedNextHash == hash) return;
+    _prefetchedNextHash = hash;
+
+    final localPath = LocalFileUrl.pathFromUrl(url);
+    if (localPath != null) return; // 本地文件，秒加载，无需预取
+
+    unawaited(_preloadNextTrackToCache(nextTrack));
+  }
+
+  Future<void> _preloadNextTrackToCache(AudioTrack track) async {
+    final hash = track.hash;
+    if (hash == null || hash.isEmpty) return;
+    final url = track.url;
+
+    try {
+      // 若已命中缓存（含已下载文件），直接跳过
+      final cached = await CacheService.getCachedAudioFile(hash);
+      if (cached != null) {
+        _log.captureOutput('[Audio] 下一首已缓存，无需预加载: ${track.title}');
+        return;
+      }
+
+      // 清理可能存在的损坏临时文件，避免追加写入脏数据
+      await CacheService.resetAudioCachePartial(hash);
+
+      // 复用 CacheService 的下载 + finalize 流程，把整首流式音频写到本地缓存
+      final dio = Dio();
+      dio.options.headers.addAll(StorageService.serverCookieHeaders);
+      dio.options.connectTimeout = const Duration(seconds: 15);
+      dio.options.receiveTimeout = const Duration(seconds: 60);
+
+      _log.captureOutput('[Audio] 开始预加载下一首: ${track.title}');
+      await CacheService.cacheAudioFile(hash: hash, url: url, dio: dio);
+      _log.captureOutput('[Audio] 预加载下一首完成: ${track.title}');
+    } catch (e) {
+      _log.captureOutput('[Audio] 预加载下一首失败: ${track.title} - $e');
     }
   }
 
@@ -828,6 +902,19 @@ class AudioPlayerService {
       enabled: _hapticsEnabled,
       intensity: _hapticsIntensity,
     );
+  }
+
+  /// 更新下一首预加载阈值，null 表示关闭预加载。
+  void updatePreloadThreshold(Duration? threshold) {
+    if (threshold != null && threshold < Duration.zero) {
+      threshold = Duration.zero;
+    }
+    _preloadThreshold = threshold;
+    if (threshold == null) {
+      _log.captureOutput('[Audio] 预加载下一首已关闭');
+    } else {
+      _log.captureOutput('[Audio] 预加载阈值已更新: ${threshold.inSeconds} 秒');
+    }
   }
 
   // Cleanup

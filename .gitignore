@@ -105,6 +105,9 @@ macos/Flutter/GeneratedPluginRegistrant.swift
 kikoeru-express-alpha/
 KikoFlu_Key.pfx
 
+# Code Graph index (local code-graph plugin artifact, not for version control)
+.codegraph/
+
 # Tag translation source files (contain raw tag names)
 scripts/tag_translations_*.json
 

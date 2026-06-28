@@ -434,6 +434,127 @@ final audioFormatPreferenceProvider =
   return AudioFormatPreferenceNotifier();
 });
 
+/// 下一首预加载阈值档位
+enum PreloadThresholdMode {
+  off('off'),
+  seconds10('seconds10'),
+  seconds20('seconds20'),
+  seconds30('seconds30'),
+  custom('custom');
+
+  final String value;
+  const PreloadThresholdMode(this.value);
+
+  static PreloadThresholdMode fromValue(String? v) => values.firstWhere(
+        (m) => m.value == v,
+        orElse: () => PreloadThresholdMode.seconds10,
+      );
+}
+
+/// 下一首预加载设置
+class PreloadNextSettings {
+  static const int minSeconds = 1;
+  static const int maxSeconds = 300;
+  static const int defaultCustomSeconds = 30;
+
+  final PreloadThresholdMode mode;
+  final int customSeconds;
+
+  const PreloadNextSettings({
+    this.mode = PreloadThresholdMode.seconds10,
+    this.customSeconds = defaultCustomSeconds,
+  });
+
+  /// 生效阈值秒数，null 表示关闭预加载
+  int? get effectiveSeconds {
+    switch (mode) {
+      case PreloadThresholdMode.off:
+        return null;
+      case PreloadThresholdMode.seconds10:
+        return 10;
+      case PreloadThresholdMode.seconds20:
+        return 20;
+      case PreloadThresholdMode.seconds30:
+        return 30;
+      case PreloadThresholdMode.custom:
+        return customSeconds.clamp(minSeconds, maxSeconds);
+    }
+  }
+
+  PreloadNextSettings copyWith({
+    PreloadThresholdMode? mode,
+    int? customSeconds,
+  }) {
+    return PreloadNextSettings(
+      mode: mode ?? this.mode,
+      customSeconds: customSeconds ?? this.customSeconds,
+    );
+  }
+}
+
+/// 下一首预加载设置控制器
+class PreloadNextSettingsNotifier
+    extends StateNotifier<PreloadNextSettings> {
+  static const String _modeKey = 'preload_next_mode';
+  static const String _customKey = 'preload_next_custom_seconds';
+
+  PreloadNextSettingsNotifier() : super(const PreloadNextSettings()) {
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (!mounted) return;
+      final customRaw = prefs.getInt(_customKey);
+      const custom = PreloadNextSettings.defaultCustomSeconds;
+      final stored = customRaw ?? custom;
+      final normalized = stored.clamp(
+        PreloadNextSettings.minSeconds,
+        PreloadNextSettings.maxSeconds,
+      );
+      state = PreloadNextSettings(
+        mode: PreloadThresholdMode.fromValue(prefs.getString(_modeKey)),
+        customSeconds: normalized,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      state = const PreloadNextSettings();
+    }
+  }
+
+  Future<void> updateMode(PreloadThresholdMode mode) async {
+    state = state.copyWith(mode: mode);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_modeKey, mode.value);
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  Future<void> updateCustomSeconds(int seconds) async {
+    final normalized = seconds.clamp(
+      PreloadNextSettings.minSeconds,
+      PreloadNextSettings.maxSeconds,
+    );
+    state = state.copyWith(customSeconds: normalized);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(_customKey, normalized);
+    } catch (_) {
+      // ignore
+    }
+  }
+}
+
+/// 下一首预加载设置提供者
+final preloadNextSettingsProvider =
+    StateNotifierProvider<PreloadNextSettingsNotifier, PreloadNextSettings>(
+        (ref) {
+  return PreloadNextSettingsNotifier();
+});
+
 /// 防社死设置
 class PrivacyModeSettings {
   final bool enabled;

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -377,6 +378,204 @@ class PreferencesScreen extends ConsumerWidget {
     return S.of(context).translationCustomLanguageLabel(trimmedValue);
   }
 
+  /// 预加载阈值的当前展示文案
+  String _preloadValueLabel(
+    BuildContext context,
+    PreloadNextSettings settings,
+  ) {
+    final s = S.of(context);
+    switch (settings.mode) {
+      case PreloadThresholdMode.off:
+        return s.preloadOptionOff;
+      case PreloadThresholdMode.seconds10:
+        return s.preloadOptionSeconds(10);
+      case PreloadThresholdMode.seconds20:
+        return s.preloadOptionSeconds(20);
+      case PreloadThresholdMode.seconds30:
+        return s.preloadOptionSeconds(30);
+      case PreloadThresholdMode.custom:
+        return s.preloadCustomValueLabel(settings.customSeconds);
+    }
+  }
+
+  void _showPreloadThresholdDialog(BuildContext pageContext, WidgetRef ref) {
+    final currentSettings = ref.read(preloadNextSettingsProvider);
+
+    showDialog(
+      context: pageContext,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          S.of(dialogContext).preloadNextTitle,
+          style: const TextStyle(fontSize: 18),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              S.of(dialogContext).selectPreloadThreshold,
+              style: const TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            RadioOptionGroup<PreloadThresholdMode>(
+              groupValue: currentSettings.mode,
+              options: [
+                RadioOption(
+                  value: PreloadThresholdMode.off,
+                  title: Text(
+                      PreloadThresholdMode.off.localizedName(dialogContext)),
+                ),
+                RadioOption(
+                  value: PreloadThresholdMode.seconds10,
+                  title: Text(PreloadThresholdMode.seconds10
+                      .localizedName(dialogContext)),
+                ),
+                RadioOption(
+                  value: PreloadThresholdMode.seconds20,
+                  title: Text(PreloadThresholdMode.seconds20
+                      .localizedName(dialogContext)),
+                ),
+                RadioOption(
+                  value: PreloadThresholdMode.seconds30,
+                  title: Text(PreloadThresholdMode.seconds30
+                      .localizedName(dialogContext)),
+                ),
+                RadioOption(
+                  value: PreloadThresholdMode.custom,
+                  title: Text(PreloadThresholdMode.custom
+                      .localizedName(dialogContext)),
+                  subtitle: currentSettings.mode == PreloadThresholdMode.custom
+                      ? Text(
+                          S.of(dialogContext).preloadCustomValueLabel(
+                              currentSettings.customSeconds),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(dialogContext)
+                                .colorScheme
+                                .onSurfaceVariant,
+                          ),
+                        )
+                      : null,
+                ),
+              ],
+              onChanged: (value) async {
+                if (value == PreloadThresholdMode.custom) {
+                  final inputSeconds = await _showPreloadCustomSecondsDialog(
+                    pageContext,
+                    initialValue: currentSettings.customSeconds,
+                  );
+                  if (inputSeconds == null) {
+                    return; // 用户取消输入，保持原选中项不变
+                  }
+                  await ref
+                      .read(preloadNextSettingsProvider.notifier)
+                      .updateCustomSeconds(inputSeconds);
+                }
+
+                await ref
+                    .read(preloadNextSettingsProvider.notifier)
+                    .updateMode(value);
+
+                if (!dialogContext.mounted) return;
+                Navigator.pop(dialogContext);
+
+                final updated = ref.read(preloadNextSettingsProvider);
+                SnackBarUtil.showSuccess(
+                  pageContext,
+                  S.of(pageContext).setToValue(
+                        _preloadValueLabel(pageContext, updated),
+                      ),
+                );
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(S.of(dialogContext).close),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<int?> _showPreloadCustomSecondsDialog(
+    BuildContext pageContext, {
+    required int initialValue,
+  }) async {
+    final controller = TextEditingController(text: initialValue.toString());
+    final result = await showDialog<int>(
+      context: pageContext,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(S.of(dialogContext).preloadCustomInputTitle),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(S.of(dialogContext).preloadCustomInputHint),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: InputDecoration(
+                hintText: S.of(dialogContext).preloadCustomInputHint,
+                errorText: null,
+              ),
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) {
+                final value =
+                    int.tryParse(controller.text.trim());
+                if (value == null ||
+                    value < PreloadNextSettings.minSeconds ||
+                    value > PreloadNextSettings.maxSeconds) {
+                  ScaffoldMessenger.maybeOf(dialogContext)?.showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        S.of(dialogContext).preloadCustomInputRangeError,
+                      ),
+                    ),
+                  );
+                  return;
+                }
+                Navigator.pop(dialogContext, value);
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(S.of(dialogContext).cancel),
+          ),
+          TextButton(
+            onPressed: () {
+              final value = int.tryParse(controller.text.trim());
+              if (value == null ||
+                  value < PreloadNextSettings.minSeconds ||
+                  value > PreloadNextSettings.maxSeconds) {
+                ScaffoldMessenger.maybeOf(dialogContext)?.showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      S.of(dialogContext).preloadCustomInputRangeError,
+                    ),
+                  ),
+                );
+                return;
+              }
+              Navigator.pop(dialogContext, value);
+            },
+            child: Text(S.of(dialogContext).confirm),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    return result;
+  }
+
   String _targetLanguageLabel(
     BuildContext context,
     TranslationLanguagePreferences preferences,
@@ -417,6 +616,7 @@ class PreferencesScreen extends ConsumerWidget {
     final translationSource = ref.watch(translationSourceProvider);
     final translationLanguagePreferences =
         ref.watch(translationLanguagePreferencesProvider);
+    final preloadSettings = ref.watch(preloadNextSettingsProvider);
 
     return Scaffold(
       appBar: ScrollableAppBar(
@@ -487,6 +687,14 @@ class PreferencesScreen extends ConsumerWidget {
                     ),
                   );
                 },
+              ),
+              SettingsNavigationTile(
+                icon: Icons.fast_forward,
+                title: S.of(context).preloadNextTitle,
+                subtitle: S.of(context).currentSettingLabel(
+                      _preloadValueLabel(context, preloadSettings),
+                    ),
+                onTap: () => _showPreloadThresholdDialog(context, ref),
               ),
               SettingsSwitchTile(
                 icon: Icons.screen_lock_portrait,

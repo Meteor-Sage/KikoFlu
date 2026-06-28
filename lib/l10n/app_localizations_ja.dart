@@ -911,6 +911,40 @@ class SJa extends S {
   String get audioFormatSubtitle => 'オーディオフォーマットの優先順位を設定';
 
   @override
+  String get preloadNextTitle => '次をプリロード';
+
+  @override
+  String get preloadNextSubtitle => '現在のトラックが終わる前に次のトラックをキャッシュし、切り替え時の途切れを防ぐ';
+
+  @override
+  String get selectPreloadThreshold => '残り時間がこの閾値を下回ったらプリロードを開始：';
+
+  @override
+  String get preloadOptionOff => 'オフ';
+
+  @override
+  String preloadOptionSeconds(int seconds) {
+    return '$seconds 秒';
+  }
+
+  @override
+  String get preloadOptionCustom => 'カスタム';
+
+  @override
+  String get preloadCustomInputTitle => 'カスタムプリロード閾値';
+
+  @override
+  String get preloadCustomInputHint => '秒数 (1-300)';
+
+  @override
+  String get preloadCustomInputRangeError => '1 から 300 までの数字を入力してください';
+
+  @override
+  String preloadCustomValueLabel(int value) {
+    return '$value 秒';
+  }
+
+  @override
   String get keepScreenAwake => '画面を常にオン';
 
   @override

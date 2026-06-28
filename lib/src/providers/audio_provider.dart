@@ -144,6 +144,20 @@ class AudioPlayerController extends StateNotifier<AudioPlayerState> {
         }
       },
     );
+
+    // 监听下一首预加载设置变化
+    _ref.listen<PreloadNextSettings>(
+      preloadNextSettingsProvider,
+      (previous, next) {
+        if (previous?.mode != next.mode ||
+            previous?.customSeconds != next.customSeconds) {
+          final seconds = next.effectiveSeconds;
+          _service.updatePreloadThreshold(
+            seconds == null ? null : Duration(seconds: seconds),
+          );
+        }
+      },
+    );
   }
 
   Future<void> initialize() async {
@@ -165,6 +179,13 @@ class AudioPlayerController extends StateNotifier<AudioPlayerState> {
     await _service.updateHapticsSettings(
       enabled: hapticsSettings.enabled,
       intensity: hapticsSettings.intensity,
+    );
+
+    // 初始化时应用当前的下一首预加载阈值
+    final preloadSettings = _ref.read(preloadNextSettingsProvider);
+    final preloadSeconds = preloadSettings.effectiveSeconds;
+    _service.updatePreloadThreshold(
+      preloadSeconds == null ? null : Duration(seconds: preloadSeconds),
     );
 
     // Listen to player state changes

@@ -929,6 +929,43 @@ class SEn extends S {
   String get audioFormatSubtitle => 'Set audio format priority order';
 
   @override
+  String get preloadNextTitle => 'Preload Next Track';
+
+  @override
+  String get preloadNextSubtitle =>
+      'Preload the next track to cache before the current one ends to avoid playback gaps';
+
+  @override
+  String get selectPreloadThreshold =>
+      'Preload starts when remaining time of the current track is below this threshold:';
+
+  @override
+  String get preloadOptionOff => 'Off';
+
+  @override
+  String preloadOptionSeconds(int seconds) {
+    return '$seconds seconds';
+  }
+
+  @override
+  String get preloadOptionCustom => 'Custom';
+
+  @override
+  String get preloadCustomInputTitle => 'Custom Preload Threshold';
+
+  @override
+  String get preloadCustomInputHint => 'Seconds (1-300)';
+
+  @override
+  String get preloadCustomInputRangeError =>
+      'Please enter a number between 1 and 300';
+
+  @override
+  String preloadCustomValueLabel(int value) {
+    return '$value s';
+  }
+
+  @override
   String get keepScreenAwake => 'Keep Screen Awake';
 
   @override

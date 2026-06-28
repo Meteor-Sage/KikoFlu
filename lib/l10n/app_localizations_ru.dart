@@ -932,6 +932,42 @@ class SRu extends S {
   String get audioFormatSubtitle => 'Приоритет аудиоформатов';
 
   @override
+  String get preloadNextTitle => 'Предзагрузка следующего';
+
+  @override
+  String get preloadNextSubtitle =>
+      'Предзагрузка следующего трека в кэш до окончания текущего, чтобы избежать пауз при переключении';
+
+  @override
+  String get selectPreloadThreshold =>
+      'Предзагрузка начнётся, когда оставшееся время ниже этого порога:';
+
+  @override
+  String get preloadOptionOff => 'Выключено';
+
+  @override
+  String preloadOptionSeconds(int seconds) {
+    return '$seconds сек.';
+  }
+
+  @override
+  String get preloadOptionCustom => 'Своё';
+
+  @override
+  String get preloadCustomInputTitle => 'Свой порог предзагрузки';
+
+  @override
+  String get preloadCustomInputHint => 'Секунды (1-300)';
+
+  @override
+  String get preloadCustomInputRangeError => 'Введите число от 1 до 300';
+
+  @override
+  String preloadCustomValueLabel(int value) {
+    return '$value сек.';
+  }
+
+  @override
   String get keepScreenAwake => 'Не выключать экран';
 
   @override
