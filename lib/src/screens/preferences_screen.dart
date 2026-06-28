@@ -505,71 +505,75 @@ class PreferencesScreen extends ConsumerWidget {
     required int initialValue,
   }) async {
     final controller = TextEditingController(text: initialValue.toString());
+    String? errorText;
+    // 解析并校验输入：合法返回正整数，越界/非法返回 null 并设置 errorText
+    int? validate(BuildContext context) {
+      final value = int.tryParse(controller.text.trim());
+      if (value == null ||
+          value < PreloadNextSettings.minSeconds ||
+          value > PreloadNextSettings.maxSeconds) {
+        errorText = S.of(context).preloadCustomInputRangeError;
+        return null;
+      }
+      errorText = null;
+      return value;
+    }
+
     final result = await showDialog<int>(
       context: pageContext,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(S.of(dialogContext).preloadCustomInputTitle),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(S.of(dialogContext).preloadCustomInputHint),
-            const SizedBox(height: 12),
-            TextField(
-              controller: controller,
-              autofocus: true,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: InputDecoration(
-                hintText: S.of(dialogContext).preloadCustomInputHint,
-                errorText: null,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (stContext, setState) => AlertDialog(
+          title: Text(S.of(stContext).preloadCustomInputTitle),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(S.of(stContext).preloadCustomInputHint),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: InputDecoration(
+                  hintText: S.of(stContext).preloadCustomInputHint,
+                  errorText: errorText,
+                ),
+                textInputAction: TextInputAction.done,
+                onChanged: (_) {
+                  if (errorText != null) {
+                    setState(() => errorText = null);
+                  }
+                },
+                onSubmitted: (_) {
+                  final value = validate(stContext);
+                  if (value != null) {
+                    Navigator.pop(dialogContext, value);
+                  } else {
+                    setState(() {});
+                  }
+                },
               ),
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) {
-                final value =
-                    int.tryParse(controller.text.trim());
-                if (value == null ||
-                    value < PreloadNextSettings.minSeconds ||
-                    value > PreloadNextSettings.maxSeconds) {
-                  ScaffoldMessenger.maybeOf(dialogContext)?.showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        S.of(dialogContext).preloadCustomInputRangeError,
-                      ),
-                    ),
-                  );
-                  return;
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(S.of(stContext).cancel),
+            ),
+            TextButton(
+              onPressed: () {
+                final value = validate(stContext);
+                if (value != null) {
+                  Navigator.pop(dialogContext, value);
+                } else {
+                  setState(() {});
                 }
-                Navigator.pop(dialogContext, value);
               },
+              child: Text(S.of(stContext).confirm),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(S.of(dialogContext).cancel),
-          ),
-          TextButton(
-            onPressed: () {
-              final value = int.tryParse(controller.text.trim());
-              if (value == null ||
-                  value < PreloadNextSettings.minSeconds ||
-                  value > PreloadNextSettings.maxSeconds) {
-                ScaffoldMessenger.maybeOf(dialogContext)?.showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      S.of(dialogContext).preloadCustomInputRangeError,
-                    ),
-                  ),
-                );
-                return;
-              }
-              Navigator.pop(dialogContext, value);
-            },
-            child: Text(S.of(dialogContext).confirm),
-          ),
-        ],
       ),
     );
     controller.dispose();

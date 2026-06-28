@@ -152,6 +152,10 @@ extension PreloadThresholdModeL10n on PreloadThresholdMode {
   }
 }
 
+// ============================================================
+// TranslationSource
+// ============================================================
+
 extension TranslationSourceL10n on TranslationSource {
   String localizedName(BuildContext context) {
     final s = S.of(context);
