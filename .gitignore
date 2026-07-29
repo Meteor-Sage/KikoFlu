@@ -33,6 +33,14 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+# Flutter 平台自动生成的插件注册文件（此前已跟踪，现取消跟踪，加入忽略）
+linux/flutter/generated_plugin_registrant.cc
+linux/flutter/generated_plugin_registrant.h
+linux/flutter/generated_plugins.cmake
+macos/Flutter/GeneratedPluginRegistrant.swift
+windows/flutter/generated_plugin_registrant.cc
+windows/flutter/generated_plugin_registrant.h
+windows/flutter/generated_plugins.cmake
 
 # Symbolication related
 app.*.symbols
@@ -95,15 +103,13 @@ app.*.map.json
 KikoFlu-macOS.dmg
 /android/build/reports
 on_process.md
-windows/flutter/generated_plugins.cmake
-windows/flutter/generated_plugin_registrant.cc
-windows/flutter/generated_plugin_registrant.h
-windows/flutter/generated_plugins.cmake
-macos/Flutter/GeneratedPluginRegistrant.swift
 
 # others
 kikoeru-express-alpha/
 KikoFlu_Key.pfx
+
+# Code Graph index (local code-graph plugin artifact, not for version control)
+.codegraph/
 
 # Tag translation source files (contain raw tag names)
 scripts/tag_translations_*.json

@@ -910,6 +910,40 @@ class SZh extends S {
   String get audioFormatSubtitle => '设置音频格式的优先级顺序';
 
   @override
+  String get preloadNextTitle => '预加载下一首';
+
+  @override
+  String get preloadNextSubtitle => '当前曲目播放结束前提前缓存下一首，避免切歌空档';
+
+  @override
+  String get selectPreloadThreshold => '当前曲目剩余时间低于此阈值时开始预加载：';
+
+  @override
+  String get preloadOptionOff => '关闭';
+
+  @override
+  String preloadOptionSeconds(int seconds) {
+    return '$seconds 秒';
+  }
+
+  @override
+  String get preloadOptionCustom => '自定义';
+
+  @override
+  String get preloadCustomInputTitle => '自定义预加载阈值';
+
+  @override
+  String get preloadCustomInputHint => '秒数 (1-300)';
+
+  @override
+  String get preloadCustomInputRangeError => '请输入 1 到 300 之间的数字';
+
+  @override
+  String preloadCustomValueLabel(int value) {
+    return '$value 秒';
+  }
+
+  @override
   String get keepScreenAwake => '屏幕常亮';
 
   @override
@@ -4366,6 +4400,40 @@ class SZhHant extends SZh {
 
   @override
   String get audioFormatSubtitle => '設定音訊格式的優先順序';
+
+  @override
+  String get preloadNextTitle => '預載下一首';
+
+  @override
+  String get preloadNextSubtitle => '當前曲目播放結束前提早快取下一首，避免切歌空檔';
+
+  @override
+  String get selectPreloadThreshold => '當前曲目剩餘時間低於此閾值時開始預載：';
+
+  @override
+  String get preloadOptionOff => '關閉';
+
+  @override
+  String preloadOptionSeconds(int seconds) {
+    return '$seconds 秒';
+  }
+
+  @override
+  String get preloadOptionCustom => '自訂';
+
+  @override
+  String get preloadCustomInputTitle => '自訂預載閾值';
+
+  @override
+  String get preloadCustomInputHint => '秒數 (1-300)';
+
+  @override
+  String get preloadCustomInputRangeError => '請輸入 1 到 300 之間的數字';
+
+  @override
+  String preloadCustomValueLabel(int value) {
+    return '$value 秒';
+  }
 
   @override
   String get keepScreenAwake => '螢幕常亮';

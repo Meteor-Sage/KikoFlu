@@ -1806,6 +1806,66 @@ abstract class S {
   /// **'Set audio format priority order'**
   String get audioFormatSubtitle;
 
+  /// No description provided for @preloadNextTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Preload Next Track'**
+  String get preloadNextTitle;
+
+  /// No description provided for @preloadNextSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Preload the next track to cache before the current one ends to avoid playback gaps'**
+  String get preloadNextSubtitle;
+
+  /// No description provided for @selectPreloadThreshold.
+  ///
+  /// In en, this message translates to:
+  /// **'Preload starts when remaining time of the current track is below this threshold:'**
+  String get selectPreloadThreshold;
+
+  /// No description provided for @preloadOptionOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get preloadOptionOff;
+
+  /// No description provided for @preloadOptionSeconds.
+  ///
+  /// In en, this message translates to:
+  /// **'{seconds} seconds'**
+  String preloadOptionSeconds(int seconds);
+
+  /// No description provided for @preloadOptionCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get preloadOptionCustom;
+
+  /// No description provided for @preloadCustomInputTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Preload Threshold'**
+  String get preloadCustomInputTitle;
+
+  /// No description provided for @preloadCustomInputHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Seconds (1-300)'**
+  String get preloadCustomInputHint;
+
+  /// No description provided for @preloadCustomInputRangeError.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a number between 1 and 300'**
+  String get preloadCustomInputRangeError;
+
+  /// No description provided for @preloadCustomValueLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} s'**
+  String preloadCustomValueLabel(int value);
+
   /// No description provided for @keepScreenAwake.
   ///
   /// In en, this message translates to:

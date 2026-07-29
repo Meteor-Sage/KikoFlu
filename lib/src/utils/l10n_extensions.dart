@@ -136,6 +136,23 @@ extension SubtitleLibraryPriorityL10n on SubtitleLibraryPriority {
 }
 
 // ============================================================
+// PreloadThresholdMode
+// ============================================================
+
+extension PreloadThresholdModeL10n on PreloadThresholdMode {
+  String localizedName(BuildContext context) {
+    final s = S.of(context);
+    return switch (this) {
+      PreloadThresholdMode.off => s.preloadOptionOff,
+      PreloadThresholdMode.seconds10 => s.preloadOptionSeconds(10),
+      PreloadThresholdMode.seconds20 => s.preloadOptionSeconds(20),
+      PreloadThresholdMode.seconds30 => s.preloadOptionSeconds(30),
+      PreloadThresholdMode.custom => s.preloadOptionCustom,
+    };
+  }
+}
+
+// ============================================================
 // TranslationSource
 // ============================================================
 
