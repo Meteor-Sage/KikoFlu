@@ -166,6 +166,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     permissions:
       contents: write
+      actions: write
     steps:
       - name: Download All Artifacts
         uses: actions/download-artifact@v6
