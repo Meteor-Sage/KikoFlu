@@ -18,6 +18,13 @@
       "tintColor": "6750A4",
       "versions": [
         {
+          "version": "3.6.0",
+          "date": "2026-08-10",
+          "size": 13160538,
+          "downloadURL": "https://github.com/frngchenziyuan/KikoFlu/releases/download/v3.6.0/KikoFlu-ios-unsigned.ipa",
+          "localizedDescription": "**Full Changelog**: https://github.com/frngchenziyuan/KikoFlu/commits/v3.6.0"
+        },
+        {
           "version": "3.5.0",
           "date": "2026-06-19",
           "size": 13149303,
