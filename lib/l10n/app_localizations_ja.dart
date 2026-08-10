@@ -518,6 +518,15 @@ class SJa extends S {
   String get playlists => 'プレイリスト';
 
   @override
+  String get playlistDisplayFormat => 'プレイリスト表示形式';
+
+  @override
+  String get playlistDisplayFormatMasonry => 'ウォーターフォール';
+
+  @override
+  String get playlistDisplayFormatList => 'リスト';
+
+  @override
   String get downloaded => 'ダウンロード済み';
 
   @override

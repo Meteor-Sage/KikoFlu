@@ -1080,6 +1080,24 @@ abstract class S {
   /// **'Playlists'**
   String get playlists;
 
+  /// No description provided for @playlistDisplayFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Playlist Display Format'**
+  String get playlistDisplayFormat;
+
+  /// No description provided for @playlistDisplayFormatMasonry.
+  ///
+  /// In en, this message translates to:
+  /// **'Masonry (Waterfall)'**
+  String get playlistDisplayFormatMasonry;
+
+  /// No description provided for @playlistDisplayFormatList.
+  ///
+  /// In en, this message translates to:
+  /// **'List'**
+  String get playlistDisplayFormatList;
+
   /// No description provided for @downloaded.
   ///
   /// In en, this message translates to:

@@ -517,6 +517,15 @@ class SZh extends S {
   String get playlists => '播放列表';
 
   @override
+  String get playlistDisplayFormat => '播放列表显示格式';
+
+  @override
+  String get playlistDisplayFormatMasonry => '瀑布流';
+
+  @override
+  String get playlistDisplayFormatList => '列表';
+
+  @override
   String get downloaded => '已下载';
 
   @override
@@ -4007,6 +4016,15 @@ class SZhHant extends SZh {
 
   @override
   String get playlists => '播放清單';
+
+  @override
+  String get playlistDisplayFormat => '播放清單顯示格式';
+
+  @override
+  String get playlistDisplayFormatMasonry => '瀑布流';
+
+  @override
+  String get playlistDisplayFormatList => '清單';
 
   @override
   String get downloaded => '已下載';

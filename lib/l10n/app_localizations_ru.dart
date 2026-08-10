@@ -531,6 +531,15 @@ class SRu extends S {
   String get playlists => 'Плейлисты';
 
   @override
+  String get playlistDisplayFormat => 'Формат отображения плейлиста';
+
+  @override
+  String get playlistDisplayFormatMasonry => 'Каскад';
+
+  @override
+  String get playlistDisplayFormatList => 'Список';
+
+  @override
   String get downloaded => 'Загружено';
 
   @override

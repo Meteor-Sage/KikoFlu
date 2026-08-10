@@ -530,6 +530,15 @@ class SEn extends S {
   String get playlists => 'Playlists';
 
   @override
+  String get playlistDisplayFormat => 'Playlist Display Format';
+
+  @override
+  String get playlistDisplayFormatMasonry => 'Masonry (Waterfall)';
+
+  @override
+  String get playlistDisplayFormatList => 'List';
+
+  @override
   String get downloaded => 'Downloaded';
 
   @override

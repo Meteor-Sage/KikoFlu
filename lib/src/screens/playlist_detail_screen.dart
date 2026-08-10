@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../providers/playlist_detail_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/work_card_display_provider.dart';
+import '../providers/playlist_display_provider.dart';
 import '../models/playlist.dart';
 import '../models/work.dart';
+import '../services/storage_service.dart';
 import '../widgets/pagination_bar.dart';
 import '../widgets/playlist_add_works_dialog.dart';
 import '../widgets/playlist_edit_dialog.dart';
@@ -13,9 +16,11 @@ import '../widgets/playlist_metadata_section.dart';
 import '../widgets/scrollable_appbar.dart';
 import '../utils/snackbar_util.dart';
 import '../widgets/overscroll_next_page_detector.dart';
+import '../widgets/privacy_blur_cover.dart';
 import '../utils/scroll_optimization.dart';
 import '../utils/responsive_grid_helper.dart';
 import '../widgets/enhanced_work_card.dart';
+import '../screens/work_detail_screen.dart';
 import '../../l10n/app_localizations.dart';
 
 class PlaylistDetailScreen extends ConsumerStatefulWidget {
@@ -446,6 +451,8 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
         .applyCardSize(
           ResponsiveGridHelper.getBigGridCrossAxisCount(context),
         );
+    // 播放列表显示布局（瀑布流 / 列表）
+    final layoutType = ref.watch(playlistDisplayProvider);
 
     return RefreshIndicator(
       onRefresh: () async => ref
@@ -472,27 +479,53 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
             if (state.metadata != null) _buildMetadataSection(state.metadata!),
 
             // 作品列表 - 瀑布流（与主页一致）
-            SliverPadding(
-              padding: EdgeInsets.all(isLandscape ? 24 : 8),
-              sliver: SliverMasonryGrid.count(
-                crossAxisCount: crossAxisCount,
-                mainAxisSpacing: isLandscape ? 24 : 8,
-                crossAxisSpacing: isLandscape ? 24 : 8,
-                childCount: state.works.length,
-                itemBuilder: (context, index) {
-                  final work = state.works[index];
-                  final authState = ref.watch(authProvider);
-                  final currentUserName = authState.currentUser?.name ?? '';
-                  final isOwner = state.metadata?.userName == currentUserName;
+            if (layoutType == PlaylistLayoutType.masonry)
+              SliverPadding(
+                padding: EdgeInsets.all(isLandscape ? 24 : 8),
+                sliver: SliverMasonryGrid.count(
+                  crossAxisCount: crossAxisCount,
+                  mainAxisSpacing: isLandscape ? 24 : 8,
+                  crossAxisSpacing: isLandscape ? 24 : 8,
+                  childCount: state.works.length,
+                  itemBuilder: (context, index) {
+                    final work = state.works[index];
+                    final authState = ref.watch(authProvider);
+                    final currentUserName = authState.currentUser?.name ?? '';
+                    final isOwner = state.metadata?.userName == currentUserName;
 
-                  return _buildPlaylistWorkCard(
-                    work,
-                    isOwner,
-                    crossAxisCount: crossAxisCount,
-                  );
-                },
+                    return _buildPlaylistWorkCardMasonry(
+                      work,
+                      isOwner,
+                      crossAxisCount: crossAxisCount,
+                    );
+                  },
+                ),
               ),
-            ),
+
+            // 作品列表 - 列表（传统扁平卡片）
+            if (layoutType == PlaylistLayoutType.list)
+              SliverPadding(
+                padding: EdgeInsets.all(isLandscape ? 24 : 8),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final work = state.works[index];
+                      final authState = ref.watch(authProvider);
+                      final currentUserName = authState.currentUser?.name ?? '';
+                      final isOwner = state.metadata?.userName == currentUserName;
+
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        child: _buildPlaylistWorkCard(work, isOwner),
+                      );
+                    },
+                    childCount: state.works.length,
+                  ),
+                ),
+              ),
 
             // 分页控件
             SliverPadding(
@@ -558,7 +591,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
   }
 
   // 瀑布流风格的作品卡片（与主页 EnhancedWorkCard 一致，保留移除按钮）
-  Widget _buildPlaylistWorkCard(
+  Widget _buildPlaylistWorkCardMasonry(
     Work work,
     bool isOwner, {
     required int crossAxisCount,
@@ -587,6 +620,175 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
             ),
           ),
       ],
+    );
+  }
+
+  // 传统扁平列表风格的作品卡片（列表布局）
+  Widget _buildPlaylistWorkCard(Work work, bool isOwner) {
+    final authState = ref.watch(authProvider);
+    final host = authState.host ?? '';
+    final token = authState.token ?? '';
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final httpHeaders = StorageService.serverCookieHeaders;
+
+    return InkWell(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => WorkDetailScreen(work: work),
+          ),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          border: Border(
+            bottom: BorderSide(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+              width: 1,
+            ),
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // 封面图 - 使用 Hero 动画和统一的图片源
+            Hero(
+              tag: 'work_cover_${work.id}',
+              child: PrivacyBlurCover(
+                borderRadius: BorderRadius.circular(4),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: CachedNetworkImage(
+                    imageUrl: work.getCoverImageUrl(host, token: token),
+                    httpHeaders: httpHeaders,
+                    cacheKey: 'work_cover_${work.id}',
+                    width: 56,
+                    height: 56,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => Container(
+                      color: colorScheme.surfaceContainerHighest,
+                      child: Center(
+                        child: Icon(
+                          Icons.image,
+                          color: colorScheme.onSurfaceVariant,
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      color: colorScheme.surfaceContainerHighest,
+                      child: Center(
+                        child: Icon(
+                          Icons.broken_image,
+                          color: colorScheme.onSurfaceVariant,
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+
+            // 信息区域
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 标题
+                  Text(
+                    work.title,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      height: 1.3,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+
+                  // 作品编号、社团名和用户评分
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        work.displayId,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.primary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      if (work.name != null && work.name!.isNotEmpty)
+                        Text(
+                          work.name!,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      if (work.userRating != null && work.userRating! > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: colorScheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.person,
+                                color: colorScheme.onPrimaryContainer,
+                                size: 12,
+                              ),
+                              const SizedBox(width: 2),
+                              Icon(
+                                Icons.star,
+                                size: 12,
+                                color: Colors.amber[700],
+                              ),
+                              const SizedBox(width: 2),
+                              Text(
+                                '${work.userRating}',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.onPrimaryContainer,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // 移除按钮（仅作者可见）
+            if (isOwner) ...[
+              const SizedBox(width: 8),
+              IconButton(
+                icon: const Icon(Icons.remove_circle_outline, size: 20),
+                color: colorScheme.error,
+                visualDensity: VisualDensity.compact,
+                onPressed: () => _showRemoveWorkConfirmDialog(work),
+                tooltip: S.of(context).removeFromPlaylist,
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

@@ -9,6 +9,7 @@ import 'my_tabs_display_settings_screen.dart';
 import '../widgets/scrollable_appbar.dart';
 import '../widgets/settings_section.dart';
 import '../providers/settings_provider.dart';
+import '../providers/playlist_display_provider.dart';
 
 class UiSettingsScreen extends ConsumerWidget {
   const UiSettingsScreen({super.key});
@@ -16,6 +17,7 @@ class UiSettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final pageSize = ref.watch(pageSizeProvider);
+    final playlistLayout = ref.watch(playlistDisplayProvider);
 
     return Scaffold(
       appBar: ScrollableAppBar(
@@ -109,6 +111,34 @@ class UiSettingsScreen extends ConsumerWidget {
                       ref
                           .read(pageSizeProvider.notifier)
                           .updatePageSize(newValue);
+                    }
+                  },
+                ),
+              ),
+              SettingsListTile(
+                icon: Icons.view_module,
+                title: S.of(context).playlistDisplayFormat,
+                subtitle: playlistLayout == PlaylistLayoutType.masonry
+                    ? S.of(context).playlistDisplayFormatMasonry
+                    : S.of(context).playlistDisplayFormatList,
+                trailing: DropdownButton<PlaylistLayoutType>(
+                  value: playlistLayout,
+                  underline: const SizedBox(),
+                  items: PlaylistLayoutType.values.map((PlaylistLayoutType v) {
+                    return DropdownMenuItem<PlaylistLayoutType>(
+                      value: v,
+                      child: Text(
+                        v == PlaylistLayoutType.masonry
+                            ? S.of(context).playlistDisplayFormatMasonry
+                            : S.of(context).playlistDisplayFormatList,
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (PlaylistLayoutType? newValue) {
+                    if (newValue != null) {
+                      ref
+                          .read(playlistDisplayProvider.notifier)
+                          .updateLayout(newValue);
                     }
                   },
                 ),
