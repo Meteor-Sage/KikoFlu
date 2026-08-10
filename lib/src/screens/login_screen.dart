@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/auth_provider.dart';
+import '../providers/proxy_provider.dart';
 import '../services/kikoeru_api_service.dart';
 import '../utils/server_utils.dart';
 import '../utils/snackbar_util.dart';
@@ -272,6 +273,68 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
 
     _hostOptions = options;
+  }
+
+  /// 登录页代理设置：登录前即可配置代理（解决"登录才能进设置页"的死循环）
+  Widget _buildLoginProxySection(BuildContext context) {
+    final proxySettings = ref.watch(proxySettingsProvider);
+    final TextEditingController proxyController =
+        TextEditingController(text: proxySettings.address);
+
+    return ExpansionTile(
+      leading: const Icon(Icons.vpn_lock_outlined),
+      title: const Text('代理设置（可选）'),
+      subtitle: Text(proxySettings.enabled
+          ? '已启用: ${proxySettings.address.isEmpty ? '未设置地址' : proxySettings.address}'
+          : '通过 HTTP 代理访问服务器（如 Clash 127.0.0.1:7890）'),
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SwitchListTile(
+                title: const Text('使用代理'),
+                value: proxySettings.enabled,
+                onChanged: (value) => ref
+                    .read(proxySettingsProvider.notifier)
+                    .setEnabled(value),
+              ),
+              TextField(
+                controller: proxyController,
+                enabled: proxySettings.enabled,
+                keyboardType: TextInputType.url,
+                decoration: const InputDecoration(
+                  labelText: '代理地址',
+                  hintText: '127.0.0.1:7890',
+                  helperText: '格式: 主机:端口，如 127.0.0.1:7890',
+                  prefixIcon: Icon(Icons.dns_outlined),
+                  border: OutlineInputBorder(),
+                ),
+                onSubmitted: (value) => ref
+                    .read(proxySettingsProvider.notifier)
+                    .setAddress(value.trim()),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: FilledButton.icon(
+                    onPressed: proxySettings.enabled
+                        ? () => ref
+                            .read(proxySettingsProvider.notifier)
+                            .setAddress(proxyController.text.trim())
+                        : null,
+                    icon: const Icon(Icons.check),
+                    label: const Text('应用代理地址'),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildHostLatencyActions(BuildContext context) {
@@ -700,6 +763,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       const SizedBox(height: 8),
       _buildHostLatencyActions(context),
+
+      const SizedBox(height: 8),
+      _buildLoginProxySection(context),
 
       const SizedBox(height: 15),
 
