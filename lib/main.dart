@@ -21,6 +21,7 @@ import 'src/screens/main_screen.dart';
 import 'src/widgets/desktop_floating_lyric.dart';
 import 'src/utils/theme.dart';
 import 'src/services/storage_service.dart';
+import 'src/services/proxy_config.dart';
 import 'src/services/account_database.dart';
 import 'src/services/cache_service.dart';
 import 'src/services/download_service.dart';
@@ -203,6 +204,10 @@ sub-auto=no
 
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 初始化代理配置，并让所有 HttpClient（API/下载/音频流）走代理
+  await ProxyConfig.init();
+  HttpOverrides.global = KikoFluHttpOverrides();
 
   // 初始化日志系统，拦截 print/debugPrint 输出
   setupLogCapture();
