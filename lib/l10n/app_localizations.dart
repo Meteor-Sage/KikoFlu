@@ -6437,6 +6437,78 @@ abstract class S {
   /// In en, this message translates to:
   /// **'No logs yet'**
   String get logEmpty;
+
+  /// No description provided for @proxySettingsOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Proxy settings (optional)'**
+  String get proxySettingsOptional;
+
+  /// No description provided for @proxyEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Enabled: {address}'**
+  String proxyEnabled(String address);
+
+  /// No description provided for @proxyAddressNotSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not set (direct connection)'**
+  String get proxyAddressNotSet;
+
+  /// No description provided for @proxyHttpDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Access servers through an HTTP proxy (for example, Clash)'**
+  String get proxyHttpDescription;
+
+  /// No description provided for @useProxy.
+  ///
+  /// In en, this message translates to:
+  /// **'Use proxy'**
+  String get useProxy;
+
+  /// No description provided for @proxyAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Proxy address'**
+  String get proxyAddress;
+
+  /// No description provided for @proxyAddressFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Format: host:port, for example 127.0.0.1:7890'**
+  String get proxyAddressFormat;
+
+  /// No description provided for @applyProxyAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply proxy address'**
+  String get applyProxyAddress;
+
+  /// No description provided for @invalidProxyAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid HTTP proxy address and port'**
+  String get invalidProxyAddress;
+
+  /// No description provided for @playlistDisplayFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Playlist layout'**
+  String get playlistDisplayFormat;
+
+  /// No description provided for @playlistDisplayFormatMasonry.
+  ///
+  /// In en, this message translates to:
+  /// **'Masonry'**
+  String get playlistDisplayFormatMasonry;
+
+  /// No description provided for @playlistDisplayFormatList.
+  ///
+  /// In en, this message translates to:
+  /// **'List'**
+  String get playlistDisplayFormatList;
 }
 
 class _SDelegate extends LocalizationsDelegate<S> {

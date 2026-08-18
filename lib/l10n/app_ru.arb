@@ -1181,5 +1181,17 @@
   "logExported": "Логи экспортированы в {path}",
   "logCount": "{count} записей",
   "logAutoScroll": "Автопрокрутка",
-  "logEmpty": "Логов пока нет"
+  "logEmpty": "Логов пока нет",
+  "proxySettingsOptional": "Настройки прокси (необязательно)",
+  "proxyEnabled": "Включено: {address}",
+  "proxyAddressNotSet": "Не задан (прямое подключение)",
+  "proxyHttpDescription": "Подключение к серверам через HTTP-прокси (например, Clash)",
+  "useProxy": "Использовать прокси",
+  "proxyAddress": "Адрес прокси",
+  "proxyAddressFormat": "Формат: хост:порт, например 127.0.0.1:7890",
+  "applyProxyAddress": "Применить адрес прокси",
+  "invalidProxyAddress": "Введите корректный адрес и порт HTTP-прокси",
+  "playlistDisplayFormat": "Вид плейлиста",
+  "playlistDisplayFormatMasonry": "Мозаика",
+  "playlistDisplayFormatList": "Список"
 }

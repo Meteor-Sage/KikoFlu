@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../providers/playlist_detail_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/playlist_display_provider.dart';
+import '../providers/work_card_display_provider.dart';
 import '../models/playlist.dart';
 import '../models/work.dart';
 import '../services/storage_service.dart';
@@ -13,7 +15,9 @@ import '../widgets/scrollable_appbar.dart';
 import '../utils/snackbar_util.dart';
 import '../screens/work_detail_screen.dart';
 import '../widgets/privacy_blur_cover.dart';
+import '../widgets/enhanced_work_card.dart';
 import '../widgets/virtualized_sliver_collection.dart';
+import '../utils/responsive_grid_helper.dart';
 import '../utils/work_cover_prefetch.dart';
 import '../utils/scroll_optimization.dart';
 import '../../l10n/app_localizations.dart';
@@ -392,12 +396,29 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
     final notifier =
         ref.read(playlistDetailProvider(widget.playlistId).notifier);
     final isOwner = state.metadata?.userName == auth.userName;
+    final layoutType = ref.watch(playlistDisplayProvider);
+    final isMasonry = layoutType == PlaylistLayoutType.masonry;
+    final isLandscape =
+        MediaQuery.orientationOf(context) == Orientation.landscape;
+    final spacing = isLandscape ? 24.0 : 8.0;
+    final crossAxisCount = isMasonry
+        ? ref.watch(workCardDisplayProvider).applyCardSize(
+              ResponsiveGridHelper.getBigGridCrossAxisCount(context),
+            )
+        : 1;
+    final contentPadding = isMasonry ? spacing : 8.0;
 
     return VirtualizedSliverCollection(
       controller: _scrollController,
       items: state.works,
       itemId: (work) => work.id,
-      padding: const EdgeInsets.all(8),
+      layout: isMasonry
+          ? VirtualizedCollectionLayout.masonry
+          : VirtualizedCollectionLayout.list,
+      masonryCrossAxisCount: isMasonry ? crossAxisCount : null,
+      masonryMainAxisSpacing: spacing,
+      masonryCrossAxisSpacing: spacing,
+      padding: EdgeInsets.all(contentPadding),
       physics: ScrollOptimization.physics,
       sliversBefore: [
         if (state.metadata != null)
@@ -423,6 +444,12 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
         nextPageOnOverscroll: true,
         scrollDuration: const Duration(milliseconds: 500),
         scrollCurve: Curves.easeInOut,
+        padding: EdgeInsets.fromLTRB(
+          contentPadding,
+          contentPadding,
+          contentPadding,
+          24,
+        ),
       ),
       onRetry: notifier.refresh,
       onPrefetch: (works) => prefetchWorkCovers(
@@ -430,7 +457,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
         works,
         host: auth.host,
         token: auth.token,
-        crossAxisCount: 1,
+        crossAxisCount: isMasonry ? crossAxisCount : 1,
       ),
       emptyBuilder: (context) => Center(
         child: Column(
@@ -457,16 +484,22 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
           ],
         ),
       ),
-      itemBuilder: (context, work, index) => Padding(
-        key: ValueKey(work.id),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-        child: _buildPlaylistWorkCard(
-          work,
-          isOwner,
-          auth.host,
-          auth.token,
-        ),
-      ),
+      itemBuilder: (context, work, index) => isMasonry
+          ? _buildPlaylistWorkCardMasonry(
+              work,
+              isOwner,
+              crossAxisCount: crossAxisCount,
+            )
+          : Padding(
+              key: ValueKey(work.id),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              child: _buildPlaylistWorkCard(
+                work,
+                isOwner,
+                auth.host,
+                auth.token,
+              ),
+            ),
     );
   }
 
@@ -478,6 +511,38 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
         onEdit: () => _showEditDialog(metadata),
         onDelete: _showDeleteConfirmDialog,
       ),
+    );
+  }
+
+  Widget _buildPlaylistWorkCardMasonry(
+    Work work,
+    bool isOwner, {
+    required int crossAxisCount,
+  }) {
+    return Stack(
+      key: ValueKey(work.id),
+      children: [
+        EnhancedWorkCard(work: work, crossAxisCount: crossAxisCount),
+        if (isOwner)
+          Positioned(
+            top: 4,
+            right: 4,
+            child: Material(
+              color: Colors.black.withValues(alpha: 0.45),
+              shape: const CircleBorder(),
+              child: IconButton(
+                icon: const Icon(Icons.remove_circle_outline, size: 18),
+                color: Colors.white,
+                visualDensity: VisualDensity.compact,
+                constraints:
+                    const BoxConstraints(minWidth: 30, minHeight: 30),
+                padding: EdgeInsets.zero,
+                onPressed: () => _showRemoveWorkConfirmDialog(work),
+                tooltip: S.of(context).removeFromPlaylist,
+              ),
+            ),
+          ),
+      ],
     );
   }
 
