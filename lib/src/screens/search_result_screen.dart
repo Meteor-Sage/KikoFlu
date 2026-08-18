@@ -11,10 +11,8 @@ import '../providers/settings_provider.dart';
 import '../services/log_service.dart';
 import '../widgets/works_grid_view.dart';
 import '../widgets/sort_dialog.dart';
-import '../widgets/pagination_bar.dart';
 import '../widgets/global_audio_player_wrapper.dart';
 import '../widgets/download_fab.dart';
-import '../widgets/overscroll_next_page_detector.dart';
 import '../utils/l10n_extensions.dart';
 import '../utils/subtitle_filter.dart';
 
@@ -97,16 +95,6 @@ class _SearchResultContentState extends ConsumerState<_SearchResultContent> {
   void dispose() {
     _scrollController.dispose();
     super.dispose();
-  }
-
-  void _scrollToTop() {
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        0,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-    }
   }
 
   void _showSortDialog(BuildContext context) {
@@ -412,58 +400,26 @@ class _SearchResultContentState extends ConsumerState<_SearchResultContent> {
   }
 
   Widget _buildBody(SearchResultState searchState) {
-    if (searchState.error != null) {
-      return Center(
+    return WorksGridView(
+      works: searchState.works,
+      layoutType: searchState.layoutType.toWorksLayoutType(),
+      scrollController: _scrollController,
+      pageStorageKey: PageStorageKey(
+        'search-results-${widget.keyword}-${searchState.layoutType.name}',
+      ),
+      isLoading: searchState.isLoading,
+      isRefreshing: searchState.isRefreshing,
+      isLoadingMore: searchState.isLoadingMore,
+      hasMore: searchState.hasMore,
+      error: searchState.error,
+      loadMoreError: searchState.loadMoreError,
+      onRetry: () => ref.read(searchResultProvider.notifier).refresh(),
+      onRefresh: () => ref.read(searchResultProvider.notifier).refresh(),
+      onLoadMore: () => ref.read(searchResultProvider.notifier).loadMore(),
+      showEndMessage: searchState.works.isNotEmpty,
+      emptyBuilder: (context) => Center(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Theme.of(context).colorScheme.error,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              S.of(context).loadFailed,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              searchState.error!,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () =>
-                  ref.read(searchResultProvider.notifier).refresh(),
-              icon: const Icon(Icons.refresh),
-              label: Text(S.of(context).retry),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (searchState.works.isEmpty && searchState.isLoading) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('...'),
-          ],
-        ),
-      );
-    }
-
-    if (searchState.works.isEmpty && !searchState.isLoading) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
@@ -473,69 +429,19 @@ class _SearchResultContentState extends ConsumerState<_SearchResultContent> {
             ),
           ],
         ),
-      );
-    }
-
-    return OverscrollNextPageDetector(
-      hasNextPage: searchState.hasMore,
-      isLoading: searchState.isLoading,
-      onNextPage: () async {
-        await ref
-            .read(searchResultProvider.notifier)
-            .goToPage(searchState.currentPage + 1);
-        // 等待一帧后滚动到顶部，确保内容已加载
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _scrollToTop();
-        });
-      },
-      child: WorksGridView(
-        works: searchState.works,
-        layoutType: searchState.layoutType.toWorksLayoutType(),
-        scrollController: _scrollController,
-        isLoading: searchState.isLoading,
-        paginationWidget: _buildPaginationBar(searchState),
       ),
-    );
-  }
-
-  Widget _buildPaginationBar(SearchResultState searchState) {
-    return Column(
-      children: [
-        PaginationBar(
-          currentPage: searchState.currentPage,
-          pageSize: searchState.pageSize,
-          totalCount: searchState.totalCount,
-          hasMore: searchState.hasMore,
-          isLoading: searchState.isLoading,
-          onPreviousPage: () {
-            ref
-                .read(searchResultProvider.notifier)
-                .goToPage(searchState.currentPage - 1);
-            _scrollToTop();
-          },
-          onNextPage: () {
-            ref
-                .read(searchResultProvider.notifier)
-                .goToPage(searchState.currentPage + 1);
-            _scrollToTop();
-          },
-          onGoToPage: (page) {
-            ref.read(searchResultProvider.notifier).goToPage(page);
-          },
-          onScrollToTop: _scrollToTop,
-          endMessage: S.of(context).reachedEnd,
+      endBuilder: (context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Column(
+          children: [
+            Text(S.of(context).reachedEnd),
+            if (searchState.rawWorks.length > searchState.works.length)
+              Text(
+                '${searchState.rawWorks.length - searchState.works.length} filtered',
+              ),
+          ],
         ),
-        if (searchState.rawWorks.length > searchState.works.length) ...[
-          const SizedBox(height: 8),
-          Text(
-            '${searchState.rawWorks.length - searchState.works.length} filtered',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ],
+      ),
     );
   }
 

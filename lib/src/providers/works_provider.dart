@@ -9,6 +9,7 @@ import 'settings_provider.dart';
 import '../models/sort_options.dart';
 import 'subtitle_library_provider.dart';
 import '../utils/subtitle_filter.dart';
+import '../utils/paged_collection.dart';
 
 final _log = LogService.instance;
 
@@ -36,7 +37,10 @@ class WorksModeSnapshot extends Equatable {
   final List<Work> works;
   final List<Work> rawWorks;
   final bool isLoading;
+  final bool isRefreshing;
+  final bool isLoadingMore;
   final String? error;
+  final String? loadMoreError;
   final int currentPage;
   final int totalCount;
   final bool hasMore;
@@ -46,7 +50,10 @@ class WorksModeSnapshot extends Equatable {
     this.works = const [],
     this.rawWorks = const [],
     this.isLoading = false,
+    this.isRefreshing = false,
+    this.isLoadingMore = false,
     this.error,
+    this.loadMoreError,
     this.currentPage = 1,
     this.totalCount = 0,
     this.hasMore = true,
@@ -57,7 +64,10 @@ class WorksModeSnapshot extends Equatable {
     List<Work>? works,
     List<Work>? rawWorks,
     bool? isLoading,
+    bool? isRefreshing,
+    bool? isLoadingMore,
     Object? error = _noValue,
+    Object? loadMoreError = _noValue,
     int? currentPage,
     int? totalCount,
     bool? hasMore,
@@ -67,7 +77,12 @@ class WorksModeSnapshot extends Equatable {
       works: works ?? this.works,
       rawWorks: rawWorks ?? this.rawWorks,
       isLoading: isLoading ?? this.isLoading,
+      isRefreshing: isRefreshing ?? this.isRefreshing,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       error: error == _noValue ? this.error : error as String?,
+      loadMoreError: loadMoreError == _noValue
+          ? this.loadMoreError
+          : loadMoreError as String?,
       currentPage: currentPage ?? this.currentPage,
       totalCount: totalCount ?? this.totalCount,
       hasMore: hasMore ?? this.hasMore,
@@ -80,7 +95,10 @@ class WorksModeSnapshot extends Equatable {
         works,
         rawWorks,
         isLoading,
+        isRefreshing,
+        isLoadingMore,
         error,
+        loadMoreError,
         currentPage,
         totalCount,
         hasMore,
@@ -139,7 +157,10 @@ class WorksState extends Equatable {
   List<Work> get works => _currentModeState.works;
   List<Work> get rawWorks => _currentModeState.rawWorks;
   bool get isLoading => _currentModeState.isLoading;
+  bool get isRefreshing => _currentModeState.isRefreshing;
+  bool get isLoadingMore => _currentModeState.isLoadingMore;
   String? get error => _currentModeState.error;
+  String? get loadMoreError => _currentModeState.loadMoreError;
   int get currentPage => _currentModeState.currentPage;
   int get totalCount => _currentModeState.totalCount;
   bool get hasMore => _currentModeState.hasMore;
@@ -167,6 +188,9 @@ class WorksState extends Equatable {
 class WorksNotifier extends StateNotifier<WorksState> {
   final KikoeruApiService _apiService;
   final Ref _ref;
+  final Map<DisplayMode, PagedRequestGate> _requestGates = {
+    for (final mode in DisplayMode.values) mode: PagedRequestGate(),
+  };
 
   WorksNotifier(
     this._apiService,
@@ -204,30 +228,40 @@ class WorksNotifier extends StateNotifier<WorksState> {
   void updatePageSize(int newSize) {
     if (state.basePageSize == newSize) return;
     state = state.copyWith(basePageSize: newSize);
-    loadWorks(targetPage: 1);
+    refresh();
   }
 
-  Future<void> loadWorks({bool refresh = false, int? targetPage}) async {
+  Future<void> loadWorks({
+    bool refresh = false,
+    int? targetPage,
+    bool append = false,
+    bool supersede = false,
+  }) async {
     final mode = state.displayMode;
     final modeState = _getModeState(mode);
+    final requestGate = _requestGates[mode]!;
+    final requestToken = requestGate.begin(supersede: supersede);
 
-    if (modeState.isLoading) {
+    if (requestToken == null) {
       _log.captureOutput('[WorksProvider] Already loading, skipping');
       return;
     }
 
-    final isAllMode = mode == DisplayMode.all;
     final previousPage = modeState.currentPage;
-
-    final page = targetPage ??
-        (isAllMode ? previousPage : (refresh ? 1 : (previousPage + 1)));
+    final page = targetPage ?? (refresh ? 1 : (append ? previousPage + 1 : 1));
 
     _log.captureOutput(
         '[WorksProvider] Loading works - mode: $mode, page: $page, refresh: $refresh, currentPage: $previousPage, targetPage: $targetPage');
 
     _updateModeState(
       mode,
-      (snapshot) => snapshot.copyWith(isLoading: true, error: null),
+      (snapshot) => snapshot.copyWith(
+        isLoading: true,
+        isRefreshing: !append,
+        isLoadingMore: append,
+        error: null,
+        loadMoreError: null,
+      ),
     );
 
     try {
@@ -279,9 +313,15 @@ class WorksNotifier extends StateNotifier<WorksState> {
           .map((workJson) => Work.fromJson(workJson as Map<String, dynamic>))
           .toList();
 
-      final shouldReplace = isAllMode || page == 1;
-      final newRawWorks =
-          shouldReplace ? works : [...modeState.rawWorks, ...works];
+      if (!requestGate.isCurrent(requestToken)) return;
+
+      final latestModeState = _getModeState(mode);
+      final newRawWorks = mergePagedItems<Work, int>(
+        existing: latestModeState.rawWorks,
+        incoming: works,
+        idOf: (work) => work.id,
+        replace: !append || page == 1,
+      );
 
       final blockedItems = _ref.read(blockedItemsProvider);
       final filteredWorks = _filterWorks(newRawWorks, blockedItems);
@@ -293,7 +333,7 @@ class WorksNotifier extends StateNotifier<WorksState> {
       bool isLastPage = false;
 
       if (mode == DisplayMode.popular || mode == DisplayMode.recommended) {
-        final currentTotal = filteredWorks.length;
+        final currentTotal = newRawWorks.length;
         hasMore = works.length >= pageSize &&
             currentTotal < 100 &&
             currentTotal < totalCount;
@@ -312,33 +352,51 @@ class WorksNotifier extends StateNotifier<WorksState> {
           works: filteredWorks,
           rawWorks: newRawWorks,
           isLoading: false,
+          isRefreshing: false,
+          isLoadingMore: false,
           currentPage: currentPage,
           totalCount: totalCount,
           hasMore: hasMore,
           isLastPage: isLastPage,
           error: null,
+          loadMoreError: null,
         ),
       );
     } catch (e) {
+      if (!requestGate.isCurrent(requestToken)) return;
       _log.captureOutput('Failed to load works: $e');
 
+      final message = '加载失败: ${e.toString()}';
       _updateModeState(
         mode,
         (snapshot) => snapshot.copyWith(
           isLoading: false,
-          error: '加载失败: ${e.toString()}',
+          isRefreshing: false,
+          isLoadingMore: false,
+          error: append ? null : message,
+          loadMoreError: append ? message : null,
         ),
       );
+    } finally {
+      requestGate.complete(requestToken);
     }
   }
 
-  Future<void> refresh({bool resetPage = false}) async {
-    if (resetPage) {
-      await loadWorks(targetPage: 1);
-    } else {
-      // 保持当前页刷新，无论是哪种模式
-      await loadWorks(targetPage: state.currentPage);
-    }
+  Future<void> refresh({bool resetPage = true}) async {
+    await loadWorks(
+      refresh: true,
+      targetPage: 1,
+      supersede: true,
+    );
+  }
+
+  Future<void> loadMore() async {
+    final modeState = _getModeState(state.displayMode);
+    if (modeState.isLoading || !modeState.hasMore) return;
+    await loadWorks(
+      targetPage: modeState.currentPage + 1,
+      append: true,
+    );
   }
 
   // 跳转到指定页(仅全部模式)
@@ -357,7 +415,7 @@ class WorksNotifier extends StateNotifier<WorksState> {
   Future<void> nextPage() async {
     if (state.displayMode != DisplayMode.all) return;
     if (!state.hasMore || state.isLoading) return;
-    await loadWorks(targetPage: state.currentPage + 1);
+    await loadMore();
   }
 
   // 上一页(仅全部模式)
@@ -370,14 +428,14 @@ class WorksNotifier extends StateNotifier<WorksState> {
   void setSortOption(SortOrder option) {
     if (state.sortOption != option) {
       state = state.copyWith(sortOption: option);
-      refresh(resetPage: true);
+      refresh();
     }
   }
 
   void setSortDirection(SortDirection direction) {
     if (state.sortDirection != direction) {
       state = state.copyWith(sortDirection: direction);
-      refresh(resetPage: true);
+      refresh();
     }
   }
 
@@ -423,7 +481,7 @@ class WorksNotifier extends StateNotifier<WorksState> {
         targetState.works.isEmpty && !targetState.isLoading;
 
     if (shouldLoadInitial) {
-      refresh(resetPage: true);
+      refresh();
     }
   }
 
@@ -432,30 +490,12 @@ class WorksNotifier extends StateNotifier<WorksState> {
 
   // Cycle subtitle filter: all -> with subtitles -> all
   void toggleSubtitleFilter() {
-    final currentPage = state.currentPage;
     final oldFilterMode = SubtitleFilterMode.fromValue(state.subtitleFilter);
     final newFilterMode = oldFilterMode.next;
     final newFilter = newFilterMode.value;
 
-    // 计算新的页码
-    // 开启筛选时：分页大小翻倍，所以页码需要调整
-    // 例如：原来第3页(每页40条，显示81-120条) -> 开启后第2页(每页80条，显示81-160条)
-    // 关闭筛选时：反向计算
-    int newPage;
-    if (oldFilterMode == SubtitleFilterMode.all && newFilterMode.isActive) {
-      // 开启字幕筛选：分页大小翻倍，页码减半（向上取整）
-      newPage = ((currentPage + 1) / 2).ceil();
-    } else if (oldFilterMode.isActive &&
-        newFilterMode == SubtitleFilterMode.all) {
-      // 关闭字幕筛选：分页大小减半，页码翻倍减1（保持大致位置）
-      newPage = (currentPage * 2) - 1;
-    } else {
-      newPage = currentPage;
-    }
-    newPage = newPage.clamp(1, 9999);
-
     state = state.copyWith(subtitleFilter: newFilter);
-    loadWorks(targetPage: newPage);
+    refresh();
   }
 
   void reapplyFilters() {

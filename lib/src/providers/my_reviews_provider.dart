@@ -9,6 +9,7 @@ import 'auth_provider.dart';
 import 'settings_provider.dart';
 import 'subtitle_library_provider.dart';
 import '../utils/subtitle_filter.dart';
+import '../utils/paged_collection.dart';
 
 /// 用户 Review/收藏状态的过滤枚举
 enum MyReviewFilter {
@@ -35,7 +36,10 @@ class MyReviewsState extends Equatable {
   final List<Work> works;
   final List<Work> rawWorks;
   final bool isLoading;
+  final bool isRefreshing;
+  final bool isLoadingMore;
   final String? error;
+  final String? loadMoreError;
   final int currentPage;
   final int totalCount;
   final bool hasMore;
@@ -55,7 +59,10 @@ class MyReviewsState extends Equatable {
     this.works = const [],
     this.rawWorks = const [],
     this.isLoading = false,
+    this.isRefreshing = false,
+    this.isLoadingMore = false,
     this.error,
+    this.loadMoreError,
     this.currentPage = 1,
     this.totalCount = 0,
     this.hasMore = true,
@@ -71,7 +78,10 @@ class MyReviewsState extends Equatable {
     List<Work>? works,
     List<Work>? rawWorks,
     bool? isLoading,
+    bool? isRefreshing,
+    bool? isLoadingMore,
     String? error,
+    String? loadMoreError,
     int? currentPage,
     int? totalCount,
     bool? hasMore,
@@ -86,7 +96,10 @@ class MyReviewsState extends Equatable {
       works: works ?? this.works,
       rawWorks: rawWorks ?? this.rawWorks,
       isLoading: isLoading ?? this.isLoading,
+      isRefreshing: isRefreshing ?? this.isRefreshing,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       error: error,
+      loadMoreError: loadMoreError,
       currentPage: currentPage ?? this.currentPage,
       totalCount: totalCount ?? this.totalCount,
       hasMore: hasMore ?? this.hasMore,
@@ -104,7 +117,10 @@ class MyReviewsState extends Equatable {
         works,
         rawWorks,
         isLoading,
+        isRefreshing,
+        isLoadingMore,
         error,
+        loadMoreError,
         currentPage,
         totalCount,
         hasMore,
@@ -120,20 +136,33 @@ class MyReviewsState extends Equatable {
 class MyReviewsNotifier extends StateNotifier<MyReviewsState> {
   final KikoeruApiService _apiService;
   final Ref _ref;
+  final PagedRequestGate _requestGate = PagedRequestGate();
   MyReviewsNotifier(this._apiService, this._ref, {int initialPageSize = 20})
       : super(MyReviewsState(pageSize: initialPageSize));
 
   void updatePageSize(int newSize) {
     if (state.pageSize == newSize) return;
     state = state.copyWith(pageSize: newSize);
-    load(targetPage: 1);
+    refresh();
   }
 
-  Future<void> load({bool refresh = false, int? targetPage}) async {
-    if (state.isLoading) return;
+  Future<void> load({
+    bool refresh = false,
+    int? targetPage,
+    bool append = false,
+    bool supersede = false,
+  }) async {
+    final requestToken = _requestGate.begin(supersede: supersede);
+    if (requestToken == null) return;
     final page = targetPage ?? state.currentPage;
 
-    state = state.copyWith(isLoading: true, error: null, currentPage: page);
+    state = state.copyWith(
+      isLoading: true,
+      isRefreshing: !append,
+      isLoadingMore: append,
+      error: null,
+      loadMoreError: null,
+    );
 
     try {
       final result = await _apiService.getMyReviews(
@@ -165,6 +194,15 @@ class MyReviewsNotifier extends StateNotifier<MyReviewsState> {
         throw Exception('Unexpected review item format');
       }).toList();
 
+      if (!_requestGate.isCurrent(requestToken)) return;
+
+      final rawWorks = mergePagedItems<Work, int>(
+        existing: state.rawWorks,
+        incoming: works,
+        idOf: (work) => work.id,
+        replace: !append || page == 1,
+      );
+
       // 获取分页信息
       final pagination = result['pagination'] as Map<String, dynamic>?;
       final totalCount = pagination?['totalCount'] ?? 0;
@@ -175,15 +213,29 @@ class MyReviewsNotifier extends StateNotifier<MyReviewsState> {
       final hasMore = page < totalPages;
 
       state = state.copyWith(
-        works: _filterWorks(works),
-        rawWorks: works,
+        works: _filterWorks(rawWorks),
+        rawWorks: rawWorks,
         totalCount: totalCount,
         hasMore: hasMore,
         isLoading: false,
+        isRefreshing: false,
+        isLoadingMore: false,
         currentPage: page,
+        error: null,
+        loadMoreError: null,
       );
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      if (!_requestGate.isCurrent(requestToken)) return;
+      final message = e.toString();
+      state = state.copyWith(
+        isLoading: false,
+        isRefreshing: false,
+        isLoadingMore: false,
+        error: append ? null : message,
+        loadMoreError: append ? message : null,
+      );
+    } finally {
+      _requestGate.complete(requestToken);
     }
   }
 
@@ -203,42 +255,43 @@ class MyReviewsNotifier extends StateNotifier<MyReviewsState> {
 
   // 下一页
   Future<void> nextPage() async {
-    if (state.hasMore) {
-      final nextPage = state.currentPage + 1;
-      await load(targetPage: nextPage);
-    }
+    await loadMore();
+  }
+
+  Future<void> loadMore() async {
+    if (state.isLoading || !state.hasMore) return;
+    await load(
+      targetPage: state.currentPage + 1,
+      append: true,
+    );
   }
 
   void changeFilter(MyReviewFilter filter) {
-    state = state.copyWith(filter: filter, currentPage: 1, totalCount: 0);
-    load(targetPage: 1);
+    state = state.copyWith(
+      filter: filter,
+      currentPage: 1,
+      totalCount: 0,
+      works: [],
+      rawWorks: [],
+    );
+    refresh();
   }
 
   bool get isSubtitleFilterActive =>
       SubtitleFilterMode.fromValue(state.subtitleFilter).isActive;
 
   void toggleSubtitleFilter() {
-    final currentPage = state.currentPage;
-    final oldFilterMode = SubtitleFilterMode.fromValue(state.subtitleFilter);
-    final newFilterMode = oldFilterMode.next;
-
-    int newPage;
-    if (oldFilterMode == SubtitleFilterMode.all && newFilterMode.isActive) {
-      newPage = ((currentPage + 1) / 2).ceil();
-    } else if (oldFilterMode.isActive &&
-        newFilterMode == SubtitleFilterMode.all) {
-      newPage = (currentPage * 2) - 1;
-    } else {
-      newPage = currentPage;
-    }
-    newPage = newPage.clamp(1, 9999);
+    final newFilterMode =
+        SubtitleFilterMode.fromValue(state.subtitleFilter).next;
 
     state = state.copyWith(
       subtitleFilter: newFilterMode.value,
-      currentPage: newPage,
+      currentPage: 1,
       totalCount: 0,
+      works: [],
+      rawWorks: [],
     );
-    load(targetPage: newPage);
+    refresh();
   }
 
   void changeSort(SortOrder sortType, SortDirection sortOrder) {
@@ -248,8 +301,10 @@ class MyReviewsNotifier extends StateNotifier<MyReviewsState> {
       sortOrder: sortOrder,
       currentPage: 1,
       totalCount: 0,
+      works: [],
+      rawWorks: [],
     );
-    load(targetPage: 1);
+    refresh();
   }
 
   // 切换布局类型
@@ -262,7 +317,11 @@ class MyReviewsNotifier extends StateNotifier<MyReviewsState> {
     state = state.copyWith(layoutType: nextLayout);
   }
 
-  void refresh() => load();
+  Future<void> refresh() => load(
+        refresh: true,
+        targetPage: 1,
+        supersede: true,
+      );
 
   void reapplyFilters() {
     state = state.copyWith(works: _filterWorks(state.rawWorks));

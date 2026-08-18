@@ -9,6 +9,7 @@ import 'auth_provider.dart';
 import 'settings_provider.dart';
 import 'subtitle_library_provider.dart';
 import '../utils/subtitle_filter.dart';
+import '../utils/paged_collection.dart';
 
 // Layout types for search results
 enum SearchLayoutType {
@@ -36,7 +37,10 @@ class SearchResultState extends Equatable {
   final List<Work> works;
   final List<Work> rawWorks;
   final bool isLoading;
+  final bool isRefreshing;
+  final bool isLoadingMore;
   final String? error;
+  final String? loadMoreError;
   final int currentPage;
   final int totalCount;
   final bool hasMore;
@@ -57,7 +61,10 @@ class SearchResultState extends Equatable {
     this.works = const [],
     this.rawWorks = const [],
     this.isLoading = false,
+    this.isRefreshing = false,
+    this.isLoadingMore = false,
     this.error,
+    this.loadMoreError,
     this.currentPage = 1,
     this.totalCount = 0,
     this.hasMore = true,
@@ -74,7 +81,10 @@ class SearchResultState extends Equatable {
     List<Work>? works,
     List<Work>? rawWorks,
     bool? isLoading,
+    bool? isRefreshing,
+    bool? isLoadingMore,
     String? error,
+    String? loadMoreError,
     int? currentPage,
     int? totalCount,
     bool? hasMore,
@@ -90,7 +100,10 @@ class SearchResultState extends Equatable {
       works: works ?? this.works,
       rawWorks: rawWorks ?? this.rawWorks,
       isLoading: isLoading ?? this.isLoading,
+      isRefreshing: isRefreshing ?? this.isRefreshing,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       error: error,
+      loadMoreError: loadMoreError,
       currentPage: currentPage ?? this.currentPage,
       totalCount: totalCount ?? this.totalCount,
       hasMore: hasMore ?? this.hasMore,
@@ -109,7 +122,10 @@ class SearchResultState extends Equatable {
         works,
         rawWorks,
         isLoading,
+        isRefreshing,
+        isLoadingMore,
         error,
+        loadMoreError,
         currentPage,
         totalCount,
         hasMore,
@@ -127,6 +143,7 @@ class SearchResultState extends Equatable {
 class SearchResultNotifier extends StateNotifier<SearchResultState> {
   final KikoeruApiService _apiService;
   final Ref _ref;
+  final PagedRequestGate _requestGate = PagedRequestGate();
 
   SearchResultNotifier(this._apiService, this._ref, {int initialPageSize = 20})
       : super(SearchResultState(basePageSize: initialPageSize));
@@ -140,8 +157,9 @@ class SearchResultNotifier extends StateNotifier<SearchResultState> {
       searchParams: searchParams,
       currentPage: 1,
       works: [],
+      rawWorks: [],
     );
-    await loadResults();
+    await loadResults(targetPage: 1, supersede: true);
   }
 
   void updatePageSize(int newSize) {
@@ -153,26 +171,28 @@ class SearchResultNotifier extends StateNotifier<SearchResultState> {
     }
   }
 
-  Future<void> loadResults({int? targetPage}) async {
-    if (state.isLoading) return;
+  Future<void> loadResults({
+    int? targetPage,
+    bool append = false,
+    bool supersede = false,
+  }) async {
+    final requestToken = _requestGate.begin(supersede: supersede);
+    if (requestToken == null) return;
 
     final page = targetPage ?? state.currentPage;
-
     state = state.copyWith(
       isLoading: true,
+      isRefreshing: !append,
+      isLoadingMore: append,
       error: null,
+      loadMoreError: null,
     );
 
     try {
       Map<String, dynamic> result;
+      const serverSubtitleParam = 0;
 
-      // 当字幕筛选开启时，不发送 subtitle 参数给服务器，而是在前端过滤
-      // 这样可以同时显示服务器有字幕 和 本地字幕库有字幕的作品
-      const serverSubtitleParam = 0; // 始终请求所有作品，前端过滤
-
-      // 根据 searchParams 判断搜索类型
       if (state.searchParams?.containsKey('vaId') == true) {
-        // 声优搜索 - 支持完整的排序和过滤参数
         result = await _apiService.getWorksByVa(
           vaId: state.searchParams!['vaId'],
           page: page,
@@ -182,7 +202,6 @@ class SearchResultNotifier extends StateNotifier<SearchResultState> {
           subtitle: serverSubtitleParam,
         );
       } else if (state.searchParams?.containsKey('tagId') == true) {
-        // 标签搜索 - 支持完整的排序和过滤参数
         result = await _apiService.getWorksByTag(
           tagId: state.searchParams!['tagId'],
           page: page,
@@ -192,7 +211,6 @@ class SearchResultNotifier extends StateNotifier<SearchResultState> {
           subtitle: serverSubtitleParam,
         );
       } else {
-        // 关键词搜索 - 支持完整的排序和过滤参数
         result = await _apiService.searchWorks(
           keyword: state.keyword,
           page: page,
@@ -203,34 +221,47 @@ class SearchResultNotifier extends StateNotifier<SearchResultState> {
         );
       }
 
-      final works =
+      if (!_requestGate.isCurrent(requestToken)) return;
+
+      final pageWorks =
           (result['works'] as List).map((json) => Work.fromJson(json)).toList();
-
-      // Apply blocked items filter
+      final rawWorks = mergePagedItems<Work, int>(
+        existing: state.rawWorks,
+        incoming: pageWorks,
+        idOf: (work) => work.id,
+        replace: !append || page == 1,
+      );
       final blockedItems = _ref.read(blockedItemsProvider);
-      final filteredWorks = _filterWorks(works, blockedItems);
-
+      final filteredWorks = _filterWorks(rawWorks, blockedItems);
       final pagination = result['pagination'] as Map<String, dynamic>?;
-      final totalCount = pagination?['totalCount'] ?? works.length;
-
-      // 计算是否还有更多页
+      final totalCount = pagination?['totalCount'] ?? pageWorks.length;
       final totalPages =
           totalCount > 0 ? (totalCount / state.pageSize).ceil() : 1;
-      final hasMorePages = page < totalPages;
 
       state = state.copyWith(
         works: filteredWorks,
-        rawWorks: works,
+        rawWorks: rawWorks,
         currentPage: page,
         totalCount: totalCount,
-        hasMore: hasMorePages,
+        hasMore: page < totalPages,
         isLoading: false,
+        isRefreshing: false,
+        isLoadingMore: false,
+        error: null,
+        loadMoreError: null,
       );
     } catch (e) {
+      if (!_requestGate.isCurrent(requestToken)) return;
+      final message = e.toString();
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        isRefreshing: false,
+        isLoadingMore: false,
+        error: append ? null : message,
+        loadMoreError: append ? message : null,
       );
+    } finally {
+      _requestGate.complete(requestToken);
     }
   }
 
@@ -277,7 +308,12 @@ class SearchResultNotifier extends StateNotifier<SearchResultState> {
   }
 
   Future<void> refresh() async {
-    await loadResults(targetPage: state.currentPage);
+    await loadResults(targetPage: 1, supersede: true);
+  }
+
+  Future<void> loadMore() async {
+    if (state.isLoading || !state.hasMore) return;
+    await loadResults(targetPage: state.currentPage + 1, append: true);
   }
 
   void toggleLayoutType() {
@@ -293,33 +329,17 @@ class SearchResultNotifier extends StateNotifier<SearchResultState> {
       SubtitleFilterMode.fromValue(state.subtitleFilter).isActive;
 
   void toggleSubtitleFilter() {
-    final currentPage = state.currentPage;
     final oldFilterMode = SubtitleFilterMode.fromValue(state.subtitleFilter);
     final newFilterMode = oldFilterMode.next;
     final newFilter = newFilterMode.value;
 
-    // 计算新的页码
-    // 开启筛选时：分页大小翻倍，所以页码需要调整
-    // 关闭筛选时：反向计算
-    int newPage;
-    if (oldFilterMode == SubtitleFilterMode.all && newFilterMode.isActive) {
-      // 开启字幕筛选：分页大小翻倍，页码减半（向上取整）
-      newPage = ((currentPage + 1) / 2).ceil();
-    } else if (oldFilterMode.isActive &&
-        newFilterMode == SubtitleFilterMode.all) {
-      // 关闭字幕筛选：分页大小减半，页码翻倍减1（保持大致位置）
-      newPage = (currentPage * 2) - 1;
-    } else {
-      newPage = currentPage;
-    }
-    newPage = newPage.clamp(1, 9999);
-
     state = state.copyWith(
       subtitleFilter: newFilter,
-      currentPage: newPage,
+      currentPage: 1,
       works: [],
+      rawWorks: [],
     );
-    loadResults(targetPage: newPage);
+    refresh();
   }
 
   void updateSort(SortOrder option, SortDirection direction) {
@@ -328,8 +348,9 @@ class SearchResultNotifier extends StateNotifier<SearchResultState> {
       sortDirection: direction,
       currentPage: 1,
       works: [],
+      rawWorks: [],
     );
-    loadResults();
+    refresh();
   }
 }
 

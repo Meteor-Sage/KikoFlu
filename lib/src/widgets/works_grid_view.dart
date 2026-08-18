@@ -1,217 +1,141 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
-import '../../l10n/app_localizations.dart';
 import '../models/work.dart';
 import '../providers/work_card_display_provider.dart';
 import '../providers/works_provider.dart';
+import '../providers/auth_provider.dart';
 import '../utils/responsive_grid_helper.dart';
-import '../utils/scroll_optimization.dart';
+import '../utils/work_cover_prefetch.dart';
 import 'enhanced_work_card.dart';
+import 'virtualized_sliver_collection.dart';
 
 class WorksGridView extends ConsumerWidget {
-  final List<Work> works;
-  final LayoutType layoutType;
-  final ScrollController? scrollController;
-  final bool isLoading;
-  final bool showEndMessage;
-  final Widget? paginationWidget;
-
   const WorksGridView({
     super.key,
     required this.works,
     required this.layoutType,
     this.scrollController,
     this.isLoading = false,
+    this.isRefreshing = false,
+    this.isLoadingMore = false,
+    this.hasMore = false,
+    this.error,
+    this.loadMoreError,
+    this.onRefresh,
+    this.onLoadMore,
+    this.onRetry,
+    this.onPrefetch,
+    this.emptyBuilder,
+    this.endBuilder,
     this.showEndMessage = false,
     this.paginationWidget,
+    this.pageStorageKey,
   });
+
+  final List<Work> works;
+  final LayoutType layoutType;
+  final ScrollController? scrollController;
+  final bool isLoading;
+  final bool isRefreshing;
+  final bool isLoadingMore;
+  final bool hasMore;
+  final Object? error;
+  final Object? loadMoreError;
+  final Future<void> Function()? onRefresh;
+  final Future<void> Function()? onLoadMore;
+  final VoidCallback? onRetry;
+  final ValueChanged<List<Work>>? onPrefetch;
+  final WidgetBuilder? emptyBuilder;
+  final WidgetBuilder? endBuilder;
+  final bool showEndMessage;
+  final Widget? paginationWidget;
+  final PageStorageKey<String>? pageStorageKey;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final displaySettings = ref.watch(workCardDisplayProvider);
-
-    switch (layoutType) {
-      case LayoutType.bigGrid:
-        return _buildGridView(
-          context,
-          layoutType: layoutType,
-          crossAxisCount: displaySettings.applyCardSize(
+    final auth = ref.watch(
+      authProvider.select((state) => (state.host ?? '', state.token ?? '')),
+    );
+    return LayoutBuilder(builder: (context, constraints) {
+      final isLandscape =
+          MediaQuery.orientationOf(context) == Orientation.landscape;
+      final spacing = isLandscape ? 24.0 : 8.0;
+      final padding = isLandscape ? 24.0 : 8.0;
+      final crossAxisCount = switch (layoutType) {
+        LayoutType.bigGrid => displaySettings.applyCardSize(
             ResponsiveGridHelper.getBigGridCrossAxisCount(context),
           ),
-        );
-      case LayoutType.smallGrid:
-        return _buildGridView(
-          context,
-          layoutType: layoutType,
-          crossAxisCount: displaySettings.applyCardSize(
+        LayoutType.smallGrid => displaySettings.applyCardSize(
             ResponsiveGridHelper.getSmallGridCrossAxisCount(context),
             minCrossAxisCount: 2,
           ),
-        );
-      case LayoutType.list:
-        return _buildListView(context);
-    }
-  }
+        LayoutType.list => 1,
+      };
+      final isGrid = layoutType != LayoutType.list;
+      final availableWidth = constraints.maxWidth - padding * 2;
+      final cardWidth = isGrid
+          ? (availableWidth - spacing * (crossAxisCount - 1)) / crossAxisCount
+          : availableWidth;
+      final usesCompactCard =
+          crossAxisCount >= 5 || (crossAxisCount == 3 && !isLandscape);
+      final detailsHeight = usesCompactCard ? 96.0 : 225.0;
 
-  Widget _buildGridView(
-    BuildContext context, {
-    required LayoutType layoutType,
-    required int crossAxisCount,
-  }) {
-    final isLandscape =
-        MediaQuery.orientationOf(context) == Orientation.landscape;
-
-    // 横屏模式下使用更大的间距，让布局更优雅
-    final spacing = isLandscape ? 24.0 : 8.0;
-    final padding = isLandscape ? 24.0 : 8.0;
-
-    return CustomScrollView(
-      controller: scrollController,
-      cacheExtent: ScrollOptimization.cacheExtent,
-      // 移除 physics 设置，让 OverscrollNextPageDetector 处理
-      // physics: const AlwaysScrollableScrollPhysics(
-      //   parent: ClampingScrollPhysics(),
-      // ),
-      slivers: [
-        SliverPadding(
-          padding: EdgeInsets.all(padding),
-          sliver: SliverMasonryGrid.count(
-            key: ValueKey('works-grid-${layoutType.name}-$crossAxisCount'),
+      return VirtualizedSliverCollection<Work>(
+        controller: scrollController,
+        pageStorageKey: pageStorageKey,
+        items: works,
+        itemId: (work) => work.id,
+        itemBuilder: (context, work, index) => EnhancedWorkCard(
+          key: ValueKey(work.id),
+          work: work,
+          crossAxisCount: crossAxisCount,
+        ),
+        layout: isGrid
+            ? VirtualizedCollectionLayout.grid
+            : VirtualizedCollectionLayout.list,
+        gridDelegate: isGrid
+            ? SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                crossAxisSpacing: spacing,
+                mainAxisSpacing: spacing,
+                mainAxisExtent: cardWidth +
+                    detailsHeight * displaySettings.fontScale.multiplier,
+              )
+            : null,
+        padding: EdgeInsets.all(padding),
+        isInitialLoading: isLoading && works.isEmpty,
+        isRefreshing: isRefreshing,
+        isLoadingMore: isLoadingMore,
+        hasMore: hasMore,
+        error: works.isEmpty ? error : null,
+        loadMoreError: loadMoreError,
+        onRefresh: onRefresh,
+        onLoadMore: onLoadMore,
+        onRetry: onRetry,
+        onPrefetch: (items) {
+          prefetchWorkCovers(
+            context,
+            items,
+            host: auth.$1,
+            token: auth.$2,
             crossAxisCount: crossAxisCount,
-            crossAxisSpacing: spacing,
-            mainAxisSpacing: spacing,
-            childCount: works.length + (isLoading ? 1 : 0),
-            itemBuilder: (context, index) {
-              if (isLoading && index == works.length) {
-                return const SizedBox(
-                  height: 100, // 统一加载指示器高度
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              }
-
-              final work = works[index];
-              return RepaintBoundary(
-                child: EnhancedWorkCard(
-                  work: work,
-                  crossAxisCount: crossAxisCount,
+          );
+          onPrefetch?.call(items);
+        },
+        emptyBuilder: emptyBuilder,
+        endBuilder: endBuilder,
+        showEndIndicator: showEndMessage && works.isNotEmpty,
+        sliversAfter: paginationWidget == null
+            ? const []
+            : [
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(padding, spacing, padding, 24),
+                  sliver: SliverToBoxAdapter(child: paginationWidget),
                 ),
-              );
-            },
-          ),
-        ),
-
-        // 到底提示
-        if (showEndMessage)
-          SliverToBoxAdapter(
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.check_circle_outline,
-                    size: 16,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    S.of(context).reachedEnd,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-        // 分页控件
-        if (paginationWidget != null)
-          SliverPadding(
-            padding: EdgeInsets.fromLTRB(padding, spacing, padding, 24),
-            sliver: SliverToBoxAdapter(
-              child: paginationWidget!,
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildListView(BuildContext context) {
-    return CustomScrollView(
-      controller: scrollController,
-      cacheExtent: ScrollOptimization.cacheExtent,
-      // 移除 physics 设置，让 OverscrollNextPageDetector 处理
-      // physics: const AlwaysScrollableScrollPhysics(
-      //   parent: ClampingScrollPhysics(),
-      // ),
-      slivers: [
-        SliverPadding(
-          padding: const EdgeInsets.all(8),
-          sliver: SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                if (isLoading && index == works.length) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(16),
-                      child: CircularProgressIndicator(),
-                    ),
-                  );
-                }
-
-                if (showEndMessage && index == works.length) {
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 24, horizontal: 16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.check_circle_outline,
-                          size: 16,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          S.of(context).reachedEnd,
-                          style: TextStyle(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                final work = works[index];
-                return RepaintBoundary(
-                  child: EnhancedWorkCard(
-                    work: work,
-                    crossAxisCount: 1,
-                  ),
-                );
-              },
-              childCount:
-                  works.length + (isLoading ? 1 : 0) + (showEndMessage ? 1 : 0),
-            ),
-          ),
-        ),
-
-        // 分页控件
-        if (paginationWidget != null)
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(8, 8, 8, 24), // 统一左右padding为8
-            sliver: SliverToBoxAdapter(
-              child: paginationWidget!,
-            ),
-          ),
-      ],
-    );
+              ],
+      );
+    });
   }
 }

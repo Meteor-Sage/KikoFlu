@@ -38,6 +38,7 @@ import 'src/providers/theme_provider.dart';
 import 'src/providers/update_provider.dart';
 import 'src/utils/global_keys.dart';
 import 'src/utils/system_ui_style.dart';
+import 'src/utils/app_scroll_behavior.dart';
 import 'src/widgets/screen_awake_observer.dart';
 
 void _setEnv(String key, String value) {
@@ -434,6 +435,7 @@ class _KikoeruAppState extends ConsumerState<KikoeruApp>
           scaffoldMessengerKey: rootScaffoldMessengerKey,
           title: 'Kikoeru',
           debugShowCheckedModeBanner: false,
+          scrollBehavior: const AppScrollBehavior(),
           localizationsDelegates: S.localizationsDelegates,
           supportedLocales: S.supportedLocales,
           locale: locale,

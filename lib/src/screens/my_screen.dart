@@ -1,16 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import '../providers/my_reviews_provider.dart';
 import '../providers/my_tabs_display_provider.dart';
-import '../providers/work_card_display_provider.dart';
-import '../utils/scroll_optimization.dart';
+import '../providers/works_provider.dart' show LayoutType;
 import '../providers/auth_provider.dart';
 import '../utils/server_utils.dart';
 import '../utils/l10n_extensions.dart';
-import '../widgets/enhanced_work_card.dart';
-import '../widgets/pagination_bar.dart';
-import '../utils/responsive_grid_helper.dart';
+import '../widgets/works_grid_view.dart';
 import '../widgets/download_fab.dart';
 import '../services/download_service.dart';
 import '../models/download_task.dart';
@@ -24,7 +20,6 @@ import '../models/sort_options.dart';
 import '../utils/subtitle_filter.dart';
 export '../providers/my_reviews_provider.dart' show MyReviewLayoutType;
 
-import '../widgets/overscroll_next_page_detector.dart';
 import '../../l10n/app_localizations.dart';
 
 class MyScreen extends ConsumerStatefulWidget {
@@ -282,6 +277,7 @@ class _MyScreenState extends ConsumerState<MyScreen>
         ],
         onSort: (option, direction) {
           ref.read(myReviewsProvider.notifier).changeSort(option, direction);
+          _scrollToTop();
         },
       ),
     );
@@ -367,9 +363,12 @@ class _MyScreenState extends ConsumerState<MyScreen>
                           label:
                               MyReviewFilter.values[i].localizedLabel(context),
                           isSelected: state.filter == MyReviewFilter.values[i],
-                          onTap: () => ref
-                              .read(myReviewsProvider.notifier)
-                              .changeFilter(MyReviewFilter.values[i]),
+                          onTap: () {
+                            ref
+                                .read(myReviewsProvider.notifier)
+                                .changeFilter(MyReviewFilter.values[i]);
+                            _scrollToTop();
+                          },
                           index: i,
                           total: MyReviewFilter.values.length,
                         ),
@@ -398,9 +397,12 @@ class _MyScreenState extends ConsumerState<MyScreen>
                       padding: const EdgeInsets.all(8),
                       constraints:
                           const BoxConstraints(minWidth: 40, minHeight: 40),
-                      onPressed: () => ref
-                          .read(myReviewsProvider.notifier)
-                          .toggleSubtitleFilter(),
+                      onPressed: () {
+                        ref
+                            .read(myReviewsProvider.notifier)
+                            .toggleSubtitleFilter();
+                        _scrollToTop();
+                      },
                       tooltip: SubtitleFilterMode.fromValue(
                         state.subtitleFilter,
                       ).localizedTooltip(context),
@@ -424,224 +426,49 @@ class _MyScreenState extends ConsumerState<MyScreen>
         ),
         // 内容区域
         Expanded(
-          child: state.error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        size: 64,
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        S.of(context).loadFailed,
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        state.error!,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
-                            ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton.icon(
-                        onPressed: () =>
-                            ref.read(myReviewsProvider.notifier).refresh(),
-                        icon: const Icon(Icons.refresh),
-                        label: Text(S.of(context).retry),
-                      ),
-                    ],
-                  ),
-                )
-              : Stack(
-                  children: [
-                    _buildBody(state),
-                    // 全局加载动画 - 在有数据且正在刷新时显示顶部进度条
-                    if (state.isLoading && state.works.isNotEmpty)
-                      const Positioned(
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        child: SizedBox(
-                          height: 3,
-                          child: LinearProgressIndicator(),
-                        ),
-                      ),
-                  ],
-                ),
+          child: _buildBody(state),
         ),
       ],
     );
   }
 
   Widget _buildBody(MyReviewsState state) {
-    // 初始加载状态（没有数据时）
-    if (state.isLoading && state.works.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    final layoutType = switch (state.layoutType) {
+      MyReviewLayoutType.bigGrid => LayoutType.bigGrid,
+      MyReviewLayoutType.smallGrid => LayoutType.smallGrid,
+      MyReviewLayoutType.list => LayoutType.list,
+    };
 
-    final displaySettings = ref.watch(workCardDisplayProvider);
-
-    switch (state.layoutType) {
-      case MyReviewLayoutType.bigGrid:
-        return _buildGridView(
-          state,
-          crossAxisCount: displaySettings.applyCardSize(
-            ResponsiveGridHelper.getBigGridCrossAxisCount(context),
-          ),
-        );
-      case MyReviewLayoutType.smallGrid:
-        return _buildGridView(
-          state,
-          crossAxisCount: displaySettings.applyCardSize(
-            ResponsiveGridHelper.getSmallGridCrossAxisCount(context),
-            minCrossAxisCount: 2,
-          ),
-        );
-      case MyReviewLayoutType.list:
-        return _buildListView(state);
-    }
-  }
-
-  Widget _buildGridView(MyReviewsState state, {required int crossAxisCount}) {
-    final isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
-
-    // 横屏模式下使用更大的间距，让布局更优雅
-    final spacing = isLandscape ? 24.0 : 8.0;
-    final padding = isLandscape ? 24.0 : 8.0;
-
-    return RefreshIndicator(
-      onRefresh: () async => ref.read(myReviewsProvider.notifier).refresh(),
-      child: OverscrollNextPageDetector(
-        hasNextPage: state.hasMore,
-        isLoading: state.isLoading,
-        onNextPage: () async {
-          await ref.read(myReviewsProvider.notifier).nextPage();
-          // 等待一帧后滚动到顶部，确保内容已加载
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _scrollToTop();
-          });
-        },
-        child: CustomScrollView(
-          controller: _scrollController,
-          cacheExtent: ScrollOptimization.cacheExtent,
-          physics: ScrollOptimization.physics,
-          slivers: [
-            SliverPadding(
-              padding: EdgeInsets.fromLTRB(padding, 8, padding, padding),
-              sliver: SliverMasonryGrid.count(
-                key: ValueKey(
-                  'my-grid-${state.layoutType.name}-$crossAxisCount',
-                ),
-                crossAxisCount: crossAxisCount,
-                mainAxisSpacing: spacing,
-                crossAxisSpacing: spacing,
-                childCount: state.works.length,
-                itemBuilder: (context, index) {
-                  final work = state.works[index];
-                  return RepaintBoundary(
-                    child: EnhancedWorkCard(
-                        work: work, crossAxisCount: crossAxisCount),
-                  );
-                },
-              ),
-            ),
-
-            // 分页控件 - 始终显示
-            SliverPadding(
-              padding: EdgeInsets.fromLTRB(padding, spacing, padding, 24),
-              sliver: SliverToBoxAdapter(
-                child: PaginationBar(
-                  currentPage: state.currentPage,
-                  totalCount: state.totalCount,
-                  pageSize: state.effectivePageSize,
-                  hasMore: state.hasMore,
-                  isLoading: state.isLoading,
-                  onPreviousPage: () {
-                    ref.read(myReviewsProvider.notifier).previousPage();
-                    _scrollToTop();
-                  },
-                  onNextPage: () {
-                    ref.read(myReviewsProvider.notifier).nextPage();
-                    _scrollToTop();
-                  },
-                  onGoToPage: (page) {
-                    ref.read(myReviewsProvider.notifier).goToPage(page);
-                    _scrollToTop();
-                  },
-                ),
-              ),
-            ),
-          ],
-        ),
+    return WorksGridView(
+      works: state.works,
+      layoutType: layoutType,
+      scrollController: _scrollController,
+      pageStorageKey: PageStorageKey(
+        'my-reviews-${state.filter.name}-${state.layoutType.name}',
       ),
-    );
-  }
-
-  Widget _buildListView(MyReviewsState state) {
-    return RefreshIndicator(
-      onRefresh: () async => ref.read(myReviewsProvider.notifier).refresh(),
-      child: OverscrollNextPageDetector(
-        hasNextPage: state.hasMore,
-        isLoading: state.isLoading,
-        onNextPage: () async {
-          await ref.read(myReviewsProvider.notifier).nextPage();
-          // 等待一帧后滚动到顶部，确保内容已加载
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _scrollToTop();
-          });
-        },
-        child: CustomScrollView(
-          controller: _scrollController,
-          cacheExtent: ScrollOptimization.cacheExtent,
-          physics: ScrollOptimization.physics,
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.all(8),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final work = state.works[index];
-                    return RepaintBoundary(
-                      child: EnhancedWorkCard(work: work, crossAxisCount: 1),
-                    );
-                  },
-                  childCount: state.works.length,
-                ),
-              ),
+      isLoading: state.isLoading,
+      isRefreshing: state.isRefreshing,
+      isLoadingMore: state.isLoadingMore,
+      hasMore: state.hasMore,
+      error: state.error,
+      loadMoreError: state.loadMoreError,
+      onRetry: () => ref.read(myReviewsProvider.notifier).refresh(),
+      onRefresh: () => ref.read(myReviewsProvider.notifier).refresh(),
+      onLoadMore: () => ref.read(myReviewsProvider.notifier).loadMore(),
+      showEndMessage: state.works.isNotEmpty,
+      emptyBuilder: (context) => Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.favorite_border,
+              size: 64,
+              color: Theme.of(context).colorScheme.outline,
             ),
-
-            // 分页控件 - 始终显示
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(8, 8, 8, 24),
-              sliver: SliverToBoxAdapter(
-                child: PaginationBar(
-                  currentPage: state.currentPage,
-                  totalCount: state.totalCount,
-                  pageSize: state.pageSize,
-                  hasMore: state.hasMore,
-                  isLoading: state.isLoading,
-                  onPreviousPage: () {
-                    ref.read(myReviewsProvider.notifier).previousPage();
-                    _scrollToTop();
-                  },
-                  onNextPage: () {
-                    ref.read(myReviewsProvider.notifier).nextPage();
-                    _scrollToTop();
-                  },
-                  onGoToPage: (page) {
-                    ref.read(myReviewsProvider.notifier).goToPage(page);
-                    _scrollToTop();
-                  },
-                ),
-              ),
+            const SizedBox(height: 16),
+            Text(
+              S.of(context).noWorks,
+              style: Theme.of(context).textTheme.titleLarge,
             ),
           ],
         ),

@@ -6,16 +6,15 @@ import '../providers/auth_provider.dart';
 import '../models/playlist.dart';
 import '../models/work.dart';
 import '../services/storage_service.dart';
-import '../widgets/pagination_bar.dart';
 import '../widgets/playlist_add_works_dialog.dart';
 import '../widgets/playlist_edit_dialog.dart';
 import '../widgets/playlist_metadata_section.dart';
 import '../widgets/scrollable_appbar.dart';
 import '../utils/snackbar_util.dart';
 import '../screens/work_detail_screen.dart';
-import '../widgets/overscroll_next_page_detector.dart';
 import '../widgets/privacy_blur_cover.dart';
-import '../utils/scroll_optimization.dart';
+import '../widgets/virtualized_sliver_collection.dart';
+import '../utils/work_cover_prefetch.dart';
 import '../../l10n/app_localizations.dart';
 
 class PlaylistDetailScreen extends ConsumerStatefulWidget {
@@ -49,16 +48,6 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
   void dispose() {
     _scrollController.dispose();
     super.dispose();
-  }
-
-  void _scrollToTop() {
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        0,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOut,
-      );
-    }
   }
 
   /// 显示删除播放列表确认对话框
@@ -352,203 +341,100 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
   }
 
   Widget _buildBody(PlaylistDetailState state) {
-    // 错误状态
-    if (state.error != null && state.metadata == null) {
-      return Center(
+    final auth = ref.watch(authProvider.select(
+      (value) => (
+        host: value.host ?? '',
+        token: value.token ?? '',
+        userName: value.currentUser?.name ?? '',
+      ),
+    ));
+    final notifier =
+        ref.read(playlistDetailProvider(widget.playlistId).notifier);
+    final isOwner = state.metadata?.userName == auth.userName;
+
+    return VirtualizedSliverCollection(
+      controller: _scrollController,
+      pageStorageKey: PageStorageKey('playlist-${widget.playlistId}'),
+      items: state.works,
+      itemId: (work) => work.id,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      sliversBefore: [
+        if (state.metadata != null)
+          _buildMetadataSection(state.metadata!, auth.userName),
+      ],
+      isInitialLoading:
+          state.isLoading && state.works.isEmpty && state.metadata == null,
+      isRefreshing: state.isRefreshing,
+      isLoadingMore: state.isLoadingMore,
+      hasMore: state.hasMore,
+      error: state.works.isEmpty ? state.error : null,
+      loadMoreError: state.loadMoreError,
+      onRefresh: notifier.refresh,
+      onLoadMore: notifier.loadMore,
+      onRetry: notifier.refresh,
+      onPrefetch: (works) => prefetchWorkCovers(
+        context,
+        works,
+        host: auth.host,
+        token: auth.token,
+        crossAxisCount: 1,
+      ),
+      emptyBuilder: (context) => Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.error_outline,
+              Icons.music_note,
               size: 64,
-              color: Theme.of(context).colorScheme.error,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
             const SizedBox(height: 16),
             Text(
-              S.of(context).loadFailed,
+              S.of(context).noWorks,
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 8),
             Text(
-              state.error!,
+              S.of(context).playlistNoWorksDescription,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () => ref
-                  .read(playlistDetailProvider(widget.playlistId).notifier)
-                  .refresh(),
-              icon: const Icon(Icons.refresh),
-              label: Text(S.of(context).retry),
-            ),
           ],
         ),
-      );
-    }
-
-    // 加载中且无数据
-    if (state.isLoading && state.metadata == null) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
-    }
-
-    // 空状态
-    if (state.works.isEmpty && !state.isLoading) {
-      return RefreshIndicator(
-        onRefresh: () async => ref
-            .read(playlistDetailProvider(widget.playlistId).notifier)
-            .refresh(),
-        child: CustomScrollView(
-          slivers: [
-            if (state.metadata != null) _buildMetadataSection(state.metadata!),
-            SliverFillRemaining(
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.music_note,
-                      size: 64,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      S.of(context).noWorks,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      S.of(context).playlistNoWorksDescription,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: () async => ref
-          .read(playlistDetailProvider(widget.playlistId).notifier)
-          .refresh(),
-      child: OverscrollNextPageDetector(
-        hasNextPage: state.hasMore,
-        isLoading: state.isLoading,
-        onNextPage: () async {
-          await ref
-              .read(playlistDetailProvider(widget.playlistId).notifier)
-              .nextPage();
-          // 等待一帧后滚动到顶部，确保内容已加载
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _scrollToTop();
-          });
-        },
-        child: CustomScrollView(
-          controller: _scrollController,
-          cacheExtent: ScrollOptimization.cacheExtent,
-          physics: ScrollOptimization.physics,
-          slivers: [
-            // 元数据信息
-            if (state.metadata != null) _buildMetadataSection(state.metadata!),
-
-            // 作品列表
-            SliverPadding(
-              padding: const EdgeInsets.all(8),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final work = state.works[index];
-                    final authState = ref.watch(authProvider);
-                    final currentUserName = authState.currentUser?.name ?? '';
-                    final isOwner = state.metadata?.userName == currentUserName;
-
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      child: _buildPlaylistWorkCard(work, isOwner),
-                    );
-                  },
-                  childCount: state.works.length,
-                ),
-              ),
-            ),
-
-            // 分页控件
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(8, 8, 8, 24),
-              sliver: SliverToBoxAdapter(
-                child: PaginationBar(
-                  currentPage: state.currentPage,
-                  totalCount: state.totalCount,
-                  pageSize: state.pageSize,
-                  hasMore: state.hasMore,
-                  isLoading: state.isLoading,
-                  onPreviousPage: () {
-                    ref
-                        .read(
-                            playlistDetailProvider(widget.playlistId).notifier)
-                        .previousPage();
-                    _scrollToTop();
-                  },
-                  onNextPage: () {
-                    ref
-                        .read(
-                            playlistDetailProvider(widget.playlistId).notifier)
-                        .nextPage();
-                    _scrollToTop();
-                  },
-                  onGoToPage: (page) {
-                    ref
-                        .read(
-                            playlistDetailProvider(widget.playlistId).notifier)
-                        .goToPage(page);
-                    _scrollToTop();
-                  },
-                ),
-              ),
-            ),
-          ],
+      ),
+      itemBuilder: (context, work, index) => Padding(
+        key: ValueKey(work.id),
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: _buildPlaylistWorkCard(
+          work,
+          isOwner,
+          auth.host,
+          auth.token,
         ),
       ),
     );
   }
 
-  Widget _buildMetadataSection(Playlist metadata) {
+  Widget _buildMetadataSection(Playlist metadata, String currentUserName) {
     return SliverToBoxAdapter(
-      child: Builder(
-        builder: (context) {
-          final authState = ref.watch(authProvider);
-          final currentUserName = authState.currentUser?.name ?? '';
-
-          return PlaylistMetadataSection(
-            metadata: metadata,
-            isOwner: metadata.userName == currentUserName,
-            onEdit: () => _showEditDialog(metadata),
-            onDelete: _showDeleteConfirmDialog,
-          );
-        },
+      child: PlaylistMetadataSection(
+        metadata: metadata,
+        isOwner: metadata.userName == currentUserName,
+        onEdit: () => _showEditDialog(metadata),
+        onDelete: _showDeleteConfirmDialog,
       ),
     );
   }
 
   // 扁平播放列表风格的作品卡片
-  Widget _buildPlaylistWorkCard(Work work, bool isOwner) {
-    final authState = ref.watch(authProvider);
-    final host = authState.host ?? '';
-    final token = authState.token ?? '';
+  Widget _buildPlaylistWorkCard(
+    Work work,
+    bool isOwner,
+    String host,
+    String token,
+  ) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -587,6 +473,8 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                     imageUrl: work.getCoverImageUrl(host, token: token),
                     httpHeaders: httpHeaders,
                     cacheKey: 'work_cover_${work.id}',
+                    memCacheWidth: 112,
+                    memCacheHeight: 112,
                     width: 56,
                     height: 56,
                     fit: BoxFit.cover,
