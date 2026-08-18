@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/auth_provider.dart';
+import '../providers/proxy_provider.dart';
 import '../services/kikoeru_api_service.dart';
 import '../utils/server_utils.dart';
 import '../utils/snackbar_util.dart';
@@ -62,6 +63,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _serverCookieController = TextEditingController();
+  final _proxyController = TextEditingController();
 
   bool _isLogin = true; // true for login, false for register
   bool _obscurePassword = true;
@@ -77,6 +79,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     final defaultHost = _normalizedHostString(KikoeruApiService.remoteHost);
     _hostValue = defaultHost;
+    _proxyController.text = ref.read(proxySettingsProvider).address;
   }
 
   @override
@@ -84,6 +87,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _usernameController.dispose();
     _passwordController.dispose();
     _serverCookieController.dispose();
+    _proxyController.dispose();
     super.dispose();
   }
 
@@ -272,6 +276,76 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
 
     _hostOptions = options;
+  }
+
+  /// 登录页代理设置：登录前即可配置代理（解决"登录才能进设置页"的死循环）
+  Widget _buildLoginProxySection(BuildContext context) {
+    final proxySettings = ref.watch(proxySettingsProvider);
+
+    return ExpansionTile(
+      leading: const Icon(Icons.vpn_lock_outlined),
+      title: Text(S.of(context).proxySettingsOptional),
+      subtitle: Text(proxySettings.enabled
+          ? S.of(context).proxyEnabled(proxySettings.address.isEmpty
+              ? S.of(context).proxyAddressNotSet
+              : proxySettings.address)
+          : S.of(context).proxyHttpDescription),
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SwitchListTile(
+                title: Text(S.of(context).useProxy),
+                value: proxySettings.enabled,
+                onChanged: (value) => ref
+                    .read(proxySettingsProvider.notifier)
+                    .setEnabled(value),
+              ),
+              TextField(
+                controller: _proxyController,
+                enabled: proxySettings.enabled,
+                keyboardType: TextInputType.url,
+                decoration: InputDecoration(
+                  labelText: S.of(context).proxyAddress,
+                  hintText: '127.0.0.1:7890',
+                  helperText: S.of(context).proxyAddressFormat,
+                  prefixIcon: const Icon(Icons.dns_outlined),
+                  border: const OutlineInputBorder(),
+                ),
+                onSubmitted: (_) => _applyProxyAddress(),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: FilledButton.icon(
+                    onPressed: proxySettings.enabled
+                        ? _applyProxyAddress
+                        : null,
+                    icon: const Icon(Icons.check),
+                    label: Text(S.of(context).applyProxyAddress),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _applyProxyAddress() async {
+    final accepted = await ref
+        .read(proxySettingsProvider.notifier)
+        .setAddress(_proxyController.text);
+    if (!mounted) return;
+    if (!accepted) {
+      SnackBarUtil.showError(context, S.of(context).invalidProxyAddress);
+      return;
+    }
+    _proxyController.text = ref.read(proxySettingsProvider).address;
   }
 
   Widget _buildHostLatencyActions(BuildContext context) {
@@ -700,6 +774,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       const SizedBox(height: 8),
       _buildHostLatencyActions(context),
+
+      const SizedBox(height: 8),
+      _buildLoginProxySection(context),
 
       const SizedBox(height: 15),
 
