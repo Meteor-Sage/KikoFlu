@@ -5,6 +5,7 @@ import '../../l10n/app_localizations.dart';
 import '../models/download_task.dart';
 import '../services/download_service.dart';
 import '../utils/string_utils.dart';
+import '../widgets/virtualized_sliver_collection.dart';
 
 class DownloadsScreen extends ConsumerStatefulWidget {
   const DownloadsScreen({super.key});
@@ -88,7 +89,8 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
         scrolledUnderElevation: 0,
         title: _isSelectionMode
             ? Text(S.of(context).selectedCount(_selectedTaskIds.length))
-            : Text(S.of(context).downloadTasks, style: const TextStyle(fontSize: 18)),
+            : Text(S.of(context).downloadTasks,
+                style: const TextStyle(fontSize: 18)),
         leading: _isSelectionMode
             ? IconButton(
                 icon: const Icon(Icons.close),
@@ -159,7 +161,8 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
           children: [
             const Icon(Icons.download_outlined, size: 64, color: Colors.grey),
             const SizedBox(height: 16),
-            Text(S.of(context).noDownloadTasks, style: const TextStyle(color: Colors.grey)),
+            Text(S.of(context).noDownloadTasks,
+                style: const TextStyle(color: Colors.grey)),
           ],
         ),
       );
@@ -171,18 +174,25 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
       groupedTasks.putIfAbsent(task.workId, () => []).add(task);
     }
 
-    return ListView.builder(
-      itemCount: groupedTasks.length,
-      itemBuilder: (context, index) {
-        final workId = groupedTasks.keys.elementAt(index);
-        final workTasks = groupedTasks[workId]!;
+    final groups = groupedTasks.entries.toList(growable: false);
+
+    return VirtualizedSliverCollection<MapEntry<int, List<DownloadTask>>>(
+      items: groups,
+      itemId: (entry) => entry.key,
+      pageStorageKey: const PageStorageKey('active-downloads-feed'),
+      showEndIndicator: false,
+      itemBuilder: (context, entry, index) {
+        final workId = entry.key;
+        final workTasks = entry.value;
         final firstTask = workTasks.first;
 
         final isWorkSelected = _selectedWorkIds.contains(workId);
 
         return Card(
+          key: ValueKey(workId),
           margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           child: ExpansionTile(
+            key: PageStorageKey('download-work-$workId'),
             leading: _isSelectionMode
                 ? Checkbox(
                     value: isWorkSelected,
@@ -210,6 +220,7 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
     final isSelected = _selectedTaskIds.contains(task.id);
 
     return ListTile(
+      key: ValueKey(task.id),
       leading: _isSelectionMode
           ? Checkbox(
               value: isSelected,
@@ -342,7 +353,8 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(S.of(context).deletionConfirmTitle),
-        content: Text(S.of(context).deleteSelectedFilesConfirm(_selectedTaskIds.length)),
+        content: Text(
+            S.of(context).deleteSelectedFilesConfirm(_selectedTaskIds.length)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),

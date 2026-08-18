@@ -7,6 +7,7 @@ import '../services/history_database.dart';
 import '../services/audio_player_service.dart' as import_service;
 import '../services/log_service.dart';
 import '../services/playback_history_service.dart';
+import '../utils/paged_collection.dart';
 
 class HistoryState {
   final List<HistoryRecord> records;
@@ -15,6 +16,10 @@ class HistoryState {
   final int totalCount;
   final int pageSize;
   final bool hasMore;
+  final bool isRefreshing;
+  final bool isLoadingMore;
+  final String? error;
+  final String? loadMoreError;
 
   const HistoryState({
     this.records = const [],
@@ -23,6 +28,10 @@ class HistoryState {
     this.totalCount = 0,
     this.pageSize = 20,
     this.hasMore = true,
+    this.isRefreshing = false,
+    this.isLoadingMore = false,
+    this.error,
+    this.loadMoreError,
   });
 
   HistoryState copyWith({
@@ -32,6 +41,10 @@ class HistoryState {
     int? totalCount,
     int? pageSize,
     bool? hasMore,
+    bool? isRefreshing,
+    bool? isLoadingMore,
+    String? error,
+    String? loadMoreError,
   }) {
     return HistoryState(
       records: records ?? this.records,
@@ -40,6 +53,10 @@ class HistoryState {
       totalCount: totalCount ?? this.totalCount,
       pageSize: pageSize ?? this.pageSize,
       hasMore: hasMore ?? this.hasMore,
+      isRefreshing: isRefreshing ?? this.isRefreshing,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      error: error,
+      loadMoreError: loadMoreError,
     );
   }
 }
@@ -60,57 +77,82 @@ class HistoryNotifier extends StateNotifier<HistoryState> {
 
   StreamSubscription? _historyUpdateSubscription;
   DateTime _lastRefreshTime = DateTime.now();
+  final PagedRequestGate _requestGate = PagedRequestGate();
 
-  Future<void> load({bool refresh = false, bool force = false}) async {
-    if (state.isLoading && !force) return;
+  Future<void> load({
+    bool refresh = false,
+    bool force = false,
+    int? targetPage,
+  }) async {
+    final token = _requestGate.begin(supersede: force || refresh);
+    if (token == null) return;
 
-    final page = refresh ? 1 : state.currentPage;
+    final page = refresh ? 1 : (targetPage ?? state.currentPage);
+    final offset = (page - 1) * state.pageSize;
 
-    state = state.copyWith(isLoading: true, currentPage: page);
+    state = state.copyWith(
+      isLoading: true,
+      isRefreshing: false,
+      isLoadingMore: false,
+      error: null,
+      loadMoreError: null,
+      currentPage: page,
+    );
 
     try {
-      final offset = (page - 1) * state.pageSize;
       final records = await HistoryDatabase.instance.getAllHistory(
         limit: state.pageSize,
         offset: offset,
       );
       final totalCount = await HistoryDatabase.instance.getHistoryCount();
+      if (!_requestGate.isCurrent(token)) return;
 
       state = state.copyWith(
         records: records,
         currentPage: page,
         totalCount: totalCount,
-        hasMore: (offset + records.length) < totalCount,
+        hasMore: offset + records.length < totalCount,
         isLoading: false,
+        isRefreshing: false,
+        isLoadingMore: false,
+        error: null,
+        loadMoreError: null,
       );
     } catch (e) {
-      state = state.copyWith(isLoading: false);
+      if (!_requestGate.isCurrent(token)) return;
+      final message = e.toString();
+      state = state.copyWith(
+        isLoading: false,
+        isRefreshing: false,
+        isLoadingMore: false,
+        error: message,
+        loadMoreError: null,
+      );
       logOutput('Failed to load history: $e');
+    } finally {
+      _requestGate.complete(token);
     }
   }
 
   Future<void> refresh() async {
-    await load(refresh: true);
+    await load(refresh: true, force: true);
   }
 
-  Future<void> nextPage() async {
-    if (state.hasMore && !state.isLoading) {
-      state = state.copyWith(currentPage: state.currentPage + 1);
-      await load();
-    }
+  Future<void> loadMore() async {
+    if (!state.hasMore || state.isRefreshing) return;
+    await load(targetPage: state.currentPage + 1);
   }
+
+  Future<void> nextPage() => loadMore();
 
   Future<void> previousPage() async {
-    if (state.currentPage > 1 && !state.isLoading) {
-      state = state.copyWith(currentPage: state.currentPage - 1);
-      await load();
-    }
+    if (state.currentPage <= 1 || state.isLoading) return;
+    await load(targetPage: state.currentPage - 1);
   }
 
   Future<void> goToPage(int page) async {
-    if (state.isLoading || page == state.currentPage) return;
-    state = state.copyWith(currentPage: page);
-    await load();
+    if (page < 1 || page == state.currentPage || state.isLoading) return;
+    await load(targetPage: page);
   }
 
   /// 外部直接写入历史（例如 history_work_card 恢复播放时）
@@ -167,7 +209,18 @@ class HistoryNotifier extends StateNotifier<HistoryState> {
 
   Future<void> clear() async {
     await HistoryDatabase.instance.clear();
-    state = state.copyWith(records: [], totalCount: 0, currentPage: 1);
+    _requestGate.invalidate();
+    state = state.copyWith(
+      records: [],
+      totalCount: 0,
+      currentPage: 1,
+      hasMore: false,
+      isLoading: false,
+      isRefreshing: false,
+      isLoadingMore: false,
+      error: null,
+      loadMoreError: null,
+    );
   }
 
   /// 监听 PlaybackHistoryService 的写入通知，节流刷新列表
@@ -178,7 +231,7 @@ class HistoryNotifier extends StateNotifier<HistoryState> {
       // 节流：10 秒内最多刷新一次列表
       if (now.difference(_lastRefreshTime).inSeconds >= 10) {
         _lastRefreshTime = now;
-        load(refresh: true, force: true);
+        refresh();
       }
     });
   }

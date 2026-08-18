@@ -518,15 +518,6 @@ class SJa extends S {
   String get playlists => 'プレイリスト';
 
   @override
-  String get playlistDisplayFormat => 'プレイリスト表示形式';
-
-  @override
-  String get playlistDisplayFormatMasonry => 'ウォーターフォール';
-
-  @override
-  String get playlistDisplayFormatList => 'リスト';
-
-  @override
   String get downloaded => 'ダウンロード済み';
 
   @override
@@ -3524,4 +3515,42 @@ class SJa extends S {
 
   @override
   String get logEmpty => 'ログはありません';
+
+  @override
+  String get proxySettingsOptional => 'プロキシ設定（任意）';
+
+  @override
+  String proxyEnabled(String address) {
+    return '有効: $address';
+  }
+
+  @override
+  String get proxyAddressNotSet => '未設定（直接接続）';
+
+  @override
+  String get proxyHttpDescription => 'HTTP プロキシ経由でサーバーに接続（例: Clash）';
+
+  @override
+  String get useProxy => 'プロキシを使用';
+
+  @override
+  String get proxyAddress => 'プロキシアドレス';
+
+  @override
+  String get proxyAddressFormat => '形式: ホスト:ポート（例: 127.0.0.1:7890）';
+
+  @override
+  String get applyProxyAddress => 'プロキシアドレスを適用';
+
+  @override
+  String get invalidProxyAddress => '有効な HTTP プロキシのアドレスとポートを入力してください';
+
+  @override
+  String get playlistDisplayFormat => 'プレイリストの表示形式';
+
+  @override
+  String get playlistDisplayFormatMasonry => 'ウォーターフォール';
+
+  @override
+  String get playlistDisplayFormatList => 'リスト';
 }

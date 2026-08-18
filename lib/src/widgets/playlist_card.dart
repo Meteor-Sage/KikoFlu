@@ -21,9 +21,9 @@ class PlaylistCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authProvider);
-    final host = authState.host ?? '';
-    final token = authState.token ?? '';
+    final auth = ref.watch(authProvider.select(
+      (value) => (host: value.host ?? '', token: value.token ?? ''),
+    ));
     final theme = Theme.of(context);
 
     final httpHeaders = StorageService.serverCookieHeaders;
@@ -50,7 +50,8 @@ class PlaylistCard extends ConsumerWidget {
                 child: PrivacyBlurCover(
                   borderRadius: BorderRadius.circular(8),
                   child: CachedNetworkImage(
-                    imageUrl: playlist.getFullCoverUrl(host, token: token),
+                    imageUrl:
+                        playlist.getFullCoverUrl(auth.host, token: auth.token),
                     httpHeaders: httpHeaders,
                     fit: BoxFit.cover,
                     placeholder: (context, url) => Container(

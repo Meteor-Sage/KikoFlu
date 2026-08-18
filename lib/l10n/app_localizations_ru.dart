@@ -531,15 +531,6 @@ class SRu extends S {
   String get playlists => 'Плейлисты';
 
   @override
-  String get playlistDisplayFormat => 'Формат отображения плейлиста';
-
-  @override
-  String get playlistDisplayFormatMasonry => 'Каскад';
-
-  @override
-  String get playlistDisplayFormatList => 'Список';
-
-  @override
   String get downloaded => 'Загружено';
 
   @override
@@ -3640,4 +3631,44 @@ class SRu extends S {
 
   @override
   String get logEmpty => 'Логов пока нет';
+
+  @override
+  String get proxySettingsOptional => 'Настройки прокси (необязательно)';
+
+  @override
+  String proxyEnabled(String address) {
+    return 'Включено: $address';
+  }
+
+  @override
+  String get proxyAddressNotSet => 'Не задан (прямое подключение)';
+
+  @override
+  String get proxyHttpDescription =>
+      'Подключение к серверам через HTTP-прокси (например, Clash)';
+
+  @override
+  String get useProxy => 'Использовать прокси';
+
+  @override
+  String get proxyAddress => 'Адрес прокси';
+
+  @override
+  String get proxyAddressFormat => 'Формат: хост:порт, например 127.0.0.1:7890';
+
+  @override
+  String get applyProxyAddress => 'Применить адрес прокси';
+
+  @override
+  String get invalidProxyAddress =>
+      'Введите корректный адрес и порт HTTP-прокси';
+
+  @override
+  String get playlistDisplayFormat => 'Вид плейлиста';
+
+  @override
+  String get playlistDisplayFormatMasonry => 'Мозаика';
+
+  @override
+  String get playlistDisplayFormatList => 'Список';
 }

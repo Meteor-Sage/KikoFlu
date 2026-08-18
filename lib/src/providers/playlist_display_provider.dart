@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// 播放列表显示布局类型
 enum PlaylistLayoutType {
   masonry('masonry'),
   list('list');
@@ -11,14 +10,14 @@ enum PlaylistLayoutType {
   final String value;
 
   static PlaylistLayoutType fromValue(String? value) {
+    if (value == 'grid') return PlaylistLayoutType.masonry;
     return PlaylistLayoutType.values.firstWhere(
-      (e) => e.value == value,
+      (layout) => layout.value == value,
       orElse: () => PlaylistLayoutType.masonry,
     );
   }
 }
 
-/// 播放列表显示布局设置
 class PlaylistDisplayNotifier extends StateNotifier<PlaylistLayoutType> {
   static const String preferenceKey = 'playlist_display_layout';
 
@@ -26,28 +25,31 @@ class PlaylistDisplayNotifier extends StateNotifier<PlaylistLayoutType> {
     _loadPreference();
   }
 
+  bool _changedLocally = false;
+
   Future<void> _loadPreference() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      if (!mounted || _changedLocally) return;
       state = PlaylistLayoutType.fromValue(prefs.getString(preferenceKey));
-    } catch (e) {
-      state = PlaylistLayoutType.masonry;
+    } catch (_) {
+      // Keep the default layout when preferences are unavailable.
     }
   }
 
   Future<void> updateLayout(PlaylistLayoutType type) async {
+    _changedLocally = true;
     state = type;
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(preferenceKey, type.value);
-    } catch (e) {
-      // ignore
+    } catch (_) {
+      // The in-memory selection remains valid for this session.
     }
   }
 }
 
-/// 播放列表显示布局提供者
 final playlistDisplayProvider =
-    StateNotifierProvider<PlaylistDisplayNotifier, PlaylistLayoutType>((ref) {
-  return PlaylistDisplayNotifier();
-});
+    StateNotifierProvider<PlaylistDisplayNotifier, PlaylistLayoutType>(
+      (ref) => PlaylistDisplayNotifier(),
+    );

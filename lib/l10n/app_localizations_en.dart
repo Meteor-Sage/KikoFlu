@@ -530,15 +530,6 @@ class SEn extends S {
   String get playlists => 'Playlists';
 
   @override
-  String get playlistDisplayFormat => 'Playlist Display Format';
-
-  @override
-  String get playlistDisplayFormatMasonry => 'Masonry (Waterfall)';
-
-  @override
-  String get playlistDisplayFormatList => 'List';
-
-  @override
   String get downloaded => 'Downloaded';
 
   @override
@@ -3622,4 +3613,44 @@ class SEn extends S {
 
   @override
   String get logEmpty => 'No logs yet';
+
+  @override
+  String get proxySettingsOptional => 'Proxy settings (optional)';
+
+  @override
+  String proxyEnabled(String address) {
+    return 'Enabled: $address';
+  }
+
+  @override
+  String get proxyAddressNotSet => 'Not set (direct connection)';
+
+  @override
+  String get proxyHttpDescription =>
+      'Access servers through an HTTP proxy (for example, Clash)';
+
+  @override
+  String get useProxy => 'Use proxy';
+
+  @override
+  String get proxyAddress => 'Proxy address';
+
+  @override
+  String get proxyAddressFormat =>
+      'Format: host:port, for example 127.0.0.1:7890';
+
+  @override
+  String get applyProxyAddress => 'Apply proxy address';
+
+  @override
+  String get invalidProxyAddress => 'Enter a valid HTTP proxy address and port';
+
+  @override
+  String get playlistDisplayFormat => 'Playlist layout';
+
+  @override
+  String get playlistDisplayFormatMasonry => 'Masonry';
+
+  @override
+  String get playlistDisplayFormatList => 'List';
 }

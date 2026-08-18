@@ -242,39 +242,47 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     Future<void> showAddressDialog() async {
       final controller = TextEditingController(text: proxySettings.address);
-      final result = await showDialog<String>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('代理地址'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: controller,
-                keyboardType: TextInputType.url,
-                decoration: const InputDecoration(
-                  hintText: '127.0.0.1:7890',
-                  helperText: '格式: 主机:端口，如 127.0.0.1:7890',
+      String? result;
+      try {
+        result = await showDialog<String>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(S.of(context).proxyAddress),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: controller,
+                  keyboardType: TextInputType.url,
+                  decoration: InputDecoration(
+                    hintText: '127.0.0.1:7890',
+                    helperText: S.of(context).proxyAddressFormat,
+                  ),
                 ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(S.of(context).cancel),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(controller.text),
+                child: Text(S.of(context).save),
               ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('取消'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(controller.text),
-              child: const Text('保存'),
-            ),
-          ],
-        ),
-      );
+        );
+      } finally {
+        controller.dispose();
+      }
       if (result != null) {
-        await ref
+        final accepted = await ref
             .read(proxySettingsProvider.notifier)
-            .setAddress(result.trim());
+            .setAddress(result);
+        if (!accepted && context.mounted) {
+          SnackBarUtil.showError(context, S.of(context).invalidProxyAddress);
+        }
       }
     }
 
@@ -282,19 +290,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       children: [
         SettingsSwitchTile(
           icon: Icons.vpn_lock_outlined,
-          title: '使用代理',
+          title: S.of(context).useProxy,
           subtitle: proxySettings.enabled
-              ? '已启用: ${proxySettings.address.isEmpty ? '未设置地址' : proxySettings.address}'
-              : '通过 HTTP 代理访问服务器（如 Clash）',
+              ? S.of(context).proxyEnabled(proxySettings.address.isEmpty
+                  ? S.of(context).proxyAddressNotSet
+                  : proxySettings.address)
+              : S.of(context).proxyHttpDescription,
           value: proxySettings.enabled,
           onChanged: (value) =>
               ref.read(proxySettingsProvider.notifier).setEnabled(value),
         ),
         SettingsListTile(
           icon: Icons.dns_outlined,
-          title: '代理地址',
+          title: S.of(context).proxyAddress,
           subtitle: proxySettings.address.isEmpty
-              ? '未设置（默认直连）'
+              ? S.of(context).proxyAddressNotSet
               : proxySettings.address,
           onTap: proxySettings.enabled ? showAddressDialog : null,
           enabled: proxySettings.enabled,

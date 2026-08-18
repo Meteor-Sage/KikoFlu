@@ -185,9 +185,6 @@
   "onlineMarks": "オンラインマーク",
   "historyRecord": "再生履歴",
   "playlists": "プレイリスト",
-  "playlistDisplayFormat": "プレイリスト表示形式",
-  "playlistDisplayFormatMasonry": "ウォーターフォール",
-  "playlistDisplayFormatList": "リスト",
   "downloaded": "ダウンロード済み",
   "downloadTasks": "ダウンロードタスク",
   "subtitleLibrary": "字幕ライブラリ",
@@ -1184,5 +1181,17 @@
   "logExported": "ログを {path} にエクスポートしました",
   "logCount": "{count} 件のログ",
   "logAutoScroll": "自動スクロール",
-  "logEmpty": "ログはありません"
+  "logEmpty": "ログはありません",
+  "proxySettingsOptional": "プロキシ設定（任意）",
+  "proxyEnabled": "有効: {address}",
+  "proxyAddressNotSet": "未設定（直接接続）",
+  "proxyHttpDescription": "HTTP プロキシ経由でサーバーに接続（例: Clash）",
+  "useProxy": "プロキシを使用",
+  "proxyAddress": "プロキシアドレス",
+  "proxyAddressFormat": "形式: ホスト:ポート（例: 127.0.0.1:7890）",
+  "applyProxyAddress": "プロキシアドレスを適用",
+  "invalidProxyAddress": "有効な HTTP プロキシのアドレスとポートを入力してください",
+  "playlistDisplayFormat": "プレイリストの表示形式",
+  "playlistDisplayFormatMasonry": "ウォーターフォール",
+  "playlistDisplayFormatList": "リスト"
 }

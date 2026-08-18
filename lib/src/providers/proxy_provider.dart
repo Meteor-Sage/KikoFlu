@@ -30,9 +30,17 @@ class ProxySettingsNotifier extends StateNotifier<ProxySettings> {
     await ProxyConfig.save(value, state.address);
   }
 
-  Future<void> setAddress(String value) async {
-    state = state.copyWith(address: value);
-    await ProxyConfig.save(state.enabled, value);
+  Future<bool> setAddress(String value) async {
+    if (value.trim().isNotEmpty &&
+        ProxyConfig.normalizeAddress(value) == null) {
+      return false;
+    }
+    final normalized = value.trim().isEmpty
+        ? ''
+        : ProxyConfig.normalizeAddress(value)!;
+    state = state.copyWith(address: normalized);
+    await ProxyConfig.save(state.enabled, normalized);
+    return true;
   }
 }
 

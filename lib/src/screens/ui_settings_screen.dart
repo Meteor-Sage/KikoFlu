@@ -8,8 +8,8 @@ import 'work_card_display_settings_screen.dart';
 import 'my_tabs_display_settings_screen.dart';
 import '../widgets/scrollable_appbar.dart';
 import '../widgets/settings_section.dart';
-import '../providers/settings_provider.dart';
 import '../providers/playlist_display_provider.dart';
+import '../providers/settings_provider.dart';
 
 class UiSettingsScreen extends ConsumerWidget {
   const UiSettingsScreen({super.key});
@@ -116,7 +116,7 @@ class UiSettingsScreen extends ConsumerWidget {
                 ),
               ),
               SettingsListTile(
-                icon: Icons.view_module,
+                icon: Icons.view_module_outlined,
                 title: S.of(context).playlistDisplayFormat,
                 subtitle: playlistLayout == PlaylistLayoutType.masonry
                     ? S.of(context).playlistDisplayFormatMasonry
@@ -124,21 +124,21 @@ class UiSettingsScreen extends ConsumerWidget {
                 trailing: DropdownButton<PlaylistLayoutType>(
                   value: playlistLayout,
                   underline: const SizedBox(),
-                  items: PlaylistLayoutType.values.map((PlaylistLayoutType v) {
+                  items: PlaylistLayoutType.values.map((layout) {
                     return DropdownMenuItem<PlaylistLayoutType>(
-                      value: v,
+                      value: layout,
                       child: Text(
-                        v == PlaylistLayoutType.masonry
+                        layout == PlaylistLayoutType.masonry
                             ? S.of(context).playlistDisplayFormatMasonry
                             : S.of(context).playlistDisplayFormatList,
                       ),
                     );
                   }).toList(),
-                  onChanged: (PlaylistLayoutType? newValue) {
-                    if (newValue != null) {
+                  onChanged: (layout) {
+                    if (layout != null) {
                       ref
                           .read(playlistDisplayProvider.notifier)
-                          .updateLayout(newValue);
+                          .updateLayout(layout);
                     }
                   },
                 ),

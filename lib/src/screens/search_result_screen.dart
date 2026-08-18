@@ -10,11 +10,10 @@ import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/log_service.dart';
 import '../widgets/works_grid_view.dart';
+import '../widgets/virtualized_sliver_collection.dart';
 import '../widgets/sort_dialog.dart';
-import '../widgets/pagination_bar.dart';
 import '../widgets/global_audio_player_wrapper.dart';
 import '../widgets/download_fab.dart';
-import '../widgets/overscroll_next_page_detector.dart';
 import '../utils/l10n_extensions.dart';
 import '../utils/subtitle_filter.dart';
 
@@ -97,16 +96,6 @@ class _SearchResultContentState extends ConsumerState<_SearchResultContent> {
   void dispose() {
     _scrollController.dispose();
     super.dispose();
-  }
-
-  void _scrollToTop() {
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        0,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-    }
   }
 
   void _showSortDialog(BuildContext context) {
@@ -460,7 +449,7 @@ class _SearchResultContentState extends ConsumerState<_SearchResultContent> {
       );
     }
 
-    if (searchState.works.isEmpty && !searchState.isLoading) {
+    if (searchState.works.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -476,66 +465,45 @@ class _SearchResultContentState extends ConsumerState<_SearchResultContent> {
       );
     }
 
-    return OverscrollNextPageDetector(
-      hasNextPage: searchState.hasMore,
+    return WorksGridView(
+      works: searchState.works,
+      layoutType: searchState.layoutType.toWorksLayoutType(),
+      scrollController: _scrollController,
       isLoading: searchState.isLoading,
-      onNextPage: () async {
-        await ref
+      isRefreshing: false,
+      isLoadingMore: searchState.isLoadingMore,
+      hasMore: searchState.hasMore,
+      error: searchState.error,
+      loadMoreError: searchState.loadMoreError,
+      onRetry: () => ref.read(searchResultProvider.notifier).refresh(),
+      showInlineLoadingIndicator: searchState.isLoading,
+      pagination: VirtualizedPagination(
+        currentPage: searchState.currentPage,
+        pageSize: searchState.pageSize,
+        totalCount: searchState.totalCount,
+        hasMore: searchState.hasMore,
+        isLoading: searchState.isLoading || searchState.isRefreshing,
+        onPreviousPage: () => ref
             .read(searchResultProvider.notifier)
-            .goToPage(searchState.currentPage + 1);
-        // 等待一帧后滚动到顶部，确保内容已加载
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _scrollToTop();
-        });
-      },
-      child: WorksGridView(
-        works: searchState.works,
-        layoutType: searchState.layoutType.toWorksLayoutType(),
-        scrollController: _scrollController,
-        isLoading: searchState.isLoading,
-        paginationWidget: _buildPaginationBar(searchState),
+            .goToPage(searchState.currentPage - 1),
+        onNextPage: () => ref
+            .read(searchResultProvider.notifier)
+            .goToPage(searchState.currentPage + 1),
+        onGoToPage: ref.read(searchResultProvider.notifier).goToPage,
+        nextPageOnOverscroll: true,
+        scrollDuration: const Duration(milliseconds: 300),
+        scrollCurve: Curves.easeOut,
+        endMessage: S.of(context).reachedEnd,
+        extraBuilder: searchState.rawWorks.length > searchState.works.length
+            ? (context) => Text(
+                  '${searchState.rawWorks.length - searchState.works.length} filtered',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
+                )
+            : null,
       ),
-    );
-  }
-
-  Widget _buildPaginationBar(SearchResultState searchState) {
-    return Column(
-      children: [
-        PaginationBar(
-          currentPage: searchState.currentPage,
-          pageSize: searchState.pageSize,
-          totalCount: searchState.totalCount,
-          hasMore: searchState.hasMore,
-          isLoading: searchState.isLoading,
-          onPreviousPage: () {
-            ref
-                .read(searchResultProvider.notifier)
-                .goToPage(searchState.currentPage - 1);
-            _scrollToTop();
-          },
-          onNextPage: () {
-            ref
-                .read(searchResultProvider.notifier)
-                .goToPage(searchState.currentPage + 1);
-            _scrollToTop();
-          },
-          onGoToPage: (page) {
-            ref.read(searchResultProvider.notifier).goToPage(page);
-          },
-          onScrollToTop: _scrollToTop,
-          endMessage: S.of(context).reachedEnd,
-        ),
-        if (searchState.rawWorks.length > searchState.works.length) ...[
-          const SizedBox(height: 8),
-          Text(
-            '${searchState.rawWorks.length - searchState.works.length} filtered',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ],
     );
   }
 

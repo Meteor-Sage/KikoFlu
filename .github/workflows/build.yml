@@ -42,6 +42,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.44.7'
           channel: 'stable'
           
       - name: Get Dependencies
@@ -83,6 +84,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.44.7'
           channel: 'stable'
           
       - name: Get Dependencies
@@ -137,6 +139,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.44.7'
           channel: 'stable'
           
       - name: Get Dependencies
@@ -158,37 +161,135 @@ jobs:
           name: ios-unsigned-release
           path: build/KikoFlu-ios-unsigned.ipa
 
-  release:
-    name: Create GitHub Release
-    runs-on: ubuntu-latest
-    needs: [android, windows, ios]
-    # Only auto-create a Release when triggered by a tag push (v*)
-    if: startsWith(github.ref, 'refs/tags/')
-    permissions:
-      contents: write
-      actions: write
+  macos:
+    name: macOS Build
+    runs-on: macos-latest
     steps:
-      - name: Download All Artifacts
-        uses: actions/download-artifact@v6
+      - uses: actions/checkout@v6
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
-          path: artifacts
-          merge-multiple: true
-
-      - name: Create GitHub Release
-        id: create_release
-        uses: softprops/action-gh-release@v2
+          flutter-version: '3.44.7'
+          channel: 'stable'
+          
+      - name: Get Dependencies
+        run: flutter pub get
+        
+      - name: Build macOS Release
+        run: flutter build macos --release
+        
+      - name: Create DMG
+        run: |
+          mkdir -p build/dmg
+          cp -R build/macos/Build/Products/Release/KikoFlu.app build/dmg/
+          hdiutil create -volname "KikoFlu" \
+            -srcfolder build/dmg \
+            -ov -format UDZO \
+            KikoFlu-macos.dmg
+            
+      - name: Upload macOS Artifact
+        uses: actions/upload-artifact@v6
         with:
-          files: artifacts/**/*
-          generate_release_notes: true
-          fail_on_unmatched_files: false
+          name: macos-release
+          path: KikoFlu-macos.dmg
 
-      # GITHUB_TOKEN-created releases do not re-trigger `release: published`
-      # workflows, so dispatch the AltStore source update explicitly.
-      - name: Trigger AltStore Source Update
-        if: steps.create_release.conclusion == 'success'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh workflow run update-altstore-source.yml --ref "${{ github.ref_name }}" -R "${{ github.repository }}"
+  linux:
+    name: Linux Build
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
 
+      - name: Install Linux Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang cmake ninja-build pkg-config \
+            libgtk-3-dev \
+            libmpv-dev \
+            libsqlite3-dev
 
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.7'
+          channel: 'stable'
 
+      - name: Get Dependencies
+        run: flutter pub get
+
+      - name: Build Linux Release
+        run: flutter build linux --release
+
+      - name: Create Archive
+        run: |
+          cd build/linux/x64/release/bundle
+          tar -czf "$GITHUB_WORKSPACE/KikoFlu-linux-x64.tar.gz" .
+
+      - name: Upload Linux Artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: linux-release
+          path: KikoFlu-linux-x64.tar.gz
+
+  linux-arm64:
+    name: Linux ARM64 Build
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Build in ARM64 Container
+        uses: uraimo/run-on-arch-action@v2
+        with:
+          arch: aarch64
+          distro: ubuntu22.04
+          githubToken: ${{ github.token }}
+          install: |
+            apt-get update
+            apt-get install -y \
+              curl git unzip xz-utils zip \
+              clang cmake ninja-build pkg-config \
+              libgtk-3-dev \
+              libmpv-dev \
+              libsqlite3-dev
+            # Install Flutter
+            git clone https://github.com/flutter/flutter.git -b stable /opt/flutter --depth 1
+            /opt/flutter/bin/flutter --version
+          run: |
+            set -e
+            export PATH="/opt/flutter/bin:$PATH"
+            export CC=clang
+            export CXX=clang++
+            export CMAKE_BUILD_PARALLEL_LEVEL=1
+            export MAKEFLAGS="-j1"
+            flutter pub get
+
+            for attempt in 1 2; do
+              echo "Linux ARM64 release build attempt ${attempt}/2"
+              if flutter build linux --release; then
+                break
+              fi
+
+              if [ "$attempt" -eq 2 ]; then
+                exit 1
+              fi
+
+              echo "Build failed in ARM64 emulation; cleaning and retrying once..."
+              flutter clean
+              flutter pub get
+            done
+
+            cd build/linux/arm64/release/bundle
+            tar -czf "$GITHUB_WORKSPACE/KikoFlu-linux-arm64.tar.gz" .
+
+      - name: Upload Linux ARM64 Artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: linux-arm64-release
+          path: KikoFlu-linux-arm64.tar.gz

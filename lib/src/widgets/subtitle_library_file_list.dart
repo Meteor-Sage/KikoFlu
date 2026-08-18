@@ -4,6 +4,7 @@ import '../../l10n/app_localizations.dart';
 import '../utils/file_icon_utils.dart';
 import '../utils/string_utils.dart';
 import '../utils/subtitle_library_display.dart';
+import 'virtualized_sliver_collection.dart';
 
 typedef SubtitleLibrarySelectionToggle = void Function(
   String path,
@@ -44,31 +45,25 @@ class SubtitleLibraryFileList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(
+    final entries = <_SubtitleLibraryEntry>[];
+    _flattenItems(items, level: 0, into: entries);
+
+    return VirtualizedSliverCollection<_SubtitleLibraryEntry>(
+      items: entries,
+      itemId: (entry) => entry.path,
+      pageStorageKey: const PageStorageKey('subtitle-library-files'),
+      padding: const EdgeInsets.only(bottom: 80),
       onRefresh: onRefresh,
-      child: ListView(
-        padding: const EdgeInsets.only(bottom: 80),
-        children: _buildRows(context, items, level: 0),
-      ),
-    );
-  }
-
-  List<Widget> _buildRows(
-    BuildContext context,
-    List<Map<String, dynamic>> currentItems, {
-    required int level,
-  }) {
-    final rows = <Widget>[];
-
-    for (final item in currentItems) {
-      final path = item['path'] as String;
-      final isFolder = item['type'] == 'folder';
-
-      rows.add(
-        _SubtitleLibraryFileRow(
+      showEndIndicator: false,
+      itemBuilder: (context, entry, index) {
+        final item = entry.item;
+        final path = entry.path;
+        final isFolder = entry.isFolder;
+        return _SubtitleLibraryFileRow(
+          key: ValueKey(path),
           item: item,
           path: path,
-          level: level,
+          level: entry.level,
           isFolder: isFolder,
           isSelected: selectedPaths.contains(path),
           selectionMode: selectionMode,
@@ -84,24 +79,54 @@ class SubtitleLibraryFileList extends StatelessWidget {
           onPreviewFile: () => onPreviewFile(path),
           onLoadSubtitle: () => onLoadSubtitle(item),
           onShowOptions: () => onShowOptions(item, path),
-        ),
-      );
+        );
+      },
+    );
+  }
+
+  void _flattenItems(
+    List<Map<String, dynamic>> currentItems, {
+    required int level,
+    required List<_SubtitleLibraryEntry> into,
+  }) {
+    for (final item in currentItems) {
+      final path = item['path'] as String;
+      final isFolder = item['type'] == 'folder';
+      into.add(_SubtitleLibraryEntry(
+        item: item,
+        path: path,
+        level: level,
+        isFolder: isFolder,
+      ));
 
       if (recursive && isFolder && item['children'] != null) {
-        rows.addAll(_buildRows(
-          context,
+        _flattenItems(
           (item['children'] as List).cast<Map<String, dynamic>>(),
           level: level + 1,
-        ));
+          into: into,
+        );
       }
     }
-
-    return rows;
   }
+}
+
+class _SubtitleLibraryEntry {
+  const _SubtitleLibraryEntry({
+    required this.item,
+    required this.path,
+    required this.level,
+    required this.isFolder,
+  });
+
+  final Map<String, dynamic> item;
+  final String path;
+  final int level;
+  final bool isFolder;
 }
 
 class _SubtitleLibraryFileRow extends StatelessWidget {
   const _SubtitleLibraryFileRow({
+    super.key,
     required this.item,
     required this.path,
     required this.level,

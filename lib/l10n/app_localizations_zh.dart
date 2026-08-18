@@ -517,15 +517,6 @@ class SZh extends S {
   String get playlists => '播放列表';
 
   @override
-  String get playlistDisplayFormat => '播放列表显示格式';
-
-  @override
-  String get playlistDisplayFormatMasonry => '瀑布流';
-
-  @override
-  String get playlistDisplayFormatList => '列表';
-
-  @override
   String get downloaded => '已下载';
 
   @override
@@ -3503,6 +3494,44 @@ class SZh extends S {
 
   @override
   String get logEmpty => '暂无日志';
+
+  @override
+  String get proxySettingsOptional => '代理设置（可选）';
+
+  @override
+  String proxyEnabled(String address) {
+    return '已启用：$address';
+  }
+
+  @override
+  String get proxyAddressNotSet => '未设置（默认直连）';
+
+  @override
+  String get proxyHttpDescription => '通过 HTTP 代理访问服务器（例如 Clash）';
+
+  @override
+  String get useProxy => '使用代理';
+
+  @override
+  String get proxyAddress => '代理地址';
+
+  @override
+  String get proxyAddressFormat => '格式：主机:端口，例如 127.0.0.1:7890';
+
+  @override
+  String get applyProxyAddress => '应用代理地址';
+
+  @override
+  String get invalidProxyAddress => '请输入有效的 HTTP 代理地址和端口';
+
+  @override
+  String get playlistDisplayFormat => '播放列表布局';
+
+  @override
+  String get playlistDisplayFormatMasonry => '瀑布流';
+
+  @override
+  String get playlistDisplayFormatList => '列表';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -4016,15 +4045,6 @@ class SZhHant extends SZh {
 
   @override
   String get playlists => '播放清單';
-
-  @override
-  String get playlistDisplayFormat => '播放清單顯示格式';
-
-  @override
-  String get playlistDisplayFormatMasonry => '瀑布流';
-
-  @override
-  String get playlistDisplayFormatList => '清單';
 
   @override
   String get downloaded => '已下載';
@@ -7004,4 +7024,42 @@ class SZhHant extends SZh {
 
   @override
   String get logEmpty => '暫無日誌';
+
+  @override
+  String get proxySettingsOptional => '代理設定（可選）';
+
+  @override
+  String proxyEnabled(String address) {
+    return '已啟用：$address';
+  }
+
+  @override
+  String get proxyAddressNotSet => '未設定（預設直連）';
+
+  @override
+  String get proxyHttpDescription => '透過 HTTP 代理存取伺服器（例如 Clash）';
+
+  @override
+  String get useProxy => '使用代理';
+
+  @override
+  String get proxyAddress => '代理位址';
+
+  @override
+  String get proxyAddressFormat => '格式：主機:連接埠，例如 127.0.0.1:7890';
+
+  @override
+  String get applyProxyAddress => '套用代理位址';
+
+  @override
+  String get invalidProxyAddress => '請輸入有效的 HTTP 代理位址和連接埠';
+
+  @override
+  String get playlistDisplayFormat => '播放清單版面';
+
+  @override
+  String get playlistDisplayFormatMasonry => '瀑布流';
+
+  @override
+  String get playlistDisplayFormatList => '列表';
 }

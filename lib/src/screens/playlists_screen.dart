@@ -4,9 +4,9 @@ import '../../l10n/app_localizations.dart';
 import '../providers/playlists_provider.dart';
 import '../providers/auth_provider.dart';
 import '../utils/l10n_extensions.dart';
-import '../utils/scroll_optimization.dart';
 import '../widgets/playlist_card.dart';
-import '../widgets/pagination_bar.dart';
+import '../widgets/virtualized_sliver_collection.dart';
+import '../utils/scroll_optimization.dart';
 import '../models/playlist.dart' show PlaylistPrivacy;
 import 'playlist_detail_screen.dart';
 
@@ -40,16 +40,6 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
   void dispose() {
     _scrollController.dispose();
     super.dispose();
-  }
-
-  void _scrollToTop() {
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        0,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOut,
-      );
-    }
   }
 
   /// 显示创建播放列表对话框
@@ -465,7 +455,6 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
 
     final state = ref.watch(playlistsProvider);
 
-    // 错误状态
     if (state.error != null && state.playlists.isEmpty) {
       return Center(
         child: Column(
@@ -500,14 +489,10 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
       );
     }
 
-    // 加载中且无数据
     if (state.isLoading && state.playlists.isEmpty) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
-    // 空状态
     if (state.playlists.isEmpty) {
       return Scaffold(
         floatingActionButton: FloatingActionButton(
@@ -550,19 +535,38 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
         child: const Icon(Icons.add),
       ),
       body: RefreshIndicator(
-        onRefresh: () async => ref.read(playlistsProvider.notifier).refresh(),
+        onRefresh: ref.read(playlistsProvider.notifier).refresh,
         child: _buildListView(state),
       ),
     );
   }
 
   Widget _buildListView(PlaylistsState state) {
-    return CustomScrollView(
+    return VirtualizedSliverCollection(
       controller: _scrollController,
-      cacheExtent: ScrollOptimization.cacheExtent,
+      items: state.playlists,
+      itemId: (playlist) => playlist.id,
       physics: ScrollOptimization.physics,
-      slivers: [
-        // 顶部标题栏
+      isInitialLoading: state.isLoading && state.playlists.isEmpty,
+      isRefreshing: false,
+      isLoadingMore: state.isLoadingMore,
+      hasMore: state.hasMore,
+      error: null,
+      loadMoreError: null,
+      pagination: VirtualizedPagination(
+        currentPage: state.currentPage,
+        pageSize: state.pageSize,
+        totalCount: state.totalCount,
+        hasMore: state.hasMore,
+        isLoading: state.isLoading || state.isRefreshing,
+        onPreviousPage: ref.read(playlistsProvider.notifier).previousPage,
+        onNextPage: ref.read(playlistsProvider.notifier).nextPage,
+        onGoToPage: ref.read(playlistsProvider.notifier).goToPage,
+        scrollDuration: const Duration(milliseconds: 500),
+        scrollCurve: Curves.easeInOut,
+      ),
+      onRetry: ref.read(playlistsProvider.notifier).refresh,
+      sliversBefore: [
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           sliver: SliverToBoxAdapter(
@@ -592,63 +596,25 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
             ),
           ),
         ),
-
-        // 播放列表列表
-        SliverList(
-          delegate: SliverChildBuilderDelegate(
-            (context, index) {
-              final playlist = state.playlists[index];
-              return RepaintBoundary(
-                child: PlaylistCard(
-                  playlist: playlist,
-                  onTap: () async {
-                    // 导航到播放列表详情页
-                    final deleted = await Navigator.of(context).push<bool>(
-                      MaterialPageRoute(
-                        builder: (context) => PlaylistDetailScreen(
-                          playlistId: playlist.id,
-                          playlistName: playlist.displayName,
-                        ),
-                      ),
-                    );
-                    // 如果在详情页中删除了播放列表，刷新列表
-                    if (deleted == true) {
-                      ref.read(playlistsProvider.notifier).refresh();
-                    }
-                  },
-                ),
-              );
-            },
-            childCount: state.playlists.length,
-          ),
-        ),
-
-        // 分页控件
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(8, 8, 8, 24),
-          sliver: SliverToBoxAdapter(
-            child: PaginationBar(
-              currentPage: state.currentPage,
-              totalCount: state.totalCount,
-              pageSize: state.pageSize,
-              hasMore: state.hasMore,
-              isLoading: state.isLoading,
-              onPreviousPage: () {
-                ref.read(playlistsProvider.notifier).previousPage();
-                _scrollToTop();
-              },
-              onNextPage: () {
-                ref.read(playlistsProvider.notifier).nextPage();
-                _scrollToTop();
-              },
-              onGoToPage: (page) {
-                ref.read(playlistsProvider.notifier).goToPage(page);
-                _scrollToTop();
-              },
-            ),
-          ),
-        ),
       ],
+      padding: EdgeInsets.zero,
+      itemBuilder: (context, playlist, index) => PlaylistCard(
+        key: ValueKey(playlist.id),
+        playlist: playlist,
+        onTap: () async {
+          final deleted = await Navigator.of(context).push<bool>(
+            MaterialPageRoute(
+              builder: (context) => PlaylistDetailScreen(
+                playlistId: playlist.id,
+                playlistName: playlist.displayName,
+              ),
+            ),
+          );
+          if (deleted == true) {
+            ref.read(playlistsProvider.notifier).refresh();
+          }
+        },
+      ),
     );
   }
 }

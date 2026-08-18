@@ -18,27 +18,6 @@
       "tintColor": "6750A4",
       "versions": [
         {
-          "version": "3.6.2",
-          "date": "2026-08-10",
-          "size": 13161255,
-          "downloadURL": "https://github.com/frngchenziyuan/KikoFlu/releases/download/v3.6.2/KikoFlu-ios-unsigned.ipa",
-          "localizedDescription": "**Full Changelog**: https://github.com/frngchenziyuan/KikoFlu/compare/v3.6.1...v3.6.2"
-        },
-        {
-          "version": "3.6.1",
-          "date": "2026-08-10",
-          "size": 13162205,
-          "downloadURL": "https://github.com/frngchenziyuan/KikoFlu/releases/download/v3.6.1/KikoFlu-ios-unsigned.ipa",
-          "localizedDescription": "**Full Changelog**: https://github.com/frngchenziyuan/KikoFlu/compare/v3.6.0...v3.6.1"
-        },
-        {
-          "version": "3.6.0",
-          "date": "2026-08-10",
-          "size": 13160538,
-          "downloadURL": "https://github.com/frngchenziyuan/KikoFlu/releases/download/v3.6.0/KikoFlu-ios-unsigned.ipa",
-          "localizedDescription": "**Full Changelog**: https://github.com/frngchenziyuan/KikoFlu/commits/v3.6.0"
-        },
-        {
           "version": "3.5.0",
           "date": "2026-06-19",
           "size": 13149303,

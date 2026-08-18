@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -21,7 +22,7 @@ class ProxyConfig {
     try {
       final prefs = await SharedPreferences.getInstance();
       enabled = prefs.getBool(_keyEnabled) ?? false;
-      address = prefs.getString(_keyAddress) ?? '';
+      address = normalizeAddress(prefs.getString(_keyAddress) ?? '') ?? '';
     } catch (_) {
       // 加载失败使用默认值（不启用代理）
     }
@@ -54,31 +55,73 @@ class ProxyConfig {
         _isPrivateIp(host)) {
       return 'DIRECT';
     }
-    final normalized = _normalize(address.trim());
+    final normalized = normalizeAddress(address);
     return normalized == null ? 'DIRECT' : 'PROXY $normalized';
   }
 
-  /// 归一化代理地址: 去掉协议头与末尾斜杠，要求 host:port 形式
-  static String? _normalize(String raw) {
-    var s = raw.trim();
-    if (s.isEmpty) return null;
-    if (s.startsWith('http://')) {
-      s = s.substring(7);
-    } else if (s.startsWith('https://')) {
-      s = s.substring(8);
+  /// Returns a canonical `host:port` value or null for malformed input.
+  static String? normalizeAddress(String raw) {
+    var value = raw.trim();
+    if (value.isEmpty || value.contains('@')) return null;
+
+    final scheme = RegExp(r'^(https?)://', caseSensitive: false)
+        .firstMatch(value);
+    if (scheme != null) {
+      value = value.substring(scheme.end);
+    } else if (value.contains('://')) {
+      return null;
     }
-    // 去掉路径部分
-    final slash = s.indexOf('/');
-    if (slash >= 0) s = s.substring(0, slash);
-    if (s.isEmpty || !s.contains(':')) return null;
-    return s;
+
+    if (value.contains('/') || value.contains('?') || value.contains('#')) {
+      return null;
+    }
+
+    String host;
+    String portText;
+    if (value.startsWith('[')) {
+      final end = value.indexOf(']');
+      if (end <= 1 || end + 1 >= value.length || value[end + 1] != ':') {
+        return null;
+      }
+      host = value.substring(1, end);
+      portText = value.substring(end + 2);
+    } else {
+      final separator = value.lastIndexOf(':');
+      if (separator <= 0 || separator == value.length - 1) return null;
+      host = value.substring(0, separator);
+      portText = value.substring(separator + 1);
+      if (host.contains(':')) return null;
+    }
+
+    final port = int.tryParse(portText);
+    if (port == null || port < 1 || port > 65535) return null;
+    if (host.isEmpty || RegExp(r'\s').hasMatch(host)) return null;
+
+    final ip = InternetAddress.tryParse(host);
+    if (ip == null &&
+        !RegExp(r'^[A-Za-z0-9][A-Za-z0-9._-]*$').hasMatch(host)) {
+      return null;
+    }
+
+    return ip?.type == InternetAddressType.IPv6
+        ? '[$host]:$port'
+        : '$host:$port';
   }
 
   static bool _isPrivateIp(String host) {
-    return host.startsWith('192.168.') ||
-        host.startsWith('10.') ||
-        host.startsWith('172.16.') ||
-        host.startsWith('172.31.');
+    final address = InternetAddress.tryParse(host);
+    if (address == null) return false;
+    final bytes = Uint8List.fromList(address.rawAddress);
+    if (address.type == InternetAddressType.IPv4) {
+      return bytes[0] == 10 ||
+          (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) ||
+          (bytes[0] == 192 && bytes[1] == 168) ||
+          (bytes[0] == 169 && bytes[1] == 254) ||
+          bytes[0] == 127;
+    }
+    return address.isLoopback ||
+        (bytes.isNotEmpty && (bytes[0] & 0xfe) == 0xfc) ||
+        (bytes.length >= 2 && bytes[0] == 0xfe && (bytes[1] & 0xc0) == 0x80);
   }
 }
 

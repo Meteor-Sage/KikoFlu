@@ -185,9 +185,6 @@
   "onlineMarks": "線上標記",
   "historyRecord": "歷史記錄",
   "playlists": "播放清單",
-  "playlistDisplayFormat": "播放清單顯示格式",
-  "playlistDisplayFormatMasonry": "瀑布流",
-  "playlistDisplayFormatList": "清單",
   "downloaded": "已下載",
   "downloadTasks": "下載任務",
   "subtitleLibrary": "字幕庫",
@@ -1184,5 +1181,17 @@
   "logExported": "日誌已匯出到 {path}",
   "logCount": "{count} 條日誌",
   "logAutoScroll": "自動捲動",
-  "logEmpty": "暫無日誌"
+  "logEmpty": "暫無日誌",
+  "proxySettingsOptional": "代理設定（可選）",
+  "proxyEnabled": "已啟用：{address}",
+  "proxyAddressNotSet": "未設定（預設直連）",
+  "proxyHttpDescription": "透過 HTTP 代理存取伺服器（例如 Clash）",
+  "useProxy": "使用代理",
+  "proxyAddress": "代理位址",
+  "proxyAddressFormat": "格式：主機:連接埠，例如 127.0.0.1:7890",
+  "applyProxyAddress": "套用代理位址",
+  "invalidProxyAddress": "請輸入有效的 HTTP 代理位址和連接埠",
+  "playlistDisplayFormat": "播放清單版面",
+  "playlistDisplayFormatMasonry": "瀑布流",
+  "playlistDisplayFormatList": "列表"
 }

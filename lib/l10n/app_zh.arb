@@ -185,9 +185,6 @@
   "onlineMarks": "在线标记",
   "historyRecord": "历史记录",
   "playlists": "播放列表",
-  "playlistDisplayFormat": "播放列表显示格式",
-  "playlistDisplayFormatMasonry": "瀑布流",
-  "playlistDisplayFormatList": "列表",
   "downloaded": "已下载",
   "downloadTasks": "下载任务",
   "subtitleLibrary": "字幕库",
@@ -1227,5 +1224,17 @@
   "logExported": "日志已导出到 {path}",
   "logCount": "{count} 条日志",
   "logAutoScroll": "自动滚动",
-  "logEmpty": "暂无日志"
+  "logEmpty": "暂无日志",
+  "proxySettingsOptional": "代理设置（可选）",
+  "proxyEnabled": "已启用：{address}",
+  "proxyAddressNotSet": "未设置（默认直连）",
+  "proxyHttpDescription": "通过 HTTP 代理访问服务器（例如 Clash）",
+  "useProxy": "使用代理",
+  "proxyAddress": "代理地址",
+  "proxyAddressFormat": "格式：主机:端口，例如 127.0.0.1:7890",
+  "applyProxyAddress": "应用代理地址",
+  "invalidProxyAddress": "请输入有效的 HTTP 代理地址和端口",
+  "playlistDisplayFormat": "播放列表布局",
+  "playlistDisplayFormatMasonry": "瀑布流",
+  "playlistDisplayFormatList": "列表"
 }
