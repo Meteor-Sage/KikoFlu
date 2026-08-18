@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:equatable/equatable.dart';
 
@@ -10,6 +12,7 @@ import '../models/sort_options.dart';
 import 'subtitle_library_provider.dart';
 import '../utils/subtitle_filter.dart';
 import '../utils/paged_collection.dart';
+import '../utils/persistent_enum_preference.dart';
 
 final _log = LogService.instance;
 
@@ -186,8 +189,15 @@ class WorksState extends Equatable {
 
 // Works notifier
 class WorksNotifier extends StateNotifier<WorksState> {
+  static const String layoutPreferenceKey = 'works_layout_type';
+
   final KikoeruApiService _apiService;
   final Ref _ref;
+  final _layoutPreference = PersistentEnumPreference<LayoutType>(
+    key: layoutPreferenceKey,
+    values: LayoutType.values,
+    fallback: LayoutType.bigGrid,
+  );
   final Map<DisplayMode, PagedRequestGate> _requestGates = {
     for (final mode in DisplayMode.values) mode: PagedRequestGate(),
   };
@@ -202,7 +212,17 @@ class WorksNotifier extends StateNotifier<WorksState> {
           basePageSize: initialPageSize,
           sortOption: initialSortOption,
           sortDirection: initialSortDirection,
-        ));
+        )) {
+    _loadLayoutPreference();
+  }
+
+  Future<void> _loadLayoutPreference() async {
+    final layoutType = await _layoutPreference.load();
+    if (!mounted || layoutType == null || layoutType == state.layoutType) {
+      return;
+    }
+    state = state.copyWith(layoutType: layoutType);
+  }
 
   WorksModeSnapshot _getModeState(DisplayMode mode) {
     return state.modeStates[mode] ?? const WorksModeSnapshot();
@@ -449,7 +469,9 @@ class WorksNotifier extends StateNotifier<WorksState> {
   }
 
   void setLayoutType(LayoutType layoutType) {
+    if (state.layoutType == layoutType) return;
     state = state.copyWith(layoutType: layoutType);
+    unawaited(_layoutPreference.save(layoutType));
   }
 
   void toggleLayoutType() {

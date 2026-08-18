@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:equatable/equatable.dart';
 
@@ -10,6 +12,7 @@ import 'settings_provider.dart';
 import 'subtitle_library_provider.dart';
 import '../utils/subtitle_filter.dart';
 import '../utils/paged_collection.dart';
+import '../utils/persistent_enum_preference.dart';
 
 // Layout types for search results
 enum SearchLayoutType {
@@ -141,12 +144,33 @@ class SearchResultState extends Equatable {
 
 // Search result notifier
 class SearchResultNotifier extends StateNotifier<SearchResultState> {
+  static const String layoutPreferenceKey = 'search_result_layout_type';
+
   final KikoeruApiService _apiService;
   final Ref _ref;
   final PagedRequestGate _requestGate = PagedRequestGate();
+  final _layoutPreference = PersistentEnumPreference<SearchLayoutType>(
+    key: layoutPreferenceKey,
+    values: SearchLayoutType.values,
+    fallback: SearchLayoutType.bigGrid,
+  );
 
   SearchResultNotifier(this._apiService, this._ref, {int initialPageSize = 20})
-      : super(SearchResultState(basePageSize: initialPageSize));
+      : super(SearchResultState(basePageSize: initialPageSize)) {
+    _loadLayoutPreference();
+  }
+
+  Future<void> _loadLayoutPreference() async {
+    final layoutType = await _layoutPreference.load();
+    if (!mounted || layoutType == null || layoutType == state.layoutType) {
+      return;
+    }
+    state = state.copyWith(
+      layoutType: layoutType,
+      error: state.error,
+      loadMoreError: state.loadMoreError,
+    );
+  }
 
   Future<void> initializeSearch({
     required String keyword,
@@ -323,6 +347,7 @@ class SearchResultNotifier extends StateNotifier<SearchResultState> {
       SearchLayoutType.list => SearchLayoutType.bigGrid,
     };
     state = state.copyWith(layoutType: nextLayout);
+    unawaited(_layoutPreference.save(nextLayout));
   }
 
   bool get isSubtitleFilterActive =>

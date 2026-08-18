@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:equatable/equatable.dart';
 
@@ -10,6 +12,7 @@ import 'settings_provider.dart';
 import 'subtitle_library_provider.dart';
 import '../utils/subtitle_filter.dart';
 import '../utils/paged_collection.dart';
+import '../utils/persistent_enum_preference.dart';
 
 /// 用户 Review/收藏状态的过滤枚举
 enum MyReviewFilter {
@@ -134,11 +137,33 @@ class MyReviewsState extends Equatable {
 }
 
 class MyReviewsNotifier extends StateNotifier<MyReviewsState> {
+  static const String layoutPreferenceKey = 'my_reviews_layout_type';
+
   final KikoeruApiService _apiService;
   final Ref _ref;
   final PagedRequestGate _requestGate = PagedRequestGate();
+  final _layoutPreference = PersistentEnumPreference<MyReviewLayoutType>(
+    key: layoutPreferenceKey,
+    values: MyReviewLayoutType.values,
+    fallback: MyReviewLayoutType.bigGrid,
+  );
+
   MyReviewsNotifier(this._apiService, this._ref, {int initialPageSize = 20})
-      : super(MyReviewsState(pageSize: initialPageSize));
+      : super(MyReviewsState(pageSize: initialPageSize)) {
+    _loadLayoutPreference();
+  }
+
+  Future<void> _loadLayoutPreference() async {
+    final layoutType = await _layoutPreference.load();
+    if (!mounted || layoutType == null || layoutType == state.layoutType) {
+      return;
+    }
+    state = state.copyWith(
+      layoutType: layoutType,
+      error: state.error,
+      loadMoreError: state.loadMoreError,
+    );
+  }
 
   void updatePageSize(int newSize) {
     if (state.pageSize == newSize) return;
@@ -321,6 +346,7 @@ class MyReviewsNotifier extends StateNotifier<MyReviewsState> {
       MyReviewLayoutType.list => MyReviewLayoutType.bigGrid,
     };
     state = state.copyWith(layoutType: nextLayout);
+    unawaited(_layoutPreference.save(nextLayout));
   }
 
   Future<void> refresh() => load(
