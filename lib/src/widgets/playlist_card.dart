@@ -53,9 +53,6 @@ class PlaylistCard extends ConsumerWidget {
                     imageUrl:
                         playlist.getFullCoverUrl(auth.host, token: auth.token),
                     httpHeaders: httpHeaders,
-                    cacheKey: 'playlist_cover_${playlist.id}',
-                    memCacheWidth: 176,
-                    memCacheHeight: 176,
                     fit: BoxFit.cover,
                     placeholder: (context, url) => Container(
                       color: theme.colorScheme.surfaceContainerHighest,

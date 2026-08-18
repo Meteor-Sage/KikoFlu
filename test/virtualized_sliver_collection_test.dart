@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:kikoeru_flutter/l10n/app_localizations.dart';
 import 'package:kikoeru_flutter/src/widgets/virtualized_sliver_collection.dart';
 
@@ -199,6 +200,76 @@ void main() {
       await tester.pump();
       expect(tester.takeException(), isNull);
     }
+  });
+
+  testWidgets('masonry layout preserves each child intrinsic height',
+      (tester) async {
+    await tester.pumpWidget(_app(
+      VirtualizedSliverCollection<int>(
+        items: const [80, 160, 120],
+        itemId: (item) => item,
+        layout: VirtualizedCollectionLayout.masonry,
+        masonryCrossAxisCount: 2,
+        masonryMainAxisSpacing: 8,
+        masonryCrossAxisSpacing: 8,
+        showEndIndicator: false,
+        itemBuilder: (context, item, index) => SizedBox(
+          key: ValueKey('height-$item'),
+          height: item.toDouble(),
+        ),
+      ),
+    ));
+    await tester.pump();
+
+    expect(find.byType(SliverMasonryGrid), findsOneWidget);
+    expect(tester.getSize(find.byKey(const ValueKey('height-80'))).height, 80);
+    expect(
+      tester.getSize(find.byKey(const ValueKey('height-160'))).height,
+      160,
+    );
+  });
+
+  testWidgets('explicit pagination never auto-loads and prevents reentry',
+      (tester) async {
+    final controller = ScrollController();
+    final pending = Completer<void>();
+    var calls = 0;
+
+    await tester.pumpWidget(_app(
+      VirtualizedSliverCollection<int>(
+        items: List.generate(40, (index) => index),
+        itemId: (item) => item,
+        controller: controller,
+        showEndIndicator: false,
+        pagination: VirtualizedPagination(
+          currentPage: 1,
+          pageSize: 20,
+          totalCount: 100,
+          hasMore: true,
+          isLoading: false,
+          scrollToTop: false,
+          onNextPage: () {
+            calls++;
+            return pending.future;
+          },
+        ),
+        itemBuilder: (context, item, index) => _IdentityTile(item: item),
+      ),
+    ));
+    await tester.pump();
+
+    controller.jumpTo(controller.position.maxScrollExtent);
+    await tester.pump();
+    expect(calls, 0);
+
+    await tester.tap(find.byIcon(Icons.chevron_right));
+    await tester.pump();
+    await tester.tap(find.byIcon(Icons.chevron_right));
+    await tester.pump();
+    expect(calls, 1);
+
+    pending.complete();
+    await tester.pumpAndSettle();
   });
 }
 

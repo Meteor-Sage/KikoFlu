@@ -77,7 +77,7 @@ class PlaylistDetailNotifier extends StateNotifier<PlaylistDetailState> {
   /// 加载播放列表元数据和作品
   Future<void> load({bool refresh = false}) async {
     await _loadPage(
-      page: 1,
+      page: refresh ? 1 : state.currentPage,
       includeMetadata: true,
       supersede: refresh,
     );
@@ -127,11 +127,11 @@ class PlaylistDetailNotifier extends StateNotifier<PlaylistDetailState> {
       final totalCount = pagination['totalCount'] as int;
       final hasMore = worksList.length >= state.pageSize &&
           page * state.pageSize < totalCount;
-      final merged = mergePagedItems(
-        existing: state.works,
+      final merged = mergePagedItems<Work, int>(
+        existing: const [],
         incoming: worksList,
         idOf: (work) => work.id,
-        replace: !append,
+        replace: true,
       );
 
       state = state.copyWith(
@@ -180,7 +180,8 @@ class PlaylistDetailNotifier extends StateNotifier<PlaylistDetailState> {
 
   /// 下一页
   Future<void> nextPage() async {
-    await loadMore();
+    if (state.isLoading || !state.hasMore || state.isRefreshing) return;
+    await goToPage(state.currentPage + 1);
   }
 
   Future<void> loadMore() async {
@@ -188,7 +189,6 @@ class PlaylistDetailNotifier extends StateNotifier<PlaylistDetailState> {
     await _loadPage(
       page: state.currentPage + 1,
       includeMetadata: false,
-      append: true,
     );
   }
 

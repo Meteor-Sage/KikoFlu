@@ -15,6 +15,7 @@ import '../screens/work_detail_screen.dart';
 import '../widgets/privacy_blur_cover.dart';
 import '../widgets/virtualized_sliver_collection.dart';
 import '../utils/work_cover_prefetch.dart';
+import '../utils/scroll_optimization.dart';
 import '../../l10n/app_localizations.dart';
 
 class PlaylistDetailScreen extends ConsumerStatefulWidget {
@@ -341,6 +342,46 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
   }
 
   Widget _buildBody(PlaylistDetailState state) {
+    if (state.error != null && state.metadata == null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              S.of(context).loadFailed,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              state.error!,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => ref
+                  .read(playlistDetailProvider(widget.playlistId).notifier)
+                  .refresh(),
+              icon: const Icon(Icons.refresh),
+              label: Text(S.of(context).retry),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (state.isLoading && state.metadata == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     final auth = ref.watch(authProvider.select(
       (value) => (
         host: value.host ?? '',
@@ -354,23 +395,35 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
 
     return VirtualizedSliverCollection(
       controller: _scrollController,
-      pageStorageKey: PageStorageKey('playlist-${widget.playlistId}'),
       items: state.works,
       itemId: (work) => work.id,
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      padding: const EdgeInsets.all(8),
+      physics: ScrollOptimization.physics,
       sliversBefore: [
         if (state.metadata != null)
           _buildMetadataSection(state.metadata!, auth.userName),
       ],
       isInitialLoading:
           state.isLoading && state.works.isEmpty && state.metadata == null,
-      isRefreshing: state.isRefreshing,
+      isRefreshing: false,
       isLoadingMore: state.isLoadingMore,
       hasMore: state.hasMore,
-      error: state.works.isEmpty ? state.error : null,
-      loadMoreError: state.loadMoreError,
+      error: null,
+      loadMoreError: null,
       onRefresh: notifier.refresh,
-      onLoadMore: notifier.loadMore,
+      pagination: VirtualizedPagination(
+        currentPage: state.currentPage,
+        pageSize: state.pageSize,
+        totalCount: state.totalCount,
+        hasMore: state.hasMore,
+        isLoading: state.isLoading || state.isRefreshing,
+        onPreviousPage: notifier.previousPage,
+        onNextPage: notifier.nextPage,
+        onGoToPage: notifier.goToPage,
+        nextPageOnOverscroll: true,
+        scrollDuration: const Duration(milliseconds: 500),
+        scrollCurve: Curves.easeInOut,
+      ),
       onRetry: notifier.refresh,
       onPrefetch: (works) => prefetchWorkCovers(
         context,
@@ -406,7 +459,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
       ),
       itemBuilder: (context, work, index) => Padding(
         key: ValueKey(work.id),
-        padding: const EdgeInsets.symmetric(vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
         child: _buildPlaylistWorkCard(
           work,
           isOwner,
@@ -473,8 +526,6 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                     imageUrl: work.getCoverImageUrl(host, token: token),
                     httpHeaders: httpHeaders,
                     cacheKey: 'work_cover_${work.id}',
-                    memCacheWidth: 112,
-                    memCacheHeight: 112,
                     width: 56,
                     height: 56,
                     fit: BoxFit.cover,

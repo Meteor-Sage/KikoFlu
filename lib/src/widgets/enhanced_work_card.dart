@@ -192,8 +192,6 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                   // 标题
                   Text(
                     widget.work.title,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                           height: 1.1,
@@ -282,8 +280,6 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                   // 标题
                   Text(
                     widget.work.title,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                           height: 1.1,
@@ -295,8 +291,6 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                   if (displaySettings.showCircle)
                     Text(
                       widget.work.name ?? '',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Colors.grey[600],
                             fontSize: bodyFontSize,

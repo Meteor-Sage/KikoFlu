@@ -93,7 +93,6 @@ class HistoryWorkCard extends ConsumerWidget {
                           imageUrl: work.getCoverImageUrl(host, token: token),
                           httpHeaders: httpHeaders,
                           cacheKey: 'work_cover_${work.id}',
-                          memCacheWidth: 512,
                           fit: BoxFit.cover,
                           placeholder: (context, url) => Container(
                             color: Colors.grey[200],

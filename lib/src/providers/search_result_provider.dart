@@ -226,10 +226,10 @@ class SearchResultNotifier extends StateNotifier<SearchResultState> {
       final pageWorks =
           (result['works'] as List).map((json) => Work.fromJson(json)).toList();
       final rawWorks = mergePagedItems<Work, int>(
-        existing: state.rawWorks,
+        existing: const [],
         incoming: pageWorks,
         idOf: (work) => work.id,
-        replace: !append || page == 1,
+        replace: true,
       );
       final blockedItems = _ref.read(blockedItemsProvider);
       final filteredWorks = _filterWorks(rawWorks, blockedItems);
@@ -308,12 +308,12 @@ class SearchResultNotifier extends StateNotifier<SearchResultState> {
   }
 
   Future<void> refresh() async {
-    await loadResults(targetPage: 1, supersede: true);
+    await loadResults(targetPage: state.currentPage, supersede: true);
   }
 
   Future<void> loadMore() async {
     if (state.isLoading || !state.hasMore) return;
-    await loadResults(targetPage: state.currentPage + 1, append: true);
+    await loadResults(targetPage: state.currentPage + 1);
   }
 
   void toggleLayoutType() {
@@ -329,17 +329,29 @@ class SearchResultNotifier extends StateNotifier<SearchResultState> {
       SubtitleFilterMode.fromValue(state.subtitleFilter).isActive;
 
   void toggleSubtitleFilter() {
+    final currentPage = state.currentPage;
     final oldFilterMode = SubtitleFilterMode.fromValue(state.subtitleFilter);
     final newFilterMode = oldFilterMode.next;
     final newFilter = newFilterMode.value;
 
+    int newPage;
+    if (oldFilterMode == SubtitleFilterMode.all && newFilterMode.isActive) {
+      newPage = ((currentPage + 1) / 2).ceil();
+    } else if (oldFilterMode.isActive &&
+        newFilterMode == SubtitleFilterMode.all) {
+      newPage = (currentPage * 2) - 1;
+    } else {
+      newPage = currentPage;
+    }
+    newPage = newPage.clamp(1, 9999);
+
     state = state.copyWith(
       subtitleFilter: newFilter,
-      currentPage: 1,
+      currentPage: newPage,
       works: [],
       rawWorks: [],
     );
-    refresh();
+    loadResults(targetPage: newPage, supersede: true);
   }
 
   void updateSort(SortOrder option, SortDirection direction) {

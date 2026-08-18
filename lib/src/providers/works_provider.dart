@@ -228,7 +228,7 @@ class WorksNotifier extends StateNotifier<WorksState> {
   void updatePageSize(int newSize) {
     if (state.basePageSize == newSize) return;
     state = state.copyWith(basePageSize: newSize);
-    refresh();
+    loadWorks(targetPage: 1, supersede: true);
   }
 
   Future<void> loadWorks({
@@ -248,7 +248,10 @@ class WorksNotifier extends StateNotifier<WorksState> {
     }
 
     final previousPage = modeState.currentPage;
-    final page = targetPage ?? (refresh ? 1 : (append ? previousPage + 1 : 1));
+    final isAllMode = mode == DisplayMode.all;
+    final page = targetPage ??
+        (isAllMode ? previousPage : (refresh ? 1 : previousPage + 1));
+    final shouldAppend = !isAllMode && page > 1;
 
     _log.captureOutput(
         '[WorksProvider] Loading works - mode: $mode, page: $page, refresh: $refresh, currentPage: $previousPage, targetPage: $targetPage');
@@ -317,10 +320,10 @@ class WorksNotifier extends StateNotifier<WorksState> {
 
       final latestModeState = _getModeState(mode);
       final newRawWorks = mergePagedItems<Work, int>(
-        existing: latestModeState.rawWorks,
+        existing: shouldAppend ? latestModeState.rawWorks : const [],
         incoming: works,
         idOf: (work) => work.id,
-        replace: !append || page == 1,
+        replace: !shouldAppend,
       );
 
       final blockedItems = _ref.read(blockedItemsProvider);
@@ -333,7 +336,7 @@ class WorksNotifier extends StateNotifier<WorksState> {
       bool isLastPage = false;
 
       if (mode == DisplayMode.popular || mode == DisplayMode.recommended) {
-        final currentTotal = newRawWorks.length;
+        final currentTotal = filteredWorks.length;
         hasMore = works.length >= pageSize &&
             currentTotal < 100 &&
             currentTotal < totalCount;
@@ -382,10 +385,9 @@ class WorksNotifier extends StateNotifier<WorksState> {
     }
   }
 
-  Future<void> refresh({bool resetPage = true}) async {
+  Future<void> refresh({bool resetPage = false}) async {
     await loadWorks(
-      refresh: true,
-      targetPage: 1,
+      targetPage: resetPage ? 1 : state.currentPage,
       supersede: true,
     );
   }
@@ -415,7 +417,7 @@ class WorksNotifier extends StateNotifier<WorksState> {
   Future<void> nextPage() async {
     if (state.displayMode != DisplayMode.all) return;
     if (!state.hasMore || state.isLoading) return;
-    await loadMore();
+    await loadWorks(targetPage: state.currentPage + 1);
   }
 
   // 上一页(仅全部模式)
@@ -428,14 +430,14 @@ class WorksNotifier extends StateNotifier<WorksState> {
   void setSortOption(SortOrder option) {
     if (state.sortOption != option) {
       state = state.copyWith(sortOption: option);
-      refresh();
+      refresh(resetPage: true);
     }
   }
 
   void setSortDirection(SortDirection direction) {
     if (state.sortDirection != direction) {
       state = state.copyWith(sortDirection: direction);
-      refresh();
+      refresh(resetPage: true);
     }
   }
 
@@ -481,7 +483,7 @@ class WorksNotifier extends StateNotifier<WorksState> {
         targetState.works.isEmpty && !targetState.isLoading;
 
     if (shouldLoadInitial) {
-      refresh();
+      refresh(resetPage: true);
     }
   }
 
@@ -490,12 +492,24 @@ class WorksNotifier extends StateNotifier<WorksState> {
 
   // Cycle subtitle filter: all -> with subtitles -> all
   void toggleSubtitleFilter() {
+    final currentPage = state.currentPage;
     final oldFilterMode = SubtitleFilterMode.fromValue(state.subtitleFilter);
     final newFilterMode = oldFilterMode.next;
     final newFilter = newFilterMode.value;
 
+    int newPage;
+    if (oldFilterMode == SubtitleFilterMode.all && newFilterMode.isActive) {
+      newPage = ((currentPage + 1) / 2).ceil();
+    } else if (oldFilterMode.isActive &&
+        newFilterMode == SubtitleFilterMode.all) {
+      newPage = (currentPage * 2) - 1;
+    } else {
+      newPage = currentPage;
+    }
+    newPage = newPage.clamp(1, 9999);
+
     state = state.copyWith(subtitleFilter: newFilter);
-    refresh();
+    loadWorks(targetPage: newPage, supersede: true);
   }
 
   void reapplyFilters() {

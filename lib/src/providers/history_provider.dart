@@ -82,46 +82,36 @@ class HistoryNotifier extends StateNotifier<HistoryState> {
   Future<void> load({
     bool refresh = false,
     bool force = false,
-    bool append = false,
+    int? targetPage,
   }) async {
     final token = _requestGate.begin(supersede: force || refresh);
     if (token == null) return;
 
-    final existingCount = state.records.length;
-    final offset = append ? existingCount : 0;
-    final limit = refresh && existingCount > state.pageSize
-        ? existingCount
-        : state.pageSize;
+    final page = refresh ? 1 : (targetPage ?? state.currentPage);
+    final offset = (page - 1) * state.pageSize;
 
     state = state.copyWith(
-      isLoading: state.records.isEmpty,
-      isRefreshing: refresh && state.records.isNotEmpty,
-      isLoadingMore: append,
+      isLoading: true,
+      isRefreshing: false,
+      isLoadingMore: false,
       error: null,
       loadMoreError: null,
+      currentPage: page,
     );
 
     try {
       final records = await HistoryDatabase.instance.getAllHistory(
-        limit: limit,
+        limit: state.pageSize,
         offset: offset,
       );
       final totalCount = await HistoryDatabase.instance.getHistoryCount();
       if (!_requestGate.isCurrent(token)) return;
 
-      final merged = mergePagedItems(
-        existing: state.records,
-        incoming: records,
-        idOf: (record) => record.work.id,
-        replace: !append,
-      );
-
       state = state.copyWith(
-        records: merged,
-        currentPage:
-            merged.isEmpty ? 1 : ((merged.length - 1) ~/ state.pageSize) + 1,
+        records: records,
+        currentPage: page,
         totalCount: totalCount,
-        hasMore: merged.length < totalCount,
+        hasMore: offset + records.length < totalCount,
         isLoading: false,
         isRefreshing: false,
         isLoadingMore: false,
@@ -135,8 +125,8 @@ class HistoryNotifier extends StateNotifier<HistoryState> {
         isLoading: false,
         isRefreshing: false,
         isLoadingMore: false,
-        error: append ? null : message,
-        loadMoreError: append ? message : null,
+        error: message,
+        loadMoreError: null,
       );
       logOutput('Failed to load history: $e');
     } finally {
@@ -150,10 +140,20 @@ class HistoryNotifier extends StateNotifier<HistoryState> {
 
   Future<void> loadMore() async {
     if (!state.hasMore || state.isRefreshing) return;
-    await load(append: true);
+    await load(targetPage: state.currentPage + 1);
   }
 
   Future<void> nextPage() => loadMore();
+
+  Future<void> previousPage() async {
+    if (state.currentPage <= 1 || state.isLoading) return;
+    await load(targetPage: state.currentPage - 1);
+  }
+
+  Future<void> goToPage(int page) async {
+    if (page < 1 || page == state.currentPage || state.isLoading) return;
+    await load(targetPage: page);
+  }
 
   /// 外部直接写入历史（例如 history_work_card 恢复播放时）
   Future<void> addOrUpdate(Work work,
@@ -199,12 +199,12 @@ class HistoryNotifier extends StateNotifier<HistoryState> {
     }
 
     await HistoryDatabase.instance.addOrUpdate(record);
-    await refresh();
+    await load(force: true);
   }
 
   Future<void> remove(int workId) async {
     await HistoryDatabase.instance.delete(workId);
-    await refresh();
+    await load(force: true);
   }
 
   Future<void> clear() async {

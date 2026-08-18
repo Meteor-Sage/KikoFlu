@@ -84,7 +84,7 @@ class PlaylistsNotifier extends StateNotifier<PlaylistsState> {
   void updatePageSize(int newSize) {
     if (state.pageSize == newSize) return;
     state = state.copyWith(pageSize: newSize);
-    refresh();
+    load(targetPage: 1, supersede: true);
   }
 
   Future<void> load({
@@ -95,11 +95,11 @@ class PlaylistsNotifier extends StateNotifier<PlaylistsState> {
   }) async {
     final token = _requestGate.begin(supersede: supersede || refresh);
     if (token == null) return;
-    final page = refresh ? 1 : (targetPage ?? state.currentPage);
+    final page = targetPage ?? state.currentPage;
 
     state = state.copyWith(
-      isLoading: state.playlists.isEmpty,
-      isRefreshing: refresh && state.playlists.isNotEmpty,
+      isLoading: true,
+      isRefreshing: false,
       isLoadingMore: append,
       error: null,
       loadMoreError: null,
@@ -128,11 +128,11 @@ class PlaylistsNotifier extends StateNotifier<PlaylistsState> {
       // 计算是否有更多页
       final totalPages = totalCount > 0 ? (totalCount / pageSize).ceil() : 1;
       final hasMore = page < totalPages;
-      final merged = mergePagedItems(
-        existing: state.playlists,
+      final merged = mergePagedItems<Playlist, String>(
+        existing: const [],
         incoming: playlists,
         idOf: (playlist) => playlist.id,
-        replace: !append,
+        replace: true,
       );
 
       state = state.copyWith(
@@ -178,12 +178,13 @@ class PlaylistsNotifier extends StateNotifier<PlaylistsState> {
 
   // 下一页
   Future<void> nextPage() async {
-    await loadMore();
+    if (!state.hasMore || state.isRefreshing) return;
+    await load(targetPage: state.currentPage + 1);
   }
 
   Future<void> loadMore() async {
     if (!state.hasMore || state.isRefreshing) return;
-    await load(targetPage: state.currentPage + 1, append: true);
+    await load(targetPage: state.currentPage + 1);
   }
 
   /// 删除播放列表
@@ -215,7 +216,10 @@ class PlaylistsNotifier extends StateNotifier<PlaylistsState> {
     }
   }
 
-  Future<void> refresh() => load(refresh: true, supersede: true);
+  Future<void> refresh() => load(
+        targetPage: state.currentPage,
+        supersede: true,
+      );
 }
 
 final playlistsProvider =

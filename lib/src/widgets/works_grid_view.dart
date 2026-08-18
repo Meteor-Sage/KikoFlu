@@ -27,10 +27,16 @@ class WorksGridView extends ConsumerWidget {
     this.onRetry,
     this.onPrefetch,
     this.emptyBuilder,
+    this.loadingBuilder,
+    this.errorBuilder,
     this.endBuilder,
     this.showEndMessage = false,
-    this.paginationWidget,
+    this.pagination,
     this.pageStorageKey,
+    this.padding,
+    this.fillEmptyViewport = true,
+    this.physics,
+    this.showInlineLoadingIndicator = false,
   });
 
   final List<Work> works;
@@ -47,10 +53,16 @@ class WorksGridView extends ConsumerWidget {
   final VoidCallback? onRetry;
   final ValueChanged<List<Work>>? onPrefetch;
   final WidgetBuilder? emptyBuilder;
+  final WidgetBuilder? loadingBuilder;
+  final VirtualizedErrorBuilder? errorBuilder;
   final WidgetBuilder? endBuilder;
   final bool showEndMessage;
-  final Widget? paginationWidget;
+  final VirtualizedPagination? pagination;
   final PageStorageKey<String>? pageStorageKey;
+  final EdgeInsetsGeometry? padding;
+  final bool fillEmptyViewport;
+  final ScrollPhysics? physics;
+  final bool showInlineLoadingIndicator;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -58,7 +70,7 @@ class WorksGridView extends ConsumerWidget {
     final auth = ref.watch(
       authProvider.select((state) => (state.host ?? '', state.token ?? '')),
     );
-    return LayoutBuilder(builder: (context, constraints) {
+    return LayoutBuilder(builder: (context, _) {
       final isLandscape =
           MediaQuery.orientationOf(context) == Orientation.landscape;
       final spacing = isLandscape ? 24.0 : 8.0;
@@ -74,14 +86,6 @@ class WorksGridView extends ConsumerWidget {
         LayoutType.list => 1,
       };
       final isGrid = layoutType != LayoutType.list;
-      final availableWidth = constraints.maxWidth - padding * 2;
-      final cardWidth = isGrid
-          ? (availableWidth - spacing * (crossAxisCount - 1)) / crossAxisCount
-          : availableWidth;
-      final usesCompactCard =
-          crossAxisCount >= 5 || (crossAxisCount == 3 && !isLandscape);
-      final detailsHeight = usesCompactCard ? 96.0 : 225.0;
-
       return VirtualizedSliverCollection<Work>(
         controller: scrollController,
         pageStorageKey: pageStorageKey,
@@ -93,18 +97,12 @@ class WorksGridView extends ConsumerWidget {
           crossAxisCount: crossAxisCount,
         ),
         layout: isGrid
-            ? VirtualizedCollectionLayout.grid
+            ? VirtualizedCollectionLayout.masonry
             : VirtualizedCollectionLayout.list,
-        gridDelegate: isGrid
-            ? SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: crossAxisCount,
-                crossAxisSpacing: spacing,
-                mainAxisSpacing: spacing,
-                mainAxisExtent: cardWidth +
-                    detailsHeight * displaySettings.fontScale.multiplier,
-              )
-            : null,
-        padding: EdgeInsets.all(padding),
+        masonryCrossAxisCount: isGrid ? crossAxisCount : null,
+        masonryCrossAxisSpacing: spacing,
+        masonryMainAxisSpacing: spacing,
+        padding: this.padding ?? EdgeInsets.all(padding),
         isInitialLoading: isLoading && works.isEmpty,
         isRefreshing: isRefreshing,
         isLoadingMore: isLoadingMore,
@@ -113,6 +111,9 @@ class WorksGridView extends ConsumerWidget {
         loadMoreError: loadMoreError,
         onRefresh: onRefresh,
         onLoadMore: onLoadMore,
+        pagination: pagination?.copyWith(
+          padding: EdgeInsets.fromLTRB(padding, spacing, padding, 24),
+        ),
         onRetry: onRetry,
         onPrefetch: (items) {
           prefetchWorkCovers(
@@ -125,16 +126,27 @@ class WorksGridView extends ConsumerWidget {
           onPrefetch?.call(items);
         },
         emptyBuilder: emptyBuilder,
+        loadingBuilder: loadingBuilder,
+        errorBuilder: errorBuilder,
         endBuilder: endBuilder,
-        showEndIndicator: showEndMessage && works.isNotEmpty,
-        sliversAfter: paginationWidget == null
-            ? const []
-            : [
-                SliverPadding(
-                  padding: EdgeInsets.fromLTRB(padding, spacing, padding, 24),
-                  sliver: SliverToBoxAdapter(child: paginationWidget),
-                ),
-              ],
+        showEndIndicator:
+            pagination == null && showEndMessage && works.isNotEmpty,
+        fillEmptyViewport: fillEmptyViewport,
+        physics: physics,
+        collectionTrailingBuilder:
+            (onLoadMore != null && hasMore) || showInlineLoadingIndicator
+                ? (context) => isGrid
+                    ? const SizedBox(
+                        height: 100,
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    : const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16),
+                          child: CircularProgressIndicator(),
+                        ),
+                      )
+                : null,
       );
     });
   }

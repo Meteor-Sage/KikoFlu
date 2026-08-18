@@ -10,6 +10,7 @@ import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/log_service.dart';
 import '../widgets/works_grid_view.dart';
+import '../widgets/virtualized_sliver_collection.dart';
 import '../widgets/sort_dialog.dart';
 import '../widgets/global_audio_player_wrapper.dart';
 import '../widgets/download_fab.dart';
@@ -400,26 +401,58 @@ class _SearchResultContentState extends ConsumerState<_SearchResultContent> {
   }
 
   Widget _buildBody(SearchResultState searchState) {
-    return WorksGridView(
-      works: searchState.works,
-      layoutType: searchState.layoutType.toWorksLayoutType(),
-      scrollController: _scrollController,
-      pageStorageKey: PageStorageKey(
-        'search-results-${widget.keyword}-${searchState.layoutType.name}',
-      ),
-      isLoading: searchState.isLoading,
-      isRefreshing: searchState.isRefreshing,
-      isLoadingMore: searchState.isLoadingMore,
-      hasMore: searchState.hasMore,
-      error: searchState.error,
-      loadMoreError: searchState.loadMoreError,
-      onRetry: () => ref.read(searchResultProvider.notifier).refresh(),
-      onRefresh: () => ref.read(searchResultProvider.notifier).refresh(),
-      onLoadMore: () => ref.read(searchResultProvider.notifier).loadMore(),
-      showEndMessage: searchState.works.isNotEmpty,
-      emptyBuilder: (context) => Center(
+    if (searchState.error != null) {
+      return Center(
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              S.of(context).loadFailed,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              searchState.error!,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () =>
+                  ref.read(searchResultProvider.notifier).refresh(),
+              icon: const Icon(Icons.refresh),
+              label: Text(S.of(context).retry),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (searchState.works.isEmpty && searchState.isLoading) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('...'),
+          ],
+        ),
+      );
+    }
+
+    if (searchState.works.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
@@ -429,18 +462,47 @@ class _SearchResultContentState extends ConsumerState<_SearchResultContent> {
             ),
           ],
         ),
-      ),
-      endBuilder: (context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24),
-        child: Column(
-          children: [
-            Text(S.of(context).reachedEnd),
-            if (searchState.rawWorks.length > searchState.works.length)
-              Text(
-                '${searchState.rawWorks.length - searchState.works.length} filtered',
-              ),
-          ],
-        ),
+      );
+    }
+
+    return WorksGridView(
+      works: searchState.works,
+      layoutType: searchState.layoutType.toWorksLayoutType(),
+      scrollController: _scrollController,
+      isLoading: searchState.isLoading,
+      isRefreshing: false,
+      isLoadingMore: searchState.isLoadingMore,
+      hasMore: searchState.hasMore,
+      error: searchState.error,
+      loadMoreError: searchState.loadMoreError,
+      onRetry: () => ref.read(searchResultProvider.notifier).refresh(),
+      showInlineLoadingIndicator: searchState.isLoading,
+      pagination: VirtualizedPagination(
+        currentPage: searchState.currentPage,
+        pageSize: searchState.pageSize,
+        totalCount: searchState.totalCount,
+        hasMore: searchState.hasMore,
+        isLoading: searchState.isLoading || searchState.isRefreshing,
+        onPreviousPage: () => ref
+            .read(searchResultProvider.notifier)
+            .goToPage(searchState.currentPage - 1),
+        onNextPage: () => ref
+            .read(searchResultProvider.notifier)
+            .goToPage(searchState.currentPage + 1),
+        onGoToPage: ref.read(searchResultProvider.notifier).goToPage,
+        nextPageOnOverscroll: true,
+        scrollDuration: const Duration(milliseconds: 300),
+        scrollCurve: Curves.easeOut,
+        endMessage: S.of(context).reachedEnd,
+        extraBuilder: searchState.rawWorks.length > searchState.works.length
+            ? (context) => Text(
+                  '${searchState.rawWorks.length - searchState.works.length} filtered',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
+                )
+            : null,
       ),
     );
   }

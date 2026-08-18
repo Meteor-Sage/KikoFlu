@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/works_provider.dart';
+import '../utils/scroll_optimization.dart';
 import '../widgets/sort_dialog.dart';
 import '../widgets/works_grid_view.dart';
+import '../widgets/virtualized_sliver_collection.dart';
 import '../utils/snackbar_util.dart';
 import '../widgets/scrollable_appbar.dart';
 import '../../l10n/app_localizations.dart';
@@ -417,18 +419,87 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
       works: worksState.works,
       layoutType: worksState.layoutType,
       scrollController: _scrollController,
-      pageStorageKey:
-          PageStorageKey('home-feed-${worksState.displayMode.name}'),
+      physics: ScrollOptimization.physics,
       isLoading: worksState.isLoading,
-      isRefreshing: worksState.isRefreshing,
+      isRefreshing: worksState.isLoading && worksState.works.isNotEmpty,
       isLoadingMore: worksState.isLoadingMore,
       hasMore: worksState.hasMore,
       error: worksState.error,
-      loadMoreError: worksState.loadMoreError,
+      loadMoreError: null,
+      onLoadMore:
+          worksState.displayMode == DisplayMode.all ? null : notifier.loadMore,
       onRetry: notifier.refresh,
-      onRefresh: notifier.refresh,
-      onLoadMore: notifier.loadMore,
-      showEndMessage: worksState.works.isNotEmpty,
+      onRefresh: worksState.works.isEmpty ? null : notifier.refresh,
+      pagination: worksState.displayMode == DisplayMode.all
+          ? VirtualizedPagination(
+              currentPage: worksState.currentPage,
+              pageSize: worksState.pageSize,
+              totalCount: worksState.totalCount,
+              hasMore: worksState.hasMore,
+              isLoading: worksState.isLoading || worksState.isRefreshing,
+              onPreviousPage: notifier.previousPage,
+              onNextPage: notifier.nextPage,
+              onGoToPage: notifier.goToPage,
+              nextPageOnOverscroll: true,
+              scrollDuration: const Duration(milliseconds: 500),
+              scrollCurve: Curves.easeInOut,
+              extraBuilder: worksState.rawWorks.length > worksState.works.length
+                  ? (context) => Text(
+                        S.of(context).pageExcludedNWorks(
+                              worksState.rawWorks.length -
+                                  worksState.works.length,
+                            ),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontSize: 12,
+                        ),
+                      )
+                  : null,
+            )
+          : null,
+      showEndMessage:
+          worksState.displayMode != DisplayMode.all && worksState.isLastPage,
+      loadingBuilder: (context) => Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(S.of(context).loading),
+          ],
+        ),
+      ),
+      errorBuilder: (context, error, retry) => Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              S.of(context).loadFailed,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              error.toString(),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: retry,
+              icon: const Icon(Icons.refresh),
+              label: Text(S.of(context).retry),
+            ),
+          ],
+        ),
+      ),
       emptyBuilder: (context) => Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -443,6 +514,13 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
               S.of(context).noWorks,
               style: Theme.of(context).textTheme.titleLarge,
             ),
+            const SizedBox(height: 8),
+            Text(
+              S.of(context).checkNetworkOrRetry,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
           ],
         ),
       ),
@@ -453,9 +531,19 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.check_circle_outline, size: 16),
+                Icon(
+                  Icons.check_circle_outline,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
                 const SizedBox(width: 8),
-                Text(S.of(context).reachedEnd),
+                Text(
+                  S.of(context).reachedEnd,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 14,
+                  ),
+                ),
               ],
             ),
             if (worksState.rawWorks.length > worksState.works.length) ...[
@@ -464,6 +552,10 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
                 S.of(context).excludedNWorks(
                       worksState.rawWorks.length - worksState.works.length,
                     ),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 12,
+                ),
               ),
             ],
           ],

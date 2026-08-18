@@ -180,7 +180,6 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
       items: groups,
       itemId: (entry) => entry.key,
       pageStorageKey: const PageStorageKey('active-downloads-feed'),
-      padding: const EdgeInsets.only(bottom: 24),
       showEndIndicator: false,
       itemBuilder: (context, entry, index) {
         final workId = entry.key;

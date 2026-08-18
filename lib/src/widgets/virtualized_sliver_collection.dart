@@ -2,11 +2,74 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../utils/scroll_optimization.dart';
+import 'overscroll_next_page_detector.dart';
+import 'pagination_bar.dart';
 
-enum VirtualizedCollectionLayout { list, grid }
+enum VirtualizedCollectionLayout { list, grid, masonry }
+
+@immutable
+class VirtualizedPagination {
+  const VirtualizedPagination({
+    required this.currentPage,
+    required this.pageSize,
+    required this.totalCount,
+    required this.hasMore,
+    required this.isLoading,
+    this.onPreviousPage,
+    this.onNextPage,
+    this.onGoToPage,
+    this.nextPageOnOverscroll = false,
+    this.scrollToTop = true,
+    this.scrollDuration = const Duration(milliseconds: 500),
+    this.scrollCurve = Curves.easeInOut,
+    this.extraBuilder,
+    this.showWhenEmpty = false,
+    this.endMessage,
+    this.padding = const EdgeInsets.fromLTRB(8, 8, 8, 24),
+  });
+
+  final int currentPage;
+  final int pageSize;
+  final int totalCount;
+  final bool hasMore;
+  final bool isLoading;
+  final FutureOr<void> Function()? onPreviousPage;
+  final FutureOr<void> Function()? onNextPage;
+  final FutureOr<void> Function(int page)? onGoToPage;
+  final bool nextPageOnOverscroll;
+  final bool scrollToTop;
+  final Duration scrollDuration;
+  final Curve scrollCurve;
+  final WidgetBuilder? extraBuilder;
+  final bool showWhenEmpty;
+  final String? endMessage;
+  final EdgeInsetsGeometry padding;
+
+  VirtualizedPagination copyWith({EdgeInsetsGeometry? padding}) {
+    return VirtualizedPagination(
+      currentPage: currentPage,
+      pageSize: pageSize,
+      totalCount: totalCount,
+      hasMore: hasMore,
+      isLoading: isLoading,
+      onPreviousPage: onPreviousPage,
+      onNextPage: onNextPage,
+      onGoToPage: onGoToPage,
+      nextPageOnOverscroll: nextPageOnOverscroll,
+      scrollToTop: scrollToTop,
+      scrollDuration: scrollDuration,
+      scrollCurve: scrollCurve,
+      extraBuilder: extraBuilder,
+      showWhenEmpty: showWhenEmpty,
+      endMessage: endMessage,
+      padding: padding ?? this.padding,
+    );
+  }
+}
 
 @immutable
 class VirtualizedVisibleItem<T> {
@@ -67,6 +130,9 @@ class VirtualizedSliverCollection<T> extends StatefulWidget {
     required this.itemBuilder,
     this.layout = VirtualizedCollectionLayout.list,
     this.gridDelegate,
+    this.masonryCrossAxisCount,
+    this.masonryMainAxisSpacing = 0,
+    this.masonryCrossAxisSpacing = 0,
     this.controller,
     this.collectionController,
     this.pageStorageKey,
@@ -75,6 +141,7 @@ class VirtualizedSliverCollection<T> extends StatefulWidget {
     this.sliversAfter = const [],
     this.onRefresh,
     this.onLoadMore,
+    this.pagination,
     this.onRetry,
     this.hasMore = false,
     this.isInitialLoading = false,
@@ -93,12 +160,23 @@ class VirtualizedSliverCollection<T> extends StatefulWidget {
     this.prefetchItemCount = 6,
     this.nearEndExtent = 720,
     this.cacheExtent = ScrollOptimization.cacheExtent,
-    this.physics = ScrollOptimization.physics,
+    this.physics,
     this.addAutomaticKeepAlives = true,
     this.addRepaintBoundaries = true,
-  }) : assert(
+    this.fillEmptyViewport = true,
+    this.collectionTrailingBuilder,
+  })  : assert(
           layout != VirtualizedCollectionLayout.grid || gridDelegate != null,
           'gridDelegate is required for grid layout',
+        ),
+        assert(
+          layout != VirtualizedCollectionLayout.masonry ||
+              (masonryCrossAxisCount != null && masonryCrossAxisCount > 0),
+          'masonryCrossAxisCount is required for masonry layout',
+        ),
+        assert(
+          pagination == null || onLoadMore == null,
+          'Explicit pagination and infinite loading are mutually exclusive',
         );
 
   final List<T> items;
@@ -106,6 +184,9 @@ class VirtualizedSliverCollection<T> extends StatefulWidget {
   final VirtualizedItemBuilder<T> itemBuilder;
   final VirtualizedCollectionLayout layout;
   final SliverGridDelegate? gridDelegate;
+  final int? masonryCrossAxisCount;
+  final double masonryMainAxisSpacing;
+  final double masonryCrossAxisSpacing;
   final ScrollController? controller;
   final VirtualizedCollectionController? collectionController;
   final PageStorageKey<String>? pageStorageKey;
@@ -114,6 +195,7 @@ class VirtualizedSliverCollection<T> extends StatefulWidget {
   final List<Widget> sliversAfter;
   final Future<void> Function()? onRefresh;
   final Future<void> Function()? onLoadMore;
+  final VirtualizedPagination? pagination;
   final VoidCallback? onRetry;
   final bool hasMore;
   final bool isInitialLoading;
@@ -132,9 +214,11 @@ class VirtualizedSliverCollection<T> extends StatefulWidget {
   final int prefetchItemCount;
   final double nearEndExtent;
   final double cacheExtent;
-  final ScrollPhysics physics;
+  final ScrollPhysics? physics;
   final bool addAutomaticKeepAlives;
   final bool addRepaintBoundaries;
+  final bool fillEmptyViewport;
+  final WidgetBuilder? collectionTrailingBuilder;
 
   @override
   State<VirtualizedSliverCollection<T>> createState() =>
@@ -149,6 +233,7 @@ class _VirtualizedSliverCollectionState<T>
   final Set<Object> _prefetchedIds = {};
   bool _inspectionScheduled = false;
   bool _requestInFlight = false;
+  bool _pageRequestInFlight = false;
   Object? _lastLoadSignature;
   List<Object> _lastVisibleIds = const [];
 
@@ -284,9 +369,36 @@ class _VirtualizedSliverCollectionState<T>
   }
 
   void _maybeLoadMore() {
+    if (widget.pagination != null) return;
     if (!_controller.hasClients || widget.items.isEmpty) return;
     if (_controller.position.extentAfter > widget.nearEndExtent) return;
     _invokeLoadMore();
+  }
+
+  Future<void> _changePage(
+    VirtualizedPagination pagination,
+    FutureOr<void> Function()? callback, {
+    bool waitForResultBeforeScroll = false,
+  }) async {
+    if (callback == null || _pageRequestInFlight) return;
+    setState(() => _pageRequestInFlight = true);
+    try {
+      final result = callback();
+      if (waitForResultBeforeScroll) await result;
+      if (pagination.scrollToTop) {
+        await WidgetsBinding.instance.endOfFrame;
+        if (mounted && _controller.hasClients) {
+          await _controller.animateTo(
+            0,
+            duration: pagination.scrollDuration,
+            curve: pagination.scrollCurve,
+          );
+        }
+      }
+      if (!waitForResultBeforeScroll) await result;
+    } finally {
+      if (mounted) setState(() => _pageRequestInFlight = false);
+    }
   }
 
   Future<void> _invokeLoadMore({bool force = false}) async {
@@ -318,6 +430,12 @@ class _VirtualizedSliverCollectionState<T>
   SliverChildBuilderDelegate _buildDelegate(Map<Object, int> indexById) {
     return SliverChildBuilderDelegate(
       (context, index) {
+        if (index == widget.items.length) {
+          return KeyedSubtree(
+            key: const ValueKey('virtualized-collection-trailing'),
+            child: widget.collectionTrailingBuilder!(context),
+          );
+        }
         final item = widget.items[index];
         final id = widget.itemId(item);
         return _TrackedVirtualizedItem(
@@ -328,7 +446,8 @@ class _VirtualizedSliverCollectionState<T>
           child: widget.itemBuilder(context, item, index),
         );
       },
-      childCount: widget.items.length,
+      childCount: widget.items.length +
+          (widget.collectionTrailingBuilder == null ? 0 : 1),
       findChildIndexCallback: (key) {
         if (key is! _VirtualizedItemKey) return null;
         return indexById[key.value];
@@ -381,6 +500,40 @@ class _VirtualizedSliverCollectionState<T>
   }
 
   Widget _buildFooter() {
+    final pagination = widget.pagination;
+    if (pagination != null) {
+      return Padding(
+        padding: pagination.padding,
+        child: Column(
+          children: [
+            PaginationBar(
+              currentPage: pagination.currentPage,
+              pageSize: pagination.pageSize,
+              totalCount: pagination.totalCount,
+              hasMore: pagination.hasMore,
+              isLoading: pagination.isLoading || _pageRequestInFlight,
+              onPreviousPage: pagination.onPreviousPage == null
+                  ? null
+                  : () => _changePage(pagination, pagination.onPreviousPage),
+              onNextPage: pagination.onNextPage == null
+                  ? null
+                  : () => _changePage(pagination, pagination.onNextPage),
+              onGoToPage: pagination.onGoToPage == null
+                  ? null
+                  : (page) => _changePage(
+                        pagination,
+                        () => pagination.onGoToPage!(page),
+                      ),
+              endMessage: pagination.endMessage,
+            ),
+            if (pagination.extraBuilder != null) ...[
+              const SizedBox(height: 8),
+              pagination.extraBuilder!(context),
+            ],
+          ],
+        ),
+      );
+    }
     if (widget.loadMoreError != null) {
       void retry() => _invokeLoadMore(force: true);
       return (widget.loadMoreErrorBuilder ?? _defaultErrorBuilder)(
@@ -389,7 +542,8 @@ class _VirtualizedSliverCollectionState<T>
         retry,
       );
     }
-    if (widget.isLoadingMore || _requestInFlight) {
+    if ((widget.isLoadingMore || _requestInFlight) &&
+        widget.collectionTrailingBuilder == null) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 24),
         child: Center(child: CircularProgressIndicator()),
@@ -430,6 +584,14 @@ class _VirtualizedSliverCollectionState<T>
           delegate: delegate,
           gridDelegate: widget.gridDelegate!,
         ),
+      VirtualizedCollectionLayout.masonry => SliverMasonryGrid(
+          delegate: delegate,
+          gridDelegate: SliverSimpleGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: widget.masonryCrossAxisCount!,
+          ),
+          mainAxisSpacing: widget.masonryMainAxisSpacing,
+          crossAxisSpacing: widget.masonryCrossAxisSpacing,
+        ),
     };
 
     Widget scrollView = CustomScrollView(
@@ -439,15 +601,21 @@ class _VirtualizedSliverCollectionState<T>
       physics: widget.physics,
       slivers: [
         ...widget.sliversBefore,
-        if (widget.items.isEmpty)
+        if (widget.items.isEmpty && widget.fillEmptyViewport)
           SliverFillRemaining(
             hasScrollBody: false,
             child: _buildInitialStatus(),
           )
+        else if (widget.items.isEmpty)
+          SliverToBoxAdapter(child: _buildInitialStatus())
         else ...[
           SliverPadding(padding: widget.padding, sliver: collection),
           SliverToBoxAdapter(child: _buildFooter()),
         ],
+        if (widget.items.isEmpty &&
+            widget.pagination != null &&
+            widget.pagination!.showWhenEmpty)
+          SliverToBoxAdapter(child: _buildFooter()),
         ...widget.sliversAfter,
       ],
     );
@@ -455,6 +623,20 @@ class _VirtualizedSliverCollectionState<T>
     if (widget.onRefresh != null) {
       scrollView = RefreshIndicator(
         onRefresh: widget.onRefresh!,
+        child: scrollView,
+      );
+    }
+
+    final pagination = widget.pagination;
+    if (pagination != null && pagination.nextPageOnOverscroll) {
+      scrollView = OverscrollNextPageDetector(
+        onNextPage: () => _changePage(
+          pagination,
+          pagination.onNextPage,
+          waitForResultBeforeScroll: true,
+        ),
+        hasNextPage: pagination.hasMore,
+        isLoading: pagination.isLoading || _pageRequestInFlight,
         child: scrollView,
       );
     }

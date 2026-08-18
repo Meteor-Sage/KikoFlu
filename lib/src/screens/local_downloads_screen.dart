@@ -13,6 +13,7 @@ import '../services/log_service.dart';
 import '../services/storage_service.dart';
 import '../utils/string_utils.dart';
 import '../utils/snackbar_util.dart';
+import '../utils/scroll_optimization.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/sort_dialog.dart';
 import 'offline_work_detail_screen.dart';
@@ -36,6 +37,8 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
   final Set<int> _selectedWorkIds = {}; // 选中的作品ID
   final VirtualizedCollectionController _collectionController =
       VirtualizedCollectionController();
+  int _currentPage = 1;
+  static const int _pageSize = 30;
 
   // 搜索相关
   final TextEditingController _searchController = TextEditingController();
@@ -68,7 +71,23 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
   }
 
   void _scrollToTop() {
-    _collectionController.scrollToTop();
+    _collectionController.scrollToTop(
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  void _goToPage(int page) {
+    setState(() => _currentPage = page);
+    _scrollToTop();
+  }
+
+  void _nextPage(int totalPages) {
+    if (_currentPage < totalPages) _goToPage(_currentPage + 1);
+  }
+
+  void _previousPage() {
+    if (_currentPage > 1) _goToPage(_currentPage - 1);
   }
 
   void _toggleSelectionMode() {
@@ -336,8 +355,8 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
           setState(() {
             _sortOrder = option;
             _sortDirection = direction;
+            _currentPage = 1;
           });
-          _scrollToTop();
         },
         autoClose: true,
       ),
@@ -351,9 +370,9 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
       if (!_isSearchVisible) {
         _searchController.clear();
         _searchQuery = '';
+        _currentPage = 1;
       }
     });
-    _scrollToTop();
   }
 
   // 过滤作品（根据搜索关键词）
@@ -542,6 +561,16 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
 
         // 应用排序
         final sortedWorkIds = _sortWorkIds(groupedTasks);
+        final totalCount = sortedWorkIds.length;
+        final totalPages = (totalCount / _pageSize).ceil();
+        final currentPage = totalPages == 0 || _currentPage < 1
+            ? 1
+            : _currentPage > totalPages
+                ? totalPages
+                : _currentPage;
+        final startIndex = (currentPage - 1) * _pageSize;
+        final endIndex = (startIndex + _pageSize).clamp(0, totalCount);
+        final currentPageWorkIds = sortedWorkIds.sublist(startIndex, endIndex);
 
         return Column(
           children: [
@@ -554,7 +583,7 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
               child: VirtualizedSliverCollection<int>(
                 collectionController: _collectionController,
                 pageStorageKey: const PageStorageKey('local-downloads-feed'),
-                items: sortedWorkIds,
+                items: currentPageWorkIds,
                 itemId: (workId) => workId,
                 layout: VirtualizedCollectionLayout.grid,
                 gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
@@ -563,8 +592,23 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
                 ),
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                onRefresh: _refreshMetadata,
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                physics: ScrollOptimization.physics,
+                pagination: totalCount == 0
+                    ? null
+                    : VirtualizedPagination(
+                        currentPage: currentPage,
+                        pageSize: _pageSize,
+                        totalCount: totalCount,
+                        hasMore: currentPage < totalPages,
+                        isLoading: false,
+                        onPreviousPage: _previousPage,
+                        onNextPage: () => _nextPage(totalPages),
+                        onGoToPage: _goToPage,
+                        nextPageOnOverscroll: true,
+                        scrollToTop: false,
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                      ),
                 showEndIndicator: false,
                 emptyBuilder: (context) => Center(
                   child: Column(
@@ -797,8 +841,8 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
                     _searchController.clear();
                     setState(() {
                       _searchQuery = '';
+                      _currentPage = 1;
                     });
-                    _scrollToTop();
                   },
                 )
               : null,
@@ -812,8 +856,8 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
         onChanged: (value) {
           setState(() {
             _searchQuery = value;
+            _currentPage = 1;
           });
-          _scrollToTop();
         },
       ),
     );
@@ -1085,8 +1129,6 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
           child: CachedNetworkImage(
             imageUrl: work.getCoverImageUrl(host, token: token),
             httpHeaders: httpHeaders,
-            cacheKey: 'work_cover_$workId',
-            memCacheWidth: 512,
             fit: BoxFit.cover,
             errorWidget: (context, url, error) => _buildPlaceholder(),
           ),

@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/my_reviews_provider.dart';
 import '../providers/my_tabs_display_provider.dart';
 import '../providers/works_provider.dart' show LayoutType;
+import '../utils/scroll_optimization.dart';
 import '../providers/auth_provider.dart';
 import '../utils/server_utils.dart';
 import '../utils/l10n_extensions.dart';
 import '../widgets/works_grid_view.dart';
+import '../widgets/virtualized_sliver_collection.dart';
 import '../widgets/download_fab.dart';
 import '../services/download_service.dart';
 import '../models/download_task.dart';
@@ -119,16 +121,6 @@ class _MyScreenState extends ConsumerState<MyScreen>
     _tabController.dispose();
     _scrollController.dispose();
     super.dispose();
-  }
-
-  void _scrollToTop() {
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        0,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOut,
-      );
-    }
   }
 
   void _navigateToDownloads() {
@@ -277,7 +269,6 @@ class _MyScreenState extends ConsumerState<MyScreen>
         ],
         onSort: (option, direction) {
           ref.read(myReviewsProvider.notifier).changeSort(option, direction);
-          _scrollToTop();
         },
       ),
     );
@@ -367,7 +358,6 @@ class _MyScreenState extends ConsumerState<MyScreen>
                             ref
                                 .read(myReviewsProvider.notifier)
                                 .changeFilter(MyReviewFilter.values[i]);
-                            _scrollToTop();
                           },
                           index: i,
                           total: MyReviewFilter.values.length,
@@ -401,7 +391,6 @@ class _MyScreenState extends ConsumerState<MyScreen>
                         ref
                             .read(myReviewsProvider.notifier)
                             .toggleSubtitleFilter();
-                        _scrollToTop();
                       },
                       tooltip: SubtitleFilterMode.fromValue(
                         state.subtitleFilter,
@@ -433,6 +422,44 @@ class _MyScreenState extends ConsumerState<MyScreen>
   }
 
   Widget _buildBody(MyReviewsState state) {
+    if (state.error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              S.of(context).loadFailed,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              state.error!,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => ref.read(myReviewsProvider.notifier).refresh(),
+              icon: const Icon(Icons.refresh),
+              label: Text(S.of(context).retry),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (state.isLoading && state.works.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     final layoutType = switch (state.layoutType) {
       MyReviewLayoutType.bigGrid => LayoutType.bigGrid,
       MyReviewLayoutType.smallGrid => LayoutType.smallGrid,
@@ -443,36 +470,37 @@ class _MyScreenState extends ConsumerState<MyScreen>
       works: state.works,
       layoutType: layoutType,
       scrollController: _scrollController,
-      pageStorageKey: PageStorageKey(
-        'my-reviews-${state.filter.name}-${state.layoutType.name}',
-      ),
+      physics: ScrollOptimization.physics,
       isLoading: state.isLoading,
-      isRefreshing: state.isRefreshing,
+      isRefreshing: state.isLoading && state.works.isNotEmpty,
       isLoadingMore: state.isLoadingMore,
       hasMore: state.hasMore,
       error: state.error,
       loadMoreError: state.loadMoreError,
       onRetry: () => ref.read(myReviewsProvider.notifier).refresh(),
       onRefresh: () => ref.read(myReviewsProvider.notifier).refresh(),
-      onLoadMore: () => ref.read(myReviewsProvider.notifier).loadMore(),
-      showEndMessage: state.works.isNotEmpty,
-      emptyBuilder: (context) => Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.favorite_border,
-              size: 64,
-              color: Theme.of(context).colorScheme.outline,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              S.of(context).noWorks,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-          ],
-        ),
+      pagination: VirtualizedPagination(
+        currentPage: state.currentPage,
+        pageSize: state.layoutType == MyReviewLayoutType.list
+            ? state.pageSize
+            : state.effectivePageSize,
+        totalCount: state.totalCount,
+        hasMore: state.hasMore,
+        isLoading: state.isLoading || state.isRefreshing,
+        onPreviousPage: ref.read(myReviewsProvider.notifier).previousPage,
+        onNextPage: ref.read(myReviewsProvider.notifier).nextPage,
+        onGoToPage: ref.read(myReviewsProvider.notifier).goToPage,
+        nextPageOnOverscroll: true,
+        scrollDuration: const Duration(milliseconds: 500),
+        scrollCurve: Curves.easeInOut,
+        showWhenEmpty: true,
       ),
+      fillEmptyViewport: false,
+      padding: state.layoutType == MyReviewLayoutType.list
+          ? const EdgeInsets.all(8)
+          : MediaQuery.orientationOf(context) == Orientation.landscape
+              ? const EdgeInsets.fromLTRB(24, 8, 24, 24)
+              : const EdgeInsets.all(8),
     );
   }
 }

@@ -143,7 +143,7 @@ class MyReviewsNotifier extends StateNotifier<MyReviewsState> {
   void updatePageSize(int newSize) {
     if (state.pageSize == newSize) return;
     state = state.copyWith(pageSize: newSize);
-    refresh();
+    load(targetPage: 1, supersede: true);
   }
 
   Future<void> load({
@@ -197,10 +197,10 @@ class MyReviewsNotifier extends StateNotifier<MyReviewsState> {
       if (!_requestGate.isCurrent(requestToken)) return;
 
       final rawWorks = mergePagedItems<Work, int>(
-        existing: state.rawWorks,
+        existing: const [],
         incoming: works,
         idOf: (work) => work.id,
-        replace: !append || page == 1,
+        replace: true,
       );
 
       // 获取分页信息
@@ -255,14 +255,14 @@ class MyReviewsNotifier extends StateNotifier<MyReviewsState> {
 
   // 下一页
   Future<void> nextPage() async {
-    await loadMore();
+    if (state.isLoading || !state.hasMore) return;
+    await load(targetPage: state.currentPage + 1);
   }
 
   Future<void> loadMore() async {
     if (state.isLoading || !state.hasMore) return;
     await load(
       targetPage: state.currentPage + 1,
-      append: true,
     );
   }
 
@@ -271,27 +271,35 @@ class MyReviewsNotifier extends StateNotifier<MyReviewsState> {
       filter: filter,
       currentPage: 1,
       totalCount: 0,
-      works: [],
-      rawWorks: [],
     );
-    refresh();
+    load(targetPage: 1, supersede: true);
   }
 
   bool get isSubtitleFilterActive =>
       SubtitleFilterMode.fromValue(state.subtitleFilter).isActive;
 
   void toggleSubtitleFilter() {
-    final newFilterMode =
-        SubtitleFilterMode.fromValue(state.subtitleFilter).next;
+    final currentPage = state.currentPage;
+    final oldFilterMode = SubtitleFilterMode.fromValue(state.subtitleFilter);
+    final newFilterMode = oldFilterMode.next;
+
+    int newPage;
+    if (oldFilterMode == SubtitleFilterMode.all && newFilterMode.isActive) {
+      newPage = ((currentPage + 1) / 2).ceil();
+    } else if (oldFilterMode.isActive &&
+        newFilterMode == SubtitleFilterMode.all) {
+      newPage = (currentPage * 2) - 1;
+    } else {
+      newPage = currentPage;
+    }
+    newPage = newPage.clamp(1, 9999);
 
     state = state.copyWith(
       subtitleFilter: newFilterMode.value,
-      currentPage: 1,
+      currentPage: newPage,
       totalCount: 0,
-      works: [],
-      rawWorks: [],
     );
-    refresh();
+    load(targetPage: newPage, supersede: true);
   }
 
   void changeSort(SortOrder sortType, SortDirection sortOrder) {
@@ -301,10 +309,8 @@ class MyReviewsNotifier extends StateNotifier<MyReviewsState> {
       sortOrder: sortOrder,
       currentPage: 1,
       totalCount: 0,
-      works: [],
-      rawWorks: [],
     );
-    refresh();
+    load(targetPage: 1, supersede: true);
   }
 
   // 切换布局类型
@@ -318,8 +324,7 @@ class MyReviewsNotifier extends StateNotifier<MyReviewsState> {
   }
 
   Future<void> refresh() => load(
-        refresh: true,
-        targetPage: 1,
+        targetPage: state.currentPage,
         supersede: true,
       );
 

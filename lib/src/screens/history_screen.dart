@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/history_provider.dart';
 import '../providers/auth_provider.dart';
 import '../utils/work_cover_prefetch.dart';
+import '../utils/scroll_optimization.dart';
 import '../widgets/history_work_card.dart';
 import '../widgets/virtualized_sliver_collection.dart';
 import '../../l10n/app_localizations.dart';
@@ -25,7 +26,6 @@ class HistoryScreen extends ConsumerWidget {
       body: VirtualizedSliverCollection(
         items: history,
         itemId: (record) => record.work.id,
-        pageStorageKey: const PageStorageKey('history-feed'),
         layout: VirtualizedCollectionLayout.grid,
         gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
           maxCrossAxisExtent: 210,
@@ -34,15 +34,25 @@ class HistoryScreen extends ConsumerWidget {
           mainAxisSpacing: 12,
         ),
         padding: const EdgeInsets.all(16),
-        isInitialLoading: historyState.isLoading && history.isEmpty,
-        isRefreshing: historyState.isRefreshing,
+        physics: ScrollOptimization.physics,
+        isInitialLoading: false,
+        isRefreshing: false,
         isLoadingMore: historyState.isLoadingMore,
         hasMore: historyState.hasMore,
-        error: history.isEmpty ? historyState.error : null,
-        loadMoreError: historyState.loadMoreError,
-        onRefresh: ref.read(historyProvider.notifier).refresh,
-        onLoadMore: ref.read(historyProvider.notifier).loadMore,
-        onRetry: ref.read(historyProvider.notifier).refresh,
+        error: null,
+        loadMoreError: null,
+        pagination: VirtualizedPagination(
+          currentPage: historyState.currentPage,
+          pageSize: historyState.pageSize,
+          totalCount: historyState.totalCount,
+          hasMore: historyState.hasMore,
+          isLoading: historyState.isLoading,
+          onPreviousPage: ref.read(historyProvider.notifier).previousPage,
+          onNextPage: ref.read(historyProvider.notifier).nextPage,
+          onGoToPage: ref.read(historyProvider.notifier).goToPage,
+          padding: const EdgeInsets.only(bottom: 80, top: 16),
+          scrollToTop: false,
+        ),
         onPrefetch: (records) => prefetchWorkCovers(
           context,
           records.map((record) => record.work),
@@ -50,26 +60,28 @@ class HistoryScreen extends ConsumerWidget {
           token: auth.token,
           crossAxisCount: crossAxisCount,
         ),
-        emptyBuilder: (context) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.history,
-                size: 64,
-                color: Theme.of(context).colorScheme.outline,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                S.of(context).noPlayHistory,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+        emptyBuilder: (context) => historyState.isLoading
+            ? const SizedBox.shrink()
+            : Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.history,
+                      size: 64,
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      S.of(context).noPlayHistory,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
-        ),
         itemBuilder: (context, record, index) => HistoryWorkCard(
           key: ValueKey(record.work.id),
           record: record,

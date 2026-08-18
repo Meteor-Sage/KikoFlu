@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:kikoeru_flutter/l10n/app_localizations.dart';
 import 'package:kikoeru_flutter/src/models/work.dart';
 import 'package:kikoeru_flutter/src/providers/work_card_display_provider.dart';
@@ -54,8 +55,10 @@ void main() {
     await _pumpAsyncPreferenceLoad(tester);
 
     expect(
-      tester.widget<SliverGrid>(find.byType(SliverGrid)).gridDelegate,
-      isA<SliverGridDelegateWithFixedCrossAxisCount>()
+      tester
+          .widget<SliverMasonryGrid>(find.byType(SliverMasonryGrid))
+          .gridDelegate,
+      isA<SliverSimpleGridDelegateWithFixedCrossAxisCount>()
           .having((delegate) => delegate.crossAxisCount, 'crossAxisCount', 2),
     );
 
@@ -67,8 +70,10 @@ void main() {
     await tester.pump();
 
     expect(
-      tester.widget<SliverGrid>(find.byType(SliverGrid)).gridDelegate,
-      isA<SliverGridDelegateWithFixedCrossAxisCount>()
+      tester
+          .widget<SliverMasonryGrid>(find.byType(SliverMasonryGrid))
+          .gridDelegate,
+      isA<SliverSimpleGridDelegateWithFixedCrossAxisCount>()
           .having((delegate) => delegate.crossAxisCount, 'crossAxisCount', 1),
     );
   });
@@ -96,8 +101,10 @@ void main() {
     await tester.pump();
 
     expect(
-      tester.widget<SliverGrid>(find.byType(SliverGrid)).gridDelegate,
-      isA<SliverGridDelegateWithFixedCrossAxisCount>()
+      tester
+          .widget<SliverMasonryGrid>(find.byType(SliverMasonryGrid))
+          .gridDelegate,
+      isA<SliverSimpleGridDelegateWithFixedCrossAxisCount>()
           .having((delegate) => delegate.crossAxisCount, 'crossAxisCount', 2),
     );
   });

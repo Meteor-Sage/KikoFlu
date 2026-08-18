@@ -6,6 +6,7 @@ import '../providers/auth_provider.dart';
 import '../utils/l10n_extensions.dart';
 import '../widgets/playlist_card.dart';
 import '../widgets/virtualized_sliver_collection.dart';
+import '../utils/scroll_optimization.dart';
 import '../models/playlist.dart' show PlaylistPrivacy;
 import 'playlist_detail_screen.dart';
 
@@ -454,56 +455,117 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
 
     final state = ref.watch(playlistsProvider);
 
+    if (state.error != null && state.playlists.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              S.of(context).loadFailed,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              state.error!,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => ref.read(playlistsProvider.notifier).refresh(),
+              icon: const Icon(Icons.refresh),
+              label: Text(S.of(context).retry),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (state.isLoading && state.playlists.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (state.playlists.isEmpty) {
+      return Scaffold(
+        floatingActionButton: FloatingActionButton(
+          onPressed: _showCreatePlaylistDialog,
+          tooltip: S.of(context).createPlaylist,
+          child: const Icon(Icons.add),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.playlist_play,
+                size: 64,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                S.of(context).noPlaylists,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                S.of(context).noPlaylistsDescription,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         onPressed: _showCreatePlaylistDialog,
         tooltip: S.of(context).createPlaylist,
         child: const Icon(Icons.add),
       ),
-      body: _buildListView(state),
+      body: RefreshIndicator(
+        onRefresh: ref.read(playlistsProvider.notifier).refresh,
+        child: _buildListView(state),
+      ),
     );
   }
 
   Widget _buildListView(PlaylistsState state) {
     return VirtualizedSliverCollection(
       controller: _scrollController,
-      pageStorageKey: const PageStorageKey('playlists-feed'),
       items: state.playlists,
       itemId: (playlist) => playlist.id,
+      physics: ScrollOptimization.physics,
       isInitialLoading: state.isLoading && state.playlists.isEmpty,
-      isRefreshing: state.isRefreshing,
+      isRefreshing: false,
       isLoadingMore: state.isLoadingMore,
       hasMore: state.hasMore,
-      error: state.playlists.isEmpty ? state.error : null,
-      loadMoreError: state.loadMoreError,
-      onRefresh: ref.read(playlistsProvider.notifier).refresh,
-      onLoadMore: ref.read(playlistsProvider.notifier).loadMore,
-      onRetry: ref.read(playlistsProvider.notifier).refresh,
-      emptyBuilder: (context) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.playlist_play,
-              size: 64,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              S.of(context).noPlaylists,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              S.of(context).noPlaylistsDescription,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+      error: null,
+      loadMoreError: null,
+      pagination: VirtualizedPagination(
+        currentPage: state.currentPage,
+        pageSize: state.pageSize,
+        totalCount: state.totalCount,
+        hasMore: state.hasMore,
+        isLoading: state.isLoading || state.isRefreshing,
+        onPreviousPage: ref.read(playlistsProvider.notifier).previousPage,
+        onNextPage: ref.read(playlistsProvider.notifier).nextPage,
+        onGoToPage: ref.read(playlistsProvider.notifier).goToPage,
+        scrollDuration: const Duration(milliseconds: 500),
+        scrollCurve: Curves.easeInOut,
       ),
+      onRetry: ref.read(playlistsProvider.notifier).refresh,
       sliversBefore: [
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -535,7 +597,7 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
           ),
         ),
       ],
-      padding: const EdgeInsets.only(bottom: 24),
+      padding: EdgeInsets.zero,
       itemBuilder: (context, playlist, index) => PlaylistCard(
         key: ValueKey(playlist.id),
         playlist: playlist,
