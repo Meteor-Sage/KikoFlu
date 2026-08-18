@@ -422,7 +422,11 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
       physics: ScrollOptimization.physics,
       sliversBefore: [
         if (state.metadata != null)
-          _buildMetadataSection(state.metadata!, auth.userName),
+          _buildMetadataSection(
+            state.metadata!,
+            auth.userName,
+            isMasonry: isMasonry,
+          ),
       ],
       isInitialLoading:
           state.isLoading && state.works.isEmpty && state.metadata == null,
@@ -503,11 +507,18 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
     );
   }
 
-  Widget _buildMetadataSection(Playlist metadata, String currentUserName) {
+  Widget _buildMetadataSection(
+    Playlist metadata,
+    String currentUserName, {
+    required bool isMasonry,
+  }) {
     return SliverToBoxAdapter(
       child: PlaylistMetadataSection(
         metadata: metadata,
         isOwner: metadata.userName == currentUserName,
+        isMasonry: isMasonry,
+        onToggleLayout: () =>
+            ref.read(playlistDisplayProvider.notifier).toggleLayout(),
         onEdit: () => _showEditDialog(metadata),
         onDelete: _showDeleteConfirmDialog,
       ),
@@ -534,8 +545,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                 icon: const Icon(Icons.remove_circle_outline, size: 18),
                 color: Colors.white,
                 visualDensity: VisualDensity.compact,
-                constraints:
-                    const BoxConstraints(minWidth: 30, minHeight: 30),
+                constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
                 padding: EdgeInsets.zero,
                 onPressed: () => _showRemoveWorkConfirmDialog(work),
                 tooltip: S.of(context).removeFromPlaylist,

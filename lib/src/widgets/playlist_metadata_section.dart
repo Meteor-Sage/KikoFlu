@@ -8,12 +8,16 @@ class PlaylistMetadataSection extends StatelessWidget {
     super.key,
     required this.metadata,
     required this.isOwner,
+    required this.isMasonry,
+    required this.onToggleLayout,
     required this.onEdit,
     required this.onDelete,
   });
 
   final Playlist metadata;
   final bool isOwner;
+  final bool isMasonry;
+  final VoidCallback onToggleLayout;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
@@ -64,6 +68,8 @@ class PlaylistMetadataSection extends StatelessWidget {
               ),
               _PlaylistMetadataActions(
                 isOwner: isOwner,
+                isMasonry: isMasonry,
+                onToggleLayout: onToggleLayout,
                 onEdit: onEdit,
                 onDelete: onDelete,
               ),
@@ -147,39 +153,44 @@ class PlaylistMetadataSection extends StatelessWidget {
 class _PlaylistMetadataActions extends StatelessWidget {
   const _PlaylistMetadataActions({
     required this.isOwner,
+    required this.isMasonry,
+    required this.onToggleLayout,
     required this.onEdit,
     required this.onDelete,
   });
 
   final bool isOwner;
+  final bool isMasonry;
+  final VoidCallback onToggleLayout;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
-    if (!isOwner) {
-      return IconButton(
-        onPressed: onDelete,
-        icon: const Icon(Icons.delete_outline),
-        tooltip: S.of(context).unfavorite,
-        visualDensity: VisualDensity.compact,
-        color: Theme.of(context).colorScheme.error,
-      );
-    }
-
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         IconButton(
-          onPressed: onEdit,
-          icon: const Icon(Icons.edit_outlined),
-          tooltip: S.of(context).edit,
+          onPressed: onToggleLayout,
+          icon: Icon(
+            isMasonry ? Icons.view_agenda_outlined : Icons.grid_view_outlined,
+          ),
+          tooltip: isMasonry
+              ? S.of(context).switchToList
+              : S.of(context).playlistDisplayFormatMasonry,
           visualDensity: VisualDensity.compact,
         ),
+        if (isOwner)
+          IconButton(
+            onPressed: onEdit,
+            icon: const Icon(Icons.edit_outlined),
+            tooltip: S.of(context).edit,
+            visualDensity: VisualDensity.compact,
+          ),
         IconButton(
           onPressed: onDelete,
           icon: const Icon(Icons.delete_outline),
-          tooltip: S.of(context).delete,
+          tooltip: isOwner ? S.of(context).delete : S.of(context).unfavorite,
           visualDensity: VisualDensity.compact,
           color: Theme.of(context).colorScheme.error,
         ),

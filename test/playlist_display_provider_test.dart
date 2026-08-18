@@ -50,6 +50,23 @@ void main() {
     );
   });
 
+  test('toggles the layout and persists the new selection', () async {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    await container.read(playlistDisplayProvider.notifier).toggleLayout();
+
+    expect(container.read(playlistDisplayProvider), PlaylistLayoutType.list);
+    final prefs = await SharedPreferences.getInstance();
+    expect(
+      prefs.getString(PlaylistDisplayNotifier.preferenceKey),
+      PlaylistLayoutType.list.value,
+    );
+
+    await container.read(playlistDisplayProvider.notifier).toggleLayout();
+    expect(container.read(playlistDisplayProvider), PlaylistLayoutType.masonry);
+  });
+
   test(
     'an immediate local selection is not overwritten by async loading',
     () async {

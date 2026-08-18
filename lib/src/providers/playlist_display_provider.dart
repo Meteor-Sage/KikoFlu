@@ -47,9 +47,17 @@ class PlaylistDisplayNotifier extends StateNotifier<PlaylistLayoutType> {
       // The in-memory selection remains valid for this session.
     }
   }
+
+  Future<void> toggleLayout() {
+    return updateLayout(
+      state == PlaylistLayoutType.masonry
+          ? PlaylistLayoutType.list
+          : PlaylistLayoutType.masonry,
+    );
+  }
 }
 
 final playlistDisplayProvider =
     StateNotifierProvider<PlaylistDisplayNotifier, PlaylistLayoutType>(
-      (ref) => PlaylistDisplayNotifier(),
-    );
+  (ref) => PlaylistDisplayNotifier(),
+);
