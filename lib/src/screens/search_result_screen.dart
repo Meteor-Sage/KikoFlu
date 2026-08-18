@@ -1,5 +1,3 @@
-import 'dart:io' show Platform;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -102,7 +100,6 @@ class _SearchResultContentState extends ConsumerState<_SearchResultContent> {
     final state = ref.read(searchResultProvider);
     showDialog(
       context: context,
-      barrierDismissible: !Platform.isIOS, // iOS 上防止点击外部区域意外关闭
       builder: (context) => CommonSortDialog(
         currentOption: state.sortOption,
         currentDirection: state.sortDirection,

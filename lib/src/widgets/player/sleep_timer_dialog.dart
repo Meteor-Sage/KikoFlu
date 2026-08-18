@@ -1,4 +1,3 @@
-import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -13,7 +12,6 @@ class SleepTimerDialog extends ConsumerStatefulWidget {
   static void show(BuildContext context) {
     showDialog(
       context: context,
-      barrierDismissible: !Platform.isIOS,
       builder: (context) => const SleepTimerDialog(),
     );
   }

@@ -1,4 +1,5 @@
-import 'dart:io';
+import 'dart:io' show File;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -354,7 +355,6 @@ class PlaylistDialog extends ConsumerWidget {
   static void show(BuildContext context) {
     showDialog(
       context: context,
-      barrierDismissible: !Platform.isIOS,
       builder: (context) => const PlaylistDialog(),
     );
   }

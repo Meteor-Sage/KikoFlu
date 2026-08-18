@@ -342,7 +342,6 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
   void _showSortDialog() {
     showDialog(
       context: context,
-      barrierDismissible: !Platform.isIOS,
       builder: (context) => CommonSortDialog(
         title: S.of(context).sortOptions,
         currentOption: _sortOrder,

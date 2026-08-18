@@ -1,4 +1,3 @@
-import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/my_reviews_provider.dart';
@@ -61,7 +60,6 @@ class ReviewProgressDialog {
       // 横屏模式：使用对话框形式，3+3两列布局
       return showDialog<Map<String, dynamic>>(
         context: context,
-        barrierDismissible: !Platform.isIOS, // iOS 上防止点击外部区域意外关闭
         builder: (dialogContext) {
           return StatefulBuilder(
             builder: (context, setState) {
@@ -300,8 +298,6 @@ class ReviewProgressDialog {
       // 竖屏模式：使用底部弹窗
       return showResponsiveBottomSheet<Map<String, dynamic>>(
         context: context,
-        isDismissible: !Platform.isIOS, // iOS 上防止点击外部区域或下拉意外关闭
-        enableDrag: !Platform.isIOS, // iOS 上禁止下拉关闭
         builder: (context) {
           return StatefulBuilder(
             builder: (context, setState) {

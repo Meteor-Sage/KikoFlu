@@ -62,7 +62,6 @@ class _PlayerControlsWidgetState extends ConsumerState<PlayerControlsWidget> {
 
     showDialog(
       context: context,
-      barrierDismissible: !Platform.isIOS,
       builder: (context) => ResponsiveAlertDialog(
         title: Text(S.of(context).playbackSpeed),
         content: StatefulBuilder(
