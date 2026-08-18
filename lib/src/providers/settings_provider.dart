@@ -373,6 +373,7 @@ class AudioFormatPreference {
 class AudioFormatPreferenceNotifier
     extends StateNotifier<AudioFormatPreference> {
   static const String _preferenceKey = 'audio_format_preference';
+  bool _changedLocally = false;
 
   AudioFormatPreferenceNotifier() : super(const AudioFormatPreference()) {
     _loadPreference();
@@ -381,6 +382,7 @@ class AudioFormatPreferenceNotifier
   Future<void> _loadPreference() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      if (_changedLocally) return;
       final savedOrder = prefs.getStringList(_preferenceKey);
 
       if (savedOrder != null && savedOrder.isNotEmpty) {
@@ -407,6 +409,7 @@ class AudioFormatPreferenceNotifier
   }
 
   Future<void> updatePriority(List<AudioFormat> newPriority) async {
+    _changedLocally = true;
     state = state.copyWith(priority: newPriority);
     await _savePreference();
   }
@@ -422,6 +425,7 @@ class AudioFormatPreferenceNotifier
   }
 
   Future<void> resetToDefault() async {
+    _changedLocally = true;
     state = const AudioFormatPreference();
     await _savePreference();
   }

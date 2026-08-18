@@ -12,7 +12,6 @@ import '../providers/settings_provider.dart';
 import '../utils/l10n_extensions.dart';
 import '../utils/snackbar_util.dart';
 import '../widgets/radio_option_group.dart';
-import '../widgets/scrollable_appbar.dart';
 import '../widgets/settings_section.dart';
 import '../widgets/sort_dialog.dart';
 
@@ -705,11 +704,8 @@ class PreferencesScreen extends ConsumerWidget {
         ref.watch(translationLanguagePreferencesProvider);
     final preloadSettings = ref.watch(preloadNextSettingsProvider);
 
-    return Scaffold(
-      appBar: ScrollableAppBar(
-        title: Text(S.of(context).preferenceSettings,
-            style: const TextStyle(fontSize: 18)),
-      ),
+    return SettingsSubpageScaffold(
+      title: S.of(context).preferenceSettings,
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

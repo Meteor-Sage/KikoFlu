@@ -3,21 +3,35 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../l10n/app_localizations.dart';
 import '../providers/floating_lyric_style_provider.dart';
 import '../utils/l10n_extensions.dart';
-import '../widgets/scrollable_appbar.dart';
+import '../utils/snackbar_util.dart';
 import '../widgets/settings_section.dart';
 
 class FloatingLyricStyleScreen extends ConsumerWidget {
   const FloatingLyricStyleScreen({super.key});
 
+  Future<void> _resetToDefault(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showSettingsResetConfirmation(
+      context: context,
+      title: S.of(context).resetStyle,
+      message: S.of(context).resetStyleConfirm,
+      confirmLabel: S.of(context).reset,
+    );
+    if (!confirmed || !context.mounted) return;
+
+    await ref.read(floatingLyricStyleProvider.notifier).reset();
+    if (context.mounted) {
+      SnackBarUtil.showSuccess(context, S.of(context).restoredToDefault);
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final style = ref.watch(floatingLyricStyleProvider);
 
-    return Scaffold(
-      appBar: ScrollableAppBar(
-        title: Text(S.of(context).floatingLyricStyle,
-            style: const TextStyle(fontSize: 18)),
-      ),
+    return SettingsSubpageScaffold(
+      title: S.of(context).floatingLyricStyle,
+      onRestoreDefaults: () => _resetToDefault(context, ref),
+      restoreDefaultsTooltip: S.of(context).restoreDefaultStyle,
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -43,10 +57,6 @@ class FloatingLyricStyleScreen extends ConsumerWidget {
 
           // 圆角和内边距
           _buildShapeCard(context, ref, style),
-          const SizedBox(height: 16),
-
-          // 重置按钮
-          _buildResetButton(context, ref),
           const SizedBox(height: 32),
         ],
       ),
@@ -433,35 +443,6 @@ class FloatingLyricStyleScreen extends ConsumerWidget {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildResetButton(BuildContext context, WidgetRef ref) {
-    return OutlinedButton.icon(
-      onPressed: () {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text(S.of(context).resetStyle),
-            content: Text(S.of(context).resetStyleConfirm),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(S.of(context).cancel),
-              ),
-              FilledButton(
-                onPressed: () {
-                  ref.read(floatingLyricStyleProvider.notifier).reset();
-                  Navigator.pop(context);
-                },
-                child: Text(S.of(context).reset),
-              ),
-            ],
-          ),
-        );
-      },
-      icon: const Icon(Icons.restore),
-      label: Text(S.of(context).restoreDefaultStyle),
     );
   }
 }

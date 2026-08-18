@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../providers/work_detail_display_provider.dart';
-import '../widgets/scrollable_appbar.dart';
 import '../widgets/settings_section.dart';
 
 class WorkDetailDisplaySettingsScreen extends ConsumerWidget {
@@ -14,13 +13,8 @@ class WorkDetailDisplaySettingsScreen extends ConsumerWidget {
     final settings = ref.watch(workDetailDisplayProvider);
     final notifier = ref.read(workDetailDisplayProvider.notifier);
 
-    return Scaffold(
-      appBar: ScrollableAppBar(
-        title: Text(
-          S.of(context).workDetailDisplaySettings,
-          style: const TextStyle(fontSize: 18),
-        ),
-      ),
+    return SettingsSubpageScaffold(
+      title: S.of(context).workDetailDisplaySettings,
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

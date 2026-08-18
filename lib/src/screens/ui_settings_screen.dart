@@ -6,7 +6,6 @@ import 'player_lyric_style_screen.dart';
 import 'work_detail_display_settings_screen.dart';
 import 'work_card_display_settings_screen.dart';
 import 'my_tabs_display_settings_screen.dart';
-import '../widgets/scrollable_appbar.dart';
 import '../widgets/settings_section.dart';
 import '../providers/settings_provider.dart';
 
@@ -17,13 +16,8 @@ class UiSettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final pageSize = ref.watch(pageSizeProvider);
 
-    return Scaffold(
-      appBar: ScrollableAppBar(
-        title: Text(
-          S.of(context).uiSettings,
-          style: const TextStyle(fontSize: 18),
-        ),
-      ),
+    return SettingsSubpageScaffold(
+      title: S.of(context).uiSettings,
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

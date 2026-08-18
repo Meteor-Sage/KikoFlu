@@ -5,7 +5,6 @@ import '../../l10n/app_localizations.dart';
 import '../providers/my_tabs_display_provider.dart';
 import '../providers/auth_provider.dart';
 import '../utils/server_utils.dart';
-import '../widgets/scrollable_appbar.dart';
 import '../widgets/settings_section.dart';
 
 class MyTabsDisplaySettingsScreen extends ConsumerWidget {
@@ -18,13 +17,8 @@ class MyTabsDisplaySettingsScreen extends ConsumerWidget {
     final authState = ref.watch(authProvider);
     final isOfficialServer = ServerUtils.isOfficialServer(authState.host);
 
-    return Scaffold(
-      appBar: ScrollableAppBar(
-        title: Text(
-          S.of(context).myTabsDisplaySettings,
-          style: const TextStyle(fontSize: 18),
-        ),
-      ),
+    return SettingsSubpageScaffold(
+      title: S.of(context).myTabsDisplaySettings,
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

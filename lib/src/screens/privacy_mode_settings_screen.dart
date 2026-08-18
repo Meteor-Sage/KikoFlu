@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../l10n/app_localizations.dart';
 import '../providers/settings_provider.dart';
 import '../utils/snackbar_util.dart';
-import '../widgets/scrollable_appbar.dart';
 import '../widgets/settings_section.dart';
 
 /// 防社死设置页面
@@ -83,11 +82,8 @@ class _PrivacyModeSettingsScreenState
   Widget build(BuildContext context) {
     final settings = ref.watch(privacyModeSettingsProvider);
 
-    return Scaffold(
-      appBar: ScrollableAppBar(
-        title: Text(S.of(context).privacyModeSettingsTitle,
-            style: const TextStyle(fontSize: 18)),
-      ),
+    return SettingsSubpageScaffold(
+      title: S.of(context).privacyModeSettingsTitle,
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

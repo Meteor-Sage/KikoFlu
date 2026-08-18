@@ -1,5 +1,144 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
+import 'scrollable_appbar.dart';
+
+class SettingsSubpageScaffold extends StatelessWidget {
+  const SettingsSubpageScaffold({
+    super.key,
+    required this.title,
+    required this.body,
+    this.actions = const [],
+    this.onRestoreDefaults,
+    this.restoreDefaultsTooltip,
+  });
+
+  final String title;
+  final Widget body;
+  final List<Widget> actions;
+  final VoidCallback? onRestoreDefaults;
+  final String? restoreDefaultsTooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    final appBarActions = <Widget>[
+      if (onRestoreDefaults != null)
+        IconButton(
+          onPressed: onRestoreDefaults,
+          icon: const Icon(Icons.restart_alt),
+          tooltip:
+              restoreDefaultsTooltip ?? S.of(context).restoreDefaultSettings,
+        ),
+      ...actions,
+    ];
+
+    return Scaffold(
+      appBar: ScrollableAppBar(
+        title: Text(title, style: const TextStyle(fontSize: 18)),
+        actions: appBarActions.isEmpty ? null : appBarActions,
+      ),
+      body: body,
+    );
+  }
+}
+
+Future<bool> showSettingsResetConfirmation({
+  required BuildContext context,
+  required String message,
+  String? title,
+  String? confirmLabel,
+}) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: Text(title ?? S.of(dialogContext).restoreDefaultSettings),
+      content: Text(message),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(false),
+          child: Text(S.of(dialogContext).cancel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(dialogContext).pop(true),
+          child: Text(confirmLabel ?? S.of(dialogContext).confirm),
+        ),
+      ],
+    ),
+  );
+  return confirmed ?? false;
+}
+
+typedef SettingsReorderItemBuilder<T> = Widget Function(
+  BuildContext context,
+  T item,
+  int index,
+);
+
+class SettingsReorderablePage<T> extends StatelessWidget {
+  const SettingsReorderablePage({
+    super.key,
+    required this.title,
+    required this.infoTitle,
+    required this.infoDescription,
+    required this.items,
+    required this.itemKey,
+    required this.itemBuilder,
+    required this.onOrderChanged,
+    required this.onRestoreDefaults,
+  });
+
+  final String title;
+  final String infoTitle;
+  final String infoDescription;
+  final List<T> items;
+  final Object Function(T item) itemKey;
+  final SettingsReorderItemBuilder<T> itemBuilder;
+  final ValueChanged<List<T>> onOrderChanged;
+  final VoidCallback onRestoreDefaults;
+
+  @override
+  Widget build(BuildContext context) {
+    return SettingsSubpageScaffold(
+      title: title,
+      onRestoreDefaults: onRestoreDefaults,
+      body: Column(
+        children: [
+          SettingsInfoCard(
+            icon: Icons.info_outline,
+            title: infoTitle,
+            margin: const EdgeInsets.all(16),
+            child: Text(
+              infoDescription,
+              style: const TextStyle(fontSize: 12, height: 1.5),
+            ),
+          ),
+          Expanded(
+            child: ReorderableListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: items.length,
+              onReorder: (oldIndex, newIndex) {
+                final reordered = List<T>.of(items);
+                if (newIndex > oldIndex) newIndex -= 1;
+                final item = reordered.removeAt(oldIndex);
+                reordered.insert(newIndex, item);
+                onOrderChanged(reordered);
+              },
+              itemBuilder: (context, index) {
+                final item = items[index];
+                return SettingsSectionCard(
+                  key: ValueKey(itemKey(item)),
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: itemBuilder(context, item, index),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class SettingsSectionCard extends StatelessWidget {
   const SettingsSectionCard({
     super.key,

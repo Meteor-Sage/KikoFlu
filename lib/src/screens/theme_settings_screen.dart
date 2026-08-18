@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../l10n/app_localizations.dart';
 import '../providers/theme_provider.dart';
 import '../widgets/radio_option_group.dart';
-import '../widgets/scrollable_appbar.dart';
 import '../widgets/settings_section.dart';
 
 class ThemeSettingsScreen extends ConsumerWidget {
@@ -14,11 +13,8 @@ class ThemeSettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeSettings = ref.watch(themeSettingsProvider);
 
-    return Scaffold(
-      appBar: ScrollableAppBar(
-        title: Text(S.of(context).themeSettings,
-            style: const TextStyle(fontSize: 18)),
-      ),
+    return SettingsSubpageScaffold(
+      title: S.of(context).themeSettings,
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

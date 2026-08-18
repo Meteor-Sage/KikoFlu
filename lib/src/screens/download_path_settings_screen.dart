@@ -8,7 +8,6 @@ import '../services/download_service.dart';
 import '../services/log_service.dart';
 import '../providers/settings_provider.dart';
 import '../utils/snackbar_util.dart';
-import '../widgets/scrollable_appbar.dart';
 import '../widgets/settings_section.dart';
 
 class DownloadPathSettingsScreen extends ConsumerStatefulWidget {
@@ -290,11 +289,8 @@ class _DownloadPathSettingsScreenState
   Widget build(BuildContext context) {
     final hasCustomPath = DownloadPathService.hasCustomPath();
 
-    return Scaffold(
-      appBar: ScrollableAppBar(
-        title: Text(S.of(context).downloadPathSettings,
-            style: const TextStyle(fontSize: 18)),
-      ),
+    return SettingsSubpageScaffold(
+      title: S.of(context).downloadPathSettings,
       body: _isMigrating
           ? Center(
               child: Column(

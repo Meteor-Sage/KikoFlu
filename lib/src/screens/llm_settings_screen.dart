@@ -4,7 +4,6 @@ import '../../l10n/app_localizations.dart';
 import '../providers/settings_provider.dart';
 import '../services/translation_service.dart';
 import '../utils/snackbar_util.dart';
-import '../widgets/scrollable_appbar.dart';
 import '../widgets/settings_section.dart';
 
 class LLMSettingsScreen extends ConsumerStatefulWidget {
@@ -86,11 +85,8 @@ class _LLMSettingsScreenState extends ConsumerState<LLMSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: ScrollableAppBar(
-        title: Text(S.of(context).llmTranslationSettings,
-            style: const TextStyle(fontSize: 18)),
-      ),
+    return SettingsSubpageScaffold(
+      title: S.of(context).llmTranslationSettings,
       body: Form(
         key: _formKey,
         child: ListView(

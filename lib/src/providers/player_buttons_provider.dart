@@ -104,6 +104,7 @@ class PlayerButtonsConfigController extends StateNotifier<PlayerButtonsConfig> {
   static const String _prefKeyDesktop = 'player_buttons_config_desktop';
 
   final bool _isDesktop;
+  bool _changedLocally = false;
 
   PlayerButtonsConfigController(this._isDesktop)
       : super(_isDesktop
@@ -115,6 +116,7 @@ class PlayerButtonsConfigController extends StateNotifier<PlayerButtonsConfig> {
   Future<void> _loadConfig() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      if (_changedLocally) return;
       final key = _isDesktop ? _prefKeyDesktop : _prefKey;
       final jsonString = prefs.getString(key);
 
@@ -155,6 +157,7 @@ class PlayerButtonsConfigController extends StateNotifier<PlayerButtonsConfig> {
   }
 
   Future<void> updateButtonOrder(List<PlayerButtonType> newOrder) async {
+    _changedLocally = true;
     state = state.copyWith(buttonOrder: newOrder);
     await _saveConfig();
   }
@@ -171,6 +174,7 @@ class PlayerButtonsConfigController extends StateNotifier<PlayerButtonsConfig> {
   }
 
   Future<void> resetToDefault() async {
+    _changedLocally = true;
     state = _isDesktop
         ? PlayerButtonsConfig.defaultDesktop
         : PlayerButtonsConfig.defaultMobile;
