@@ -237,6 +237,9 @@ class _VirtualizedSliverCollectionState<T>
   Object? _lastLoadSignature;
   List<Object> _lastVisibleIds = const [];
 
+  bool get _tracksItems =>
+      widget.onVisibleItemsChanged != null || widget.onPrefetch != null;
+
   @override
   void initState() {
     super.initState();
@@ -283,18 +286,26 @@ class _VirtualizedSliverCollectionState<T>
   }
 
   void _handleScroll() {
-    _scheduleInspection();
-    _maybeLoadMore();
+    if (_tracksItems) _scheduleInspection();
+    if (widget.pagination == null && widget.onLoadMore != null) {
+      _maybeLoadMore();
+    }
   }
 
   void _scheduleInspection() {
-    if (_inspectionScheduled) return;
+    final needsInitialLoadCheck =
+        widget.pagination == null && widget.onLoadMore != null;
+    if ((!_tracksItems && !needsInitialLoadCheck) || _inspectionScheduled) {
+      return;
+    }
     _inspectionScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _inspectionScheduled = false;
       if (!mounted) return;
-      _inspectVisibleItems();
-      _maybeLoadMore();
+      if (_tracksItems) _inspectVisibleItems();
+      if (widget.pagination == null && widget.onLoadMore != null) {
+        _maybeLoadMore();
+      }
     });
   }
 
@@ -310,6 +321,11 @@ class _VirtualizedSliverCollectionState<T>
   void _inspectVisibleItems() {
     if (!_controller.hasClients || widget.items.isEmpty) return;
     if (widget.onVisibleItemsChanged == null && widget.onPrefetch == null) {
+      return;
+    }
+
+    if (widget.onVisibleItemsChanged == null) {
+      _prefetchAfterMountedItems();
       return;
     }
 
@@ -349,7 +365,33 @@ class _VirtualizedSliverCollectionState<T>
     }
 
     if (widget.onPrefetch == null || visibleIndices.isEmpty) return;
+    final anchorContext = _mountedItems[visibleIndices.last];
+    if (anchorContext == null ||
+        position.recommendDeferredLoading(anchorContext)) {
+      return;
+    }
     final start = visibleIndices.last + 1;
+    _dispatchPrefetch(start);
+  }
+
+  void _prefetchAfterMountedItems() {
+    if (widget.onPrefetch == null || _mountedItems.isEmpty) return;
+
+    final mountedIndices = _mountedItems.keys
+        .where((index) => index >= 0 && index < widget.items.length)
+        .toList(growable: false);
+    if (mountedIndices.isEmpty) return;
+    final lastMountedIndex = mountedIndices.reduce((a, b) => a > b ? a : b);
+    final anchorContext = _mountedItems[lastMountedIndex];
+    if (anchorContext == null ||
+        _controller.position.recommendDeferredLoading(anchorContext)) {
+      return;
+    }
+
+    _dispatchPrefetch(lastMountedIndex + 1);
+  }
+
+  void _dispatchPrefetch(int start) {
     final end =
         (start + widget.prefetchItemCount).clamp(0, widget.items.length);
     final pending = <T>[];
@@ -438,12 +480,16 @@ class _VirtualizedSliverCollectionState<T>
         }
         final item = widget.items[index];
         final id = widget.itemId(item);
+        final child = widget.itemBuilder(context, item, index);
+        if (!_tracksItems) {
+          return KeyedSubtree(key: _VirtualizedItemKey(id), child: child);
+        }
         return _TrackedVirtualizedItem(
           key: _VirtualizedItemKey(id),
           index: index,
           onMount: _registerItem,
           onUnmount: _unregisterItem,
-          child: widget.itemBuilder(context, item, index),
+          child: child,
         );
       },
       childCount: widget.items.length +

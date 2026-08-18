@@ -16,7 +16,6 @@ import 'log_screen.dart';
 import '../providers/locale_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/update_provider.dart';
-import '../providers/proxy_provider.dart';
 import '../providers/floating_lyric_provider.dart';
 import '../services/cache_service.dart';
 import '../services/translation_service.dart';
@@ -116,7 +115,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         MediaQuery.of(context).orientation == Orientation.landscape;
     final cards = [
       _buildAccountCard(context),
-      _buildNetworkCard(context),
       _buildDownloadAndCacheCard(context),
       _buildAppearanceAndAboutCard(context),
     ];
@@ -232,83 +230,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               );
             },
           ),
-      ],
-    );
-  }
-
-  /// 网络设置卡片：代理开关 + 自定义代理地址
-  Widget _buildNetworkCard(BuildContext context) {
-    final proxySettings = ref.watch(proxySettingsProvider);
-
-    Future<void> showAddressDialog() async {
-      final controller = TextEditingController(text: proxySettings.address);
-      String? result;
-      try {
-        result = await showDialog<String>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text(S.of(context).proxyAddress),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: controller,
-                  keyboardType: TextInputType.url,
-                  decoration: InputDecoration(
-                    hintText: '127.0.0.1:7890',
-                    helperText: S.of(context).proxyAddressFormat,
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text(S.of(context).cancel),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(context).pop(controller.text),
-                child: Text(S.of(context).save),
-              ),
-            ],
-          ),
-        );
-      } finally {
-        controller.dispose();
-      }
-      if (result != null) {
-        final accepted = await ref
-            .read(proxySettingsProvider.notifier)
-            .setAddress(result);
-        if (!accepted && context.mounted) {
-          SnackBarUtil.showError(context, S.of(context).invalidProxyAddress);
-        }
-      }
-    }
-
-    return SettingsSectionList(
-      children: [
-        SettingsSwitchTile(
-          icon: Icons.vpn_lock_outlined,
-          title: S.of(context).useProxy,
-          subtitle: proxySettings.enabled
-              ? S.of(context).proxyEnabled(proxySettings.address.isEmpty
-                  ? S.of(context).proxyAddressNotSet
-                  : proxySettings.address)
-              : S.of(context).proxyHttpDescription,
-          value: proxySettings.enabled,
-          onChanged: (value) =>
-              ref.read(proxySettingsProvider.notifier).setEnabled(value),
-        ),
-        SettingsListTile(
-          icon: Icons.dns_outlined,
-          title: S.of(context).proxyAddress,
-          subtitle: proxySettings.address.isEmpty
-              ? S.of(context).proxyAddressNotSet
-              : proxySettings.address,
-          onTap: proxySettings.enabled ? showAddressDialog : null,
-          enabled: proxySettings.enabled,
-        ),
       ],
     );
   }

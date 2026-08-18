@@ -7,6 +7,7 @@ import 'audio_format_settings_screen.dart';
 import 'blocked_items_screen.dart';
 import 'llm_settings_screen.dart';
 import '../models/sort_options.dart';
+import '../providers/proxy_provider.dart';
 import '../providers/settings_provider.dart';
 import '../utils/l10n_extensions.dart';
 import '../utils/snackbar_util.dart';
@@ -442,8 +443,8 @@ class PreferencesScreen extends ConsumerWidget {
                 ),
                 RadioOption(
                   value: PreloadThresholdMode.custom,
-                  title: Text(PreloadThresholdMode.custom
-                      .localizedName(dialogContext)),
+                  title: Text(
+                      PreloadThresholdMode.custom.localizedName(dialogContext)),
                   subtitle: currentSettings.mode == PreloadThresholdMode.custom
                       ? Text(
                           S.of(dialogContext).preloadCustomValueLabel(
@@ -613,6 +614,88 @@ class PreferencesScreen extends ConsumerWidget {
     }
   }
 
+  Future<void> _showProxyAddressDialog(
+    BuildContext context,
+    WidgetRef ref,
+    String currentAddress,
+  ) async {
+    final controller = TextEditingController(text: currentAddress);
+    String? result;
+    try {
+      result = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(S.of(dialogContext).proxyAddress),
+          content: TextField(
+            controller: controller,
+            keyboardType: TextInputType.url,
+            decoration: InputDecoration(
+              hintText: '127.0.0.1:7890',
+              helperText: S.of(dialogContext).proxyAddressFormat,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(S.of(dialogContext).cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(controller.text),
+              child: Text(S.of(dialogContext).save),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      controller.dispose();
+    }
+
+    if (result == null) return;
+    final accepted =
+        await ref.read(proxySettingsProvider.notifier).setAddress(result);
+    if (!accepted && context.mounted) {
+      SnackBarUtil.showError(context, S.of(context).invalidProxyAddress);
+    }
+  }
+
+  Widget _buildProxySettings(BuildContext context, WidgetRef ref) {
+    final proxySettings = ref.watch(proxySettingsProvider);
+    return Column(
+      children: [
+        SettingsSwitchTile(
+          icon: Icons.vpn_lock_outlined,
+          title: S.of(context).useProxy,
+          subtitle: proxySettings.enabled
+              ? S.of(context).proxyEnabled(
+                    proxySettings.address.isEmpty
+                        ? S.of(context).proxyAddressNotSet
+                        : proxySettings.address,
+                  )
+              : S.of(context).proxyHttpDescription,
+          value: proxySettings.enabled,
+          onChanged: (value) =>
+              ref.read(proxySettingsProvider.notifier).setEnabled(value),
+        ),
+        if (proxySettings.enabled) ...[
+          const SettingsDivider(),
+          SettingsListTile(
+            leading: const SizedBox(width: 24),
+            title: S.of(context).proxyAddress,
+            subtitle: proxySettings.address.isEmpty
+                ? S.of(context).proxyAddressNotSet
+                : proxySettings.address,
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () => _showProxyAddressDialog(
+              context,
+              ref,
+              proxySettings.address,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final priority = ref.watch(subtitleLibraryPriorityProvider);
@@ -700,6 +783,7 @@ class PreferencesScreen extends ConsumerWidget {
                     ),
                 onTap: () => _showPreloadThresholdDialog(context, ref),
               ),
+              _buildProxySettings(context, ref),
               SettingsSwitchTile(
                 icon: Icons.screen_lock_portrait,
                 title: S.of(context).keepScreenAwake,

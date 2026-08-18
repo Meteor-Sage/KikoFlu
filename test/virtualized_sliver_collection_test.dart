@@ -145,6 +145,36 @@ void main() {
     expect(builds, lessThan(100));
   });
 
+  testWidgets('prefetch dispatches each upcoming item at most once',
+      (tester) async {
+    final prefetchedBatches = <List<int>>[];
+
+    await tester.pumpWidget(_app(
+      VirtualizedSliverCollection<int>(
+        items: List.generate(100, (index) => index),
+        itemId: (item) => item,
+        cacheExtent: 0,
+        prefetchItemCount: 4,
+        showEndIndicator: false,
+        onPrefetch: (items) => prefetchedBatches.add(items),
+        itemBuilder: (context, item, index) => _IdentityTile(item: item),
+      ),
+    ));
+    await tester.pump();
+    await tester.pump();
+
+    expect(prefetchedBatches, isNotEmpty);
+
+    await tester.drag(
+      find.byType(CustomScrollView),
+      const Offset(0, -600),
+    );
+    await tester.pumpAndSettle();
+
+    final allPrefetched = prefetchedBatches.expand((batch) => batch).toList();
+    expect(allPrefetched.toSet().length, allPrefetched.length);
+  });
+
   testWidgets('page storage restores position after leaving and returning',
       (tester) async {
     final bucket = PageStorageBucket();

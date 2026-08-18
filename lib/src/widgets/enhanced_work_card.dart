@@ -9,6 +9,7 @@ import '../services/storage_service.dart';
 import '../screens/work_detail_screen.dart';
 import '../utils/snackbar_util.dart';
 import '../utils/string_utils.dart';
+import '../utils/work_cover_prefetch.dart';
 import '../../l10n/app_localizations.dart';
 import 'tag_chip.dart';
 import 'va_chip.dart';
@@ -94,10 +95,15 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authProvider);
+    final auth = ref.watch(
+      authProvider.select(
+        (state) => (host: state.host ?? '', token: state.token ?? ''),
+      ),
+    );
     final displaySettings = ref.watch(workCardDisplayProvider);
-    final host = authState.host ?? '';
-    final token = authState.token ?? '';
+    final hasLocalSubtitle = ref.watch(
+      subtitleLibraryProvider.select((ids) => ids.contains(widget.work.id)),
+    );
 
     final cardOnTap = widget.onTap ??
         () {
@@ -116,17 +122,43 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
     if (widget.crossAxisCount >= 5 ||
         (widget.crossAxisCount == 3 && !isLandscape)) {
       return _buildCompactCard(
-          context, host, token, cardOnTap, displaySettings);
+        context,
+        auth.host,
+        auth.token,
+        cardOnTap,
+        displaySettings,
+        hasLocalSubtitle,
+      );
     } else if (widget.crossAxisCount >= 2) {
-      return _buildMediumCard(context, host, token, cardOnTap, displaySettings);
+      return _buildMediumCard(
+        context,
+        auth.host,
+        auth.token,
+        cardOnTap,
+        displaySettings,
+        hasLocalSubtitle,
+      );
     } else {
-      return _buildFullCard(context, host, token, cardOnTap, displaySettings);
+      return _buildFullCard(
+        context,
+        auth.host,
+        auth.token,
+        cardOnTap,
+        displaySettings,
+        hasLocalSubtitle,
+      );
     }
   }
 
   // 紧凑卡片 (3列布局)
-  Widget _buildCompactCard(BuildContext context, String host, String token,
-      VoidCallback cardOnTap, WorkCardDisplaySettings displaySettings) {
+  Widget _buildCompactCard(
+    BuildContext context,
+    String host,
+    String token,
+    VoidCallback cardOnTap,
+    WorkCardDisplaySettings displaySettings,
+    bool hasLocalSubtitle,
+  ) {
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
     final titleFontSize =
@@ -157,18 +189,13 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                   ),
                   // 字幕标签 (左下角)
                   if (displaySettings.showSubtitleTag &&
-                      (widget.work.hasSubtitle == true ||
-                          ref
-                              .watch(subtitleLibraryProvider)
-                              .contains(widget.work.id)))
+                      (widget.work.hasSubtitle == true || hasLocalSubtitle))
                     Positioned(
                       bottom: 4,
                       left: 4,
                       child: _buildSubtitleTag(
                         context,
-                        isLocal: ref
-                            .watch(subtitleLibraryProvider)
-                            .contains(widget.work.id),
+                        isLocal: hasLocalSubtitle,
                       ),
                     ),
                   // 日期标签 (右下角)
@@ -208,8 +235,14 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
   }
 
   // 中等卡片 (2列布局)
-  Widget _buildMediumCard(BuildContext context, String host, String token,
-      VoidCallback cardOnTap, WorkCardDisplaySettings displaySettings) {
+  Widget _buildMediumCard(
+    BuildContext context,
+    String host,
+    String token,
+    VoidCallback cardOnTap,
+    WorkCardDisplaySettings displaySettings,
+    bool hasLocalSubtitle,
+  ) {
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
     final titleFontSize =
@@ -246,18 +279,13 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                   ),
                   // 字幕标签 (左下角)
                   if (displaySettings.showSubtitleTag &&
-                      (widget.work.hasSubtitle == true ||
-                          ref
-                              .watch(subtitleLibraryProvider)
-                              .contains(widget.work.id)))
+                      (widget.work.hasSubtitle == true || hasLocalSubtitle))
                     Positioned(
                       bottom: 6,
                       left: 6,
                       child: _buildSubtitleTag(
                         context,
-                        isLocal: ref
-                            .watch(subtitleLibraryProvider)
-                            .contains(widget.work.id),
+                        isLocal: hasLocalSubtitle,
                       ),
                     ),
                   if (displaySettings.showReleaseDate &&
@@ -377,8 +405,14 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
   }
 
   // 完整卡片 (列表布局)
-  Widget _buildFullCard(BuildContext context, String host, String token,
-      VoidCallback cardOnTap, WorkCardDisplaySettings displaySettings) {
+  Widget _buildFullCard(
+    BuildContext context,
+    String host,
+    String token,
+    VoidCallback cardOnTap,
+    WorkCardDisplaySettings displaySettings,
+    bool hasLocalSubtitle,
+  ) {
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
     final rjFontSize = displaySettings.scaleFontSize(isLandscape ? 11.0 : 10.0);
@@ -440,17 +474,13 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                         // 字幕标签 (左下角)
                         if (displaySettings.showSubtitleTag &&
                             (widget.work.hasSubtitle == true ||
-                                ref
-                                    .watch(subtitleLibraryProvider)
-                                    .contains(widget.work.id)))
+                                hasLocalSubtitle))
                           Positioned(
                             bottom: 2,
                             left: 2,
                             child: _buildSubtitleTag(
                               context,
-                              isLocal: ref
-                                  .watch(subtitleLibraryProvider)
-                                  .contains(widget.work.id),
+                              isLocal: hasLocalSubtitle,
                             ),
                           ),
                       ],
@@ -601,7 +631,10 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
     }
 
     final url = widget.work.getCoverImageUrl(host, token: token);
-    final targetWidth = _resolveCoverCacheWidth(context);
+    final targetWidth = resolveWorkCoverCacheWidth(
+      context,
+      crossAxisCount: widget.crossAxisCount,
+    );
 
     final httpHeaders = StorageService.serverCookieHeaders;
 
@@ -615,44 +648,19 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
             httpHeaders: httpHeaders,
             cacheKey: 'work_cover_${widget.work.id}',
             memCacheWidth: targetWidth, // 降低解码分辨率，减少 GPU / CPU 压力
+            width: double.infinity,
+            height: double.infinity,
+            fit: BoxFit.cover,
+            filterQuality: FilterQuality.low,
             fadeInDuration: const Duration(milliseconds: 120),
             fadeOutDuration: const Duration(milliseconds: 90),
             placeholderFadeInDuration: const Duration(milliseconds: 80),
             placeholder: (context, _) => _buildPlaceholder(context),
             errorWidget: (context, _, __) => _buildPlaceholder(context),
-            imageBuilder: (context, imageProvider) => Container(
-              decoration: BoxDecoration(
-                image: DecorationImage(
-                  image: imageProvider,
-                  fit: BoxFit.cover,
-                  filterQuality: FilterQuality.low, // 优化滚动时的重采样性能
-                ),
-              ),
-            ),
           ),
         ),
       ),
     );
-  }
-
-  int _resolveCoverCacheWidth(BuildContext context) {
-    final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
-
-    // 列表样式的封面是固定 80dp，避免按整屏宽度解码。
-    if (widget.crossAxisCount <= 1) {
-      return (80 * devicePixelRatio).round().clamp(160, 512);
-    }
-
-    final columns = widget.crossAxisCount.clamp(2, 6);
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    final isLandscape =
-        MediaQuery.orientationOf(context) == Orientation.landscape;
-    final spacing = isLandscape ? 24.0 : 8.0;
-    final padding = isLandscape ? 24.0 : 8.0;
-    final availableWidth = screenWidth - padding * 2 - spacing * (columns - 1);
-    final logicalWidth = (availableWidth / columns).clamp(80.0, screenWidth);
-
-    return (logicalWidth * devicePixelRatio).round().clamp(160, 1024);
   }
 
   Widget _buildPlaceholder(BuildContext context) {
