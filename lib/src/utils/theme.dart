@@ -6,6 +6,10 @@ class AppTheme {
   // iOS 使用 Cupertino 转场以支持侧滑返回
   static const _pageTransitionsTheme = PageTransitionsTheme();
 
+  // 避免信息流中新 CJK 文本进入视口时触发昂贵的系统字体搜索。
+  static List<String>? get _fontFamilyFallback =>
+      Platform.isIOS ? const ['Hiragino Sans', 'PingFang SC'] : null;
+
   // 平台字体配置
   static TextTheme? _getTextTheme() {
     if (Platform.isWindows) {
@@ -105,6 +109,7 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: colorScheme,
       textTheme: _getTextTheme(),
+      fontFamilyFallback: _fontFamilyFallback,
       pageTransitionsTheme: _pageTransitionsTheme,
       appBarTheme: AppBarTheme(
         centerTitle: true,
@@ -155,6 +160,7 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: colorScheme,
       textTheme: _getTextTheme(),
+      fontFamilyFallback: _fontFamilyFallback,
       pageTransitionsTheme: _pageTransitionsTheme,
       appBarTheme: AppBarTheme(
         centerTitle: true,
