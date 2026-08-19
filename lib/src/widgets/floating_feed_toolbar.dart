@@ -88,6 +88,8 @@ class FloatingFeedToolbar extends StatelessWidget {
 
 /// Shared translucent capsule surface for toolbars that need custom content.
 class FloatingToolbarSurface extends StatelessWidget {
+  static const double backgroundOpacity = 0.88;
+
   const FloatingToolbarSurface({
     super.key,
     required this.child,
@@ -114,7 +116,9 @@ class FloatingToolbarSurface extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
         child: Material(
-          color: theme.colorScheme.surfaceContainer.withValues(alpha: 0.78),
+          color: theme.colorScheme.surfaceContainer.withValues(
+            alpha: backgroundOpacity,
+          ),
           child: Padding(
             padding: padding,
             child: child,

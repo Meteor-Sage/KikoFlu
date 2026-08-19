@@ -60,6 +60,18 @@ void main() {
     expect(find.byKey(const ValueKey('feed-mode-capsule')), findsOneWidget);
     expect(find.byKey(const ValueKey('feed-tool-capsule')), findsOneWidget);
     expect(tester.getSize(find.byType(FloatingFeedToolbar)).height, 48);
+    final surfaceMaterial = tester.widget<Material>(
+      find
+          .descendant(
+            of: find.byKey(const ValueKey('feed-mode-capsule')),
+            matching: find.byType(Material),
+          )
+          .first,
+    );
+    expect(
+      surfaceMaterial.color?.a,
+      closeTo(FloatingToolbarSurface.backgroundOpacity, 0.001),
+    );
 
     await tester.tap(find.text('Popular'));
     await tester.tap(find.byTooltip('Subtitles'));
