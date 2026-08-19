@@ -4,6 +4,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../models/audio_track.dart';
+import '../models/audio_gain_settings.dart';
 import '../models/work.dart';
 import '../services/audio_player_service.dart';
 import '../services/log_service.dart';
@@ -145,6 +146,15 @@ class AudioPlayerController extends StateNotifier<AudioPlayerState> {
       },
     );
 
+    _ref.listen<AudioGainSettings>(
+      audioGainSettingsProvider,
+      (previous, next) {
+        if (previous?.decibels != next.decibels) {
+          _service.updateAudioGain(next.decibels);
+        }
+      },
+    );
+
     // 监听下一首预加载设置变化
     _ref.listen<PreloadNextSettings>(
       preloadNextSettingsProvider,
@@ -179,6 +189,13 @@ class AudioPlayerController extends StateNotifier<AudioPlayerState> {
     await _service.updateHapticsSettings(
       enabled: hapticsSettings.enabled,
       intensity: hapticsSettings.intensity,
+    );
+
+    await _service.updateAudioSessionConfig(
+      _ref.read(audioPassthroughProvider),
+    );
+    await _service.updateAudioGain(
+      _ref.read(audioGainSettingsProvider).decibels,
     );
 
     // 初始化时应用当前的下一首预加载阈值

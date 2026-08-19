@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/audio_gain_settings.dart';
 import '../models/sort_options.dart';
 
 /// Triggers when Settings screen should refresh cache-related information.
@@ -782,6 +783,52 @@ final audioHapticsSettingsProvider =
     StateNotifierProvider<AudioHapticsSettingsNotifier, AudioHapticsSettings>(
         (ref) {
   return AudioHapticsSettingsNotifier();
+});
+
+class AudioGainSettingsNotifier extends StateNotifier<AudioGainSettings> {
+  static const String preferenceKey = 'global_audio_gain_db';
+  bool _changedLocally = false;
+
+  AudioGainSettingsNotifier() : super(const AudioGainSettings()) {
+    _loadPreference();
+  }
+
+  Future<void> _loadPreference() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (!mounted || _changedLocally) return;
+      state = AudioGainSettings(
+        decibels: AudioGainSettings.normalize(
+          prefs.getDouble(preferenceKey) ?? AudioGainSettings.defaultDecibels,
+        ),
+      );
+    } catch (_) {
+      if (!mounted || _changedLocally) return;
+      state = const AudioGainSettings();
+    }
+  }
+
+  Future<void> setDecibels(double decibels) async {
+    _changedLocally = true;
+    state = AudioGainSettings(
+      decibels: AudioGainSettings.normalize(decibels),
+    );
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble(preferenceKey, state.decibels);
+    } catch (_) {
+      // Keep the in-memory setting when persistence is unavailable.
+    }
+  }
+
+  Future<void> resetToDefault() {
+    return setDecibels(AudioGainSettings.defaultDecibels);
+  }
+}
+
+final audioGainSettingsProvider =
+    StateNotifierProvider<AudioGainSettingsNotifier, AudioGainSettings>((ref) {
+  return AudioGainSettingsNotifier();
 });
 
 /// 分页大小设置

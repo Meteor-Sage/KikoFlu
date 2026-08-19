@@ -985,6 +985,21 @@ class SRu extends S {
   String get audioHapticsIntensity => 'Интенсивность';
 
   @override
+  String get audioGain => 'Глобальное усиление звука';
+
+  @override
+  String get audioGainDesc =>
+      'Ослабляет или усиливает весь звук. 0 дБ сохраняет исходное звучание. Слишком высокое положительное усиление может вызвать искажения или повредить слух.';
+
+  @override
+  String get audioGainAttenuationDesc =>
+      'Ослабляет весь звук. 0 дБ сохраняет исходное звучание.';
+
+  @override
+  String get audioGainPassthroughDesc =>
+      'Недоступно, пока включён сквозной вывод звука.';
+
+  @override
   String get blockingSettings => 'Блокировки';
 
   @override

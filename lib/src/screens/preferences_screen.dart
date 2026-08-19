@@ -6,6 +6,7 @@ import '../../l10n/app_localizations.dart';
 import 'audio_format_settings_screen.dart';
 import 'blocked_items_screen.dart';
 import 'llm_settings_screen.dart';
+import '../models/audio_gain_settings.dart';
 import '../models/sort_options.dart';
 import '../providers/proxy_provider.dart';
 import '../providers/settings_provider.dart';
@@ -779,6 +780,8 @@ class PreferencesScreen extends ConsumerWidget {
                     ),
                 onTap: () => _showPreloadThresholdDialog(context, ref),
               ),
+              if (_supportsAudioGain(Theme.of(context).platform))
+                _AudioGainSettingsTile(ref: ref),
               _buildProxySettings(context, ref),
               SettingsSwitchTile(
                 icon: Icons.screen_lock_portrait,
@@ -861,6 +864,93 @@ class PreferencesScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  bool _supportsAudioGain(TargetPlatform platform) {
+    return platform == TargetPlatform.android ||
+        platform == TargetPlatform.iOS ||
+        platform == TargetPlatform.windows ||
+        platform == TargetPlatform.linux ||
+        platform == TargetPlatform.macOS;
+  }
+}
+
+class _AudioGainSettingsTile extends StatelessWidget {
+  const _AudioGainSettingsTile({required this.ref});
+
+  final WidgetRef ref;
+
+  String _valueLabel(double decibels) {
+    if (decibels == 0) return '0 dB';
+    final digits = decibels == decibels.roundToDouble() ? 0 : 1;
+    final prefix = decibels > 0 ? '+' : '';
+    return '$prefix${decibels.toStringAsFixed(digits)} dB';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = ref.watch(audioGainSettingsProvider);
+    final notifier = ref.read(audioGainSettingsProvider.notifier);
+    final passthroughEnabled = ref.watch(audioPassthroughProvider);
+    final colorScheme = Theme.of(context).colorScheme;
+    final platform = Theme.of(context).platform;
+    final supportsPositiveGain = platform != TargetPlatform.iOS;
+    final maxDecibels = supportsPositiveGain
+        ? AudioGainSettings.maxDecibels
+        : AudioGainSettings.defaultDecibels;
+    final displayedDecibels = settings.decibels
+        .clamp(AudioGainSettings.minDecibels, maxDecibels)
+        .toDouble();
+
+    return Column(
+      children: [
+        ListTile(
+          leading: Icon(Icons.graphic_eq, color: colorScheme.primary),
+          title: Text(S.of(context).audioGain),
+          subtitle: Text(
+            passthroughEnabled
+                ? S.of(context).audioGainPassthroughDesc
+                : supportsPositiveGain
+                    ? S.of(context).audioGainDesc
+                    : S.of(context).audioGainAttenuationDesc,
+          ),
+          trailing: IconButton(
+            onPressed: settings.decibels == AudioGainSettings.defaultDecibels
+                ? null
+                : notifier.resetToDefault,
+            icon: const Icon(Icons.restart_alt),
+            tooltip: S.of(context).restoreDefaultSettings,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(72, 0, 16, 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Slider(
+                  value: displayedDecibels,
+                  min: AudioGainSettings.minDecibels,
+                  max: maxDecibels,
+                  divisions: ((maxDecibels - AudioGainSettings.minDecibels) /
+                          AudioGainSettings.stepDecibels)
+                      .round(),
+                  label: _valueLabel(displayedDecibels),
+                  onChanged: passthroughEnabled ? null : notifier.setDecibels,
+                ),
+              ),
+              SizedBox(
+                width: 58,
+                child: Text(
+                  _valueLabel(displayedDecibels),
+                  textAlign: TextAlign.end,
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

@@ -1896,6 +1896,30 @@ abstract class S {
   /// **'Intensity'**
   String get audioHapticsIntensity;
 
+  /// No description provided for @audioGain.
+  ///
+  /// In en, this message translates to:
+  /// **'Global Audio Gain'**
+  String get audioGain;
+
+  /// No description provided for @audioGainDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Attenuate or boost all audio globally. 0 dB preserves the original sound. High positive gain may cause distortion or hearing damage.'**
+  String get audioGainDesc;
+
+  /// No description provided for @audioGainAttenuationDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Reduce all audio globally. 0 dB preserves the original sound.'**
+  String get audioGainAttenuationDesc;
+
+  /// No description provided for @audioGainPassthroughDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable while audio passthrough is enabled.'**
+  String get audioGainPassthroughDesc;
+
   /// No description provided for @blockingSettings.
   ///
   /// In en, this message translates to:

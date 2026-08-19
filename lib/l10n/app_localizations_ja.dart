@@ -962,6 +962,19 @@ class SJa extends S {
   String get audioHapticsIntensity => '強度';
 
   @override
+  String get audioGain => 'グローバルオーディオゲイン';
+
+  @override
+  String get audioGainDesc =>
+      'すべての音声を減衰または増幅します。0 dB では原音を維持します。高い正のゲインは歪みや聴力への損傷を引き起こす可能性があります。';
+
+  @override
+  String get audioGainAttenuationDesc => 'すべての音声を減衰します。0 dB では原音を維持します。';
+
+  @override
+  String get audioGainPassthroughDesc => 'オーディオパススルーが有効な間は使用できません。';
+
+  @override
   String get blockingSettings => 'ブロック設定';
 
   @override

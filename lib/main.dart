@@ -146,6 +146,7 @@ Future<void> _configureMpv() async {
 ao=wasapi
 audio-exclusive=yes
 audio-spdif=ac3,dts,eac3
+volume-max=400
 log-file=mpv_debug.log
 msg-level=all=v
 video=no
@@ -154,6 +155,7 @@ sub-auto=no
       } else if (Platform.isLinux) {
         configContent = '''
 audio-spdif=ac3,dts,eac3
+volume-max=400
 log-file=${p.join(configDir.path, 'mpv_debug.log')}
 msg-level=all=v
 video=no
@@ -164,6 +166,7 @@ sub-auto=no
 ao=coreaudio
 audio-exclusive=yes
 audio-spdif=ac3,dts,eac3
+volume-max=400
 log-file=${p.join(configDir.path, 'mpv_debug.log')}
 msg-level=all=v
 video=no
@@ -180,6 +183,7 @@ sub-auto=no
       String configContent;
       if (Platform.isWindows) {
         configContent = '''
+volume-max=400
 log-file=mpv_debug.log
 msg-level=all=v
 video=no
@@ -187,6 +191,7 @@ sub-auto=no
 ''';
       } else {
         configContent = '''
+volume-max=400
 log-file=${p.join(configDir.path, 'mpv_debug.log')}
 msg-level=all=v
 video=no

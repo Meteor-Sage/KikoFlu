@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
@@ -8,6 +9,7 @@ import 'package:path/path.dart' as p;
 import 'package:smtc_windows/smtc_windows.dart';
 
 import '../models/audio_track.dart';
+import '../models/audio_gain_settings.dart';
 import 'cache_service.dart';
 import 'caching_stream_audio_source.dart';
 import 'audio_haptics_service.dart';
@@ -25,9 +27,21 @@ class AudioPlayerService {
   static AudioPlayerService get instance =>
       _instance ??= AudioPlayerService._();
 
-  AudioPlayerService._();
+  AudioPlayerService._() {
+    if (Platform.isAndroid) {
+      _androidLoudnessEnhancer = AndroidLoudnessEnhancer();
+      _player = AudioPlayer(
+        audioPipeline: AudioPipeline(
+          androidAudioEffects: [_androidLoudnessEnhancer!],
+        ),
+      );
+    } else {
+      _player = AudioPlayer();
+    }
+  }
 
-  final AudioPlayer _player = AudioPlayer();
+  late final AudioPlayer _player;
+  AndroidLoudnessEnhancer? _androidLoudnessEnhancer;
   final AudioHapticsService _hapticsService = AudioHapticsService.instance;
   final List<AudioTrack> _queue = [];
   int _currentIndex = 0;
@@ -67,6 +81,11 @@ class AudioPlayerService {
   // Audio haptics settings
   bool _hapticsEnabled = false;
   double _hapticsIntensity = 0.85;
+
+  // Logical user volume and the independent global gain setting.
+  double _userVolume = 1;
+  double _audioGainDecibels = AudioGainSettings.defaultDecibels;
+  bool _audioPassthroughEnabled = false;
 
   // Stream controllers
   final StreamController<List<AudioTrack>> _queueController =
@@ -150,6 +169,9 @@ class AudioPlayerService {
 
   /// 更新音频会话配置（直通/独占模式）
   Future<void> updateAudioSessionConfig(bool enablePassthrough) async {
+    _audioPassthroughEnabled = enablePassthrough;
+    await _applyOutputLevel();
+
     if (!Platform.isAndroid && !Platform.isIOS) return;
 
     // iOS 平台如果用户认为不支持，则不应用直通配置，或者仅应用基础配置
@@ -860,7 +882,47 @@ class AudioPlayerService {
   }
 
   Future<void> setVolume(double volume) async {
-    await _player.setVolume(volume.clamp(0.0, 1.0));
+    _userVolume = volume.clamp(0.0, 1.0).toDouble();
+    await _applyOutputLevel();
+  }
+
+  Future<void> updateAudioGain(double decibels) async {
+    _audioGainDecibels = AudioGainSettings.normalize(decibels);
+    await _applyOutputLevel();
+  }
+
+  Future<void> _applyOutputLevel() async {
+    final gainDecibels = _audioPassthroughEnabled
+        ? AudioGainSettings.defaultDecibels
+        : _audioGainDecibels;
+
+    if (Platform.isAndroid) {
+      final enhancer = _androidLoudnessEnhancer;
+      if (enhancer != null) {
+        await enhancer.setTargetGain(math.max(gainDecibels, 0));
+        await enhancer.setEnabled(gainDecibels > 0);
+      }
+      final effectiveVolume = gainDecibels < 0
+          ? _userVolume * AudioGainSettings.linearMultiplier(gainDecibels)
+          : _userVolume;
+      await _player.setVolume(effectiveVolume);
+      return;
+    }
+
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      final effectiveVolume =
+          _userVolume * AudioGainSettings.linearMultiplier(gainDecibels);
+      await _player.setVolume(effectiveVolume);
+      return;
+    }
+
+    // AVPlayer cannot boost above its native 1.0 ceiling, but attenuation is
+    // reliable. Ignore positive values instead of pretending they work.
+    final effectiveVolume = _userVolume *
+        AudioGainSettings.linearMultiplier(
+          math.min(gainDecibels, 0),
+        );
+    await _player.setVolume(effectiveVolume);
   }
 
   Future<void> setSpeed(double speed) async {

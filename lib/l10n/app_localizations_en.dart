@@ -983,6 +983,21 @@ class SEn extends S {
   String get audioHapticsIntensity => 'Intensity';
 
   @override
+  String get audioGain => 'Global Audio Gain';
+
+  @override
+  String get audioGainDesc =>
+      'Attenuate or boost all audio globally. 0 dB preserves the original sound. High positive gain may cause distortion or hearing damage.';
+
+  @override
+  String get audioGainAttenuationDesc =>
+      'Reduce all audio globally. 0 dB preserves the original sound.';
+
+  @override
+  String get audioGainPassthroughDesc =>
+      'Unavailable while audio passthrough is enabled.';
+
+  @override
   String get blockingSettings => 'Blocking Settings';
 
   @override

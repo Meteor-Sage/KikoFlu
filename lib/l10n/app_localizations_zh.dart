@@ -959,6 +959,18 @@ class SZh extends S {
   String get audioHapticsIntensity => '强度';
 
   @override
+  String get audioGain => '全局音频增益';
+
+  @override
+  String get audioGainDesc => '全局衰减或放大所有音频，0 dB 保持原声。正增益过高可能导致失真或损伤听力';
+
+  @override
+  String get audioGainAttenuationDesc => '全局降低所有音频的音量，0 dB 保持原声';
+
+  @override
+  String get audioGainPassthroughDesc => '开启音频直通时增益不可用';
+
+  @override
   String get blockingSettings => '屏蔽设置';
 
   @override
@@ -4490,6 +4502,18 @@ class SZhHant extends SZh {
 
   @override
   String get audioHapticsIntensity => '強度';
+
+  @override
+  String get audioGain => '全域音訊增益';
+
+  @override
+  String get audioGainDesc => '全域衰減或放大所有音訊，0 dB 保持原聲。正增益過高可能導致失真或損傷聽力';
+
+  @override
+  String get audioGainAttenuationDesc => '全域降低所有音訊的音量，0 dB 保持原聲';
+
+  @override
+  String get audioGainPassthroughDesc => '開啟音訊直通時增益無法使用';
 
   @override
   String get blockingSettings => '封鎖設定';
