@@ -63,10 +63,7 @@ class SubtitleLibraryTopBar extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      color: Theme.of(context)
-          .colorScheme
-          .surfaceContainerHighest
-          .withValues(alpha: 0.5),
+      color: Colors.transparent,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -119,7 +116,7 @@ class SubtitleLibraryTopBar extends StatelessWidget {
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
-                        children: _buildBreadcrumbs(context),
+                        children: buildBreadcrumbs(context),
                       ),
                     ),
                   ),
@@ -131,7 +128,7 @@ class SubtitleLibraryTopBar extends StatelessWidget {
     );
   }
 
-  List<Widget> _buildBreadcrumbs(BuildContext context) {
+  List<Widget> buildBreadcrumbs(BuildContext context) {
     final root = rootPath;
     final breadcrumbs = <Widget>[
       InkWell(

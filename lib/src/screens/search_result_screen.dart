@@ -14,6 +14,8 @@ import '../widgets/global_audio_player_wrapper.dart';
 import '../widgets/download_fab.dart';
 import '../utils/l10n_extensions.dart';
 import '../utils/subtitle_filter.dart';
+import '../widgets/floating_feed_toolbar.dart';
+import '../utils/system_ui_style.dart';
 
 class SearchResultScreen extends StatelessWidget {
   final String keyword;
@@ -115,14 +117,14 @@ class _SearchResultContentState extends ConsumerState<_SearchResultContent> {
     );
   }
 
-  Icon _getLayoutIcon(SearchLayoutType layoutType) {
+  IconData _getLayoutIcon(SearchLayoutType layoutType) {
     switch (layoutType) {
       case SearchLayoutType.bigGrid:
-        return const Icon(Icons.grid_3x3);
+        return Icons.grid_3x3;
       case SearchLayoutType.smallGrid:
-        return const Icon(Icons.view_list);
+        return Icons.view_list;
       case SearchLayoutType.list:
-        return const Icon(Icons.view_agenda);
+        return Icons.view_agenda;
     }
   }
 
@@ -137,14 +139,11 @@ class _SearchResultContentState extends ConsumerState<_SearchResultContent> {
     }
   }
 
-  Icon _getSubtitleFilterIcon(int subtitleFilter) {
+  IconData _getSubtitleFilterIcon(int subtitleFilter) {
     final mode = SubtitleFilterMode.fromValue(subtitleFilter);
-    return Icon(
-      mode == SubtitleFilterMode.withSubtitles
-          ? Icons.closed_caption
-          : Icons.closed_caption_disabled,
-      color: mode.isActive ? Theme.of(context).colorScheme.primary : null,
-    );
+    return mode == SubtitleFilterMode.withSubtitles
+        ? Icons.closed_caption
+        : Icons.closed_caption_disabled;
   }
 
   @override
@@ -155,78 +154,75 @@ class _SearchResultContentState extends ConsumerState<_SearchResultContent> {
         MediaQuery.of(context).orientation == Orientation.landscape;
     final horizontalPadding = isLandscape ? 24.0 : 0.0;
 
+    final topPadding = MediaQuery.paddingOf(context).top;
+    final systemOverlayStyle =
+        transparentSystemBarsForBrightness(Theme.of(context).brightness);
+
     return GlobalAudioPlayerWrapper(
-      child: Scaffold(
-        floatingActionButton: const DownloadFab(),
-        appBar: AppBar(
-          scrolledUnderElevation: 0,
-          elevation: 0,
-          titleSpacing: 0,
-          actions: [
-            if (horizontalPadding > 0) SizedBox(width: horizontalPadding - 8),
-            IconButton(
-              icon: _getLayoutIcon(searchState.layoutType),
-              iconSize: 22,
-              padding: const EdgeInsets.all(8),
-              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-              onPressed: () =>
-                  ref.read(searchResultProvider.notifier).toggleLayoutType(),
-              tooltip: _getLayoutTooltip(searchState.layoutType),
-            ),
-            IconButton(
-              icon: _getSubtitleFilterIcon(searchState.subtitleFilter),
-              iconSize: 22,
-              padding: const EdgeInsets.all(8),
-              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-              onPressed: () => ref
-                  .read(searchResultProvider.notifier)
-                  .toggleSubtitleFilter(),
-              tooltip: SubtitleFilterMode.fromValue(
-                searchState.subtitleFilter,
-              ).localizedTooltip(context),
-            ),
-            Padding(
-              padding: EdgeInsets.only(
-                  right: horizontalPadding > 0 ? horizontalPadding - 8 : 0),
-              child: IconButton(
-                icon: const Icon(Icons.sort),
-                iconSize: 22,
-                padding: const EdgeInsets.all(8),
-                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                onPressed: () => _showSortDialog(context),
-                tooltip: S.of(context).sort,
+      child: AnnotatedRegion(
+        value: systemOverlayStyle,
+        child: Scaffold(
+          floatingActionButton: const DownloadFab(),
+          body: Stack(
+            children: [
+              Positioned.fill(child: _buildBody(searchState)),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: ProgressiveTopBlur(height: topPadding + 72),
               ),
-            ),
-          ],
-        ),
-        body: Column(
-          children: [
-            // 搜索信息行
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.symmetric(
-                horizontal: isLandscape ? 24.0 : 8.0,
-                vertical: 8,
-              ),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                border: Border(
-                  bottom: BorderSide(
-                    color: Theme.of(context).dividerColor,
-                    width: 1,
-                  ),
+              Positioned(
+                top: topPadding + 8,
+                left: horizontalPadding > 0 ? horizontalPadding : 8,
+                right: horizontalPadding > 0 ? horizontalPadding : 8,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    FloatingToolbarSurface(
+                      child: FloatingToolbarIconButton(
+                        icon: Icons.arrow_back,
+                        tooltip: S.of(context).back,
+                        onPressed: () => Navigator.of(context).maybePop(),
+                      ),
+                    ),
+                    FloatingToolbarSurface(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          FloatingToolbarIconButton(
+                            icon: _getLayoutIcon(searchState.layoutType),
+                            tooltip: _getLayoutTooltip(searchState.layoutType),
+                            onPressed: () => ref
+                                .read(searchResultProvider.notifier)
+                                .toggleLayoutType(),
+                          ),
+                          FloatingToolbarIconButton(
+                            icon: _getSubtitleFilterIcon(
+                                searchState.subtitleFilter),
+                            tooltip: SubtitleFilterMode.fromValue(
+                              searchState.subtitleFilter,
+                            ).localizedTooltip(context),
+                            isSelected: SubtitleFilterMode.fromValue(
+                              searchState.subtitleFilter,
+                            ).isActive,
+                            onPressed: () => ref
+                                .read(searchResultProvider.notifier)
+                                .toggleSubtitleFilter(),
+                          ),
+                          FloatingToolbarIconButton(
+                            icon: Icons.sort,
+                            tooltip: S.of(context).sort,
+                            onPressed: () => _showSortDialog(context),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: _buildSearchInfo(context, searchState),
-              ),
-            ),
-            // 搜索结果内容
-            Expanded(
-              child: _buildBody(searchState),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -501,6 +497,26 @@ class _SearchResultContentState extends ConsumerState<_SearchResultContent> {
                 )
             : null,
       ),
+      sliversBefore: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.only(
+              top: MediaQuery.paddingOf(context).top + 64,
+              left: MediaQuery.orientationOf(context) == Orientation.landscape
+                  ? 24
+                  : 8,
+              right: MediaQuery.orientationOf(context) == Orientation.landscape
+                  ? 24
+                  : 8,
+              bottom: 8,
+            ),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: _buildSearchInfo(context, searchState),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

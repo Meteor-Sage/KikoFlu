@@ -7,12 +7,13 @@ import '../widgets/sort_dialog.dart';
 import '../widgets/works_grid_view.dart';
 import '../widgets/virtualized_sliver_collection.dart';
 import '../utils/snackbar_util.dart';
-import '../widgets/scrollable_appbar.dart';
+import '../widgets/floating_feed_toolbar.dart';
 import '../../l10n/app_localizations.dart';
 import '../widgets/download_fab.dart';
 import '../models/sort_options.dart';
 import '../utils/subtitle_filter.dart';
 import '../utils/l10n_extensions.dart';
+import '../utils/system_ui_style.dart';
 
 class WorksScreen extends ConsumerStatefulWidget {
   const WorksScreen({super.key});
@@ -84,14 +85,14 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
     );
   }
 
-  Icon _getLayoutIcon(LayoutType layoutType) {
+  IconData _getLayoutIcon(LayoutType layoutType) {
     switch (layoutType) {
       case LayoutType.bigGrid:
-        return const Icon(Icons.grid_3x3);
+        return Icons.grid_3x3;
       case LayoutType.smallGrid:
-        return const Icon(Icons.view_list);
+        return Icons.view_list;
       case LayoutType.list:
-        return const Icon(Icons.view_agenda);
+        return Icons.view_agenda;
     }
   }
 
@@ -106,14 +107,11 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
     }
   }
 
-  Icon _getSubtitleFilterIcon(int subtitleFilter) {
+  IconData _getSubtitleFilterIcon(int subtitleFilter) {
     final mode = SubtitleFilterMode.fromValue(subtitleFilter);
-    return Icon(
-      mode == SubtitleFilterMode.withSubtitles
-          ? Icons.closed_caption
-          : Icons.closed_caption_disabled,
-      color: mode.isActive ? Theme.of(context).colorScheme.primary : null,
-    );
+    return mode == SubtitleFilterMode.withSubtitles
+        ? Icons.closed_caption
+        : Icons.closed_caption_disabled;
   }
 
   void _changeDisplayMode(DisplayMode mode) {
@@ -192,230 +190,151 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
     final horizontalPadding = isLandscape ? 24.0 : 8.0;
+    final topPadding = MediaQuery.paddingOf(context).top;
+    final toolbarTop = topPadding + 8;
+    final contentTopPadding = toolbarTop + 56;
+    final systemOverlayStyle =
+        transparentSystemBarsForBrightness(Theme.of(context).brightness);
 
-    return Scaffold(
-      floatingActionButton: const DownloadFab(),
-      appBar: ScrollableAppBar(
-        toolbarHeight: 56,
-        flexibleSpace: SafeArea(
-          child: Row(
-            children: [
-              // 第一列：可滚动的模式切换按钮
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  padding: EdgeInsets.symmetric(
-                      horizontal: horizontalPadding, vertical: 8),
-                  child: _buildModeButtons(context, worksState),
-                ),
-              ),
-              // 分隔线
-              Container(
-                height: 28,
-                width: 1,
-                color: Theme.of(context)
-                    .colorScheme
-                    .outlineVariant
-                    .withValues(alpha: 0.5),
-                margin: const EdgeInsets.symmetric(horizontal: 2),
-              ),
-              // 第二列：布局切换按钮
-              IconButton(
-                icon: _getLayoutIcon(worksState.layoutType),
-                iconSize: 22,
-                padding: const EdgeInsets.all(6),
-                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                onPressed: () =>
-                    ref.read(worksProvider.notifier).toggleLayoutType(),
-                tooltip: _getLayoutTooltip(worksState.layoutType),
-              ),
-              // 第三列：字幕筛选按钮
-              IconButton(
-                icon: _getSubtitleFilterIcon(worksState.subtitleFilter),
-                iconSize: 22,
-                padding: const EdgeInsets.all(6),
-                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                onPressed: () =>
-                    ref.read(worksProvider.notifier).toggleSubtitleFilter(),
-                tooltip: SubtitleFilterMode.fromValue(
-                  worksState.subtitleFilter,
-                ).localizedTooltip(context),
-              ),
-              // 第四列：排序按钮
-              Padding(
-                padding: EdgeInsets.only(right: horizontalPadding - 6),
-                child: IconButton(
-                  icon: Icon(
-                    Icons.sort,
-                    color: isRecommendMode ? Colors.grey : null,
+    return AnnotatedRegion(
+      value: systemOverlayStyle,
+      child: Scaffold(
+        floatingActionButton: const DownloadFab(),
+        body: Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                onHorizontalDragEnd: _handleSwipe,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  switchInCurve: Curves.easeOut,
+                  switchOutCurve: Curves.easeIn,
+                  transitionBuilder: (child, animation) {
+                    final direction = _slideDirection == 0
+                        ? 0.0
+                        : (_slideDirection > 0 ? 0.12 : -0.12);
+                    final offsetAnimation = Tween<Offset>(
+                      begin: Offset(direction, 0),
+                      end: Offset.zero,
+                    ).animate(animation);
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: offsetAnimation,
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: KeyedSubtree(
+                    key: ValueKey(worksState.displayMode),
+                    child: _buildBody(
+                      worksState,
+                      EdgeInsets.fromLTRB(
+                        horizontalPadding,
+                        contentTopPadding,
+                        horizontalPadding,
+                        horizontalPadding,
+                      ),
+                    ),
                   ),
-                  iconSize: 22,
-                  padding: const EdgeInsets.all(6),
-                  constraints:
-                      const BoxConstraints(minWidth: 36, minHeight: 36),
-                  onPressed:
-                      isRecommendMode ? null : () => _showSortDialog(context),
-                  tooltip: isRecommendMode
-                      ? S.of(context).recommendedNoSort
-                      : S.of(context).sort,
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
-      body: GestureDetector(
-        onHorizontalDragEnd: _handleSwipe,
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 250),
-          switchInCurve: Curves.easeOut,
-          switchOutCurve: Curves.easeIn,
-          transitionBuilder: (child, animation) {
-            final direction = _slideDirection == 0
-                ? 0.0
-                : (_slideDirection > 0 ? 0.12 : -0.12);
-            final offsetAnimation = Tween<Offset>(
-              begin: Offset(direction, 0),
-              end: Offset.zero,
-            ).animate(animation);
-            return FadeTransition(
-              opacity: animation,
-              child: SlideTransition(
-                position: offsetAnimation,
-                child: child,
+            ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: ProgressiveTopBlur(height: topPadding + 72),
+            ),
+            Positioned(
+              top: toolbarTop,
+              left: horizontalPadding,
+              right: horizontalPadding,
+              child: FloatingFeedToolbar(
+                modeActions: _buildModeActions(context, worksState),
+                toolActions: _buildToolActions(
+                  context,
+                  worksState,
+                  isRecommendMode: isRecommendMode,
+                ),
               ),
-            );
-          },
-          child: KeyedSubtree(
-            key: ValueKey(worksState.displayMode),
-            child: _buildBody(worksState),
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  /// ===== 构建「全部 / 热门 / 推荐」按钮组 =====
-  Widget _buildModeButtons(BuildContext context, WorksState worksState) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _buildModeButton(
-          context: context,
-          icon: Icons.grid_view,
-          label: S.of(context).displayModeAll,
-          isSelected: worksState.displayMode == DisplayMode.all,
-          index: 0,
-          total: 3,
-          onTap: () => _changeDisplayMode(DisplayMode.all),
-        ),
-        _buildModeButton(
-          context: context,
-          icon: Icons.local_fire_department,
-          label: S.of(context).displayModePopular,
-          isSelected: worksState.displayMode == DisplayMode.popular,
-          index: 1,
-          total: 3,
-          onTap: () => _changeDisplayMode(DisplayMode.popular),
-        ),
-        _buildModeButton(
-          context: context,
-          icon: Icons.auto_awesome,
-          label: S.of(context).displayModeRecommended,
-          isSelected: worksState.displayMode == DisplayMode.recommended,
-          index: 2,
-          total: 3,
-          onTap: () => _changeDisplayMode(DisplayMode.recommended),
-        ),
-      ],
-    );
+  List<FloatingFeedModeAction> _buildModeActions(
+    BuildContext context,
+    WorksState worksState,
+  ) {
+    return [
+      FloatingFeedModeAction(
+        icon: Icons.grid_view,
+        label: S.of(context).displayModeAll,
+        isSelected: worksState.displayMode == DisplayMode.all,
+        onPressed: () => _changeDisplayMode(DisplayMode.all),
+      ),
+      FloatingFeedModeAction(
+        icon: Icons.local_fire_department,
+        label: S.of(context).displayModePopular,
+        isSelected: worksState.displayMode == DisplayMode.popular,
+        onPressed: () => _changeDisplayMode(DisplayMode.popular),
+      ),
+      FloatingFeedModeAction(
+        icon: Icons.auto_awesome,
+        label: S.of(context).displayModeRecommended,
+        isSelected: worksState.displayMode == DisplayMode.recommended,
+        onPressed: () => _changeDisplayMode(DisplayMode.recommended),
+      ),
+    ];
   }
 
-  /// ===== 单个模式按钮样式封装 =====
-  Widget _buildModeButton({
-    required BuildContext context,
-    required IconData icon,
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-    required int index,
-    required int total,
+  List<FloatingFeedToolAction> _buildToolActions(
+    BuildContext context,
+    WorksState worksState, {
+    required bool isRecommendMode,
   }) {
-    final theme = Theme.of(context);
-
-    // 第一个按钮：左侧圆角，右侧方角
-    // 最后一个按钮：左侧方角，右侧圆角
-    // 中间按钮：两侧方角
-    BorderRadius buttonBorderRadius;
-    if (index == 0) {
-      buttonBorderRadius = const BorderRadius.only(
-        topLeft: Radius.circular(16),
-        bottomLeft: Radius.circular(16),
-      );
-    } else if (index == total - 1) {
-      buttonBorderRadius = const BorderRadius.only(
-        topRight: Radius.circular(16),
-        bottomRight: Radius.circular(16),
-      );
-    } else {
-      buttonBorderRadius = BorderRadius.zero;
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(right: 4),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: buttonBorderRadius,
-          onTap: onTap,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? theme.colorScheme.primaryContainer
-                  : theme.colorScheme.surfaceContainerHighest,
-              borderRadius: buttonBorderRadius,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  icon,
-                  size: 16,
-                  color: isSelected
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: isSelected
-                        ? theme.colorScheme.primary
-                        : theme.colorScheme.onSurfaceVariant,
-                    fontSize: 12,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+    final subtitleMode =
+        SubtitleFilterMode.fromValue(worksState.subtitleFilter);
+    return [
+      FloatingFeedToolAction(
+        icon: _getLayoutIcon(worksState.layoutType),
+        tooltip: _getLayoutTooltip(worksState.layoutType),
+        onPressed: () => ref.read(worksProvider.notifier).toggleLayoutType(),
       ),
-    );
+      FloatingFeedToolAction(
+        icon: _getSubtitleFilterIcon(worksState.subtitleFilter),
+        tooltip: subtitleMode.localizedTooltip(context),
+        isSelected: subtitleMode.isActive,
+        onPressed: () =>
+            ref.read(worksProvider.notifier).toggleSubtitleFilter(),
+      ),
+      FloatingFeedToolAction(
+        icon: Icons.sort,
+        tooltip: isRecommendMode
+            ? S.of(context).recommendedNoSort
+            : S.of(context).sort,
+        onPressed: isRecommendMode ? null : () => _showSortDialog(context),
+      ),
+    ];
   }
 
-  Widget _buildBody(WorksState worksState) {
-    return _buildLayoutView(worksState);
+  Widget _buildBody(WorksState worksState, EdgeInsetsGeometry padding) {
+    return _buildLayoutView(worksState, padding);
   }
 
-  Widget _buildLayoutView(WorksState worksState) {
+  Widget _buildLayoutView(
+    WorksState worksState,
+    EdgeInsetsGeometry padding,
+  ) {
     final notifier = ref.read(worksProvider.notifier);
     return WorksGridView(
       works: worksState.works,
       layoutType: worksState.layoutType,
       scrollController: _scrollController,
+      padding: padding,
       physics: ScrollOptimization.physics,
       isLoading: worksState.isLoading,
       isRefreshing: worksState.isLoading && worksState.works.isNotEmpty,

@@ -11,7 +11,12 @@ import '../models/playlist.dart' show PlaylistPrivacy;
 import 'playlist_detail_screen.dart';
 
 class PlaylistsScreen extends ConsumerStatefulWidget {
-  const PlaylistsScreen({super.key});
+  const PlaylistsScreen({
+    super.key,
+    this.topInset = 0,
+  });
+
+  final double topInset;
 
   @override
   ConsumerState<PlaylistsScreen> createState() => _PlaylistsScreenState();
@@ -568,7 +573,7 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
       onRetry: ref.read(playlistsProvider.notifier).refresh,
       sliversBefore: [
         SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          padding: EdgeInsets.fromLTRB(16, widget.topInset + 16, 16, 8),
           sliver: SliverToBoxAdapter(
             child: Row(
               children: [

@@ -30,6 +30,7 @@ class SubtitleLibraryFileList extends StatelessWidget {
     required this.onPreviewFile,
     required this.onLoadSubtitle,
     required this.onShowOptions,
+    this.header,
   });
 
   final List<Map<String, dynamic>> items;
@@ -42,6 +43,7 @@ class SubtitleLibraryFileList extends StatelessWidget {
   final ValueChanged<String> onPreviewFile;
   final ValueChanged<Map<String, dynamic>> onLoadSubtitle;
   final SubtitleLibraryFileOptions onShowOptions;
+  final Widget? header;
 
   @override
   Widget build(BuildContext context) {
@@ -53,6 +55,9 @@ class SubtitleLibraryFileList extends StatelessWidget {
       itemId: (entry) => entry.path,
       pageStorageKey: const PageStorageKey('subtitle-library-files'),
       padding: const EdgeInsets.only(bottom: 80),
+      sliversBefore: [
+        if (header != null) SliverToBoxAdapter(child: header),
+      ],
       onRefresh: onRefresh,
       showEndIndicator: false,
       itemBuilder: (context, entry, index) {

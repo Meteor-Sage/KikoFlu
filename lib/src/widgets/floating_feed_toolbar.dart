@@ -1,0 +1,373 @@
+import 'dart:ui' as ui;
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+
+class FloatingFeedModeAction {
+  const FloatingFeedModeAction({
+    required this.icon,
+    required this.label,
+    required this.isSelected,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool isSelected;
+  final VoidCallback onPressed;
+}
+
+class FloatingFeedToolAction {
+  const FloatingFeedToolAction({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+    this.isSelected = false,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onPressed;
+  final bool isSelected;
+}
+
+/// Two floating capsules used by feed surfaces: modes on the left and tools
+/// on the right. The surface remains translucent without applying extra blur
+/// filters, so a page only needs one shared top backdrop filter.
+class FloatingFeedToolbar extends StatelessWidget {
+  const FloatingFeedToolbar({
+    super.key,
+    required this.modeActions,
+    required this.toolActions,
+  });
+
+  final List<FloatingFeedModeAction> modeActions;
+  final List<FloatingFeedToolAction> toolActions;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 48,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Flexible(
+            fit: FlexFit.loose,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: FloatingToolbarSurface(
+                key: const ValueKey('feed-mode-capsule'),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const ClampingScrollPhysics(),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (final action in modeActions)
+                        _ModeButton(action: action),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          FloatingToolbarSurface(
+            key: const ValueKey('feed-tool-capsule'),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final action in toolActions) _ToolButton(action: action),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Shared translucent capsule surface for toolbars that need custom content.
+class FloatingToolbarSurface extends StatelessWidget {
+  const FloatingToolbarSurface({
+    super.key,
+    required this.child,
+    this.padding = const EdgeInsets.all(4),
+  });
+
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.shadow.withValues(alpha: 0.16),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Material(
+          color: theme.colorScheme.surfaceContainer.withValues(alpha: 0.78),
+          child: Padding(
+            padding: padding,
+            child: child,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Keeps a secondary floating toolbar aligned with a collapsible primary
+/// toolbar without rebuilding or moving the scrollable below it.
+class FloatingToolbarPositionFollower extends StatefulWidget {
+  const FloatingToolbarPositionFollower({
+    super.key,
+    required this.primaryToolbarVisible,
+    required this.visibleTop,
+    required this.hiddenTop,
+    required this.left,
+    required this.right,
+    required this.child,
+    this.duration = const Duration(milliseconds: 180),
+  });
+
+  final ValueListenable<bool> primaryToolbarVisible;
+  final double visibleTop;
+  final double hiddenTop;
+  final double left;
+  final double right;
+  final Widget child;
+  final Duration duration;
+
+  @override
+  State<FloatingToolbarPositionFollower> createState() =>
+      _FloatingToolbarPositionFollowerState();
+}
+
+class _FloatingToolbarPositionFollowerState
+    extends State<FloatingToolbarPositionFollower> {
+  late bool _primaryToolbarVisible;
+
+  @override
+  void initState() {
+    super.initState();
+    _primaryToolbarVisible = widget.primaryToolbarVisible.value;
+    widget.primaryToolbarVisible.addListener(_handleVisibilityChanged);
+  }
+
+  @override
+  void didUpdateWidget(FloatingToolbarPositionFollower oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.primaryToolbarVisible != widget.primaryToolbarVisible) {
+      oldWidget.primaryToolbarVisible.removeListener(_handleVisibilityChanged);
+      _primaryToolbarVisible = widget.primaryToolbarVisible.value;
+      widget.primaryToolbarVisible.addListener(_handleVisibilityChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.primaryToolbarVisible.removeListener(_handleVisibilityChanged);
+    super.dispose();
+  }
+
+  void _handleVisibilityChanged() {
+    final visible = widget.primaryToolbarVisible.value;
+    if (_primaryToolbarVisible == visible) return;
+    setState(() => _primaryToolbarVisible = visible);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedPositioned(
+      duration: widget.duration,
+      curve: Curves.easeOutCubic,
+      top: _primaryToolbarVisible ? widget.visibleTop : widget.hiddenTop,
+      left: widget.left,
+      right: widget.right,
+      child: widget.child,
+    );
+  }
+}
+
+class _ModeButton extends StatelessWidget {
+  const _ModeButton({required this.action});
+
+  final FloatingFeedModeAction action;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Semantics(
+      selected: action.isSelected,
+      button: true,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: action.onPressed,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
+            height: 40,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: action.isSelected
+                  ? colorScheme.primaryContainer
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  action.icon,
+                  size: 18,
+                  color: action.isSelected
+                      ? colorScheme.primary
+                      : colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  action.label,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: action.isSelected
+                            ? colorScheme.primary
+                            : colorScheme.onSurfaceVariant,
+                        fontWeight: action.isSelected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ToolButton extends StatelessWidget {
+  const _ToolButton({required this.action});
+
+  final FloatingFeedToolAction action;
+
+  @override
+  Widget build(BuildContext context) {
+    return FloatingToolbarIconButton(
+      icon: action.icon,
+      tooltip: action.tooltip,
+      onPressed: action.onPressed,
+      isSelected: action.isSelected,
+    );
+  }
+}
+
+/// Icon-only action button for toolbars that use a custom capsule grouping.
+class FloatingToolbarIconButton extends StatelessWidget {
+  const FloatingToolbarIconButton({
+    super.key,
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+    this.isSelected = false,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onPressed;
+  final bool isSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: isSelected ? colorScheme.primaryContainer : Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: IconButton(
+        onPressed: onPressed,
+        tooltip: tooltip,
+        icon: Icon(icon),
+        iconSize: 20,
+        padding: EdgeInsets.zero,
+        color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
+        disabledColor: colorScheme.onSurface.withValues(alpha: 0.32),
+      ),
+    );
+  }
+}
+
+/// A shallow, single-pass backdrop blur whose opacity fades into the content.
+/// Keeping the filtered area bounded avoids applying blur to the whole feed.
+class ProgressiveTopBlur extends StatelessWidget {
+  const ProgressiveTopBlur({
+    super.key,
+    required this.height,
+    this.sigma = 14,
+  });
+
+  final double height;
+  final double sigma;
+
+  @override
+  Widget build(BuildContext context) {
+    if (MediaQuery.paddingOf(context).top <= 0) {
+      return const SizedBox.shrink();
+    }
+    final surface = Theme.of(context).colorScheme.surface;
+    return IgnorePointer(
+      child: SizedBox(
+        height: height,
+        width: double.infinity,
+        child: ClipRect(
+          child: ShaderMask(
+            blendMode: BlendMode.dstIn,
+            shaderCallback: (bounds) => const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Colors.white, Colors.white, Colors.transparent],
+              stops: [0, 0.58, 1],
+            ).createShader(bounds),
+            child: BackdropFilter(
+              filter: ui.ImageFilter.blur(
+                sigmaX: sigma,
+                sigmaY: sigma,
+                tileMode: TileMode.decal,
+              ),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      surface.withValues(alpha: 0.72),
+                      surface.withValues(alpha: 0.34),
+                      surface.withValues(alpha: 0),
+                    ],
+                    stops: const [0, 0.58, 1],
+                  ),
+                ),
+                child: const SizedBox.expand(),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

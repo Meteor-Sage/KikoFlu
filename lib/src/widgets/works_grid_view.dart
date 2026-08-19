@@ -34,6 +34,7 @@ class WorksGridView extends ConsumerWidget {
     this.pagination,
     this.pageStorageKey,
     this.padding,
+    this.sliversBefore = const [],
     this.fillEmptyViewport = true,
     this.physics,
     this.showInlineLoadingIndicator = false,
@@ -60,6 +61,7 @@ class WorksGridView extends ConsumerWidget {
   final VirtualizedPagination? pagination;
   final PageStorageKey<String>? pageStorageKey;
   final EdgeInsetsGeometry? padding;
+  final List<Widget> sliversBefore;
   final bool fillEmptyViewport;
   final ScrollPhysics? physics;
   final bool showInlineLoadingIndicator;
@@ -89,6 +91,7 @@ class WorksGridView extends ConsumerWidget {
       return VirtualizedSliverCollection<Work>(
         controller: scrollController,
         pageStorageKey: pageStorageKey,
+        sliversBefore: sliversBefore,
         items: works,
         itemId: (work) => work.id,
         itemBuilder: (context, work, index) => EnhancedWorkCard(

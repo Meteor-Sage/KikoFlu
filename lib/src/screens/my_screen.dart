@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/my_reviews_provider.dart';
 import '../providers/my_tabs_display_provider.dart';
@@ -9,6 +10,7 @@ import '../utils/server_utils.dart';
 import '../utils/l10n_extensions.dart';
 import '../widgets/works_grid_view.dart';
 import '../widgets/virtualized_sliver_collection.dart';
+import '../widgets/floating_feed_toolbar.dart';
 import '../widgets/download_fab.dart';
 import '../services/download_service.dart';
 import '../models/download_task.dart';
@@ -20,6 +22,7 @@ import 'history_screen.dart';
 import '../widgets/sort_dialog.dart';
 import '../models/sort_options.dart';
 import '../utils/subtitle_filter.dart';
+import '../utils/system_ui_style.dart';
 export '../providers/my_reviews_provider.dart' show MyReviewLayoutType;
 
 import '../../l10n/app_localizations.dart';
@@ -35,11 +38,17 @@ class _MyScreenState extends ConsumerState<MyScreen>
     with AutomaticKeepAliveClientMixin, TickerProviderStateMixin {
   final ScrollController _scrollController = ScrollController();
   late TabController _tabController;
+  final ValueNotifier<bool> _tabSwitcherVisible = ValueNotifier(true);
+  int _lastTabIndex = 0;
 
   @override
   bool get wantKeepAlive => true; // 保持状态不被销毁
 
-  List<_TabInfo> _buildTabList(MyTabsDisplaySettings settings) {
+  List<_TabInfo> _buildTabList(
+    MyTabsDisplaySettings settings, {
+    required double contentTop,
+    required double collapsedToolbarTop,
+  }) {
     final tabs = <_TabInfo>[];
     final authState = ref.watch(authProvider);
     final isOfficialServer = ServerUtils.isOfficialServer(authState.host);
@@ -48,7 +57,10 @@ class _MyScreenState extends ConsumerState<MyScreen>
       tabs.add(_TabInfo(
         title: S.of(context).onlineMarks,
         index: 0,
-        widget: _buildOnlineBookmarksTab(),
+        widget: _buildOnlineBookmarksTab(
+          toolbarTop: contentTop,
+          collapsedToolbarTop: collapsedToolbarTop,
+        ),
         showFab: true,
         fabWidget: const DownloadFab(),
       ));
@@ -58,14 +70,14 @@ class _MyScreenState extends ConsumerState<MyScreen>
     tabs.add(_TabInfo(
       title: S.of(context).historyRecord,
       index: tabs.length,
-      widget: const HistoryScreen(),
+      widget: HistoryScreen(topInset: contentTop),
     ));
 
     if (settings.showPlaylists && isOfficialServer) {
       tabs.add(_TabInfo(
         title: S.of(context).playlists,
         index: 1,
-        widget: const PlaylistsScreen(),
+        widget: PlaylistsScreen(topInset: contentTop),
       ));
     }
 
@@ -73,7 +85,11 @@ class _MyScreenState extends ConsumerState<MyScreen>
     tabs.add(_TabInfo(
       title: S.of(context).downloaded,
       index: 2,
-      widget: const LocalDownloadsScreen(),
+      widget: LocalDownloadsScreen(
+        toolbarTop: contentTop,
+        collapsedToolbarTop: collapsedToolbarTop,
+        primaryToolbarVisible: _tabSwitcherVisible,
+      ),
       showFab: true,
       fabWidget: StreamBuilder<List<DownloadTask>>(
         stream: DownloadService.instance.tasksStream,
@@ -96,7 +112,11 @@ class _MyScreenState extends ConsumerState<MyScreen>
       tabs.add(_TabInfo(
         title: S.of(context).subtitleLibrary,
         index: 3,
-        widget: const SubtitleLibraryScreen(),
+        widget: SubtitleLibraryScreen(
+          toolbarTop: contentTop,
+          collapsedToolbarTop: collapsedToolbarTop,
+          primaryToolbarVisible: _tabSwitcherVisible,
+        ),
       ));
     }
 
@@ -107,6 +127,7 @@ class _MyScreenState extends ConsumerState<MyScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _tabController.addListener(_handleTabChanged);
     // 只在首次加载时获取数据，如果已有数据则不重新加载
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final myState = ref.read(myReviewsProvider);
@@ -118,7 +139,9 @@ class _MyScreenState extends ConsumerState<MyScreen>
 
   @override
   void dispose() {
+    _tabController.removeListener(_handleTabChanged);
     _tabController.dispose();
+    _tabSwitcherVisible.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -131,14 +154,55 @@ class _MyScreenState extends ConsumerState<MyScreen>
     );
   }
 
-  Icon _getLayoutIcon(MyReviewLayoutType layoutType) {
+  void _handleTabChanged() {
+    if (_tabController.index == _lastTabIndex) return;
+    _lastTabIndex = _tabController.index;
+    _tabSwitcherVisible.value = true;
+  }
+
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification.metrics.axis != Axis.vertical) return false;
+
+    if (notification.metrics.pixels <= notification.metrics.minScrollExtent) {
+      _tabSwitcherVisible.value = true;
+      return false;
+    }
+
+    final scrolledPastHeader =
+        notification.metrics.pixels - notification.metrics.minScrollExtent >=
+            kTextTabBarHeight;
+
+    if (notification is ScrollUpdateNotification &&
+        notification.scrollDelta != null &&
+        notification.scrollDelta != 0) {
+      if (notification.scrollDelta! < 0) {
+        _tabSwitcherVisible.value = true;
+      } else if (scrolledPastHeader) {
+        _tabSwitcherVisible.value = false;
+      }
+    } else if (notification is UserScrollNotification) {
+      switch (notification.direction) {
+        case ScrollDirection.reverse:
+          if (scrolledPastHeader) {
+            _tabSwitcherVisible.value = false;
+          }
+        case ScrollDirection.forward:
+          _tabSwitcherVisible.value = true;
+        case ScrollDirection.idle:
+          break;
+      }
+    }
+    return false;
+  }
+
+  IconData _getLayoutIcon(MyReviewLayoutType layoutType) {
     switch (layoutType) {
       case MyReviewLayoutType.bigGrid:
-        return const Icon(Icons.grid_3x3);
+        return Icons.grid_3x3;
       case MyReviewLayoutType.smallGrid:
-        return const Icon(Icons.view_list);
+        return Icons.view_list;
       case MyReviewLayoutType.list:
-        return const Icon(Icons.view_agenda);
+        return Icons.view_agenda;
     }
   }
 
@@ -153,14 +217,11 @@ class _MyScreenState extends ConsumerState<MyScreen>
     }
   }
 
-  Icon _getSubtitleFilterIcon(int subtitleFilter) {
+  IconData _getSubtitleFilterIcon(int subtitleFilter) {
     final mode = SubtitleFilterMode.fromValue(subtitleFilter);
-    return Icon(
-      mode == SubtitleFilterMode.withSubtitles
-          ? Icons.closed_caption
-          : Icons.closed_caption_disabled,
-      color: mode.isActive ? Theme.of(context).colorScheme.primary : null,
-    );
+    return mode == SubtitleFilterMode.withSubtitles
+        ? Icons.closed_caption
+        : Icons.closed_caption_disabled;
   }
 
   IconData _getFilterIcon(MyReviewFilter filter) {
@@ -178,79 +239,6 @@ class _MyScreenState extends ConsumerState<MyScreen>
       case MyReviewFilter.postponed:
         return Icons.schedule;
     }
-  }
-
-  Widget _buildFilterButton({
-    required IconData icon,
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-    required int index,
-    required int total,
-  }) {
-    final theme = Theme.of(context);
-
-    // 第一个按钮：左侧圆角，右侧方角
-    // 最后一个按钮：左侧方角，右侧圆角
-    // 中间按钮：两侧方角
-    BorderRadius buttonBorderRadius;
-    if (index == 0) {
-      buttonBorderRadius = const BorderRadius.only(
-        topLeft: Radius.circular(16),
-        bottomLeft: Radius.circular(16),
-      );
-    } else if (index == total - 1) {
-      buttonBorderRadius = const BorderRadius.only(
-        topRight: Radius.circular(16),
-        bottomRight: Radius.circular(16),
-      );
-    } else {
-      buttonBorderRadius = BorderRadius.zero;
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(right: 4),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: buttonBorderRadius,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? theme.colorScheme.primaryContainer
-                  : theme.colorScheme.surfaceContainerHighest,
-              borderRadius: buttonBorderRadius,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  icon,
-                  size: 16,
-                  color: isSelected
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                    color: isSelected
-                        ? theme.colorScheme.primary
-                        : theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
   }
 
   void _showSortDialog() {
@@ -279,149 +267,172 @@ class _MyScreenState extends ConsumerState<MyScreen>
     super.build(context); // 必须调用以保持状态
 
     final tabsSettings = ref.watch(myTabsDisplayProvider);
-    final tabs = _buildTabList(tabsSettings);
+    final topPadding = MediaQuery.paddingOf(context).top;
+    final tabSwitcherTop = topPadding + 8;
+    final contentTop = tabSwitcherTop + kTextTabBarHeight + 8;
+    final tabs = _buildTabList(
+      tabsSettings,
+      contentTop: contentTop,
+      collapsedToolbarTop: tabSwitcherTop,
+    );
 
     // 如果标签数量变化，需要重新创建 TabController
     if (_tabController.length != tabs.length) {
       final oldIndex = _tabController.index;
+      _tabController.removeListener(_handleTabChanged);
       _tabController.dispose();
       _tabController = TabController(length: tabs.length, vsync: this);
+      _tabController.addListener(_handleTabChanged);
       // 尝试恢复之前的位置，但不超出新的范围
       if (oldIndex < tabs.length) {
         _tabController.index = oldIndex;
       }
+      _lastTabIndex = _tabController.index;
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: 0,
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          tabAlignment: TabAlignment.start,
-          tabs: tabs.map((tab) => Tab(text: tab.title)).toList(),
-        ),
-      ),
-      floatingActionButton: AnimatedBuilder(
-        animation: _tabController,
-        builder: (context, child) {
-          final currentIndex = _tabController.index;
-          if (currentIndex >= 0 && currentIndex < tabs.length) {
-            final currentTab = tabs[currentIndex];
-            if (currentTab.showFab && currentTab.fabWidget != null) {
-              return currentTab.fabWidget!;
+    final systemOverlayStyle =
+        transparentSystemBarsForBrightness(Theme.of(context).brightness);
+
+    return AnnotatedRegion(
+      value: systemOverlayStyle,
+      child: Scaffold(
+        floatingActionButton: AnimatedBuilder(
+          animation: _tabController,
+          builder: (context, child) {
+            final currentIndex = _tabController.index;
+            if (currentIndex >= 0 && currentIndex < tabs.length) {
+              final currentTab = tabs[currentIndex];
+              if (currentTab.showFab && currentTab.fabWidget != null) {
+                return currentTab.fabWidget!;
+              }
             }
-          }
-          return const SizedBox.shrink();
-        },
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: tabs.map((tab) => tab.widget).toList(),
+            return const SizedBox.shrink();
+          },
+        ),
+        body: Stack(
+          children: [
+            Positioned.fill(
+              child: NotificationListener<ScrollNotification>(
+                onNotification: _handleScrollNotification,
+                child: TabBarView(
+                  controller: _tabController,
+                  children: tabs.map((tab) => tab.widget).toList(),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: ProgressiveTopBlur(height: topPadding + 12),
+            ),
+            Positioned(
+              top: tabSwitcherTop,
+              left: 8,
+              right: 8,
+              child: ValueListenableBuilder<bool>(
+                valueListenable: _tabSwitcherVisible,
+                builder: (context, visible, child) => IgnorePointer(
+                  ignoring: !visible,
+                  child: AnimatedSlide(
+                    key: const ValueKey('my-tab-switcher'),
+                    offset: visible ? Offset.zero : const Offset(0, -2),
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeOutCubic,
+                    child: AnimatedOpacity(
+                      opacity: visible ? 1 : 0,
+                      duration: const Duration(milliseconds: 140),
+                      child: child,
+                    ),
+                  ),
+                ),
+                child: FloatingToolbarSurface(
+                  child: SizedBox(
+                    height: 40,
+                    child: TabBar(
+                      controller: _tabController,
+                      isScrollable: true,
+                      tabAlignment: TabAlignment.start,
+                      dividerColor: Colors.transparent,
+                      indicatorSize: TabBarIndicatorSize.tab,
+                      indicator: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      labelColor: Theme.of(context).colorScheme.primary,
+                      unselectedLabelColor:
+                          Theme.of(context).colorScheme.onSurfaceVariant,
+                      splashBorderRadius: BorderRadius.circular(20),
+                      tabs: tabs.map((tab) => Tab(text: tab.title)).toList(),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildOnlineBookmarksTab() {
+  Widget _buildOnlineBookmarksTab({
+    required double toolbarTop,
+    required double collapsedToolbarTop,
+  }) {
     final state = ref.watch(myReviewsProvider);
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
     final horizontalPadding = isLandscape ? 24.0 : 8.0;
 
-    return Column(
+    return Stack(
       children: [
-        // 筛选和布局切换工具栏
-        Container(
-          height: 56,
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          color: Theme.of(context)
-              .colorScheme
-              .surfaceContainerHighest
-              .withValues(alpha: 0.5),
-          child: Row(
-            children: [
-              // 可滚动的筛选按钮
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  padding: EdgeInsets.symmetric(
-                      horizontal: horizontalPadding, vertical: 4),
-                  child: Row(
-                    children: [
-                      for (int i = 0; i < MyReviewFilter.values.length; i++)
-                        _buildFilterButton(
-                          icon: _getFilterIcon(MyReviewFilter.values[i]),
-                          label:
-                              MyReviewFilter.values[i].localizedLabel(context),
-                          isSelected: state.filter == MyReviewFilter.values[i],
-                          onTap: () {
-                            ref
-                                .read(myReviewsProvider.notifier)
-                                .changeFilter(MyReviewFilter.values[i]);
-                          },
-                          index: i,
-                          total: MyReviewFilter.values.length,
-                        ),
-                    ],
-                  ),
+        Positioned.fill(child: _buildBody(state, topPadding: toolbarTop + 56)),
+        FloatingToolbarPositionFollower(
+          primaryToolbarVisible: _tabSwitcherVisible,
+          visibleTop: toolbarTop,
+          hiddenTop: collapsedToolbarTop,
+          left: horizontalPadding,
+          right: horizontalPadding,
+          child: FloatingFeedToolbar(
+            modeActions: [
+              for (final filter in MyReviewFilter.values)
+                FloatingFeedModeAction(
+                  icon: _getFilterIcon(filter),
+                  label: filter.localizedLabel(context),
+                  isSelected: state.filter == filter,
+                  onPressed: () =>
+                      ref.read(myReviewsProvider.notifier).changeFilter(filter),
                 ),
+            ],
+            toolActions: [
+              FloatingFeedToolAction(
+                icon: Icons.sort,
+                tooltip: S.of(context).sort,
+                onPressed: _showSortDialog,
               ),
-              // 布局切换按钮
-              Padding(
-                padding: EdgeInsets.only(right: horizontalPadding - 8),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.sort),
-                      iconSize: 22,
-                      padding: const EdgeInsets.all(8),
-                      constraints:
-                          const BoxConstraints(minWidth: 40, minHeight: 40),
-                      onPressed: _showSortDialog,
-                      tooltip: S.of(context).sort,
-                    ),
-                    IconButton(
-                      icon: _getSubtitleFilterIcon(state.subtitleFilter),
-                      iconSize: 22,
-                      padding: const EdgeInsets.all(8),
-                      constraints:
-                          const BoxConstraints(minWidth: 40, minHeight: 40),
-                      onPressed: () {
-                        ref
-                            .read(myReviewsProvider.notifier)
-                            .toggleSubtitleFilter();
-                      },
-                      tooltip: SubtitleFilterMode.fromValue(
-                        state.subtitleFilter,
-                      ).localizedTooltip(context),
-                    ),
-                    IconButton(
-                      icon: _getLayoutIcon(state.layoutType),
-                      iconSize: 22,
-                      padding: const EdgeInsets.all(8),
-                      constraints:
-                          const BoxConstraints(minWidth: 40, minHeight: 40),
-                      onPressed: () => ref
-                          .read(myReviewsProvider.notifier)
-                          .toggleLayoutType(),
-                      tooltip: _getLayoutTooltip(state.layoutType),
-                    ),
-                  ],
-                ),
+              FloatingFeedToolAction(
+                icon: _getSubtitleFilterIcon(state.subtitleFilter),
+                tooltip: SubtitleFilterMode.fromValue(state.subtitleFilter)
+                    .localizedTooltip(context),
+                isSelected:
+                    SubtitleFilterMode.fromValue(state.subtitleFilter).isActive,
+                onPressed: () =>
+                    ref.read(myReviewsProvider.notifier).toggleSubtitleFilter(),
+              ),
+              FloatingFeedToolAction(
+                icon: _getLayoutIcon(state.layoutType),
+                tooltip: _getLayoutTooltip(state.layoutType),
+                onPressed: () =>
+                    ref.read(myReviewsProvider.notifier).toggleLayoutType(),
               ),
             ],
           ),
-        ),
-        // 内容区域
-        Expanded(
-          child: _buildBody(state),
         ),
       ],
     );
   }
 
-  Widget _buildBody(MyReviewsState state) {
+  Widget _buildBody(MyReviewsState state, {double topPadding = 0}) {
     if (state.error != null) {
       return Center(
         child: Column(
@@ -497,10 +508,10 @@ class _MyScreenState extends ConsumerState<MyScreen>
       ),
       fillEmptyViewport: false,
       padding: state.layoutType == MyReviewLayoutType.list
-          ? const EdgeInsets.all(8)
+          ? EdgeInsets.fromLTRB(8, topPadding + 8, 8, 8)
           : MediaQuery.orientationOf(context) == Orientation.landscape
-              ? const EdgeInsets.fromLTRB(24, 8, 24, 24)
-              : const EdgeInsets.all(8),
+              ? EdgeInsets.fromLTRB(24, topPadding + 8, 24, 24)
+              : EdgeInsets.fromLTRB(8, topPadding + 8, 8, 8),
     );
   }
 }

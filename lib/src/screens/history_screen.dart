@@ -9,7 +9,12 @@ import '../widgets/virtualized_sliver_collection.dart';
 import '../../l10n/app_localizations.dart';
 
 class HistoryScreen extends ConsumerWidget {
-  const HistoryScreen({super.key});
+  const HistoryScreen({
+    super.key,
+    this.topInset = 0,
+  });
+
+  final double topInset;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -53,6 +58,10 @@ class HistoryScreen extends ConsumerWidget {
           padding: const EdgeInsets.only(bottom: 80, top: 16),
           scrollToTop: false,
         ),
+        sliversBefore: [
+          if (topInset > 0)
+            SliverToBoxAdapter(child: SizedBox(height: topInset)),
+        ],
         onPrefetch: (records) => prefetchWorkCovers(
           context,
           records.map((record) => record.work),

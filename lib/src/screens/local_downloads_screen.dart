@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -19,12 +20,22 @@ import '../widgets/sort_dialog.dart';
 import 'offline_work_detail_screen.dart';
 import '../widgets/privacy_blur_cover.dart';
 import '../widgets/virtualized_sliver_collection.dart';
+import '../widgets/floating_feed_toolbar.dart';
 
 final _log = LogService.instance;
 
 /// 本地下载屏幕 - 显示已完成的下载内容
 class LocalDownloadsScreen extends ConsumerStatefulWidget {
-  const LocalDownloadsScreen({super.key});
+  const LocalDownloadsScreen({
+    super.key,
+    this.toolbarTop = 8,
+    this.collapsedToolbarTop,
+    this.primaryToolbarVisible,
+  });
+
+  final double toolbarTop;
+  final double? collapsedToolbarTop;
+  final ValueListenable<bool>? primaryToolbarVisible;
 
   @override
   ConsumerState<LocalDownloadsScreen> createState() =>
@@ -570,15 +581,11 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
         final startIndex = (currentPage - 1) * _pageSize;
         final endIndex = (startIndex + _pageSize).clamp(0, totalCount);
         final currentPageWorkIds = sortedWorkIds.sublist(startIndex, endIndex);
+        final toolbarTop = widget.toolbarTop;
 
-        return Column(
+        return Stack(
           children: [
-            // 顶部工具栏
-            _buildTopBar(allGroupedTasks),
-            // 搜索栏
-            if (_isSearchVisible) _buildSearchBar(),
-            // 内容区域
-            Expanded(
+            Positioned.fill(
               child: VirtualizedSliverCollection<int>(
                 collectionController: _collectionController,
                 pageStorageKey: const PageStorageKey('local-downloads-feed'),
@@ -591,7 +598,7 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
                 ),
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                padding: EdgeInsets.fromLTRB(16, toolbarTop + 60, 16, 16),
                 physics: ScrollOptimization.physics,
                 pagination: totalCount == 0
                     ? null
@@ -644,172 +651,181 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
                 },
               ),
             ),
+            if (widget.primaryToolbarVisible == null)
+              Positioned(
+                top: toolbarTop,
+                left: 8,
+                right: 8,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Flexible(
+                      fit: FlexFit.loose,
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: _buildPrimaryToolbar(allGroupedTasks),
+                      ),
+                    ),
+                    _buildSecondaryToolbar(),
+                  ],
+                ),
+              )
+            else
+              FloatingToolbarPositionFollower(
+                primaryToolbarVisible: widget.primaryToolbarVisible!,
+                visibleTop: toolbarTop,
+                hiddenTop: widget.collapsedToolbarTop ?? toolbarTop,
+                left: 8,
+                right: 8,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Flexible(
+                      fit: FlexFit.loose,
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: _buildPrimaryToolbar(allGroupedTasks),
+                      ),
+                    ),
+                    _buildSecondaryToolbar(),
+                  ],
+                ),
+              ),
           ],
         );
       },
     );
   }
 
-  Widget _buildTopBar(Map<int, List<DownloadTask>> groupedTasks) {
-    final isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
-    final horizontalPadding = isLandscape ? 24.0 : 8.0;
+  Widget _buildPrimaryToolbar(Map<int, List<DownloadTask>> groupedTasks) {
+    if (_isSelectionMode) {
+      return FloatingToolbarSurface(
+        padding: const EdgeInsets.all(4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            FloatingToolbarIconButton(
+              icon: Icons.close,
+              tooltip: S.of(context).exitSelection,
+              onPressed: _toggleSelectionMode,
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text(
+                S.of(context).selectedCount(_selectedWorkIds.length),
+                style: Theme.of(context).textTheme.labelLarge,
+              ),
+            ),
+            FloatingToolbarIconButton(
+              icon: _selectedWorkIds.length == groupedTasks.length &&
+                      groupedTasks.isNotEmpty
+                  ? Icons.deselect
+                  : Icons.select_all,
+              tooltip: _selectedWorkIds.length == groupedTasks.length &&
+                      groupedTasks.isNotEmpty
+                  ? S.of(context).deselectAll
+                  : S.of(context).selectAll,
+              onPressed: _selectedWorkIds.length == groupedTasks.length &&
+                      groupedTasks.isNotEmpty
+                  ? _deselectAll
+                  : () => _selectAll(groupedTasks),
+            ),
+            if (_selectedWorkIds.isNotEmpty)
+              FloatingToolbarIconButton(
+                icon: Icons.delete,
+                tooltip: S.of(context).delete,
+                onPressed: () => _deleteSelectedWorks(groupedTasks),
+              ),
+          ],
+        ),
+      );
+    }
 
-    return Container(
-      height: 56,
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      color: Theme.of(context)
-          .colorScheme
-          .surfaceContainerHighest
-          .withValues(alpha: 0.5),
-      child: _isSelectionMode
-          ? Row(
-              children: [
-                // 退出选择按钮
-                Padding(
-                  padding: EdgeInsets.only(left: horizontalPadding - 8),
-                  child: IconButton(
-                    icon: const Icon(Icons.close),
-                    iconSize: 22,
-                    padding: const EdgeInsets.all(8),
-                    constraints:
-                        const BoxConstraints(minWidth: 40, minHeight: 40),
-                    onPressed: _toggleSelectionMode,
-                    tooltip: S.of(context).exitSelection,
-                  ),
-                ),
-                // 选中数量显示
-                Text(
-                  S.of(context).selectedCount(_selectedWorkIds.length),
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-                const Spacer(),
-                // 全选/取消全选按钮
-                IconButton(
-                  icon: Icon(
-                    _selectedWorkIds.length == groupedTasks.length
-                        ? Icons.deselect
-                        : Icons.select_all,
-                  ),
-                  iconSize: 22,
-                  padding: const EdgeInsets.all(8),
-                  constraints:
-                      const BoxConstraints(minWidth: 40, minHeight: 40),
-                  onPressed: _selectedWorkIds.length == groupedTasks.length
-                      ? _deselectAll
-                      : () => _selectAll(groupedTasks),
-                  tooltip: _selectedWorkIds.length == groupedTasks.length
-                      ? S.of(context).deselectAll
-                      : S.of(context).selectAll,
-                ),
-                // 删除按钮
-                if (_selectedWorkIds.isNotEmpty)
-                  IconButton(
-                    icon: const Icon(Icons.delete),
-                    iconSize: 22,
-                    padding: const EdgeInsets.all(8),
-                    constraints:
-                        const BoxConstraints(minWidth: 40, minHeight: 40),
-                    onPressed: () => _deleteSelectedWorks(groupedTasks),
-                    tooltip:
-                        '${S.of(context).delete} (${_selectedWorkIds.length})',
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                SizedBox(width: horizontalPadding - 8),
-              ],
-            )
-          : Align(
-              alignment: Alignment.centerLeft,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // 选择按钮
-                    Padding(
-                      padding: const EdgeInsets.only(left: 20, right: 8),
-                      child: TextButton.icon(
-                        icon: const Icon(Icons.checklist, size: 20),
-                        label: Text(S.of(context).select),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10),
-                          backgroundColor: Theme.of(context)
-                              .colorScheme
-                              .primaryContainer
-                              .withValues(alpha: 0.5),
+    if (_isSearchVisible) {
+      return FloatingToolbarSurface(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            FloatingToolbarIconButton(
+              icon: Icons.arrow_back,
+              tooltip: S.of(context).close,
+              onPressed: _toggleSearch,
+            ),
+            SizedBox(
+              width: 160,
+              child: TextField(
+                controller: _searchController,
+                autofocus: true,
+                onChanged: (value) => setState(() {
+                  _searchQuery = value;
+                  _currentPage = 1;
+                }),
+                decoration: InputDecoration(
+                  hintText: S.of(context).searchDownloads,
+                  border: InputBorder.none,
+                  isDense: true,
+                  suffixIcon: _searchQuery.isEmpty
+                      ? null
+                      : IconButton(
+                          icon: const Icon(Icons.clear, size: 18),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {
+                              _searchQuery = '';
+                              _currentPage = 1;
+                            });
+                          },
                         ),
-                        onPressed: _toggleSelectionMode,
-                      ),
-                    ),
-                    // 刷新按钮
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: TextButton.icon(
-                        icon: const Icon(Icons.refresh, size: 20),
-                        label: Text(S.of(context).reload),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10),
-                          backgroundColor: Theme.of(context)
-                              .colorScheme
-                              .primaryContainer
-                              .withValues(alpha: 0.5),
-                        ),
-                        onPressed: _refreshMetadata,
-                      ),
-                    ),
-                    // 打开文件夹按钮（仅 Windows 和 macOS）
-                    if (Platform.isWindows ||
-                        Platform.isMacOS ||
-                        Platform.isLinux)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: TextButton.icon(
-                          icon: const Icon(Icons.folder_open, size: 20),
-                          label: Text(S.of(context).openFolder),
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 10),
-                            backgroundColor: Theme.of(context)
-                                .colorScheme
-                                .primaryContainer
-                                .withValues(alpha: 0.5),
-                          ),
-                          onPressed: _openDownloadFolder,
-                        ),
-                      ),
-                    // 搜索按钮
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: IconButton(
-                        icon: Icon(
-                          _isSearchVisible ? Icons.search_off : Icons.search,
-                          size: 22,
-                        ),
-                        padding: const EdgeInsets.all(8),
-                        constraints:
-                            const BoxConstraints(minWidth: 40, minHeight: 40),
-                        onPressed: _toggleSearch,
-                        tooltip: S.of(context).search,
-                      ),
-                    ),
-                    // 排序按钮
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: IconButton(
-                        icon: const Icon(Icons.sort, size: 22),
-                        padding: const EdgeInsets.all(8),
-                        constraints:
-                            const BoxConstraints(minWidth: 40, minHeight: 40),
-                        onPressed: _showSortDialog,
-                        tooltip: S.of(context).sortOptions,
-                      ),
-                    ),
-                  ],
                 ),
               ),
             ),
+          ],
+        ),
+      );
+    }
+
+    return FloatingToolbarSurface(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingToolbarIconButton(
+            icon: Icons.checklist,
+            tooltip: S.of(context).select,
+            onPressed: _toggleSelectionMode,
+          ),
+          FloatingToolbarIconButton(
+            icon: Icons.search,
+            tooltip: S.of(context).search,
+            onPressed: _toggleSearch,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSecondaryToolbar() {
+    return FloatingToolbarSurface(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingToolbarIconButton(
+            icon: Icons.refresh,
+            tooltip: S.of(context).reload,
+            onPressed: _refreshMetadata,
+          ),
+          FloatingToolbarIconButton(
+            icon: Icons.sort,
+            tooltip: S.of(context).sortOptions,
+            onPressed: _showSortDialog,
+          ),
+          if (Platform.isWindows || Platform.isMacOS || Platform.isLinux)
+            FloatingToolbarIconButton(
+              icon: Icons.folder_open,
+              tooltip: S.of(context).openFolder,
+              onPressed: _openDownloadFolder,
+            ),
+        ],
+      ),
     );
   }
 
@@ -818,48 +834,6 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
       if (task.workMetadata != null) return task;
     }
     return tasks.first;
-  }
-
-  Widget _buildSearchBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: Theme.of(context)
-          .colorScheme
-          .surfaceContainerHighest
-          .withValues(alpha: 0.3),
-      child: TextField(
-        controller: _searchController,
-        autofocus: true,
-        decoration: InputDecoration(
-          hintText: S.of(context).searchDownloads,
-          prefixIcon: const Icon(Icons.search, size: 20),
-          suffixIcon: _searchQuery.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear, size: 20),
-                  onPressed: () {
-                    _searchController.clear();
-                    setState(() {
-                      _searchQuery = '';
-                      _currentPage = 1;
-                    });
-                  },
-                )
-              : null,
-          isDense: true,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
-        onChanged: (value) {
-          setState(() {
-            _searchQuery = value;
-            _currentPage = 1;
-          });
-        },
-      ),
-    );
   }
 
   Widget _buildWorkCard({

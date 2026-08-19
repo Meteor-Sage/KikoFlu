@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:open_filex/open_filex.dart';
@@ -21,10 +22,20 @@ import '../utils/snackbar_util.dart';
 import '../utils/subtitle_library_display.dart';
 import '../../l10n/app_localizations.dart';
 import '../widgets/responsive_dialog.dart';
+import '../widgets/floating_feed_toolbar.dart';
 
 /// 字幕库界面
 class SubtitleLibraryScreen extends ConsumerStatefulWidget {
-  const SubtitleLibraryScreen({super.key});
+  const SubtitleLibraryScreen({
+    super.key,
+    this.toolbarTop = 8,
+    this.collapsedToolbarTop,
+    this.primaryToolbarVisible,
+  });
+
+  final double toolbarTop;
+  final double? collapsedToolbarTop;
+  final ValueListenable<bool>? primaryToolbarVisible;
 
   @override
   ConsumerState<SubtitleLibraryScreen> createState() =>
@@ -726,47 +737,9 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
           tooltip: S.of(context).importSubtitle,
           child: const Icon(Icons.add),
         ),
-        body: Column(
+        body: Stack(
           children: [
-            // 顶部工具栏
-            _buildTopBar(),
-
-            // 固定位置的返回上一级按钮
-            if (_currentPath != _rootPath &&
-                _currentPath.isNotEmpty &&
-                !_isSearching)
-              Material(
-                color: Theme.of(context).colorScheme.surface,
-                child: InkWell(
-                  onTap: _navigateUp,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(
-                          color: Theme.of(context)
-                              .dividerColor
-                              .withValues(alpha: 0.5),
-                        ),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.arrow_back, size: 20),
-                        const SizedBox(width: 16),
-                        Text(
-                          S.of(context).back,
-                          style: Theme.of(context).textTheme.bodyLarge,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-            // 内容区域
-            Expanded(
+            Positioned.fill(
               child: SubtitleLibraryContentView(
                 isLoading: _isLoading,
                 empty: _files.isEmpty,
@@ -779,6 +752,10 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
                   selectedPaths: _selectedPaths,
                   selectionMode: _isSelectionMode,
                   recursive: _isSearching,
+                  header: Padding(
+                    padding: EdgeInsets.only(top: widget.toolbarTop + 60),
+                    child: _buildBreadcrumbs(),
+                  ),
                   onRefresh: () => _loadFiles(forceRefresh: true),
                   onSelectionToggle: _toggleItemSelection,
                   onFolderTap: _navigateTo,
@@ -788,6 +765,67 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
                 ),
               ),
             ),
+            if (widget.primaryToolbarVisible == null)
+              Positioned(
+                top: widget.toolbarTop,
+                left: 8,
+                right: 8,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Flexible(
+                      fit: FlexFit.loose,
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: _buildPrimaryToolbar(),
+                      ),
+                    ),
+                    _buildSecondaryToolbar(),
+                  ],
+                ),
+              )
+            else
+              FloatingToolbarPositionFollower(
+                primaryToolbarVisible: widget.primaryToolbarVisible!,
+                visibleTop: widget.toolbarTop,
+                hiddenTop: widget.collapsedToolbarTop ?? widget.toolbarTop,
+                left: 8,
+                right: 8,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Flexible(
+                      fit: FlexFit.loose,
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: _buildPrimaryToolbar(),
+                      ),
+                    ),
+                    _buildSecondaryToolbar(),
+                  ],
+                ),
+              ),
+            if (_rootPath != null && _currentPath == _rootPath)
+              Positioned(
+                left: 16,
+                bottom: 20,
+                child: IgnorePointer(
+                  child: Text(
+                    _stats == null
+                        ? ''
+                        : S.of(context).nFilesWithSize(
+                              _stats!.totalFiles,
+                              _stats!.sizeFormatted,
+                            ),
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant
+                              .withValues(alpha: 0.8),
+                        ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -851,7 +889,7 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
     );
   }
 
-  Widget _buildTopBar() {
+  SubtitleLibraryTopBar _buildTopBar() {
     return SubtitleLibraryTopBar(
       isSelectionMode: _isSelectionMode,
       isSearching: _isSearching,
@@ -896,6 +934,148 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
       onStartSelection: _toggleSelectionMode,
       onShowGuide: _showLibraryInfoDialog,
       onNavigateTo: _navigateTo,
+    );
+  }
+
+  Widget _buildBreadcrumbs() {
+    final topBar = _buildTopBar();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      child: Row(
+        children: [
+          const Icon(Icons.folder_open, size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: topBar.buildBreadcrumbs(context)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPrimaryToolbar() {
+    if (_isSelectionMode) {
+      return FloatingToolbarSurface(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            FloatingToolbarIconButton(
+              icon: Icons.close,
+              tooltip: S.of(context).exitSelection,
+              onPressed: _toggleSelectionMode,
+            ),
+            FloatingToolbarIconButton(
+              icon: _selectedPaths.isEmpty ? Icons.select_all : Icons.deselect,
+              tooltip: _selectedPaths.isEmpty
+                  ? S.of(context).selectAll
+                  : S.of(context).deselectAll,
+              onPressed: _selectedPaths.isEmpty ? _selectAll : _deselectAll,
+            ),
+            if (_selectedPaths.isNotEmpty)
+              FloatingToolbarIconButton(
+                icon: Icons.delete,
+                tooltip: S.of(context).delete,
+                onPressed: _deleteSelectedItems,
+              ),
+          ],
+        ),
+      );
+    }
+
+    if (_isSearching) {
+      return FloatingToolbarSurface(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            FloatingToolbarIconButton(
+              icon: Icons.arrow_back,
+              tooltip: S.of(context).close,
+              onPressed: () {
+                setState(() {
+                  _isSearching = false;
+                  _searchQuery = '';
+                  _searchController.clear();
+                });
+              },
+            ),
+            SizedBox(
+              width: 160,
+              child: TextField(
+                controller: _searchController,
+                autofocus: true,
+                onChanged: (value) => setState(() => _searchQuery = value),
+                decoration: InputDecoration(
+                  hintText: S.of(context).searchSubtitles,
+                  border: InputBorder.none,
+                  isDense: true,
+                  suffixIcon: _searchQuery.isEmpty
+                      ? null
+                      : IconButton(
+                          icon: const Icon(Icons.clear, size: 18),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                          },
+                        ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final canNavigateUp = _rootPath != null && _currentPath != _rootPath;
+    return FloatingToolbarSurface(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingToolbarIconButton(
+            icon: Icons.arrow_back,
+            tooltip: S.of(context).back,
+            onPressed: canNavigateUp ? _navigateUp : null,
+          ),
+          FloatingToolbarIconButton(
+            icon: Icons.search,
+            tooltip: S.of(context).search,
+            onPressed: () => setState(() => _isSearching = true),
+          ),
+          FloatingToolbarIconButton(
+            icon: Icons.checklist,
+            tooltip: S.of(context).select,
+            onPressed: _toggleSelectionMode,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSecondaryToolbar() {
+    return FloatingToolbarSurface(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingToolbarIconButton(
+            icon: Icons.refresh,
+            tooltip: S.of(context).reload,
+            onPressed: () => _loadFiles(forceRefresh: true),
+          ),
+          FloatingToolbarIconButton(
+            icon: Icons.info_outline,
+            tooltip: S.of(context).subtitleLibraryGuide,
+            onPressed: _showLibraryInfoDialog,
+          ),
+          if (Platform.isWindows || Platform.isMacOS || Platform.isLinux)
+            FloatingToolbarIconButton(
+              icon: Icons.folder_open,
+              tooltip: S.of(context).openFolder,
+              onPressed: _openSubtitleLibraryFolder,
+            ),
+        ],
+      ),
     );
   }
 }
