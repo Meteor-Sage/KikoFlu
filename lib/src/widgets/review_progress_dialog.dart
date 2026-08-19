@@ -71,45 +71,23 @@ class ReviewProgressDialog {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // 标题栏（含评分）
+                      BottomSheetHeader(title: resolvedTitle),
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 20, 16, 16),
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                         child: Row(
                           children: [
-                            Text(
-                              resolvedTitle,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleLarge
-                                  ?.copyWith(fontWeight: FontWeight.bold),
+                            ..._buildRatingButtons(
+                              context: context,
+                              selectedRating: selectedRating,
+                              onSelected: (value) {
+                                setState(() {
+                                  selectedRating =
+                                      selectedRating == value ? null : value;
+                                });
+                              },
+                              iconSize: 24,
+                              minButtonSize: 32,
                             ),
-                            const SizedBox(width: 16),
-                            // 评分星星
-                            ...List.generate(5, (index) {
-                              final starValue = index + 1;
-                              final isSelected = selectedRating != null &&
-                                  starValue <= selectedRating!;
-                              return IconButton(
-                                icon: Icon(
-                                  isSelected ? Icons.star : Icons.star_border,
-                                  color: isSelected ? Colors.amber : null,
-                                  size: 24,
-                                ),
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(
-                                  minWidth: 32,
-                                  minHeight: 32,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    selectedRating = selectedRating == starValue
-                                        ? null
-                                        : starValue;
-                                  });
-                                },
-                                tooltip: S.of(context).nStars(starValue),
-                              );
-                            }),
                             const Spacer(),
                             if (workId != null &&
                                 workTitle != null &&
@@ -135,12 +113,6 @@ class ReviewProgressDialog {
                                       CircularProgressIndicator(strokeWidth: 2),
                                 ),
                               ),
-                            IconButton(
-                              icon: const Icon(Icons.close),
-                              onPressed: () =>
-                                  Navigator.of(dialogContext).pop(),
-                              tooltip: S.of(context).close,
-                            ),
                           ],
                         ),
                       ),
@@ -261,30 +233,17 @@ class ReviewProgressDialog {
                           ),
                         ),
                       ),
-                      const Divider(height: 1),
-                      // 底部按钮
-                      Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            TextButton(
-                              onPressed: () =>
-                                  Navigator.of(dialogContext).pop(),
-                              child: Text(S.of(context).cancel),
-                            ),
-                            const SizedBox(width: 8),
-                            FilledButton(
-                              onPressed: () {
-                                Navigator.of(dialogContext).pop({
-                                  'progress': selectedProgress,
-                                  'rating': selectedRating,
-                                });
-                              },
-                              child: Text(S.of(context).confirm),
-                            ),
-                          ],
-                        ),
+                      BottomSheetActionBar(
+                        secondaryLabel: S.of(context).cancel,
+                        onSecondaryPressed: () =>
+                            Navigator.of(dialogContext).pop(),
+                        primaryLabel: S.of(context).confirm,
+                        onPrimaryPressed: () {
+                          Navigator.of(dialogContext).pop({
+                            'progress': selectedProgress,
+                            'rating': selectedRating,
+                          });
+                        },
                       ),
                     ],
                   ),
@@ -301,170 +260,135 @@ class ReviewProgressDialog {
         builder: (context) {
           return StatefulBuilder(
             builder: (context, setState) {
-              return Container(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // 标题行
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: Text(
-                              resolvedTitle,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          // 评分和操作行
-                          Row(
-                            children: [
-                              // 评分星星
-                              ...List.generate(5, (index) {
-                                final starValue = index + 1;
-                                final isSelected = selectedRating != null &&
-                                    starValue <= selectedRating!;
-                                return IconButton(
-                                  icon: Icon(
-                                    isSelected ? Icons.star : Icons.star_border,
-                                    color: isSelected ? Colors.amber : null,
-                                    size: 22,
-                                  ),
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(
-                                    minWidth: 28,
-                                    minHeight: 28,
-                                  ),
-                                  onPressed: () {
-                                    setState(() {
-                                      selectedRating =
-                                          selectedRating == starValue
-                                              ? null
-                                              : starValue;
-                                    });
-                                  },
-                                  tooltip: S.of(context).nStars(starValue),
-                                );
-                              }),
-                              const Spacer(),
-                              if (workId != null &&
-                                  workTitle != null &&
-                                  isOfficialServer)
-                                IconButton(
-                                  icon: const Icon(Icons.playlist_add),
-                                  onPressed: () async {
-                                    await AddToPlaylistDialog.show(
-                                      context: context,
-                                      workId: workId,
-                                      workTitle: workTitle,
-                                    );
-                                  },
-                                  tooltip: S.of(context).addToPlaylist,
-                                ),
-                              if (showLoading)
-                                const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2),
-                                ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Divider(),
-                    // 进度选项
-                    ...filters.map((filter) {
-                      final isSelected = selectedProgress == filter.value;
-                      return ListTile(
-                        leading: Icon(
-                          isSelected
-                              ? Icons.check_circle
-                              : Icons.circle_outlined,
-                          color: isSelected
-                              ? Theme.of(context).colorScheme.primary
-                              : null,
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  BottomSheetHeader(title: resolvedTitle),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                    child: Row(
+                      children: [
+                        ..._buildRatingButtons(
+                          context: context,
+                          selectedRating: selectedRating,
+                          onSelected: (value) {
+                            setState(() {
+                              selectedRating =
+                                  selectedRating == value ? null : value;
+                            });
+                          },
+                          iconSize: 22,
+                          minButtonSize: 28,
                         ),
-                        title: Text(filter.localizedLabel(context)),
-                        selected: isSelected,
-                        onTap: () {
-                          setState(() {
-                            selectedProgress = filter.value;
-                          });
-                        },
-                      );
-                    }),
-                    const SizedBox(height: 8),
-                    if (currentProgress != null || currentRating != null)
-                      ListTile(
-                        leading: Icon(
-                          Icons.delete_outline,
+                        const Spacer(),
+                        if (workId != null &&
+                            workTitle != null &&
+                            isOfficialServer)
+                          IconButton(
+                            icon: const Icon(Icons.playlist_add),
+                            onPressed: () async {
+                              await AddToPlaylistDialog.show(
+                                context: context,
+                                workId: workId,
+                                workTitle: workTitle,
+                              );
+                            },
+                            tooltip: S.of(context).addToPlaylist,
+                          ),
+                        if (showLoading)
+                          const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const Divider(),
+                  // 进度选项
+                  ...filters.map((filter) {
+                    final isSelected = selectedProgress == filter.value;
+                    return ListTile(
+                      leading: Icon(
+                        isSelected ? Icons.check_circle : Icons.circle_outlined,
+                        color: isSelected
+                            ? Theme.of(context).colorScheme.primary
+                            : null,
+                      ),
+                      title: Text(filter.localizedLabel(context)),
+                      selected: isSelected,
+                      onTap: () {
+                        setState(() {
+                          selectedProgress = filter.value;
+                        });
+                      },
+                    );
+                  }),
+                  const SizedBox(height: 8),
+                  if (currentProgress != null || currentRating != null)
+                    ListTile(
+                      leading: Icon(
+                        Icons.delete_outline,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                      title: Text(
+                        S.of(context).remove,
+                        style: TextStyle(
                           color: Theme.of(context).colorScheme.error,
                         ),
-                        title: Text(
-                          S.of(context).remove,
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.error,
-                          ),
-                        ),
-                        onTap: () {
-                          Navigator.pop(context, {
-                            'progress': '__REMOVE__',
-                            'rating': null,
-                          });
-                        },
                       ),
-                    const Divider(),
-                    // 底部按钮
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: TextButton(
-                              onPressed: () {
-                                Navigator.pop(context); // 取消，不返回任何值
-                              },
-                              child: Text(S.of(context).cancel),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: FilledButton(
-                              onPressed: () {
-                                Navigator.pop(context, {
-                                  'progress': selectedProgress,
-                                  'rating': selectedRating,
-                                });
-                              },
-                              child: Text(S.of(context).confirm),
-                            ),
-                          ),
-                        ],
-                      ),
+                      onTap: () {
+                        Navigator.pop(context, {
+                          'progress': '__REMOVE__',
+                          'rating': null,
+                        });
+                      },
                     ),
-                  ],
-                ),
+                  BottomSheetActionBar(
+                    secondaryLabel: S.of(context).cancel,
+                    onSecondaryPressed: () => Navigator.pop(context),
+                    primaryLabel: S.of(context).confirm,
+                    onPrimaryPressed: () {
+                      Navigator.pop(context, {
+                        'progress': selectedProgress,
+                        'rating': selectedRating,
+                      });
+                    },
+                  ),
+                ],
               );
             },
           );
         },
       );
     }
+  }
+
+  static List<Widget> _buildRatingButtons({
+    required BuildContext context,
+    required int? selectedRating,
+    required ValueChanged<int> onSelected,
+    required double iconSize,
+    required double minButtonSize,
+  }) {
+    return List.generate(5, (index) {
+      final starValue = index + 1;
+      final isSelected = selectedRating != null && starValue <= selectedRating;
+      return IconButton(
+        icon: Icon(
+          isSelected ? Icons.star : Icons.star_border,
+          color: isSelected ? Colors.amber : null,
+          size: iconSize,
+        ),
+        padding: EdgeInsets.zero,
+        constraints: BoxConstraints(
+          minWidth: minButtonSize,
+          minHeight: minButtonSize,
+        ),
+        onPressed: () => onSelected(starValue),
+        tooltip: S.of(context).nStars(starValue),
+      );
+    });
   }
 
   /// 获取状态标签（需要 BuildContext 以支持多语言）

@@ -1145,6 +1145,7 @@
   "activeSubtitleFontSize": "Active subtitle size",
   "inactiveSubtitleFontSize": "Inactive subtitle size",
   "restoreDefaultSettings": "Restore Default Settings",
+  "confirmRestoreDefaultSettings": "Are you sure you want to restore the default settings?",
   "guideInPrefix": "In ",
   "guideParsedFolder": "<Parsed>",
   "guideFindWorkDesc": " folder, find matching works\nSupported folder format: RJ123456",

@@ -2,25 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../l10n/app_localizations.dart';
 import '../providers/player_lyric_style_provider.dart';
-import '../utils/snackbar_util.dart';
 import '../widgets/settings_section.dart';
 
 class PlayerLyricStyleScreen extends ConsumerWidget {
   const PlayerLyricStyleScreen({super.key});
 
   Future<void> _resetToDefault(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showSettingsResetConfirmation(
+    await confirmAndRestoreSettingsDefaults(
       context: context,
       title: S.of(context).resetStyle,
       message: S.of(context).resetStyleConfirm,
       confirmLabel: S.of(context).reset,
+      restore: ref.read(playerLyricSettingsProvider.notifier).reset,
     );
-    if (!confirmed || !context.mounted) return;
-
-    await ref.read(playerLyricSettingsProvider.notifier).reset();
-    if (context.mounted) {
-      SnackBarUtil.showSuccess(context, S.of(context).restoredToDefault);
-    }
   }
 
   @override

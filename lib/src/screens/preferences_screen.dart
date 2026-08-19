@@ -870,6 +870,13 @@ class _AudioHapticsSettingsTile extends StatelessWidget {
 
   final WidgetRef ref;
 
+  Future<void> _resetToDefault(BuildContext context) async {
+    await confirmAndRestoreSettingsDefaults(
+      context: context,
+      restore: ref.read(audioHapticsSettingsProvider.notifier).resetToDefault,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(audioHapticsSettingsProvider);
@@ -878,14 +885,22 @@ class _AudioHapticsSettingsTile extends StatelessWidget {
 
     return Column(
       children: [
-        SwitchListTile(
-          secondary: Icon(Icons.vibration, color: colorScheme.primary),
+        ListTile(
+          leading: Icon(Icons.vibration, color: colorScheme.primary),
           title: Text(S.of(context).audioHaptics),
-          subtitle: Text(
-            S.of(context).audioHapticsDesc,
+          subtitle: Text(S.of(context).audioHapticsDesc),
+          onTap: () => notifier.setEnabled(!settings.enabled),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                onPressed: () => _resetToDefault(context),
+                icon: const Icon(Icons.restart_alt),
+                tooltip: S.of(context).restoreDefaultSettings,
+              ),
+              Switch(value: settings.enabled, onChanged: notifier.setEnabled),
+            ],
           ),
-          value: settings.enabled,
-          onChanged: notifier.setEnabled,
         ),
         if (settings.enabled)
           Padding(

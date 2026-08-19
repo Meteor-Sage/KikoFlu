@@ -253,36 +253,43 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
     final preparedWorkFuture = _prepareWorkForFileSelection();
 
     try {
-      await showDialog<void>(
+      await showResponsiveBottomSheet<void>(
         context: context,
-        barrierDismissible: false,
+        maxHeight: MediaQuery.of(context).size.height * 0.9,
         builder: (dialogContext) {
           return FutureBuilder<Work>(
             future: preparedWorkFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState != ConnectionState.done) {
-                return ResponsiveAlertDialog(
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const CircularProgressIndicator(),
-                      const SizedBox(height: 16),
-                      Text(S.of(context).loadingFileList),
-                    ],
+                return SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const CircularProgressIndicator(),
+                        const SizedBox(height: 16),
+                        Text(S.of(context).loadingFileList),
+                      ],
+                    ),
                   ),
                 );
               }
 
               if (snapshot.hasError) {
-                return ResponsiveAlertDialog(
-                  title: Text(S.of(context).loadFailed),
-                  content: Text(S
-                      .of(context)
-                      .loadFileListFailed(snapshot.error.toString())),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: Text(S.of(context).close),
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    BottomSheetHeader(
+                      title: S.of(context).loadFailed,
+                    ),
+                    const Divider(height: 1),
+                    Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(S
+                          .of(context)
+                          .loadFileListFailed(snapshot.error.toString())),
                     ),
                   ],
                 );

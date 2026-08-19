@@ -176,13 +176,155 @@ class ResponsiveBottomSheet extends StatelessWidget {
       );
     } else {
       // 竖屏时使用底部弹窗
-      return ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: maxHeight ?? screenHeight * 0.9,
+      return SafeArea(
+        top: false,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: maxHeight ?? screenHeight * 0.9,
+          ),
+          child: child,
         ),
-        child: child,
       );
     }
+  }
+}
+
+class BottomSheetHeader extends StatelessWidget {
+  const BottomSheetHeader({
+    super.key,
+    required this.title,
+    this.subtitle,
+    this.leading,
+    this.trailing = const [],
+    this.showCloseButton = false,
+  });
+
+  final String title;
+  final String? subtitle;
+  final Widget? leading;
+  final List<Widget> trailing;
+  final bool showCloseButton;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 8, 12),
+      child: Row(
+        children: [
+          if (leading != null) ...[
+            IconTheme(
+              data: IconThemeData(color: Theme.of(context).colorScheme.primary),
+              child: leading!,
+            ),
+            const SizedBox(width: 12),
+          ],
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          ...trailing,
+          if (showCloseButton)
+            IconButton(
+              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(Icons.close),
+              tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class BottomSheetActionBar extends StatelessWidget {
+  const BottomSheetActionBar({
+    super.key,
+    required this.secondaryLabel,
+    required this.onSecondaryPressed,
+    required this.primaryLabel,
+    required this.onPrimaryPressed,
+  });
+
+  final String secondaryLabel;
+  final VoidCallback onSecondaryPressed;
+  final String primaryLabel;
+  final VoidCallback? onPrimaryPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Divider(height: 1),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: onSecondaryPressed,
+                  child: Text(secondaryLabel),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton(
+                  onPressed: onPrimaryPressed,
+                  child: Text(primaryLabel),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class BottomSheetMenu extends StatelessWidget {
+  const BottomSheetMenu({
+    super.key,
+    required this.children,
+    this.bottomSpacing = 8,
+  });
+
+  final List<Widget> children;
+  final double bottomSpacing;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ...children,
+          SizedBox(height: bottomSpacing),
+        ],
+      ),
+    );
   }
 }
 
@@ -203,12 +345,11 @@ Future<T?> showResponsiveBottomSheet<T>({
     // 横屏时使用对话框样式
     return showDialog<T>(
       context: context,
-      builder: (context) => Dialog(
-        child: ResponsiveBottomSheet(
-          maxWidth: maxWidth,
-          maxHeight: maxHeight,
-          child: builder(context),
-        ),
+      barrierDismissible: isDismissible,
+      builder: (context) => ResponsiveBottomSheet(
+        maxWidth: maxWidth,
+        maxHeight: maxHeight,
+        child: builder(context),
       ),
     );
   } else {
@@ -225,4 +366,18 @@ Future<T?> showResponsiveBottomSheet<T>({
       ),
     );
   }
+}
+
+Future<T?> showBottomSheetMenu<T>({
+  required BuildContext context,
+  required List<Widget> children,
+  double? maxWidth,
+  double? maxHeight,
+}) {
+  return showResponsiveBottomSheet<T>(
+    context: context,
+    maxWidth: maxWidth,
+    maxHeight: maxHeight,
+    builder: (context) => BottomSheetMenu(children: children),
+  );
 }

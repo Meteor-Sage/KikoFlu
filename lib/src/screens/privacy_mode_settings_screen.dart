@@ -78,12 +78,24 @@ class _PrivacyModeSettingsScreenState
     );
   }
 
+  Future<void> _resetToDefault() async {
+    await confirmAndRestoreSettingsDefaults(
+      context: context,
+      restore: ref.read(privacyModeSettingsProvider.notifier).resetToDefault,
+      afterRestore: () async {
+        _titleController.text =
+            ref.read(privacyModeSettingsProvider).customTitle;
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(privacyModeSettingsProvider);
 
     return SettingsSubpageScaffold(
       title: S.of(context).privacyModeSettingsTitle,
+      onRestoreDefaults: _resetToDefault,
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

@@ -55,6 +55,7 @@ class ThemeSettings {
 class ThemeSettingsNotifier extends StateNotifier<ThemeSettings> {
   static const String _themeModeKey = 'theme_mode';
   static const String _colorSchemeTypeKey = 'color_scheme_type';
+  bool _changedLocally = false;
 
   ThemeSettingsNotifier() : super(const ThemeSettings()) {
     _loadSettings();
@@ -65,6 +66,7 @@ class ThemeSettingsNotifier extends StateNotifier<ThemeSettings> {
 
     final themeModeIndex = prefs.getInt(_themeModeKey) ?? 0;
     final colorSchemeTypeIndex = prefs.getInt(_colorSchemeTypeKey) ?? 0;
+    if (!mounted || _changedLocally) return;
 
     state = ThemeSettings(
       themeMode: AppThemeMode.values[themeModeIndex],
@@ -73,15 +75,25 @@ class ThemeSettingsNotifier extends StateNotifier<ThemeSettings> {
   }
 
   Future<void> setThemeMode(AppThemeMode mode) async {
+    _changedLocally = true;
+    state = state.copyWith(themeMode: mode);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_themeModeKey, mode.index);
-    state = state.copyWith(themeMode: mode);
   }
 
   Future<void> setColorSchemeType(ColorSchemeType type) async {
+    _changedLocally = true;
+    state = state.copyWith(colorSchemeType: type);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_colorSchemeTypeKey, type.index);
-    state = state.copyWith(colorSchemeType: type);
+  }
+
+  Future<void> resetToDefault() async {
+    _changedLocally = true;
+    state = const ThemeSettings();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_themeModeKey, AppThemeMode.system.index);
+    await prefs.setInt(_colorSchemeTypeKey, ColorSchemeType.oceanBlue.index);
   }
 }
 

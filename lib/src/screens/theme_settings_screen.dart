@@ -9,12 +9,20 @@ import '../widgets/settings_section.dart';
 class ThemeSettingsScreen extends ConsumerWidget {
   const ThemeSettingsScreen({super.key});
 
+  Future<void> _resetToDefault(BuildContext context, WidgetRef ref) async {
+    await confirmAndRestoreSettingsDefaults(
+      context: context,
+      restore: ref.read(themeSettingsProvider.notifier).resetToDefault,
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeSettings = ref.watch(themeSettingsProvider);
 
     return SettingsSubpageScaffold(
       title: S.of(context).themeSettings,
+      onRestoreDefaults: () => _resetToDefault(context, ref),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

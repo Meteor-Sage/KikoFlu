@@ -9,6 +9,7 @@ import '../providers/audio_provider.dart';
 import '../services/subtitle_library_service.dart';
 import '../utils/snackbar_util.dart';
 import '../../l10n/app_localizations.dart';
+import 'responsive_dialog.dart';
 
 /// 字幕轴调整对话框
 class SubtitleAdjustmentDialog extends ConsumerStatefulWidget {
@@ -174,34 +175,28 @@ class _SubtitleAdjustmentDialogState
   }
 
   void _showSaveOptions() {
-    showModalBottomSheet(
+    showBottomSheetMenu(
       context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.folder_open),
-              title: Text(S.of(context).saveToLocal),
-              subtitle: Text(S.of(context).selectDirectoryToSaveFile),
-              onTap: () {
-                Navigator.pop(context);
-                _saveToLocal();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.library_books),
-              title: Text(S.of(context).saveToSubtitleLibrary),
-              subtitle: Text(S.of(context).saveToSubtitleLibraryDesc),
-              onTap: () {
-                Navigator.pop(context);
-                _saveToLibrary();
-              },
-            ),
-            const SizedBox(height: 8),
-          ],
+      children: [
+        ListTile(
+          leading: const Icon(Icons.folder_open),
+          title: Text(S.of(context).saveToLocal),
+          subtitle: Text(S.of(context).selectDirectoryToSaveFile),
+          onTap: () {
+            Navigator.pop(context);
+            _saveToLocal();
+          },
         ),
-      ),
+        ListTile(
+          leading: const Icon(Icons.library_books),
+          title: Text(S.of(context).saveToSubtitleLibrary),
+          subtitle: Text(S.of(context).saveToSubtitleLibraryDesc),
+          onTap: () {
+            Navigator.pop(context);
+            _saveToLibrary();
+          },
+        ),
+      ],
     );
   }
 

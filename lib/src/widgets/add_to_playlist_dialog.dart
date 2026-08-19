@@ -26,26 +26,13 @@ class AddToPlaylistDialog extends ConsumerStatefulWidget {
     required int workId,
     required String workTitle,
   }) {
-    final isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
-
-    if (isLandscape) {
-      return showDialog<bool>(
-        context: context,
-        builder: (context) => AddToPlaylistDialog(
-          workId: workId,
-          workTitle: workTitle,
-        ),
-      );
-    } else {
-      return showResponsiveBottomSheet<bool>(
-        context: context,
-        builder: (context) => AddToPlaylistDialog(
-          workId: workId,
-          workTitle: workTitle,
-        ),
-      );
-    }
+    return showResponsiveBottomSheet<bool>(
+      context: context,
+      builder: (context) => AddToPlaylistDialog(
+        workId: workId,
+        workTitle: workTitle,
+      ),
+    );
   }
 
   @override
@@ -277,58 +264,21 @@ class _AddToPlaylistDialogState extends ConsumerState<AddToPlaylistDialog> {
     Widget content = Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // 标题栏
-        Padding(
-          padding: EdgeInsets.fromLTRB(
-            isLandscape ? 24 : 16,
-            isLandscape ? 20 : 16,
-            isLandscape ? 16 : 8,
-            isLandscape ? 16 : 8,
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      S.of(context).addToPlaylist,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.workTitle,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.6),
-                          ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+        BottomSheetHeader(
+          title: S.of(context).addToPlaylist,
+          subtitle: widget.workTitle,
+          showCloseButton: isLandscape,
+          trailing: [
+            if (_isAdding)
+              const Padding(
+                padding: EdgeInsets.only(right: 8),
+                child: SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 ),
               ),
-              if (_isAdding)
-                const Padding(
-                  padding: EdgeInsets.only(right: 8),
-                  child: SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                ),
-              if (isLandscape)
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(),
-                  tooltip: S.of(context).close,
-                ),
-            ],
-          ),
+          ],
         ),
         const Divider(height: 1),
         // 播放列表
@@ -512,24 +462,12 @@ class _AddToPlaylistDialogState extends ConsumerState<AddToPlaylistDialog> {
       ],
     );
 
-    if (isLandscape) {
-      return Dialog(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width * 0.5,
-            maxHeight: MediaQuery.of(context).size.height * 0.7,
-          ),
-          child: content,
-        ),
-      );
-    } else {
-      return Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.7,
-        ),
-        child: content,
-      );
-    }
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.7,
+      ),
+      child: content,
+    );
   }
 }

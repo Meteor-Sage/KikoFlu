@@ -901,6 +901,7 @@
   "activeSubtitleFontSize": "アクティブ字幕サイズ",
   "inactiveSubtitleFontSize": "その他の字幕サイズ",
   "restoreDefaultSettings": "デフォルト設定に戻す",
+  "confirmRestoreDefaultSettings": "デフォルト設定に戻しますか？",
   "guideInPrefix": "",
   "guideParsedFolder": "<解析済み>",
   "guideFindWorkDesc": "フォルダで対応する作品を検索\nサポートされるフォルダ形式：RJ123456",

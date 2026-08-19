@@ -497,8 +497,7 @@ class PreloadNextSettings {
 }
 
 /// 下一首预加载设置控制器
-class PreloadNextSettingsNotifier
-    extends StateNotifier<PreloadNextSettings> {
+class PreloadNextSettingsNotifier extends StateNotifier<PreloadNextSettings> {
   static const String _modeKey = 'preload_next_mode';
   static const String _customKey = 'preload_next_custom_seconds';
 
@@ -599,6 +598,7 @@ class PrivacyModeSettingsNotifier extends StateNotifier<PrivacyModeSettings> {
   static const String _blurCoverInAppKey = 'privacy_mode_blur_cover_in_app';
   static const String _maskTitleKey = 'privacy_mode_mask_title';
   static const String _customTitleKey = 'privacy_mode_custom_title';
+  bool _changedLocally = false;
 
   PrivacyModeSettingsNotifier() : super(const PrivacyModeSettings()) {
     _loadPreferences();
@@ -607,6 +607,7 @@ class PrivacyModeSettingsNotifier extends StateNotifier<PrivacyModeSettings> {
   Future<void> _loadPreferences() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      if (!mounted || _changedLocally) return;
       final blurCover = prefs.getBool(_blurCoverKey) ?? true;
       final blurCoverInApp = prefs.getBool(_blurCoverInAppKey) ?? false;
 
@@ -624,29 +625,49 @@ class PrivacyModeSettingsNotifier extends StateNotifier<PrivacyModeSettings> {
   }
 
   Future<void> setEnabled(bool enabled) async {
+    _changedLocally = true;
     state = state.copyWith(enabled: enabled);
     await _savePreference(_enabledKey, enabled);
   }
 
   Future<void> setBlurCover(bool blur) async {
+    _changedLocally = true;
     state = state.copyWith(blurCover: blur);
     await _savePreference(_blurCoverKey, blur);
   }
 
   Future<void> setBlurCoverInApp(bool blur) async {
+    _changedLocally = true;
     state = state.copyWith(blurCoverInApp: blur);
     await _savePreference(_blurCoverInAppKey, blur);
   }
 
   Future<void> setMaskTitle(bool mask) async {
+    _changedLocally = true;
     state = state.copyWith(maskTitle: mask);
     await _savePreference(_maskTitleKey, mask);
   }
 
   Future<void> setCustomTitle(String title) async {
+    _changedLocally = true;
     state = state.copyWith(customTitle: title);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_customTitleKey, title);
+  }
+
+  Future<void> resetToDefault() async {
+    _changedLocally = true;
+    state = const PrivacyModeSettings();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_enabledKey, state.enabled);
+      await prefs.setBool(_blurCoverKey, state.blurCover);
+      await prefs.setBool(_blurCoverInAppKey, state.blurCoverInApp);
+      await prefs.setBool(_maskTitleKey, state.maskTitle);
+      await prefs.setString(_customTitleKey, state.customTitle);
+    } catch (_) {
+      // ignore
+    }
   }
 
   Future<void> _savePreference(String key, bool value) async {
@@ -694,10 +715,10 @@ class AudioHapticsSettings {
   }
 }
 
-class AudioHapticsSettingsNotifier
-    extends StateNotifier<AudioHapticsSettings> {
+class AudioHapticsSettingsNotifier extends StateNotifier<AudioHapticsSettings> {
   static const String _enabledKey = 'audio_haptics_enabled';
   static const String _intensityKey = 'audio_haptics_intensity';
+  bool _changedLocally = false;
 
   AudioHapticsSettingsNotifier() : super(const AudioHapticsSettings()) {
     _loadPreferences();
@@ -706,6 +727,7 @@ class AudioHapticsSettingsNotifier
   Future<void> _loadPreferences() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      if (!mounted || _changedLocally) return;
       if (!mounted) return;
       state = AudioHapticsSettings(
         enabled: prefs.getBool(_enabledKey) ?? false,
@@ -721,6 +743,7 @@ class AudioHapticsSettingsNotifier
   }
 
   Future<void> setEnabled(bool enabled) async {
+    _changedLocally = true;
     state = state.copyWith(enabled: enabled);
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -731,6 +754,7 @@ class AudioHapticsSettingsNotifier
   }
 
   Future<void> setIntensity(double intensity) async {
+    _changedLocally = true;
     final normalized = AudioHapticsSettings.normalizeIntensity(intensity);
     state = state.copyWith(intensity: normalized);
     try {
@@ -740,10 +764,23 @@ class AudioHapticsSettingsNotifier
       // ignore
     }
   }
+
+  Future<void> resetToDefault() async {
+    _changedLocally = true;
+    state = const AudioHapticsSettings();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_enabledKey, state.enabled);
+      await prefs.setDouble(_intensityKey, state.intensity);
+    } catch (_) {
+      // ignore
+    }
+  }
 }
 
-final audioHapticsSettingsProvider = StateNotifierProvider<
-    AudioHapticsSettingsNotifier, AudioHapticsSettings>((ref) {
+final audioHapticsSettingsProvider =
+    StateNotifierProvider<AudioHapticsSettingsNotifier, AudioHapticsSettings>(
+        (ref) {
   return AudioHapticsSettingsNotifier();
 });
 

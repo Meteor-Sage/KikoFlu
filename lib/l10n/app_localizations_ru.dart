@@ -2767,6 +2767,10 @@ class SRu extends S {
   String get restoreDefaultSettings => 'Восстановить настройки по умолчанию';
 
   @override
+  String get confirmRestoreDefaultSettings =>
+      'Восстановить настройки по умолчанию?';
+
+  @override
   String get guideInPrefix => 'В ';
 
   @override

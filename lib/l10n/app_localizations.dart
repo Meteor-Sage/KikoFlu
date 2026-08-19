@@ -4950,6 +4950,12 @@ abstract class S {
   /// **'Restore Default Settings'**
   String get restoreDefaultSettings;
 
+  /// No description provided for @confirmRestoreDefaultSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to restore the default settings?'**
+  String get confirmRestoreDefaultSettings;
+
   /// No description provided for @guideInPrefix.
   ///
   /// In en, this message translates to:

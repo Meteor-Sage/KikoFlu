@@ -892,6 +892,7 @@
   "activeSubtitleFontSize": "当前字幕大小",
   "inactiveSubtitleFontSize": "其他字幕大小",
   "restoreDefaultSettings": "恢复默认设置",
+  "confirmRestoreDefaultSettings": "确定要恢复默认设置吗？",
   "guideInPrefix": "在",
   "guideParsedFolder": "<已解析>",
   "guideFindWorkDesc": "文件夹下查找对应作品\n支持文件夹格式：RJ123456",

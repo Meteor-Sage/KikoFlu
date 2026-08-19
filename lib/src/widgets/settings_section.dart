@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../utils/snackbar_util.dart';
 import 'scrollable_appbar.dart';
 
 class SettingsSubpageScaffold extends StatelessWidget {
@@ -66,6 +67,31 @@ Future<bool> showSettingsResetConfirmation({
     ),
   );
   return confirmed ?? false;
+}
+
+Future<bool> confirmAndRestoreSettingsDefaults({
+  required BuildContext context,
+  required Future<void> Function() restore,
+  Future<void> Function()? afterRestore,
+  String? title,
+  String? message,
+  String? confirmLabel,
+}) async {
+  final confirmed = await showSettingsResetConfirmation(
+    context: context,
+    title: title,
+    message: message ?? S.of(context).confirmRestoreDefaultSettings,
+    confirmLabel: confirmLabel,
+  );
+  if (!confirmed || !context.mounted) return false;
+
+  await restore();
+  if (!context.mounted) return true;
+  await afterRestore?.call();
+  if (context.mounted) {
+    SnackBarUtil.showSuccess(context, S.of(context).restoredToDefault);
+  }
+  return true;
 }
 
 typedef SettingsReorderItemBuilder<T> = Widget Function(

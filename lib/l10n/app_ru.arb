@@ -901,6 +901,7 @@
   "activeSubtitleFontSize": "Размер активных субтитров",
   "inactiveSubtitleFontSize": "Размер неактивных субтитров",
   "restoreDefaultSettings": "Восстановить настройки по умолчанию",
+  "confirmRestoreDefaultSettings": "Восстановить настройки по умолчанию?",
   "guideInPrefix": "В ",
   "guideParsedFolder": "<Распознанные>",
   "guideFindWorkDesc": " папке найти соответствующие произведения\nПоддерживаемый формат папки: RJ123456",

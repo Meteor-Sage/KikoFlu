@@ -2761,6 +2761,10 @@ class SEn extends S {
   String get restoreDefaultSettings => 'Restore Default Settings';
 
   @override
+  String get confirmRestoreDefaultSettings =>
+      'Are you sure you want to restore the default settings?';
+
+  @override
   String get guideInPrefix => 'In ';
 
   @override

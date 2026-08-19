@@ -20,6 +20,7 @@ import '../utils/file_icon_utils.dart';
 import '../utils/snackbar_util.dart';
 import '../utils/subtitle_library_display.dart';
 import '../../l10n/app_localizations.dart';
+import '../widgets/responsive_dialog.dart';
 
 /// 字幕库界面
 class SubtitleLibraryScreen extends ConsumerStatefulWidget {
@@ -353,45 +354,39 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
   }
 
   void _showImportOptions() {
-    showModalBottomSheet(
+    showBottomSheetMenu(
       context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.insert_drive_file),
-              title: Text(S.of(context).importSubtitleFile),
-              subtitle: Text(S.of(context).supportedSubtitleFormats),
-              onTap: () {
-                Navigator.pop(context);
-                _importFile();
-              },
-            ),
-            // iOS 不支持文件夹选择器
-            if (!Platform.isIOS)
-              ListTile(
-                leading: const Icon(Icons.folder),
-                title: Text(S.of(context).importFolder),
-                subtitle: Text(S.of(context).importFolderDesc),
-                onTap: () {
-                  Navigator.pop(context);
-                  _importFolder();
-                },
-              ),
-            ListTile(
-              leading: const Icon(Icons.archive),
-              title: Text(S.of(context).importArchive),
-              subtitle: Text(S.of(context).importArchiveDesc),
-              onTap: () {
-                Navigator.pop(context);
-                _importArchive();
-              },
-            ),
-            const SizedBox(height: 8),
-          ],
+      children: [
+        ListTile(
+          leading: const Icon(Icons.insert_drive_file),
+          title: Text(S.of(context).importSubtitleFile),
+          subtitle: Text(S.of(context).supportedSubtitleFormats),
+          onTap: () {
+            Navigator.pop(context);
+            _importFile();
+          },
         ),
-      ),
+        // iOS 不支持文件夹选择器
+        if (!Platform.isIOS)
+          ListTile(
+            leading: const Icon(Icons.folder),
+            title: Text(S.of(context).importFolder),
+            subtitle: Text(S.of(context).importFolderDesc),
+            onTap: () {
+              Navigator.pop(context);
+              _importFolder();
+            },
+          ),
+        ListTile(
+          leading: const Icon(Icons.archive),
+          title: Text(S.of(context).importArchive),
+          subtitle: Text(S.of(context).importArchiveDesc),
+          onTap: () {
+            Navigator.pop(context);
+            _importArchive();
+          },
+        ),
+      ],
     );
   }
 
@@ -403,68 +398,62 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
   }
 
   void _showFileOptions(Map<String, dynamic> item, String path) {
-    showModalBottomSheet(
+    showBottomSheetMenu(
       context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (item['type'] == 'text' &&
-                FileIconUtils.isLyricFile(item['title'] ?? ''))
-              ListTile(
-                leading: const Icon(Icons.subtitles, color: Colors.orange),
-                title: Text(S.of(context).loadAsSubtitle),
-                onTap: () {
-                  Navigator.pop(context);
-                  _loadLyricManually(item);
-                },
-              ),
-            if (item['type'] == 'text')
-              ListTile(
-                leading: const Icon(Icons.visibility),
-                title: Text(S.of(context).preview),
-                onTap: () {
-                  Navigator.pop(context);
-                  _previewFile(path);
-                },
-              ),
-            ListTile(
-              leading: const Icon(Icons.open_in_new),
-              title: Text(S.of(context).open),
-              onTap: () {
-                Navigator.pop(context);
-                _openFile(path);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.drive_file_move),
-              title: Text(S.of(context).moveTo),
-              onTap: () {
-                Navigator.pop(context);
-                _moveItem(item);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.edit),
-              title: Text(S.of(context).rename),
-              onTap: () {
-                Navigator.pop(context);
-                _renameItem(item);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete, color: Colors.red),
-              title: Text(S.of(context).delete,
-                  style: const TextStyle(color: Colors.red)),
-              onTap: () {
-                Navigator.pop(context);
-                _deleteItem(item);
-              },
-            ),
-            const SizedBox(height: 8),
-          ],
+      children: [
+        if (item['type'] == 'text' &&
+            FileIconUtils.isLyricFile(item['title'] ?? ''))
+          ListTile(
+            leading: const Icon(Icons.subtitles, color: Colors.orange),
+            title: Text(S.of(context).loadAsSubtitle),
+            onTap: () {
+              Navigator.pop(context);
+              _loadLyricManually(item);
+            },
+          ),
+        if (item['type'] == 'text')
+          ListTile(
+            leading: const Icon(Icons.visibility),
+            title: Text(S.of(context).preview),
+            onTap: () {
+              Navigator.pop(context);
+              _previewFile(path);
+            },
+          ),
+        ListTile(
+          leading: const Icon(Icons.open_in_new),
+          title: Text(S.of(context).open),
+          onTap: () {
+            Navigator.pop(context);
+            _openFile(path);
+          },
         ),
-      ),
+        ListTile(
+          leading: const Icon(Icons.drive_file_move),
+          title: Text(S.of(context).moveTo),
+          onTap: () {
+            Navigator.pop(context);
+            _moveItem(item);
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.edit),
+          title: Text(S.of(context).rename),
+          onTap: () {
+            Navigator.pop(context);
+            _renameItem(item);
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.delete, color: Colors.red),
+          title: Text(S.of(context).delete,
+              style: const TextStyle(color: Colors.red)),
+          onTap: () {
+            Navigator.pop(context);
+            _deleteItem(item);
+          },
+        ),
+      ],
     );
   }
 

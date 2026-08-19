@@ -3,24 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../providers/settings_provider.dart';
-import '../utils/snackbar_util.dart';
 import '../widgets/settings_section.dart';
 
 class AudioFormatSettingsScreen extends ConsumerWidget {
   const AudioFormatSettingsScreen({super.key});
 
   Future<void> _resetToDefault(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showSettingsResetConfirmation(
+    await confirmAndRestoreSettingsDefaults(
       context: context,
       message: S.of(context).confirmRestoreAudioFormat,
+      restore: ref.read(audioFormatPreferenceProvider.notifier).resetToDefault,
     );
-
-    if (confirmed && context.mounted) {
-      await ref.read(audioFormatPreferenceProvider.notifier).resetToDefault();
-      if (context.mounted) {
-        SnackBarUtil.showSuccess(context, S.of(context).restoredToDefault);
-      }
-    }
   }
 
   @override

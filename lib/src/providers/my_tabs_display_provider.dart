@@ -32,6 +32,7 @@ class MyTabsDisplaySettingsNotifier
   static const String _onlineMarksKey = 'my_tabs_show_online_marks';
   static const String _playlistsKey = 'my_tabs_show_playlists';
   static const String _subtitleLibraryKey = 'my_tabs_show_subtitle_library';
+  bool _changedLocally = false;
 
   MyTabsDisplaySettingsNotifier() : super(const MyTabsDisplaySettings()) {
     _loadSettings();
@@ -40,6 +41,7 @@ class MyTabsDisplaySettingsNotifier
   Future<void> _loadSettings() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      if (!mounted || _changedLocally) return;
       state = MyTabsDisplaySettings(
         showOnlineMarks: prefs.getBool(_onlineMarksKey) ?? true,
         showPlaylists: prefs.getBool(_playlistsKey) ?? true,
@@ -52,18 +54,29 @@ class MyTabsDisplaySettingsNotifier
   }
 
   Future<void> setShowOnlineMarks(bool value) async {
+    _changedLocally = true;
     state = state.copyWith(showOnlineMarks: value);
     await _saveSetting(_onlineMarksKey, value);
   }
 
   Future<void> setShowPlaylists(bool value) async {
+    _changedLocally = true;
     state = state.copyWith(showPlaylists: value);
     await _saveSetting(_playlistsKey, value);
   }
 
   Future<void> setShowSubtitleLibrary(bool value) async {
+    _changedLocally = true;
     state = state.copyWith(showSubtitleLibrary: value);
     await _saveSetting(_subtitleLibraryKey, value);
+  }
+
+  Future<void> resetToDefault() async {
+    _changedLocally = true;
+    state = const MyTabsDisplaySettings();
+    await _saveSetting(_onlineMarksKey, state.showOnlineMarks);
+    await _saveSetting(_playlistsKey, state.showPlaylists);
+    await _saveSetting(_subtitleLibraryKey, state.showSubtitleLibrary);
   }
 
   Future<void> _saveSetting(String key, bool value) async {

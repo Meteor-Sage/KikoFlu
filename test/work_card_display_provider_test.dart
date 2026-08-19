@@ -93,4 +93,35 @@ void main() {
     expect(prefs.getString(WorkCardDisplayNotifier.keyCardSize),
         WorkCardSize.extraLarge.value);
   });
+
+  test('reset restores and persists all work card defaults', () async {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    await _pumpAsyncPreferenceLoad();
+
+    final notifier = container.read(workCardDisplayProvider.notifier);
+    await notifier.toggleRating();
+    await notifier.toggleDuration();
+    await notifier.updateCardSize(WorkCardSize.extraLarge);
+    await notifier.updateFontScale(WorkCardFontScale.large);
+    await notifier.resetToDefault();
+
+    final settings = container.read(workCardDisplayProvider);
+    expect(settings.showRating, isTrue);
+    expect(settings.showDuration, isFalse);
+    expect(settings.cardSize, WorkCardSize.normal);
+    expect(settings.fontScale, WorkCardFontScale.normal);
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getBool('work_card_display_rating'), isTrue);
+    expect(prefs.getBool('work_card_display_duration'), isFalse);
+    expect(
+      prefs.getString(WorkCardDisplayNotifier.keyCardSize),
+      WorkCardSize.normal.value,
+    );
+    expect(
+      prefs.getString(WorkCardDisplayNotifier.keyFontScale),
+      WorkCardFontScale.normal.value,
+    );
+  });
 }

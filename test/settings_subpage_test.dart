@@ -7,9 +7,11 @@ import 'package:kikoeru_flutter/l10n/app_localizations.dart';
 import 'package:kikoeru_flutter/src/providers/player_buttons_provider.dart';
 import 'package:kikoeru_flutter/src/providers/player_lyric_style_provider.dart';
 import 'package:kikoeru_flutter/src/providers/settings_provider.dart';
+import 'package:kikoeru_flutter/src/providers/theme_provider.dart';
 import 'package:kikoeru_flutter/src/screens/audio_format_settings_screen.dart';
 import 'package:kikoeru_flutter/src/screens/player_buttons_settings_screen.dart';
 import 'package:kikoeru_flutter/src/screens/player_lyric_style_screen.dart';
+import 'package:kikoeru_flutter/src/screens/theme_settings_screen.dart';
 import 'package:kikoeru_flutter/src/widgets/settings_section.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -189,6 +191,40 @@ void main() {
     );
   });
 
+  testWidgets('theme settings restores defaults from the app bar',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'theme_mode': AppThemeMode.dark.index,
+      'color_scheme_type': ColorSchemeType.dynamic.index,
+    });
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      _testApp(const ThemeSettingsScreen(), container: container),
+    );
+    await tester.runAsync(_pumpPreferences);
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('Restore Default Settings'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Are you sure you want to restore the default settings?'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Confirm'));
+    await tester.pumpAndSettle();
+    expect(
+      container.read(themeSettingsProvider).themeMode,
+      AppThemeMode.system,
+    );
+    expect(
+      container.read(themeSettingsProvider).colorSchemeType,
+      ColorSchemeType.oceanBlue,
+    );
+  });
+
   test('immediate reorder wins over asynchronous stored preference loading',
       () async {
     SharedPreferences.setMockInitialValues({
@@ -220,5 +256,68 @@ void main() {
       container.read(audioFormatPreferenceProvider).priority,
       formatOrder,
     );
+  });
+
+  test('theme and audio haptics reset to persisted defaults', () async {
+    SharedPreferences.setMockInitialValues({
+      'theme_mode': AppThemeMode.dark.index,
+      'color_scheme_type': ColorSchemeType.dynamic.index,
+      'audio_haptics_enabled': true,
+      'audio_haptics_intensity': 0.4,
+    });
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    container.read(themeSettingsProvider);
+    container.read(audioHapticsSettingsProvider);
+    await _pumpPreferences();
+
+    await container.read(themeSettingsProvider.notifier).resetToDefault();
+    await container
+        .read(audioHapticsSettingsProvider.notifier)
+        .resetToDefault();
+
+    final theme = container.read(themeSettingsProvider);
+    final haptics = container.read(audioHapticsSettingsProvider);
+    expect(theme.themeMode, AppThemeMode.system);
+    expect(theme.colorSchemeType, ColorSchemeType.oceanBlue);
+    expect(haptics.enabled, isFalse);
+    expect(haptics.intensity, AudioHapticsSettings.defaultIntensity);
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getInt('theme_mode'), AppThemeMode.system.index);
+    expect(
+      prefs.getInt('color_scheme_type'),
+      ColorSchemeType.oceanBlue.index,
+    );
+    expect(prefs.getBool('audio_haptics_enabled'), isFalse);
+    expect(
+      prefs.getDouble('audio_haptics_intensity'),
+      AudioHapticsSettings.defaultIntensity,
+    );
+  });
+
+  test('immediate settings reset wins over asynchronous preference loading',
+      () async {
+    SharedPreferences.setMockInitialValues({
+      'theme_mode': AppThemeMode.dark.index,
+      'color_scheme_type': ColorSchemeType.dynamic.index,
+      'audio_haptics_enabled': true,
+      'audio_haptics_intensity': 0.4,
+    });
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    await container.read(themeSettingsProvider.notifier).resetToDefault();
+    await container
+        .read(audioHapticsSettingsProvider.notifier)
+        .resetToDefault();
+    await _pumpPreferences();
+
+    expect(
+      container.read(themeSettingsProvider).themeMode,
+      AppThemeMode.system,
+    );
+    expect(container.read(audioHapticsSettingsProvider).enabled, isFalse);
   });
 }

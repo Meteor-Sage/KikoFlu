@@ -415,6 +415,8 @@ class _KikoeruAppState extends ConsumerState<KikoeruApp>
   Widget build(BuildContext context) {
     final themeSettings = ref.watch(themeSettingsProvider);
     final locale = ref.watch(localeProvider);
+    final effectiveLocale =
+        locale ?? WidgetsBinding.instance.platformDispatcher.locale;
 
     return DynamicColorBuilder(
       builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
@@ -442,10 +444,16 @@ class _KikoeruAppState extends ConsumerState<KikoeruApp>
           localizationsDelegates: S.localizationsDelegates,
           supportedLocales: S.supportedLocales,
           locale: locale,
-          theme:
-              AppTheme.lightTheme(lightScheme, themeSettings.colorSchemeType),
-          darkTheme:
-              AppTheme.darkTheme(darkScheme, themeSettings.colorSchemeType),
+          theme: AppTheme.lightTheme(
+            lightScheme,
+            themeSettings.colorSchemeType,
+            effectiveLocale,
+          ),
+          darkTheme: AppTheme.darkTheme(
+            darkScheme,
+            themeSettings.colorSchemeType,
+            effectiveLocale,
+          ),
           themeMode: mode,
           home: ScreenAwakeObserver(child: _buildHomeScreen()),
         );

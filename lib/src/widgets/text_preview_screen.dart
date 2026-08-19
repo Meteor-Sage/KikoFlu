@@ -18,6 +18,7 @@ import '../utils/scroll_optimization.dart';
 import '../../l10n/app_localizations.dart';
 import 'scrollable_appbar.dart';
 import 'translation_toggle_button.dart';
+import 'responsive_dialog.dart';
 
 /// 文本预览屏幕
 class TextPreviewScreen extends StatefulWidget {
@@ -119,34 +120,28 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
   }
 
   void _showSaveOptions() {
-    showModalBottomSheet(
+    showBottomSheetMenu(
       context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.folder_open),
-              title: Text(S.of(context).saveToLocal),
-              subtitle: Text(S.of(context).selectDirectoryToSaveFile),
-              onTap: () {
-                Navigator.pop(context);
-                _saveToLocal();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.library_books),
-              title: Text(S.of(context).saveToSubtitleLibrary),
-              subtitle: Text(S.of(context).saveToSubtitleLibraryDesc),
-              onTap: () {
-                Navigator.pop(context);
-                _saveToSubtitleLibrary();
-              },
-            ),
-            const SizedBox(height: 8),
-          ],
+      children: [
+        ListTile(
+          leading: const Icon(Icons.folder_open),
+          title: Text(S.of(context).saveToLocal),
+          subtitle: Text(S.of(context).selectDirectoryToSaveFile),
+          onTap: () {
+            Navigator.pop(context);
+            _saveToLocal();
+          },
         ),
-      ),
+        ListTile(
+          leading: const Icon(Icons.library_books),
+          title: Text(S.of(context).saveToSubtitleLibrary),
+          subtitle: Text(S.of(context).saveToSubtitleLibraryDesc),
+          onTap: () {
+            Navigator.pop(context);
+            _saveToSubtitleLibrary();
+          },
+        ),
+      ],
     );
   }
 

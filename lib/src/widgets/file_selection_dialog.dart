@@ -8,6 +8,7 @@ import '../utils/string_utils.dart';
 import '../utils/file_icon_utils.dart';
 import '../utils/snackbar_util.dart';
 import '../providers/auth_provider.dart';
+import 'responsive_dialog.dart';
 
 class FileSelectionDialog extends ConsumerStatefulWidget {
   final Work work;
@@ -343,251 +344,35 @@ class _FileSelectionDialogState extends ConsumerState<FileSelectionDialog> {
 
     if (isLandscape) {
       // 横屏模式：紧凑布局，最大化文件列表空间
-      return Dialog(
-        child: Container(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.85,
-            maxWidth: MediaQuery.of(context).size.width * 0.75,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 紧凑标题栏：整合所有控制项
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(28),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.download,
-                      color: theme.colorScheme.onPrimaryContainer,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            widget.work.title,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: theme.colorScheme.onPrimaryContainer,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          if (!_isCheckingDownloads) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              S.of(context).downloadedAndSelected(
-                                  _downloadedFiles.values
-                                      .where((v) => v)
-                                      .length,
-                                  _selectedFiles.values.where((v) => v).length),
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onPrimaryContainer
-                                    .withAlpha(179),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    // 全选按钮
-                    TextButton.icon(
-                      icon: Icon(
-                        Icons.select_all,
-                        size: 16,
-                        color: theme.colorScheme.onPrimaryContainer,
-                      ),
-                      label: Text(
-                        S.of(context).selectAll,
-                        style: TextStyle(
-                          color: theme.colorScheme.onPrimaryContainer,
-                        ),
-                      ),
-                      onPressed: _toggleSelectAll,
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // 下载按钮
-                    FilledButton.icon(
-                      onPressed: _startDownload,
-                      icon: const Icon(Icons.download, size: 16),
-                      label: Text(
-                          S.of(context).downloadN(_getSelectedFiles().length)),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: theme.colorScheme.onPrimaryContainer,
-                        foregroundColor: theme.colorScheme.primaryContainer,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // 关闭按钮
-                    IconButton(
-                      icon: const Icon(Icons.close, size: 20),
-                      onPressed: () => Navigator.of(context).pop(),
-                      color: theme.colorScheme.onPrimaryContainer,
-                      padding: const EdgeInsets.all(8),
-                      constraints: const BoxConstraints(),
-                      tooltip: S.of(context).close,
-                    ),
-                  ],
-                ),
-              ),
-
-              const Divider(height: 1),
-
-              // 文件列表：最大化显示空间
-              Flexible(
-                child: _isCheckingDownloads
-                    ? Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const CircularProgressIndicator(),
-                            const SizedBox(height: 16),
-                            Text(S.of(context).checkingDownloadedFiles),
-                          ],
-                        ),
-                      )
-                    : widget.work.children == null ||
-                            widget.work.children!.isEmpty
-                        ? Center(
-                            child: Text(S.of(context).noDownloadableFiles),
-                          )
-                        : ListView(
-                            children:
-                                _buildFileTree(widget.work.children!, 0, ''),
-                          ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    // 竖屏模式：保持原有布局
-    return Dialog(
-      child: Container(
+      return Container(
         constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.8,
-          maxWidth: 800,
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+          maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(28),
+            BottomSheetHeader(
+              leading: const Icon(Icons.download),
+              title: widget.work.title,
+              subtitle: _isCheckingDownloads
+                  ? null
+                  : S.of(context).downloadedAndSelected(
+                        _downloadedFiles.values.where((v) => v).length,
+                        _selectedFiles.values.where((v) => v).length,
+                      ),
+              trailing: [
+                TextButton.icon(
+                  icon: const Icon(Icons.select_all, size: 16),
+                  label: Text(S.of(context).selectAll),
+                  onPressed: _toggleSelectAll,
                 ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.download,
-                    color: theme.colorScheme.onPrimaryContainer,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          S.of(context).selectFilesToDownload,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            color: theme.colorScheme.onPrimaryContainer,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          widget.work.title,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onPrimaryContainer
-                                .withAlpha(179),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.of(context).pop(),
-                    color: theme.colorScheme.onPrimaryContainer,
-                  ),
-                ],
-              ),
+              ],
             ),
 
-            // Toolbar
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: theme.dividerColor,
-                    width: 1,
-                  ),
-                ),
-              ),
-              child: Row(
-                children: [
-                  TextButton.icon(
-                    icon: const Icon(Icons.select_all, size: 18),
-                    label: Text(S.of(context).selectAll),
-                    onPressed: _toggleSelectAll,
-                  ),
-                  const Spacer(),
-                  if (!_isCheckingDownloads) ...[
-                    Text(
-                      S.of(context).downloadedNCount(
-                          _downloadedFiles.values.where((v) => v).length),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.green[700],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Container(
-                      width: 1,
-                      height: 12,
-                      color: theme.dividerColor,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      S.of(context).selectedNCount(
-                          _selectedFiles.values.where((v) => v).length),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurface.withAlpha(153),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
+            const Divider(height: 1),
 
-            // File List
+            // 文件列表：最大化显示空间
             Flexible(
               child: _isCheckingDownloads
                   ? Center(
@@ -606,36 +391,103 @@ class _FileSelectionDialogState extends ConsumerState<FileSelectionDialog> {
                           child: Text(S.of(context).noDownloadableFiles),
                         )
                       : ListView(
-                          shrinkWrap: true,
                           children:
                               _buildFileTree(widget.work.children!, 0, ''),
                         ),
             ),
-
-            const Divider(height: 1),
-
-            // Actions
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: Text(S.of(context).cancel),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton.icon(
-                    onPressed: _startDownload,
-                    icon: const Icon(Icons.download),
-                    label: Text(
-                        S.of(context).downloadN(_getSelectedFiles().length)),
-                  ),
-                ],
-              ),
+            BottomSheetActionBar(
+              secondaryLabel: S.of(context).cancel,
+              onSecondaryPressed: () => Navigator.of(context).pop(),
+              primaryLabel: S.of(context).downloadN(_getSelectedFiles().length),
+              onPrimaryPressed: _startDownload,
             ),
           ],
         ),
+      );
+    }
+
+    // 竖屏模式：保持原有布局
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.8,
+        maxWidth: 800,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          BottomSheetHeader(
+            leading: const Icon(Icons.download),
+            title: S.of(context).selectFilesToDownload,
+            subtitle: widget.work.title,
+          ),
+
+          // Toolbar
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: theme.dividerColor,
+                  width: 1,
+                ),
+              ),
+            ),
+            child: Row(
+              children: [
+                TextButton.icon(
+                  icon: const Icon(Icons.select_all, size: 18),
+                  label: Text(S.of(context).selectAll),
+                  onPressed: _toggleSelectAll,
+                ),
+                if (!_isCheckingDownloads)
+                  Expanded(
+                    child: Text(
+                      S.of(context).downloadedAndSelected(
+                            _downloadedFiles.values.where((v) => v).length,
+                            _selectedFiles.values.where((v) => v).length,
+                          ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.end,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
+          // File List
+          Flexible(
+            child: _isCheckingDownloads
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const CircularProgressIndicator(),
+                        const SizedBox(height: 16),
+                        Text(S.of(context).checkingDownloadedFiles),
+                      ],
+                    ),
+                  )
+                : widget.work.children == null || widget.work.children!.isEmpty
+                    ? Center(
+                        child: Text(S.of(context).noDownloadableFiles),
+                      )
+                    : ListView(
+                        shrinkWrap: true,
+                        children: _buildFileTree(widget.work.children!, 0, ''),
+                      ),
+          ),
+
+          BottomSheetActionBar(
+            secondaryLabel: S.of(context).cancel,
+            onSecondaryPressed: () => Navigator.of(context).pop(),
+            primaryLabel: S.of(context).downloadN(_getSelectedFiles().length),
+            onPrimaryPressed: _startDownload,
+          ),
+        ],
       ),
     );
   }

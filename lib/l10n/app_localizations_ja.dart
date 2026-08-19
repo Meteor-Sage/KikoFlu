@@ -2692,6 +2692,9 @@ class SJa extends S {
   String get restoreDefaultSettings => 'デフォルト設定に戻す';
 
   @override
+  String get confirmRestoreDefaultSettings => 'デフォルト設定に戻しますか？';
+
+  @override
   String get guideInPrefix => '';
 
   @override

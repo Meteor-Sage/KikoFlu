@@ -244,6 +244,22 @@ class WorkCardDisplayNotifier extends StateNotifier<WorkCardDisplaySettings> {
     await _saveSettings();
   }
 
+  Future<void> resetToDefault() async {
+    _dirtyKeys.addAll({
+      _keyRating,
+      _keyPrice,
+      _keySales,
+      _keyReleaseDate,
+      _keyCircle,
+      _keyDuration,
+      _keySubtitleTag,
+      keyCardSize,
+      keyFontScale,
+    });
+    state = const WorkCardDisplaySettings();
+    await _saveSettings();
+  }
+
   Future<void> _saveSettings() async {
     try {
       final prefs = await SharedPreferences.getInstance();

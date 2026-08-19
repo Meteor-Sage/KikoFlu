@@ -8,6 +8,13 @@ import '../widgets/settings_section.dart';
 class WorkDetailDisplaySettingsScreen extends ConsumerWidget {
   const WorkDetailDisplaySettingsScreen({super.key});
 
+  Future<void> _resetToDefault(BuildContext context, WidgetRef ref) async {
+    await confirmAndRestoreSettingsDefaults(
+      context: context,
+      restore: ref.read(workDetailDisplayProvider.notifier).resetToDefault,
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(workDetailDisplayProvider);
@@ -15,6 +22,7 @@ class WorkDetailDisplaySettingsScreen extends ConsumerWidget {
 
     return SettingsSubpageScaffold(
       title: S.of(context).workDetailDisplaySettings,
+      onRestoreDefaults: () => _resetToDefault(context, ref),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

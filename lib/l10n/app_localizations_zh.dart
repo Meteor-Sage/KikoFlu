@@ -2680,6 +2680,9 @@ class SZh extends S {
   String get restoreDefaultSettings => '恢复默认设置';
 
   @override
+  String get confirmRestoreDefaultSettings => '确定要恢复默认设置吗？';
+
+  @override
   String get guideInPrefix => '在';
 
   @override
@@ -6208,6 +6211,9 @@ class SZhHant extends SZh {
 
   @override
   String get restoreDefaultSettings => '恢復預設設定';
+
+  @override
+  String get confirmRestoreDefaultSettings => '確定要恢復預設設定嗎？';
 
   @override
   String get guideInPrefix => '在';

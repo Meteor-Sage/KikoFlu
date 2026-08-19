@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kikoeru_flutter/l10n/app_localizations.dart';
 import 'package:kikoeru_flutter/src/screens/preferences_screen.dart';
+import 'package:kikoeru_flutter/src/providers/settings_provider.dart';
 import 'package:kikoeru_flutter/src/services/proxy_config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -40,5 +41,38 @@ void main() {
     await tester.tap(proxySwitch);
     await tester.pump();
     expect(find.text('Proxy address'), findsNothing);
+  });
+
+  testWidgets('audio haptics exposes a working restore defaults action',
+      (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    SharedPreferences.setMockInitialValues({
+      'audio_haptics_enabled': true,
+      'audio_haptics_intensity': 0.4,
+    });
+
+    await tester.pumpWidget(_testApp());
+    await tester.pump();
+    await tester.scrollUntilVisible(
+      find.text('Audio Haptics (Beta)'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('Restore Default Settings'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Confirm'));
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(PreferencesScreen)),
+    );
+    final settings = container.read(audioHapticsSettingsProvider);
+    expect(settings.enabled, isFalse);
+    expect(settings.intensity, AudioHapticsSettings.defaultIntensity);
   });
 }

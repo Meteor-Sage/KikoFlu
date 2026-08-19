@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../l10n/app_localizations.dart';
 import '../providers/player_buttons_provider.dart';
 import '../utils/l10n_extensions.dart';
-import '../utils/snackbar_util.dart';
 import '../widgets/settings_section.dart';
 
 /// 播放器按钮设置页面
@@ -42,26 +41,17 @@ class PlayerButtonsSettingsScreen extends ConsumerWidget {
     WidgetRef ref, {
     required bool isDesktop,
   }) async {
-    final confirmed = await showSettingsResetConfirmation(
+    await confirmAndRestoreSettingsDefaults(
       context: context,
       message: S.of(context).confirmRestoreButtonOrder,
+      restore: () => isDesktop
+          ? ref
+              .read(playerButtonsConfigDesktopProvider.notifier)
+              .resetToDefault()
+          : ref
+              .read(playerButtonsConfigMobileProvider.notifier)
+              .resetToDefault(),
     );
-
-    if (confirmed && context.mounted) {
-      if (isDesktop) {
-        await ref
-            .read(playerButtonsConfigDesktopProvider.notifier)
-            .resetToDefault();
-      } else {
-        await ref
-            .read(playerButtonsConfigMobileProvider.notifier)
-            .resetToDefault();
-      }
-
-      if (context.mounted) {
-        SnackBarUtil.showSuccess(context, S.of(context).restoredToDefault);
-      }
-    }
   }
 
   @override

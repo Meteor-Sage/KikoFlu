@@ -10,6 +10,13 @@ import '../widgets/settings_section.dart';
 class MyTabsDisplaySettingsScreen extends ConsumerWidget {
   const MyTabsDisplaySettingsScreen({super.key});
 
+  Future<void> _resetToDefault(BuildContext context, WidgetRef ref) async {
+    await confirmAndRestoreSettingsDefaults(
+      context: context,
+      restore: ref.read(myTabsDisplayProvider.notifier).resetToDefault,
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(myTabsDisplayProvider);
@@ -19,6 +26,7 @@ class MyTabsDisplaySettingsScreen extends ConsumerWidget {
 
     return SettingsSubpageScaffold(
       title: S.of(context).myTabsDisplaySettings,
+      onRestoreDefaults: () => _resetToDefault(context, ref),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
