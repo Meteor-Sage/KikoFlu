@@ -486,8 +486,8 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
                   alignment: Alignment.bottomCenter,
                   child: LiquidGlassContainer(
                     shape: const LiquidGlassShape.roundedRectangle(24),
-                    style: LiquidGlassStyle.regular,
-                    fallbackIntensity: 0.86,
+                    style: LiquidGlassStyle.clear,
+                    fallbackIntensity: 0.78,
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(24),
                       child: playerContent,
