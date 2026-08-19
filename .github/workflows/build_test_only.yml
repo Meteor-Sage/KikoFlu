@@ -1,0 +1,71 @@
+name: Build test
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+
+  ios:
+    name: iOS Build (Unsigned)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v6
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.7'
+          channel: 'stable'
+          
+      - name: Get Dependencies
+        run: flutter pub get
+        
+      - name: Build iOS App (Unsigned)
+        run: flutter build ios --release --no-codesign
+            
+      - name: Package IPA
+        run: |
+          mkdir -p build/Payload
+          cp -r build/ios/iphoneos/Runner.app build/Payload/
+          cd build
+          zip -qr KikoFlu-ios-unsigned.ipa Payload
+          
+      - name: Upload iOS Artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: ios-unsigned-release
+          path: build/KikoFlu-ios-unsigned.ipa
+
+  macos:
+    name: macOS Build
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v6
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.7'
+          channel: 'stable'
+          
+      - name: Get Dependencies
+        run: flutter pub get
+        
+      - name: Build macOS Release
+        run: flutter build macos --release
+        
+      - name: Create DMG
+        run: |
+          mkdir -p build/dmg
+          cp -R build/macos/Build/Products/Release/KikoFlu.app build/dmg/
+          hdiutil create -volname "KikoFlu" \
+            -srcfolder build/dmg \
+            -ov -format UDZO \
+            KikoFlu-macos.dmg
+            
+      - name: Upload macOS Artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: macos-release
+          path: KikoFlu-macos.dmg
