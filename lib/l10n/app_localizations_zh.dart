@@ -437,6 +437,13 @@ class SZh extends S {
   String get uiSettingsSubtitle => '播放器、详情页、卡片等';
 
   @override
+  String get liquidGlassNavigation => '液态玻璃导航';
+
+  @override
+  String get liquidGlassNavigationDesc =>
+      '使用半透明液态玻璃导航栏和迷你播放器。iOS 和 macOS 默认开启。';
+
+  @override
   String get preferenceSettings => '偏好设置';
 
   @override
@@ -3980,6 +3987,13 @@ class SZhHant extends SZh {
 
   @override
   String get uiSettingsSubtitle => '播放器、詳情頁、卡片等';
+
+  @override
+  String get liquidGlassNavigation => '液態玻璃導覽';
+
+  @override
+  String get liquidGlassNavigationDesc =>
+      '使用半透明液態玻璃導覽列和迷你播放器。iOS 和 macOS 預設開啟。';
 
   @override
   String get preferenceSettings => '偏好設定';

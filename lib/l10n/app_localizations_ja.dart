@@ -438,6 +438,13 @@ class SJa extends S {
   String get uiSettingsSubtitle => 'プレーヤー、詳細ページ、カードなど';
 
   @override
+  String get liquidGlassNavigation => 'リキッドグラスナビゲーション';
+
+  @override
+  String get liquidGlassNavigationDesc =>
+      '半透明のリキッドグラスナビゲーションとミニプレーヤーを使用します。iOS と macOS ではデフォルトで有効です。';
+
+  @override
   String get preferenceSettings => '環境設定';
 
   @override

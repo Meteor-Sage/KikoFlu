@@ -159,6 +159,8 @@
   "themeSettingsSubtitle": "深色模式、主题色等",
   "uiSettings": "界面设置",
   "uiSettingsSubtitle": "播放器、详情页、卡片等",
+  "liquidGlassNavigation": "液态玻璃导航",
+  "liquidGlassNavigationDesc": "使用半透明液态玻璃导航栏和迷你播放器。iOS 和 macOS 默认开启。",
   "preferenceSettings": "偏好设置",
   "preferenceSettingsSubtitle": "翻译源、屏蔽、音频偏好等",
 

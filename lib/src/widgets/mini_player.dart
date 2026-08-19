@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:real_liquid_glass/real_liquid_glass.dart';
 
 import '../models/audio_track.dart';
 import '../providers/audio_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/lyric_provider.dart';
 import '../providers/player_lyric_style_provider.dart';
+import '../providers/settings_provider.dart';
 import '../screens/audio_player_screen.dart';
 import '../utils/local_file_url.dart';
 import 'privacy_blur_cover.dart';
@@ -40,6 +42,7 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
     final duration = ref.watch(durationProvider);
     final authState = ref.watch(authProvider);
     final isMiniPlayerVisible = ref.watch(miniPlayerVisibilityProvider);
+    final useLiquidGlass = ref.watch(liquidGlassNavigationProvider);
 
     // 启用自动字幕加载器
     ref.watch(lyricAutoLoaderProvider);
@@ -117,19 +120,23 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
               final shouldShowLyric =
                   isPlaying && hasLyrics && currentLyric != null;
 
-              return Container(
+              final playerContent = Container(
                 height: shouldShowLyric ? 88 : 72,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  border: Border(
-                    top: BorderSide(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .outline
-                          .withValues(alpha: 0.2),
-                      width: 1,
-                    ),
-                  ),
+                  color: useLiquidGlass
+                      ? Colors.transparent
+                      : Theme.of(context).colorScheme.surface,
+                  border: useLiquidGlass
+                      ? null
+                      : Border(
+                          top: BorderSide(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .outline
+                                .withValues(alpha: 0.2),
+                            width: 1,
+                          ),
+                        ),
                 ),
                 child: Column(
                   children: [
@@ -465,6 +472,27 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
                       ),
                     ),
                   ],
+                ),
+              );
+
+              if (!useLiquidGlass) return playerContent;
+
+              return Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                child: AnimatedSize(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOutCubic,
+                  alignment: Alignment.bottomCenter,
+                  child: LiquidGlassContainer(
+                    shape: const LiquidGlassShape.roundedRectangle(24),
+                    style: LiquidGlassStyle.regular,
+                    fallbackIntensity: 0.86,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: playerContent,
+                    ),
+                  ),
                 ),
               );
             },

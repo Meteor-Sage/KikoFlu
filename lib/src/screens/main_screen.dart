@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:real_liquid_glass/real_liquid_glass.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../providers/audio_provider.dart';
@@ -92,6 +93,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
     final showUpdateBadge = ref.watch(showUpdateRedDotProvider);
+    final useLiquidGlass = ref.watch(liquidGlassNavigationProvider);
     final destinations = _buildDestinations(context, showUpdateBadge);
 
     if (isLandscape) {
@@ -112,17 +114,22 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                             MediaQuery.of(context).padding.bottom,
                       ),
                       child: IntrinsicHeight(
-                        child: NavigationRail(
-                          selectedIndex: _currentIndex,
-                          onDestinationSelected: _handleDestinationSelected,
-                          labelType: NavigationRailLabelType.selected,
-                          destinations: destinations
-                              .map((dest) => NavigationRailDestination(
-                                    icon: dest.icon,
-                                    selectedIcon: dest.selectedIcon,
-                                    label: Text(dest.label),
-                                  ))
-                              .toList(),
+                        child: Padding(
+                          padding: useLiquidGlass
+                              ? const EdgeInsets.all(8)
+                              : EdgeInsets.zero,
+                          child: useLiquidGlass
+                              ? LiquidGlassContainer(
+                                  shape:
+                                      const LiquidGlassShape.roundedRectangle(
+                                          28),
+                                  fallbackIntensity: 0.86,
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(28),
+                                    child: _buildNavigationRail(destinations),
+                                  ),
+                                )
+                              : _buildNavigationRail(destinations),
                         ),
                       ),
                     ),
@@ -255,6 +262,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
     // 竖屏布局：使用 BottomNavigationBar
     return Scaffold(
+      // The native glass bar must overlap the page to refract its content.
+      extendBody: useLiquidGlass,
       body: Stack(
         children: [
           // 主内容
@@ -356,6 +365,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         selectedIndex: _currentIndex,
         onDestinationSelected: _handleDestinationSelected,
         destinations: destinations,
+        liquidGlass: useLiquidGlass,
+        showUpdateBadge: showUpdateBadge,
         miniPlayer: Consumer(
           builder: (context, ref, child) {
             final currentTrack = ref.watch(currentTrackProvider);
@@ -368,6 +379,21 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           },
         ),
       ),
+    );
+  }
+
+  Widget _buildNavigationRail(List<NavigationDestination> destinations) {
+    return NavigationRail(
+      selectedIndex: _currentIndex,
+      onDestinationSelected: _handleDestinationSelected,
+      labelType: NavigationRailLabelType.selected,
+      destinations: destinations
+          .map((dest) => NavigationRailDestination(
+                icon: dest.icon,
+                selectedIcon: dest.selectedIcon,
+                label: Text(dest.label),
+              ))
+          .toList(),
     );
   }
 }

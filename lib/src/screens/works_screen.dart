@@ -187,9 +187,7 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
     final isRecommendMode = worksState.displayMode == DisplayMode.popular ||
         worksState.displayMode == DisplayMode.recommended;
 
-    final isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
-    final horizontalPadding = isLandscape ? 24.0 : 8.0;
+    final horizontalPadding = FloatingToolbarLayout.horizontalPadding(context);
     final topPadding = MediaQuery.paddingOf(context).top;
     final toolbarTop = topPadding + 8;
     final contentTopPadding = toolbarTop + 56;

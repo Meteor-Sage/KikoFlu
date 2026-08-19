@@ -91,8 +91,8 @@ iOS 用户可通过 AltStore 或 SideStore 添加软件源来安装和更新 Kik
 ## 源码构建
 
 ### 环境要求
-- Flutter SDK 3.0+
-- Dart SDK 3.0+
+- Flutter SDK 3.44.1+
+- Dart SDK 3.12.1+
 
 ```bash
 git clone https://github.com/pa-jesusf/KikoFlu.git

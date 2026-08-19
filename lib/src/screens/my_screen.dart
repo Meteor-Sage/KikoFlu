@@ -268,6 +268,7 @@ class _MyScreenState extends ConsumerState<MyScreen>
 
     final tabsSettings = ref.watch(myTabsDisplayProvider);
     final topPadding = MediaQuery.paddingOf(context).top;
+    final horizontalPadding = FloatingToolbarLayout.horizontalPadding(context);
     final tabSwitcherTop = topPadding + 8;
     final contentTop = tabSwitcherTop + kTextTabBarHeight + 8;
     final tabs = _buildTabList(
@@ -328,8 +329,8 @@ class _MyScreenState extends ConsumerState<MyScreen>
             ),
             Positioned(
               top: tabSwitcherTop,
-              left: 8,
-              right: 8,
+              left: horizontalPadding,
+              right: horizontalPadding,
               child: ValueListenableBuilder<bool>(
                 valueListenable: _tabSwitcherVisible,
                 builder: (context, visible, child) => IgnorePointer(
@@ -380,9 +381,7 @@ class _MyScreenState extends ConsumerState<MyScreen>
     required double collapsedToolbarTop,
   }) {
     final state = ref.watch(myReviewsProvider);
-    final isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
-    final horizontalPadding = isLandscape ? 24.0 : 8.0;
+    final horizontalPadding = FloatingToolbarLayout.horizontalPadding(context);
 
     return Stack(
       children: [

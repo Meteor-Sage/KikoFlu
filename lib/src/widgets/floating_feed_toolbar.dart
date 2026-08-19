@@ -44,6 +44,10 @@ class FloatingFeedToolbar extends StatelessWidget {
   final List<FloatingFeedModeAction> modeActions;
   final List<FloatingFeedToolAction> toolActions;
 
+  /// Keeps a long filter list from consuming the entire tablet/desktop row.
+  /// When the available width is smaller, the list scrolls inside the capsule.
+  static const double maxModeCapsuleWidth = 420;
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(
@@ -55,17 +59,22 @@ class FloatingFeedToolbar extends StatelessWidget {
             fit: FlexFit.loose,
             child: Padding(
               padding: const EdgeInsets.only(right: 8),
-              child: FloatingToolbarSurface(
-                key: const ValueKey('feed-mode-capsule'),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  physics: const ClampingScrollPhysics(),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      for (final action in modeActions)
-                        _ModeButton(action: action),
-                    ],
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: maxModeCapsuleWidth,
+                ),
+                child: FloatingToolbarSurface(
+                  key: const ValueKey('feed-mode-capsule'),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const ClampingScrollPhysics(),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (final action in modeActions)
+                          _ModeButton(action: action),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -83,6 +92,19 @@ class FloatingFeedToolbar extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Shared horizontal inset for all floating controls in feed-like screens.
+/// Landscape uses a wider inset so every floating capsule shares the same
+/// left and right edges across tabs and nested toolbars.
+class FloatingToolbarLayout {
+  const FloatingToolbarLayout._();
+
+  static double horizontalPadding(BuildContext context) {
+    return MediaQuery.of(context).orientation == Orientation.landscape
+        ? 24.0
+        : 8.0;
   }
 }
 

@@ -448,6 +448,13 @@ class SEn extends S {
   String get uiSettingsSubtitle => 'Player, detail page, cards, etc.';
 
   @override
+  String get liquidGlassNavigation => 'Liquid Glass Navigation';
+
+  @override
+  String get liquidGlassNavigationDesc =>
+      'Use translucent glass navigation and mini player surfaces. Enabled by default on iOS and macOS.';
+
+  @override
   String get preferenceSettings => 'Preference Settings';
 
   @override

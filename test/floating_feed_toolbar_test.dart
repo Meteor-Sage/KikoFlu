@@ -177,4 +177,39 @@ void main() {
     expect(mode.width, lessThan(160));
     expect(tools.right, closeTo(750, 1));
   });
+
+  testWidgets('long mode lists stay bounded and scroll inside the capsule',
+      (tester) async {
+    await tester.pumpWidget(
+      _wideTestApp(
+        FloatingFeedToolbar(
+          modeActions: [
+            for (var i = 0; i < 8; i++)
+              FloatingFeedModeAction(
+                icon: Icons.filter_alt,
+                label: 'Filter option $i',
+                isSelected: i == 0,
+                onPressed: () {},
+              ),
+          ],
+          toolActions: [
+            FloatingFeedToolAction(
+              icon: Icons.sort,
+              tooltip: 'Sort',
+              onPressed: () {},
+            ),
+          ],
+        ),
+      ),
+    );
+
+    final mode = tester.getRect(
+      find.byKey(const ValueKey('feed-mode-capsule')),
+    );
+    expect(
+      mode.width,
+      lessThanOrEqualTo(FloatingFeedToolbar.maxModeCapsuleWidth),
+    );
+    expect(find.byType(SingleChildScrollView), findsOneWidget);
+  });
 }

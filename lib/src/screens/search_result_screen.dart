@@ -150,9 +150,7 @@ class _SearchResultContentState extends ConsumerState<_SearchResultContent> {
   Widget build(BuildContext context) {
     final searchState = ref.watch(searchResultProvider);
 
-    final isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
-    final horizontalPadding = isLandscape ? 24.0 : 0.0;
+    final horizontalPadding = FloatingToolbarLayout.horizontalPadding(context);
 
     final topPadding = MediaQuery.paddingOf(context).top;
     final systemOverlayStyle =
@@ -174,8 +172,8 @@ class _SearchResultContentState extends ConsumerState<_SearchResultContent> {
               ),
               Positioned(
                 top: topPadding + 8,
-                left: horizontalPadding > 0 ? horizontalPadding : 8,
-                right: horizontalPadding > 0 ? horizontalPadding : 8,
+                left: horizontalPadding,
+                right: horizontalPadding,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [

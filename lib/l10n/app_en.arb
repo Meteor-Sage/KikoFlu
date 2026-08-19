@@ -184,6 +184,8 @@
   "themeSettingsSubtitle": "Dark mode, theme color, etc.",
   "uiSettings": "UI Settings",
   "uiSettingsSubtitle": "Player, detail page, cards, etc.",
+  "liquidGlassNavigation": "Liquid Glass Navigation",
+  "liquidGlassNavigationDesc": "Use translucent glass navigation and mini player surfaces. Enabled by default on iOS and macOS.",
   "preferenceSettings": "Preference Settings",
   "preferenceSettingsSubtitle": "Translation source, blocking, audio preferences, etc.",
 

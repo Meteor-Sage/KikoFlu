@@ -768,8 +768,8 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
             if (widget.primaryToolbarVisible == null)
               Positioned(
                 top: widget.toolbarTop,
-                left: 8,
-                right: 8,
+                left: FloatingToolbarLayout.horizontalPadding(context),
+                right: FloatingToolbarLayout.horizontalPadding(context),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -789,8 +789,8 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
                 primaryToolbarVisible: widget.primaryToolbarVisible!,
                 visibleTop: widget.toolbarTop,
                 hiddenTop: widget.collapsedToolbarTop ?? widget.toolbarTop,
-                left: 8,
-                right: 8,
+                left: FloatingToolbarLayout.horizontalPadding(context),
+                right: FloatingToolbarLayout.horizontalPadding(context),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [

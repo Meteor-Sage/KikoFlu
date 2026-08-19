@@ -654,8 +654,8 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
             if (widget.primaryToolbarVisible == null)
               Positioned(
                 top: toolbarTop,
-                left: 8,
-                right: 8,
+                left: FloatingToolbarLayout.horizontalPadding(context),
+                right: FloatingToolbarLayout.horizontalPadding(context),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -675,8 +675,8 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
                 primaryToolbarVisible: widget.primaryToolbarVisible!,
                 visibleTop: toolbarTop,
                 hiddenTop: widget.collapsedToolbarTop ?? toolbarTop,
-                left: 8,
-                right: 8,
+                left: FloatingToolbarLayout.horizontalPadding(context),
+                right: FloatingToolbarLayout.horizontalPadding(context),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [

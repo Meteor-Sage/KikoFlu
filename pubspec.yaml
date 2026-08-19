@@ -6,7 +6,8 @@ publish_to: 'none'
 version: 3.5.0
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: '>=3.12.1 <4.0.0'
+  flutter: '>=3.44.1'
 
 dependencies:
   flutter:
@@ -80,6 +81,7 @@ dependencies:
   desktop_multi_window: ^0.3.0
   audio_session: ^0.1.25
   ffi: ^2.1.4
+  real_liquid_glass: ^0.3.0
 
 dev_dependencies:
   flutter_test:

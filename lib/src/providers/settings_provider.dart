@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/audio_gain_settings.dart';
@@ -10,6 +12,52 @@ final settingsCacheRefreshTriggerProvider = StateProvider<int>((ref) => 0);
 
 /// Triggers when Subtitle Library screen should refresh (e.g., after path change).
 final subtitleLibraryRefreshTriggerProvider = StateProvider<int>((ref) => 0);
+
+/// Controls the optional liquid-glass treatment for the main navigation and
+/// the mini player. The platform defaults intentionally preserve the legacy
+/// navigation on Android, Windows and Linux.
+class LiquidGlassNavigationNotifier extends StateNotifier<bool> {
+  static const String preferenceKey = 'liquid_glass_navigation_enabled';
+
+  LiquidGlassNavigationNotifier() : super(defaultValue) {
+    _loadPreference();
+  }
+
+  static bool get defaultValue =>
+      defaultTargetPlatform == TargetPlatform.iOS ||
+      defaultTargetPlatform == TargetPlatform.macOS;
+
+  bool _changedLocally = false;
+
+  Future<void> _loadPreference() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (!mounted || _changedLocally) return;
+      state = prefs.getBool(preferenceKey) ?? defaultValue;
+    } catch (_) {
+      if (!mounted || _changedLocally) return;
+      state = defaultValue;
+    }
+  }
+
+  Future<void> setEnabled(bool enabled) async {
+    _changedLocally = true;
+    state = enabled;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(preferenceKey, enabled);
+    } catch (_) {
+      // Keep the in-memory value when persistence is unavailable.
+    }
+  }
+
+  Future<void> resetToDefault() => setEnabled(defaultValue);
+}
+
+final liquidGlassNavigationProvider =
+    StateNotifierProvider<LiquidGlassNavigationNotifier, bool>((ref) {
+  return LiquidGlassNavigationNotifier();
+});
 
 /// 字幕库匹配优先级
 enum SubtitleLibraryPriority {

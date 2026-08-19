@@ -85,6 +85,17 @@ class UiSettingsScreen extends ConsumerWidget {
                   );
                 },
               ),
+              SettingsSwitchTile(
+                icon: Icons.blur_on,
+                title: S.of(context).liquidGlassNavigation,
+                subtitle: S.of(context).liquidGlassNavigationDesc,
+                value: ref.watch(liquidGlassNavigationProvider),
+                onChanged: (value) {
+                  ref
+                      .read(liquidGlassNavigationProvider.notifier)
+                      .setEnabled(value);
+                },
+              ),
               SettingsListTile(
                 icon: Icons.format_list_numbered,
                 title: S.of(context).pageSizeSettings,

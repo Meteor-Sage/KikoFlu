@@ -159,6 +159,8 @@
   "themeSettingsSubtitle": "ダークモード、テーマカラーなど",
   "uiSettings": "UI設定",
   "uiSettingsSubtitle": "プレーヤー、詳細ページ、カードなど",
+  "liquidGlassNavigation": "リキッドグラスナビゲーション",
+  "liquidGlassNavigationDesc": "半透明のリキッドグラスナビゲーションとミニプレーヤーを使用します。iOS と macOS ではデフォルトで有効です。",
   "preferenceSettings": "環境設定",
   "preferenceSettingsSubtitle": "翻訳ソース、ブロック、オーディオ設定など",
 
