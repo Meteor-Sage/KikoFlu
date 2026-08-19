@@ -236,13 +236,11 @@ void main(List<String> args) async {
     return;
   }
 
-  // Initialize just_audio_media_kit for desktop and Android platforms
-  if (Platform.isWindows ||
-      Platform.isLinux ||
-      Platform.isMacOS ||
-      Platform.isAndroid) {
+  // Use media_kit only for desktop platforms. Android is natively supported
+  // by just_audio and should stay on its Media3/AudioTrack backend.
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     await _configureMpv();
-    JustAudioMediaKit.ensureInitialized(android: true);
+    JustAudioMediaKit.ensureInitialized();
   }
 
   if (Platform.isWindows || Platform.isLinux) {
