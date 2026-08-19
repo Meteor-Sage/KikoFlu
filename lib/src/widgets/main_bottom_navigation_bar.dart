@@ -13,7 +13,6 @@ class MainBottomNavigationBar extends StatelessWidget {
   });
 
   static const double navigationBarHeight = 58;
-  static const double liquidNavigationBarHeight = 82;
 
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
@@ -30,6 +29,7 @@ class MainBottomNavigationBar extends StatelessWidget {
         onDestinationSelected: onDestinationSelected,
         destinations: destinations,
         miniPlayer: miniPlayer,
+        showUpdateBadge: showUpdateBadge,
       );
     }
 
@@ -55,15 +55,59 @@ class _LiquidGlassBottomNavigation extends StatelessWidget {
     required this.onDestinationSelected,
     required this.destinations,
     required this.miniPlayer,
+    required this.showUpdateBadge,
   });
 
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
   final List<NavigationDestination> destinations;
   final Widget miniPlayer;
+  final bool showUpdateBadge;
 
-  static const double _barHeight =
-      MainBottomNavigationBar.liquidNavigationBarHeight;
+  static const _items = [
+    (
+      icon: Icons.home_outlined,
+      selectedIcon: Icons.home,
+      sfSymbol: 'house',
+      selectedSfSymbol: 'house.fill',
+    ),
+    (
+      icon: Icons.search_outlined,
+      selectedIcon: Icons.search,
+      sfSymbol: 'magnifyingglass',
+      selectedSfSymbol: 'magnifyingglass',
+    ),
+    (
+      icon: Icons.favorite_border,
+      selectedIcon: Icons.favorite,
+      sfSymbol: 'heart',
+      selectedSfSymbol: 'heart.fill',
+    ),
+    (
+      icon: Icons.settings_outlined,
+      selectedIcon: Icons.settings,
+      sfSymbol: 'gearshape',
+      selectedSfSymbol: 'gearshape.fill',
+    ),
+  ];
+
+  List<LiquidGlassBarItem> _itemsForDestinations() {
+    return [
+      for (var index = 0; index < destinations.length; index++)
+        LiquidGlassBarItem(
+          icon: index < _items.length
+              ? _items[index].icon
+              : Icons.circle_outlined,
+          selectedIcon:
+              index < _items.length ? _items[index].selectedIcon : Icons.circle,
+          sfSymbol: index < _items.length ? _items[index].sfSymbol : 'circle',
+          selectedSfSymbol: index < _items.length
+              ? _items[index].selectedSfSymbol
+              : 'circle.fill',
+          label: destinations[index].label,
+        ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -80,98 +124,50 @@ class _LiquidGlassBottomNavigation extends StatelessWidget {
             child: miniPlayer,
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            child: LiquidGlassContainer(
-              height: _barHeight,
-              shape: const LiquidGlassShape.capsule(),
-              style: LiquidGlassStyle.clear,
-              fallbackIntensity: 0.78,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(_barHeight / 2),
-                child: Row(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final bar = LiquidGlassBottomBar(
+                  items: _itemsForDestinations(),
+                  currentIndex: selectedIndex,
+                  onTap: onDestinationSelected,
+                  height: MainBottomNavigationBar.navigationBarHeight + 8,
+                  showLabels: true,
+                  tint: Theme.of(context).colorScheme.primary,
+                  fallbackIntensity: 0.86,
+                );
+
+                if (!showUpdateBadge || destinations.isEmpty) return bar;
+
+                final itemWidth = constraints.maxWidth / destinations.length;
+                return Stack(
+                  clipBehavior: Clip.none,
                   children: [
-                    for (var index = 0; index < destinations.length; index++)
-                      Expanded(
-                        child: _LiquidNavigationDestination(
-                          destination: destinations[index],
-                          selected: index == selectedIndex,
-                          onPressed: () => onDestinationSelected(index),
+                    bar,
+                    Positioned(
+                      top: 10,
+                      left: itemWidth * (destinations.length - 0.5) - 4,
+                      child: IgnorePointer(
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.error,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Theme.of(context).colorScheme.surface,
+                              width: 1.5,
+                            ),
+                          ),
                         ),
                       ),
+                    ),
                   ],
-                ),
-              ),
+                );
+              },
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _LiquidNavigationDestination extends StatelessWidget {
-  const _LiquidNavigationDestination({
-    required this.destination,
-    required this.selected,
-    required this.onPressed,
-  });
-
-  final NavigationDestination destination;
-  final bool selected;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final foreground =
-        selected ? colorScheme.primary : colorScheme.onSurfaceVariant;
-
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: destination.label,
-      child: Padding(
-        padding: const EdgeInsets.all(6),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(36),
-            onTap: onPressed,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOutCubic,
-              decoration: BoxDecoration(
-                color: selected
-                    ? colorScheme.primaryContainer.withValues(alpha: 0.72)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(36),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  IconTheme(
-                    data: IconThemeData(size: 30, color: foreground),
-                    child: selected
-                        ? (destination.selectedIcon ?? destination.icon)
-                        : destination.icon,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    destination.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: foreground,
-                          fontWeight:
-                              selected ? FontWeight.w600 : FontWeight.w500,
-                        ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }

@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -386,13 +385,6 @@ class _KikoeruAppState extends ConsumerState<KikoeruApp>
   }
 
   @override
-  void didChangePlatformBrightness() {
-    // MaterialApp handles ThemeMode.system internally, but rebuilding here
-    // also refreshes native glass views that receive the Cupertino brightness.
-    if (mounted) setState(() {});
-  }
-
-  @override
   void onWindowClose() async {
     // 桌面端关闭窗口时 flush 播放历史
     await PlaybackHistoryService.instance.flushNow(reason: FlushReason.dispose);
@@ -466,16 +458,6 @@ class _KikoeruAppState extends ConsumerState<KikoeruApp>
             effectiveLocale,
           ),
           themeMode: mode,
-          builder: (context, child) {
-            final theme = Theme.of(context);
-            return CupertinoTheme(
-              data: CupertinoThemeData(
-                brightness: theme.brightness,
-                primaryColor: theme.colorScheme.primary,
-              ),
-              child: child ?? const SizedBox.shrink(),
-            );
-          },
           home: ScreenAwakeObserver(child: _buildHomeScreen()),
         );
       },

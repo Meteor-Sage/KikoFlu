@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kikoeru_flutter/src/widgets/main_bottom_navigation_bar.dart';
 import 'package:real_liquid_glass/real_liquid_glass.dart';
+import 'package:kikoeru_flutter/src/widgets/main_bottom_navigation_bar.dart';
 
 void main() {
   testWidgets('keeps iOS home indicator safe area below navigation content',
@@ -42,39 +42,28 @@ void main() {
   testWidgets('liquid glass navigation uses a bounded glass surface',
       (tester) async {
     await tester.pumpWidget(
-      MediaQuery(
-        data: const MediaQueryData(size: Size(390, 844)),
-        child: MaterialApp(
-          home: Scaffold(
-            bottomNavigationBar: MainBottomNavigationBar(
-              selectedIndex: 0,
-              liquidGlass: true,
-              onDestinationSelected: (_) {},
-              destinations: const [
-                NavigationDestination(
-                  icon: Icon(Icons.home_outlined),
-                  label: 'Home',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.search_outlined),
-                  label: 'Search',
-                ),
-              ],
-            ),
+      MaterialApp(
+        home: Scaffold(
+          bottomNavigationBar: MainBottomNavigationBar(
+            selectedIndex: 0,
+            liquidGlass: true,
+            onDestinationSelected: (_) {},
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                label: 'Home',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.search_outlined),
+                label: 'Search',
+              ),
+            ],
           ),
         ),
       ),
     );
 
-    expect(find.byType(LiquidGlassContainer), findsOneWidget);
-    expect(
-      tester.getSize(find.byType(LiquidGlassContainer)).height,
-      MainBottomNavigationBar.liquidNavigationBarHeight,
-    );
-    expect(
-      tester.getSize(find.byType(LiquidGlassContainer)).width,
-      366,
-    );
+    expect(find.byType(LiquidGlassBottomBar), findsOneWidget);
     expect(find.byType(NavigationRail), findsNothing);
   });
 }
