@@ -99,7 +99,6 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     if (isLandscape) {
       // 横屏布局：使用 NavigationRail
       return Scaffold(
-        backgroundColor: useLiquidGlass ? Colors.transparent : null,
         body: Stack(
           children: [
             // 主内容区域
@@ -124,8 +123,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                                   shape:
                                       const LiquidGlassShape.roundedRectangle(
                                           28),
-                                  style: LiquidGlassStyle.clear,
-                                  fallbackIntensity: 0.78,
+                                  fallbackIntensity: 0.86,
                                   child: ClipRRect(
                                     borderRadius: BorderRadius.circular(28),
                                     child: _buildNavigationRail(destinations),
@@ -265,7 +263,6 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     // 竖屏布局：使用 BottomNavigationBar
     return Scaffold(
       // The native glass bar must overlap the page to refract its content.
-      backgroundColor: useLiquidGlass ? Colors.transparent : null,
       extendBody: useLiquidGlass,
       body: Stack(
         children: [

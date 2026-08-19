@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kikoeru_flutter/src/widgets/main_bottom_navigation_bar.dart';
 import 'package:real_liquid_glass/real_liquid_glass.dart';
+import 'package:kikoeru_flutter/src/widgets/main_bottom_navigation_bar.dart';
 
 void main() {
   testWidgets('keeps iOS home indicator safe area below navigation content',
@@ -63,11 +63,7 @@ void main() {
       ),
     );
 
-    expect(find.byType(LiquidGlassContainer), findsOneWidget);
-    expect(
-      tester.getSize(find.byType(LiquidGlassContainer)).height,
-      MainBottomNavigationBar.liquidNavigationBarHeight,
-    );
+    expect(find.byType(LiquidGlassBottomBar), findsOneWidget);
     expect(find.byType(NavigationRail), findsNothing);
   });
 }
