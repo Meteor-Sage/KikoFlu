@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:kikoeru_flutter/l10n/app_localizations.dart';
 import 'package:kikoeru_flutter/src/widgets/virtualized_sliver_collection.dart';
+import 'package:kikoeru_flutter/src/widgets/liquid_glass_layout.dart';
 
 Widget _app(Widget child, {Size size = const Size(400, 800)}) {
   return MaterialApp(
@@ -42,6 +43,33 @@ Widget _list({
 }
 
 void main() {
+  testWidgets('appends the measured liquid glass dock extent', (tester) async {
+    final dockExtent = ValueNotifier<double>(128);
+    final controller = ScrollController();
+
+    await tester.pumpWidget(
+      _app(
+        LiquidGlassDockScope(
+          notifier: dockExtent,
+          child: _list(
+            items: List.generate(20, (index) => index),
+            controller: controller,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    controller.jumpTo(controller.position.maxScrollExtent);
+    await tester.pump();
+
+    expect(
+      find.byWidgetPredicate(
+        (widget) => widget is SizedBox && widget.height == dockExtent.value,
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('stable item identity preserves item state after reordering',
       (tester) async {
     final items = ValueNotifier<List<int>>([1, 2, 3]);

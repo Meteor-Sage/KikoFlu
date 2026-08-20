@@ -8,6 +8,7 @@ import '../providers/update_provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/main_bottom_navigation_bar.dart';
 import '../widgets/mini_player.dart';
+import '../widgets/liquid_glass_layout.dart';
 import 'works_screen.dart';
 import 'search_screen.dart';
 import 'my_screen.dart';
@@ -27,6 +28,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
   // 使用 PageStorageBucket 来保存页面状态
   final PageStorageBucket _bucket = PageStorageBucket();
+  final ValueNotifier<double> _liquidDockExtent = ValueNotifier(0);
 
   late final List<Widget> _screens;
 
@@ -39,6 +41,12 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       MyScreen(key: PageStorageKey('my_screen')),
       SettingsScreen(key: PageStorageKey('settings_screen')),
     ];
+  }
+
+  @override
+  void dispose() {
+    _liquidDockExtent.dispose();
+    super.dispose();
   }
 
   List<NavigationDestination> _buildDestinations(
@@ -268,6 +276,11 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       destinations: destinations,
       liquidGlass: useLiquidGlass,
       showUpdateBadge: showUpdateBadge,
+      onLayoutExtentChanged: (extent) {
+        if (_liquidDockExtent.value != extent) {
+          _liquidDockExtent.value = extent;
+        }
+      },
       miniPlayer: Consumer(
         builder: (context, ref, child) {
           final currentTrack = ref.watch(currentTrackProvider);
@@ -281,7 +294,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       ),
     );
 
-    return Scaffold(
+    final portraitScaffold = Scaffold(
       body: Stack(
         children: [
           // 主内容
@@ -296,16 +309,19 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                 padding: EdgeInsets.only(top: isOfflineMode ? 30 : 0),
                 child: SafeArea(
                   top: false,
-                  child: PageStorage(
-                    bucket: _bucket,
-                    child: IndexedStack(
-                      index: _currentIndex,
-                      children: List.generate(_screens.length, (index) {
-                        return HeroMode(
-                          enabled: index == _currentIndex,
-                          child: _screens[index],
-                        );
-                      }),
+                  bottom: false,
+                  child: LiquidGlassDockMediaQuery(
+                    child: PageStorage(
+                      bucket: _bucket,
+                      child: IndexedStack(
+                        index: _currentIndex,
+                        children: List.generate(_screens.length, (index) {
+                          return HeroMode(
+                            enabled: index == _currentIndex,
+                            child: _screens[index],
+                          );
+                        }),
+                      ),
                     ),
                   ),
                 ),
@@ -388,6 +404,12 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       ),
       bottomNavigationBar: useLiquidGlass ? null : bottomNavigation,
     );
+    return useLiquidGlass
+        ? LiquidGlassDockScope(
+            notifier: _liquidDockExtent,
+            child: portraitScaffold,
+          )
+        : portraitScaffold;
   }
 
   Widget _buildNavigationRail(List<NavigationDestination> destinations) {

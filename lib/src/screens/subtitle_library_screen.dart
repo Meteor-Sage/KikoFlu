@@ -808,7 +808,7 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
             if (_rootPath != null && _currentPath == _rootPath)
               Positioned(
                 left: 16,
-                bottom: 20,
+                bottom: MediaQuery.paddingOf(context).bottom + 12,
                 child: IgnorePointer(
                   child: Text(
                     _stats == null

@@ -3,10 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/audio_provider.dart';
 import '../providers/settings_provider.dart';
+import 'liquid_glass_layout.dart';
 import 'mini_player.dart';
 
 /// Global wrapper that shows the mini player on all screens except login
-class GlobalAudioPlayerWrapper extends ConsumerWidget {
+class GlobalAudioPlayerWrapper extends ConsumerStatefulWidget {
   final Widget child;
   final bool showMiniPlayer;
 
@@ -17,7 +18,22 @@ class GlobalAudioPlayerWrapper extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<GlobalAudioPlayerWrapper> createState() =>
+      _GlobalAudioPlayerWrapperState();
+}
+
+class _GlobalAudioPlayerWrapperState
+    extends ConsumerState<GlobalAudioPlayerWrapper> {
+  final ValueNotifier<double> _liquidDockExtent = ValueNotifier(0);
+
+  @override
+  void dispose() {
+    _liquidDockExtent.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final currentTrack = ref.watch(currentTrackProvider);
     final useLiquidGlass = ref.watch(liquidGlassNavigationProvider);
 
@@ -30,32 +46,42 @@ class GlobalAudioPlayerWrapper extends ConsumerWidget {
     );
 
     if (useLiquidGlass) {
-      return Scaffold(
-        body: Stack(
-          fit: StackFit.expand,
-          children: [
-            child,
-            if (showMiniPlayer)
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: SafeArea(
-                  top: false,
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 180),
-                    switchInCurve: Curves.easeOutCubic,
-                    switchOutCurve: Curves.easeInCubic,
-                    child: AnimatedSize(
-                      duration: const Duration(milliseconds: 180),
-                      curve: Curves.easeOutCubic,
-                      alignment: Alignment.bottomCenter,
-                      child: miniPlayer,
+      return LiquidGlassDockScope(
+        notifier: _liquidDockExtent,
+        child: Scaffold(
+          body: Stack(
+            fit: StackFit.expand,
+            children: [
+              LiquidGlassDockMediaQuery(child: widget.child),
+              if (widget.showMiniPlayer)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: LiquidGlassDockExtentReporter(
+                    onChanged: (extent) {
+                      if (_liquidDockExtent.value != extent) {
+                        _liquidDockExtent.value = extent;
+                      }
+                    },
+                    child: SafeArea(
+                      top: false,
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 180),
+                        switchInCurve: Curves.easeOutCubic,
+                        switchOutCurve: Curves.easeInCubic,
+                        child: AnimatedSize(
+                          duration: const Duration(milliseconds: 180),
+                          curve: Curves.easeOutCubic,
+                          alignment: Alignment.bottomCenter,
+                          child: miniPlayer,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       );
     }
@@ -63,8 +89,8 @@ class GlobalAudioPlayerWrapper extends ConsumerWidget {
     return Scaffold(
       body: Column(
         children: [
-          Expanded(child: child),
-          if (showMiniPlayer) miniPlayer,
+          Expanded(child: widget.child),
+          if (widget.showMiniPlayer) miniPlayer,
         ],
       ),
     );
