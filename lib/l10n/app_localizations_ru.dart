@@ -3662,6 +3662,9 @@ class SRu extends S {
   String get proxySettingsOptional => 'Прокси';
 
   @override
+  String get loginAdvancedSettings => 'Расширенные настройки';
+
+  @override
   String proxyEnabled(String address) {
     return 'Включено: $address';
   }

@@ -9,8 +9,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   testWidgets(
-    'login proxy section is compact and saves on editing completion',
+    'login advanced settings are separate, aligned, and auto-save proxy',
     (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1400, 900);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
       SharedPreferences.setMockInitialValues({});
       ProxyConfig.enabled = false;
       ProxyConfig.address = '';
@@ -34,28 +38,31 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('代理'), findsOneWidget);
+      expect(find.text('高级配置'), findsOneWidget);
+      expect(find.text('代理'), findsNothing);
+      expect(find.text('Cookie'), findsNothing);
       expect(find.byIcon(Icons.vpn_lock_outlined), findsNothing);
       expect(find.text('应用代理地址'), findsNothing);
 
-      await tester.ensureVisible(find.text('Cookie'));
-      await tester.pumpAndSettle();
-      final proxyTile = find.ancestor(
-        of: find.text('代理'),
-        matching: find.byType(ExpansionTile),
+      final titleCenter = tester.getCenter(find.text('添加账户'));
+      final firstFieldCenter = tester.getCenter(
+        find.byType(TextFormField).first,
       );
-      final cookieTile = find.ancestor(
-        of: find.text('Cookie'),
-        matching: find.byType(ExpansionTile),
+      expect(titleCenter.dx, closeTo(firstFieldCenter.dx, 0.01));
+
+      expect(
+        tester.getSize(find.widgetWithText(FilledButton, '登录')).height,
+        52,
       );
       expect(
-        tester.getTopLeft(cookieTile).dy,
-        closeTo(tester.getBottomLeft(proxyTile).dy, 0.01),
+        tester.getSize(find.widgetWithText(OutlinedButton, '游客模式')).height,
+        52,
       );
 
-      await tester.ensureVisible(find.text('代理'));
-      await tester.tap(find.text('代理'));
+      await tester.tap(find.text('高级配置'));
       await tester.pumpAndSettle();
+      expect(find.text('高级配置'), findsNWidgets(2));
+      expect(find.text('Cookie'), findsOneWidget);
       await tester.tap(find.widgetWithText(SwitchListTile, '使用代理'));
       await tester.pumpAndSettle();
 
@@ -70,11 +77,11 @@ void main() {
 
       expect(container.read(proxySettingsProvider).address, '127.0.0.1:7890');
       expect(find.text('应用代理地址'), findsNothing);
-
-      await tester.ensureVisible(find.text('Cookie'));
-      await tester.tap(find.text('Cookie'));
-      await tester.pumpAndSettle();
       expect(find.text('Server Cookie'), findsNothing);
+
+      await tester.tap(find.widgetWithText(TextButton, '关闭'));
+      await tester.pumpAndSettle();
+      expect(find.text('Cookie'), findsNothing);
     },
   );
 }

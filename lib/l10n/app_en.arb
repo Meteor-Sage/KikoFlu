@@ -1488,6 +1488,7 @@
   "logAutoScroll": "Auto scroll",
   "logEmpty": "No logs yet",
   "proxySettingsOptional": "Proxy",
+  "loginAdvancedSettings": "Advanced settings",
   "proxyEnabled": "Enabled: {address}",
   "@proxyEnabled": { "placeholders": { "address": { "type": "String" } } },
   "proxyAddressNotSet": "Not set (direct connection)",

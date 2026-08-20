@@ -3644,6 +3644,9 @@ class SEn extends S {
   String get proxySettingsOptional => 'Proxy';
 
   @override
+  String get loginAdvancedSettings => 'Advanced settings';
+
+  @override
   String proxyEnabled(String address) {
     return 'Enabled: $address';
   }

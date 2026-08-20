@@ -43,57 +43,164 @@ class FloatingFeedToolbar extends StatelessWidget {
     super.key,
     required this.modeActions,
     required this.toolActions,
-  });
+  }) : assert(modeActions.length > 0);
 
   final List<FloatingFeedModeAction> modeActions;
   final List<FloatingFeedToolAction> toolActions;
-
-  /// Keeps a long filter list from consuming the entire tablet/desktop row.
-  /// When the available width is smaller, the list scrolls inside the capsule.
-  static const double maxModeCapsuleWidth = 420;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: 48,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Flexible(
-            fit: FlexFit.loose,
-            child: Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  maxWidth: maxModeCapsuleWidth,
-                ),
-                child: FloatingToolbarSurface(
-                  key: const ValueKey('feed-mode-capsule'),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    physics: const ClampingScrollPhysics(),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        for (final action in modeActions)
-                          _ModeButton(action: action),
-                      ],
-                    ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          const surfacePadding = 8.0;
+          const capsuleGap = 8.0;
+          final toolWidth = toolActions.isEmpty
+              ? 0.0
+              : surfacePadding + toolActions.length * 40.0;
+          final availableModeWidth =
+              (constraints.maxWidth -
+                      toolWidth -
+                      (toolActions.isEmpty ? 0 : capsuleGap))
+                  .clamp(0.0, constraints.maxWidth)
+                  .toDouble();
+          final requiredModeWidth =
+              surfacePadding +
+              modeActions.fold<double>(
+                0,
+                (width, action) =>
+                    width + _modeActionWidth(context, action.label),
+              );
+          final useDropdown = requiredModeWidth > availableModeWidth;
+          final selectedIndex = modeActions.indexWhere(
+            (action) => action.isSelected,
+          );
+          final selectedAction =
+              modeActions[selectedIndex < 0 ? 0 : selectedIndex];
+          final maxDropdownWidth = availableModeWidth > surfacePadding
+              ? availableModeWidth - surfacePadding
+              : availableModeWidth;
+          final desiredDropdownWidth =
+              _modeActionWidth(context, selectedAction.label) + 24;
+          final dropdownWidth = desiredDropdownWidth < maxDropdownWidth
+              ? desiredDropdownWidth
+              : maxDropdownWidth;
+
+          final modeSurface = FloatingToolbarSurface(
+            key: const ValueKey('feed-mode-capsule'),
+            child: useDropdown
+                ? _ModeDropdown(actions: modeActions, maxWidth: dropdownWidth)
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (final action in modeActions)
+                        _ModeButton(action: action),
+                    ],
+                  ),
+          );
+
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Flexible(fit: FlexFit.loose, child: modeSurface),
+              if (toolActions.isNotEmpty) ...[
+                const SizedBox(width: capsuleGap),
+                FloatingToolbarSurface(
+                  key: const ValueKey('feed-tool-capsule'),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (final action in toolActions)
+                        _ToolButton(action: action),
+                    ],
                   ),
                 ),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  double _modeActionWidth(BuildContext context, String label) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: label,
+        style: Theme.of(
+          context,
+        ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+      ),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    return 24 + 18 + 6 + painter.width;
+  }
+}
+
+class _ModeDropdown extends StatelessWidget {
+  const _ModeDropdown({required this.actions, required this.maxWidth});
+
+  final List<FloatingFeedModeAction> actions;
+  final double maxWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedIndex = actions.indexWhere((action) => action.isSelected);
+    final effectiveIndex = selectedIndex < 0 ? 0 : selectedIndex;
+    final selected = actions[effectiveIndex];
+    return SizedBox(
+      key: const ValueKey('feed-mode-dropdown'),
+      height: 40,
+      width: maxWidth,
+      child: PopupMenuButton<int>(
+        tooltip: selected.label,
+        position: PopupMenuPosition.under,
+        onSelected: (index) => actions[index].onPressed(),
+        itemBuilder: (context) => [
+          for (var index = 0; index < actions.length; index++)
+            PopupMenuItem<int>(
+              value: index,
+              child: Row(
+                children: [
+                  Icon(actions[index].icon, size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(actions[index].label)),
+                  if (actions[index].isSelected) ...[
+                    const SizedBox(width: 12),
+                    Icon(
+                      Icons.check,
+                      size: 18,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ],
+                ],
               ),
             ),
-          ),
-          FloatingToolbarSurface(
-            key: const ValueKey('feed-tool-capsule'),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (final action in toolActions) _ToolButton(action: action),
-              ],
-            ),
-          ),
         ],
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            children: [
+              Icon(selected.icon, size: 18),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  selected.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(Icons.arrow_drop_down, size: 20),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -285,13 +392,13 @@ class _ModeButton extends StatelessWidget {
                 Text(
                   action.label,
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: action.isSelected
-                            ? colorScheme.primary
-                            : colorScheme.onSurfaceVariant,
-                        fontWeight: action.isSelected
-                            ? FontWeight.w700
-                            : FontWeight.w500,
-                      ),
+                    color: action.isSelected
+                        ? colorScheme.primary
+                        : colorScheme.onSurfaceVariant,
+                    fontWeight: action.isSelected
+                        ? FontWeight.w700
+                        : FontWeight.w500,
+                  ),
                 ),
               ],
             ),
@@ -361,11 +468,7 @@ class FloatingToolbarIconButton extends StatelessWidget {
 /// A shallow, single-pass backdrop blur whose opacity fades into the content.
 /// Keeping the filtered area bounded avoids applying blur to the whole feed.
 class ProgressiveTopBlur extends StatelessWidget {
-  const ProgressiveTopBlur({
-    super.key,
-    required this.height,
-    this.sigma = 14,
-  });
+  const ProgressiveTopBlur({super.key, required this.height, this.sigma = 14});
 
   final double height;
   final double sigma;

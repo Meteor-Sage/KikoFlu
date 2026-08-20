@@ -3543,6 +3543,9 @@ class SJa extends S {
   String get proxySettingsOptional => 'プロキシ';
 
   @override
+  String get loginAdvancedSettings => '詳細設定';
+
+  @override
   String proxyEnabled(String address) {
     return '有効: $address';
   }

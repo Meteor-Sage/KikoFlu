@@ -8,16 +8,14 @@ import '../services/kikoeru_api_service.dart';
 import '../utils/server_utils.dart';
 import '../utils/snackbar_util.dart';
 import '../../l10n/app_localizations.dart';
+import '../widgets/responsive_dialog.dart';
 import '../widgets/scrollable_appbar.dart';
 import 'main_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   final bool isAddingAccount; // true when adding from account management
 
-  const LoginScreen({
-    super.key,
-    this.isAddingAccount = false,
-  });
+  const LoginScreen({super.key, this.isAddingAccount = false});
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -141,7 +139,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           // Adding account mode - just go back
           Navigator.pop(context, true);
           SnackBarUtil.showSuccess(
-              context, S.of(context).accountAdded(username));
+            context,
+            S.of(context).accountAdded(username),
+          );
         } else {
           // Normal login - go to main screen
           Navigator.of(context).pushAndRemoveUntil(
@@ -187,9 +187,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text(S.of(context).guestModeTitle),
-          content: Text(
-            S.of(context).guestModeMessage,
-          ),
+          content: Text(S.of(context).guestModeMessage),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
@@ -288,54 +286,103 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _hostOptions = options;
   }
 
-  /// 登录页代理设置：登录前即可配置代理（解决"登录才能进设置页"的死循环）
-  Widget _buildLoginProxySection(BuildContext context) {
-    final proxySettings = ref.watch(proxySettingsProvider);
-
-    return ExpansionTile(
-      title: Text(S.of(context).proxySettingsOptional),
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Column(
+  Future<void> _showAdvancedSettings() async {
+    var proxyEnabled = ref.read(proxySettingsProvider).enabled;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => ResponsiveAlertDialog(
+          maxWidth: 520,
+          title: Row(
+            children: [
+              const Icon(Icons.tune),
+              const SizedBox(width: 12),
+              Text(S.of(context).loginAdvancedSettings),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               SwitchListTile(
+                contentPadding: EdgeInsets.zero,
                 title: Text(S.of(context).useProxy),
-                value: proxySettings.enabled,
+                value: proxyEnabled,
                 onChanged: (value) async {
-                  final notifier = ref.read(proxySettingsProvider.notifier);
                   if (!value) await _saveProxyAddress();
-                  if (!mounted) return;
-                  await notifier.setEnabled(value);
+                  if (!mounted || !dialogContext.mounted) return;
+                  await ref
+                      .read(proxySettingsProvider.notifier)
+                      .setEnabled(value);
+                  if (!dialogContext.mounted) return;
+                  setDialogState(() => proxyEnabled = value);
                 },
               ),
-              TextField(
-                controller: _proxyController,
-                focusNode: _proxyFocusNode,
-                enabled: proxySettings.enabled,
-                keyboardType: TextInputType.url,
-                textInputAction: TextInputAction.done,
-                decoration: InputDecoration(
-                  labelText: S.of(context).proxyAddress,
-                  hintText: '127.0.0.1:7890',
-                  helperText: S.of(context).proxyAddressFormat,
-                  errorText: _proxyErrorText,
-                  prefixIcon: const Icon(Icons.dns_outlined),
-                  border: const OutlineInputBorder(),
+              if (proxyEnabled) ...[
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _proxyController,
+                  focusNode: _proxyFocusNode,
+                  keyboardType: TextInputType.url,
+                  textInputAction: TextInputAction.done,
+                  decoration: InputDecoration(
+                    labelText: S.of(context).proxyAddress,
+                    hintText: '127.0.0.1:7890',
+                    helperText: S.of(context).proxyAddressFormat,
+                    errorText: _proxyErrorText,
+                    prefixIcon: const Icon(Icons.dns_outlined),
+                    border: const OutlineInputBorder(),
+                  ),
+                  onChanged: (_) {
+                    if (_proxyErrorText == null) return;
+                    setState(() => _proxyErrorText = null);
+                    setDialogState(() {});
+                  },
+                  onSubmitted: (_) async {
+                    await _saveProxyAddress();
+                    if (!dialogContext.mounted) return;
+                    setDialogState(() {});
+                  },
+                  onTapOutside: (_) async {
+                    _proxyFocusNode.unfocus();
+                    await _saveProxyAddress();
+                    if (!dialogContext.mounted) return;
+                    setDialogState(() {});
+                  },
                 ),
-                onChanged: (_) {
-                  if (_proxyErrorText == null) return;
-                  setState(() => _proxyErrorText = null);
-                },
-                onSubmitted: (_) => _saveProxyAddress(),
-                onTapOutside: (_) => _proxyFocusNode.unfocus(),
+              ],
+              const SizedBox(height: 20),
+              TextField(
+                controller: _serverCookieController,
+                decoration: const InputDecoration(
+                  labelText: 'Cookie',
+                  prefixIcon: Icon(Icons.security_outlined),
+                  border: OutlineInputBorder(),
+                ),
+                textInputAction: TextInputAction.done,
               ),
             ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                _proxyFocusNode.unfocus();
+                final accepted = await _saveProxyAddress();
+                if (!dialogContext.mounted) return;
+                if (accepted) {
+                  Navigator.of(dialogContext).pop();
+                } else {
+                  setDialogState(() {});
+                }
+              },
+              child: Text(S.of(context).close),
+            ),
+          ],
         ),
-      ],
+      ),
     );
+    if (!mounted) return;
+    await _saveProxyAddress();
   }
 
   void _handleProxyFocusChanged() {
@@ -396,14 +443,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 )
               : const Icon(Icons.network_ping_outlined),
           label: Text(
-              isTesting ? S.of(context).testing : S.of(context).testConnection),
+            isTesting ? S.of(context).testing : S.of(context).testConnection,
+          ),
         ),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
             statusText,
-            style:
-                Theme.of(context).textTheme.bodySmall?.copyWith(color: color),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: color),
             textAlign: TextAlign.right,
           ),
         ),
@@ -498,8 +547,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  String _describeLatencyResult(_LatencyResult? result,
-      {bool includePlaceholder = false}) {
+  String _describeLatencyResult(
+    _LatencyResult? result, {
+    bool includePlaceholder = false,
+  }) {
     final s = S.of(context);
     if (result == null) {
       return includePlaceholder ? s.notTestedYet : '';
@@ -557,15 +608,45 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
+    final title = Text(
+      widget.isAddingAccount
+          ? (_isLogin
+                ? S.of(context).addAccount
+                : S.of(context).registerAccount)
+          : (_isLogin ? S.of(context).login : S.of(context).register),
+    );
 
     return Scaffold(
       appBar: ScrollableAppBar(
-        title: Text(widget.isAddingAccount
-            ? (_isLogin
-                ? S.of(context).addAccount
-                : S.of(context).registerAccount)
-            : (_isLogin ? S.of(context).login : S.of(context).register)),
-        centerTitle: true,
+        title: isLandscape ? null : title,
+        centerTitle: !isLandscape,
+        flexibleSpace: isLandscape
+            ? SafeArea(
+                bottom: false,
+                child: Row(
+                  children: [
+                    const Expanded(flex: 2, child: SizedBox.shrink()),
+                    Expanded(
+                      flex: 3,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 32),
+                        child: Center(child: title),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : null,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: TextButton.icon(
+              onPressed: _showAdvancedSettings,
+              icon: const Icon(Icons.tune, size: 20),
+              label: Text(S.of(context).loginAdvancedSettings),
+            ),
+          ),
+        ],
         // Show back button in adding account mode
         automaticallyImplyLeading: widget.isAddingAccount,
       ),
@@ -609,11 +690,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const SizedBox(height: 8),
                     Text(
                       'KikoFlu',
-                      style:
-                          Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                color: Theme.of(context).colorScheme.primary,
-                                fontWeight: FontWeight.bold,
-                              ),
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
                   ],
                 ),
@@ -657,9 +738,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Text(
                     'KikoFlu',
                     style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
@@ -751,36 +832,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           // 始终显示所有推荐选项
           return _hostOptions;
         },
-        fieldViewBuilder: (
-          context,
-          textEditingController,
-          focusNode,
-          onFieldSubmitted,
-        ) {
-          return TextFormField(
-            controller: textEditingController,
-            focusNode: focusNode,
-            decoration: InputDecoration(
-              labelText: S.of(context).serverAddress,
-              prefixIcon: const Icon(Icons.dns),
-              border: const OutlineInputBorder(),
-            ),
-            keyboardType: TextInputType.url,
-            onChanged: (value) {
-              setState(() {
-                _hostValue = value;
-              });
+        fieldViewBuilder:
+            (context, textEditingController, focusNode, onFieldSubmitted) {
+              return TextFormField(
+                controller: textEditingController,
+                focusNode: focusNode,
+                decoration: InputDecoration(
+                  labelText: S.of(context).serverAddress,
+                  prefixIcon: const Icon(Icons.dns),
+                  border: const OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.url,
+                onChanged: (value) {
+                  setState(() {
+                    _hostValue = value;
+                  });
+                },
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return S.of(context).pleaseEnterServerAddress;
+                  }
+                  return null;
+                },
+                textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) => _submit(),
+              );
             },
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return S.of(context).pleaseEnterServerAddress;
-              }
-              return null;
-            },
-            textInputAction: TextInputAction.next,
-            onFieldSubmitted: (_) => _submit(),
-          );
-        },
         onSelected: (selection) {
           setState(() {
             _hostValue = selection;
@@ -791,29 +868,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       const SizedBox(height: 8),
       _buildHostLatencyActions(context),
 
-      const SizedBox(height: 8),
-      _buildLoginProxySection(context),
-
-      // Cookie field (collapsible)
-      ExpansionTile(
-        title: const Text('Cookie'),
-        children: [
-          TextFormField(
-            controller: _serverCookieController,
-            decoration: InputDecoration(
-              labelText: S.of(context).serverCookie,
-              prefixIcon: const Icon(Icons.security),
-              border: const OutlineInputBorder(),
-            ),
-            textInputAction: TextInputAction.done,
-          ),
-          const SizedBox(height: 16),
-        ],
-      ),
+      const SizedBox(height: 12),
 
       // Submit button
       FilledButton(
         onPressed: _isLoading ? null : _submit,
+        style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
         child: _isLoading
             ? const SizedBox(
                 height: 20,
@@ -833,6 +893,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           label: Text(S.of(context).guestMode),
           style: OutlinedButton.styleFrom(
             foregroundColor: Theme.of(context).colorScheme.secondary,
+            minimumSize: const Size.fromHeight(52),
           ),
         ),
 
@@ -845,9 +906,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           _isLogin
               ? S.of(context).noAccountTapToRegister
               : S.of(context).haveAccountTapToLogin,
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.primary,
-          ),
+          style: TextStyle(color: Theme.of(context).colorScheme.primary),
         ),
       ),
     ];

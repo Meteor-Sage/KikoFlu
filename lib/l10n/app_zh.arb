@@ -1233,6 +1233,7 @@
   "logAutoScroll": "自动滚动",
   "logEmpty": "暂无日志",
   "proxySettingsOptional": "代理",
+  "loginAdvancedSettings": "高级配置",
   "proxyEnabled": "已启用：{address}",
   "proxyAddressNotSet": "未设置（默认直连）",
   "proxyHttpDescription": "通过 HTTP 代理访问服务器（例如 Clash）",

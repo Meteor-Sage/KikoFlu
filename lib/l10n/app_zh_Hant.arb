@@ -1190,6 +1190,7 @@
   "logAutoScroll": "自動捲動",
   "logEmpty": "暫無日誌",
   "proxySettingsOptional": "代理",
+  "loginAdvancedSettings": "進階設定",
   "proxyEnabled": "已啟用：{address}",
   "proxyAddressNotSet": "未設定（預設直連）",
   "proxyHttpDescription": "透過 HTTP 代理存取伺服器（例如 Clash）",

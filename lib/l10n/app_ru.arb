@@ -1190,6 +1190,7 @@
   "logAutoScroll": "Автопрокрутка",
   "logEmpty": "Логов пока нет",
   "proxySettingsOptional": "Прокси",
+  "loginAdvancedSettings": "Расширенные настройки",
   "proxyEnabled": "Включено: {address}",
   "proxyAddressNotSet": "Не задан (прямое подключение)",
   "proxyHttpDescription": "Подключение к серверам через HTTP-прокси (например, Clash)",

@@ -3521,6 +3521,9 @@ class SZh extends S {
   String get proxySettingsOptional => '代理';
 
   @override
+  String get loginAdvancedSettings => '高级配置';
+
+  @override
   String proxyEnabled(String address) {
     return '已启用：$address';
   }
@@ -7071,6 +7074,9 @@ class SZhHant extends SZh {
 
   @override
   String get proxySettingsOptional => '代理';
+
+  @override
+  String get loginAdvancedSettings => '進階設定';
 
   @override
   String proxyEnabled(String address) {

@@ -6486,6 +6486,12 @@ abstract class S {
   /// **'Proxy'**
   String get proxySettingsOptional;
 
+  /// No description provided for @loginAdvancedSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced settings'**
+  String get loginAdvancedSettings;
+
   /// No description provided for @proxyEnabled.
   ///
   /// In en, this message translates to:

@@ -35,8 +35,9 @@ void main() {
     }),
   );
 
-  testWidgets('renders two capsules and keeps their actions interactive',
-      (tester) async {
+  testWidgets('renders two capsules and keeps their actions interactive', (
+    tester,
+  ) async {
     var selectedMode = '';
     var toolTaps = 0;
 
@@ -112,8 +113,9 @@ void main() {
     expect(material.type, MaterialType.transparency);
   });
 
-  testWidgets('fallback liquid glass keeps page content visible',
-      (tester) async {
+  testWidgets('fallback liquid glass keeps page content visible', (
+    tester,
+  ) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
     final container = ProviderContainer();
@@ -145,8 +147,9 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
   });
 
-  testWidgets('progressive top treatment uses one bounded blur pass',
-      (tester) async {
+  testWidgets('progressive top treatment uses one bounded blur pass', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _testApp(
         const MediaQuery(
@@ -161,19 +164,17 @@ void main() {
     expect(tester.getSize(find.byType(ProgressiveTopBlur)).height, 96);
   });
 
-  testWidgets('top treatment is omitted without a status bar inset',
-      (tester) async {
-    await tester.pumpWidget(
-      _testApp(
-        const ProgressiveTopBlur(height: 96),
-      ),
-    );
+  testWidgets('top treatment is omitted without a status bar inset', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_testApp(const ProgressiveTopBlur(height: 96)));
 
     expect(find.byType(BackdropFilter), findsNothing);
   });
 
-  testWidgets('secondary toolbar follows the primary toolbar position',
-      (tester) async {
+  testWidgets('secondary toolbar follows the primary toolbar position', (
+    tester,
+  ) async {
     final primaryVisible = ValueNotifier(true);
     addTearDown(primaryVisible.dispose);
 
@@ -200,18 +201,21 @@ void main() {
       ),
     );
 
-    final visibleTop =
-        tester.getTopLeft(find.byKey(const ValueKey('secondary-toolbar'))).dy;
+    final visibleTop = tester
+        .getTopLeft(find.byKey(const ValueKey('secondary-toolbar')))
+        .dy;
     primaryVisible.value = false;
     await tester.pumpAndSettle();
-    final hiddenTop =
-        tester.getTopLeft(find.byKey(const ValueKey('secondary-toolbar'))).dy;
+    final hiddenTop = tester
+        .getTopLeft(find.byKey(const ValueKey('secondary-toolbar')))
+        .dy;
 
     expect(visibleTop - hiddenTop, 56);
   });
 
-  testWidgets('mode capsule hugs its content and leaves tools at the edge',
-      (tester) async {
+  testWidgets('mode capsule hugs its content and leaves tools at the edge', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _wideTestApp(
         FloatingFeedToolbar(
@@ -244,18 +248,53 @@ void main() {
     expect(tools.right, closeTo(750, 1));
   });
 
-  testWidgets('long mode lists stay bounded and scroll inside the capsule',
-      (tester) async {
+  testWidgets('shows every mode when the complete row fits', (tester) async {
     await tester.pumpWidget(
       _wideTestApp(
         FloatingFeedToolbar(
           modeActions: [
-            for (var i = 0; i < 8; i++)
+            for (final label in ['全部', '想听', '在听', '听过', '重听', '搁置'])
               FloatingFeedModeAction(
                 icon: Icons.filter_alt,
-                label: 'Filter option $i',
-                isSelected: i == 0,
+                label: label,
+                isSelected: label == '全部',
                 onPressed: () {},
+              ),
+          ],
+          toolActions: [
+            for (var index = 0; index < 3; index++)
+              FloatingFeedToolAction(
+                icon: Icons.tune,
+                tooltip: 'Tool $index',
+                onPressed: () {},
+              ),
+          ],
+        ),
+      ),
+    );
+
+    final mode = tester.getRect(
+      find.byKey(const ValueKey('feed-mode-capsule')),
+    );
+    expect(mode.width, greaterThan(420));
+    expect(find.text('搁置'), findsOneWidget);
+    expect(find.byKey(const ValueKey('feed-mode-dropdown')), findsNothing);
+  });
+
+  testWidgets('uses a mode dropdown when the complete row does not fit', (
+    tester,
+  ) async {
+    var selectedMode = -1;
+    await tester.pumpWidget(
+      _testApp(
+        FloatingFeedToolbar(
+          modeActions: [
+            for (var index = 0; index < 8; index++)
+              FloatingFeedModeAction(
+                icon: Icons.filter_alt,
+                label: 'Filter option $index',
+                isSelected: index == 0,
+                onPressed: () => selectedMode = index,
               ),
           ],
           toolActions: [
@@ -269,13 +308,12 @@ void main() {
       ),
     );
 
-    final mode = tester.getRect(
-      find.byKey(const ValueKey('feed-mode-capsule')),
-    );
-    expect(
-      mode.width,
-      lessThanOrEqualTo(FloatingFeedToolbar.maxModeCapsuleWidth),
-    );
-    expect(find.byType(SingleChildScrollView), findsOneWidget);
+    expect(find.byKey(const ValueKey('feed-mode-dropdown')), findsOneWidget);
+    expect(find.byType(SingleChildScrollView), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('feed-mode-dropdown')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Filter option 1'));
+    await tester.pumpAndSettle();
+    expect(selectedMode, 1);
   });
 }
