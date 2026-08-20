@@ -3641,7 +3641,7 @@ class SEn extends S {
   String get logEmpty => 'No logs yet';
 
   @override
-  String get proxySettingsOptional => 'Proxy settings (optional)';
+  String get proxySettingsOptional => 'Proxy';
 
   @override
   String proxyEnabled(String address) {

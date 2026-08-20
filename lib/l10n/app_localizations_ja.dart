@@ -3540,7 +3540,7 @@ class SJa extends S {
   String get logEmpty => 'ログはありません';
 
   @override
-  String get proxySettingsOptional => 'プロキシ設定（任意）';
+  String get proxySettingsOptional => 'プロキシ';
 
   @override
   String proxyEnabled(String address) {

@@ -1189,7 +1189,7 @@
   "logCount": "{count} 件のログ",
   "logAutoScroll": "自動スクロール",
   "logEmpty": "ログはありません",
-  "proxySettingsOptional": "プロキシ設定（任意）",
+  "proxySettingsOptional": "プロキシ",
   "proxyEnabled": "有効: {address}",
   "proxyAddressNotSet": "未設定（直接接続）",
   "proxyHttpDescription": "HTTP プロキシ経由でサーバーに接続（例: Clash）",

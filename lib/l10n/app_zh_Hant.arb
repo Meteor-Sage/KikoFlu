@@ -1189,7 +1189,7 @@
   "logCount": "{count} 條日誌",
   "logAutoScroll": "自動捲動",
   "logEmpty": "暫無日誌",
-  "proxySettingsOptional": "代理設定（可選）",
+  "proxySettingsOptional": "代理",
   "proxyEnabled": "已啟用：{address}",
   "proxyAddressNotSet": "未設定（預設直連）",
   "proxyHttpDescription": "透過 HTTP 代理存取伺服器（例如 Clash）",

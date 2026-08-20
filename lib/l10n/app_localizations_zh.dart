@@ -3518,7 +3518,7 @@ class SZh extends S {
   String get logEmpty => '暂无日志';
 
   @override
-  String get proxySettingsOptional => '代理设置（可选）';
+  String get proxySettingsOptional => '代理';
 
   @override
   String proxyEnabled(String address) {
@@ -7070,7 +7070,7 @@ class SZhHant extends SZh {
   String get logEmpty => '暫無日誌';
 
   @override
-  String get proxySettingsOptional => '代理設定（可選）';
+  String get proxySettingsOptional => '代理';
 
   @override
   String proxyEnabled(String address) {

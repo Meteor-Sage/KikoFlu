@@ -1189,7 +1189,7 @@
   "logCount": "{count} записей",
   "logAutoScroll": "Автопрокрутка",
   "logEmpty": "Логов пока нет",
-  "proxySettingsOptional": "Настройки прокси (необязательно)",
+  "proxySettingsOptional": "Прокси",
   "proxyEnabled": "Включено: {address}",
   "proxyAddressNotSet": "Не задан (прямое подключение)",
   "proxyHttpDescription": "Подключение к серверам через HTTP-прокси (например, Clash)",

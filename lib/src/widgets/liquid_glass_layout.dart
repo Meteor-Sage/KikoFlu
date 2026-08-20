@@ -9,10 +9,48 @@ import 'package:flutter/widgets.dart';
 abstract final class LiquidGlassLayout {
   static const double horizontalPadding = 12;
   static const double verticalPadding = 6;
-  static const double navigationBarHeight = 78;
+  static const double iosNavigationBarHeight = 78;
   static const double cornerRadius = 24;
 
   static const double navigationBarBottomPadding = 0;
+
+  // These metrics mirror LiquidGlassBottomBar's fallback item layout. The
+  // resulting surface follows its content and the user's text scale instead
+  // of applying the taller native iOS tab-bar height to every platform.
+  static const double _fallbackIconSize = 24;
+  static const double _fallbackItemGap = 2;
+  static const double _fallbackLabelFontSize = 11;
+  static const double _fallbackLabelLineHeight = 1.2;
+  static const double _fallbackSurfacePadding = 8;
+
+  static double navigationBarHeight(BuildContext context) {
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      return iosNavigationBarHeight;
+    }
+
+    final mediaQuery = MediaQuery.of(context);
+    final isCompactHeight =
+        mediaQuery.orientation == Orientation.landscape &&
+        mediaQuery.size.height < 600;
+    final labelHeight =
+        mediaQuery.textScaler.scale(_fallbackLabelFontSize) *
+        _fallbackLabelLineHeight;
+    final contentHeight =
+        _fallbackIconSize +
+        _fallbackItemGap +
+        labelHeight +
+        _fallbackSurfacePadding;
+
+    // Compact phone/tablet landscapes trade a little breathing room for page
+    // content. Larger text is still allowed to grow the control above its
+    // default height, while the lower bounds preserve a comfortable target.
+    final breathingRoom = isCompactHeight ? 8.0 : 12.0;
+    final minimumHeight = isCompactHeight ? 56.0 : 60.0;
+    final maximumHeight = isCompactHeight ? 72.0 : 92.0;
+    return (contentHeight + breathingRoom)
+        .clamp(minimumHeight, maximumHeight)
+        .toDouble();
+  }
 
   static double nativeTabBarExpansion(BuildContext context) {
     return defaultTargetPlatform == TargetPlatform.iOS ? 20 : 0;
@@ -48,11 +86,13 @@ class LiquidGlassDockMediaQuery extends StatelessWidget {
   Widget build(BuildContext context) {
     final extent = LiquidGlassDockScope.extentOf(context);
     final mediaQuery = MediaQuery.of(context);
-    final bottom =
-        extent > mediaQuery.padding.bottom ? extent : mediaQuery.padding.bottom;
+    final bottom = extent > mediaQuery.padding.bottom
+        ? extent
+        : mediaQuery.padding.bottom;
     return MediaQuery(
       data: mediaQuery.copyWith(
         padding: mediaQuery.padding.copyWith(bottom: bottom),
+        viewPadding: mediaQuery.viewPadding.copyWith(bottom: bottom),
       ),
       child: child,
     );

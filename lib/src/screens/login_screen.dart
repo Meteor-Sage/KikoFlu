@@ -64,10 +64,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _passwordController = TextEditingController();
   final _serverCookieController = TextEditingController();
   final _proxyController = TextEditingController();
+  final _proxyFocusNode = FocusNode();
 
   bool _isLogin = true; // true for login, false for register
   bool _obscurePassword = true;
   bool _isLoading = false;
+  String? _proxyErrorText;
   late final List<String> _hostOptions;
   String _hostValue = '';
   final Map<String, _LatencyResult> _latencyResults = {};
@@ -80,6 +82,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final defaultHost = _normalizedHostString(KikoeruApiService.remoteHost);
     _hostValue = defaultHost;
     _proxyController.text = ref.read(proxySettingsProvider).address;
+    _proxyFocusNode.addListener(_handleProxyFocusChanged);
   }
 
   @override
@@ -88,6 +91,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _passwordController.dispose();
     _serverCookieController.dispose();
     _proxyController.dispose();
+    _proxyFocusNode
+      ..removeListener(_handleProxyFocusChanged)
+      ..dispose();
     super.dispose();
   }
 
@@ -95,6 +101,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!_formKey.currentState!.validate()) {
       return;
     }
+
+    if (!await _saveProxyAddress() || !mounted) return;
 
     setState(() => _isLoading = true);
 
@@ -201,6 +209,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
 
+    if (!await _saveProxyAddress() || !mounted) return;
+
     setState(() => _isLoading = true);
 
     final host = _hostValue.trim();
@@ -283,13 +293,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final proxySettings = ref.watch(proxySettingsProvider);
 
     return ExpansionTile(
-      leading: const Icon(Icons.vpn_lock_outlined),
       title: Text(S.of(context).proxySettingsOptional),
-      subtitle: Text(proxySettings.enabled
-          ? S.of(context).proxyEnabled(proxySettings.address.isEmpty
-              ? S.of(context).proxyAddressNotSet
-              : proxySettings.address)
-          : S.of(context).proxyHttpDescription),
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -299,35 +303,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               SwitchListTile(
                 title: Text(S.of(context).useProxy),
                 value: proxySettings.enabled,
-                onChanged: (value) => ref
-                    .read(proxySettingsProvider.notifier)
-                    .setEnabled(value),
+                onChanged: (value) async {
+                  final notifier = ref.read(proxySettingsProvider.notifier);
+                  if (!value) await _saveProxyAddress();
+                  if (!mounted) return;
+                  await notifier.setEnabled(value);
+                },
               ),
               TextField(
                 controller: _proxyController,
+                focusNode: _proxyFocusNode,
                 enabled: proxySettings.enabled,
                 keyboardType: TextInputType.url,
+                textInputAction: TextInputAction.done,
                 decoration: InputDecoration(
                   labelText: S.of(context).proxyAddress,
                   hintText: '127.0.0.1:7890',
                   helperText: S.of(context).proxyAddressFormat,
+                  errorText: _proxyErrorText,
                   prefixIcon: const Icon(Icons.dns_outlined),
                   border: const OutlineInputBorder(),
                 ),
-                onSubmitted: (_) => _applyProxyAddress(),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: FilledButton.icon(
-                    onPressed: proxySettings.enabled
-                        ? _applyProxyAddress
-                        : null,
-                    icon: const Icon(Icons.check),
-                    label: Text(S.of(context).applyProxyAddress),
-                  ),
-                ),
+                onChanged: (_) {
+                  if (_proxyErrorText == null) return;
+                  setState(() => _proxyErrorText = null);
+                },
+                onSubmitted: (_) => _saveProxyAddress(),
+                onTapOutside: (_) => _proxyFocusNode.unfocus(),
               ),
             ],
           ),
@@ -336,16 +338,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  Future<void> _applyProxyAddress() async {
+  void _handleProxyFocusChanged() {
+    if (!_proxyFocusNode.hasFocus) {
+      _saveProxyAddress();
+    }
+  }
+
+  Future<bool> _saveProxyAddress() async {
+    if (!ref.read(proxySettingsProvider).enabled) return true;
     final accepted = await ref
         .read(proxySettingsProvider.notifier)
         .setAddress(_proxyController.text);
-    if (!mounted) return;
+    if (!mounted) return accepted;
     if (!accepted) {
-      SnackBarUtil.showError(context, S.of(context).invalidProxyAddress);
-      return;
+      setState(() => _proxyErrorText = S.of(context).invalidProxyAddress);
+      return false;
     }
-    _proxyController.text = ref.read(proxySettingsProvider).address;
+    final normalized = ref.read(proxySettingsProvider).address;
+    if (!_proxyFocusNode.hasFocus && _proxyController.text != normalized) {
+      _proxyController.text = normalized;
+    }
+    if (_proxyErrorText != null) {
+      setState(() => _proxyErrorText = null);
+    }
+    return true;
   }
 
   Widget _buildHostLatencyActions(BuildContext context) {
@@ -790,7 +806,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               labelText: S.of(context).serverCookie,
               prefixIcon: const Icon(Icons.security),
               border: const OutlineInputBorder(),
-              helperText: 'Server Cookie',
             ),
             textInputAction: TextInputAction.done,
           ),

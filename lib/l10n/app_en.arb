@@ -1487,7 +1487,7 @@
   "@logCount": { "placeholders": { "count": { "type": "int" } } },
   "logAutoScroll": "Auto scroll",
   "logEmpty": "No logs yet",
-  "proxySettingsOptional": "Proxy settings (optional)",
+  "proxySettingsOptional": "Proxy",
   "proxyEnabled": "Enabled: {address}",
   "@proxyEnabled": { "placeholders": { "address": { "type": "String" } } },
   "proxyAddressNotSet": "Not set (direct connection)",

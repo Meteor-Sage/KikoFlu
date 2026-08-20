@@ -1,0 +1,36 @@
+name: real_liquid_glass
+description: >-
+  Real Liquid Glass containers and bottom bars. Hosts Apple's native
+  UIGlassEffect on iOS 26+, adapts automatically to the iOS 27 transparency
+  slider and accessibility settings, with a Flutter-drawn frosted fallback
+  everywhere else.
+version: 0.3.0
+repository: https://github.com/kiddo4/real_liquid_glass
+
+topics:
+  - liquid-glass
+  - glassmorphism
+  - ios
+  - cupertino
+  - ui
+
+environment:
+  sdk: ^3.12.1
+  flutter: ">=3.27.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  plugin:
+    platforms:
+      ios:
+        pluginClass: LiquidGlassContainerPlugin
+      macos:
+        pluginClass: LiquidGlassContainerPlugin

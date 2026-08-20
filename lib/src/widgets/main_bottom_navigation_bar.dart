@@ -16,11 +16,6 @@ class MainBottomNavigationBar extends StatelessWidget {
   });
 
   static const double navigationBarHeight = 58;
-  // Apple's floating tab bar keeps a taller touch target than the legacy
-  // Material bar, while the surrounding SafeArea supplies the home-indicator
-  // inset separately.
-  static const double liquidNavigationBarHeight =
-      LiquidGlassLayout.navigationBarHeight;
 
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
@@ -124,6 +119,7 @@ class _LiquidGlassBottomNavigation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final navigationBarHeight = LiquidGlassLayout.navigationBarHeight(context);
     return LiquidGlassDockExtentReporter(
       onChanged: onLayoutExtentChanged ?? (_) {},
       child: Padding(
@@ -147,7 +143,7 @@ class _LiquidGlassBottomNavigation extends StatelessWidget {
                 LiquidGlassLayout.navigationBarBottomPadding,
               ),
               child: SizedBox(
-                height: MainBottomNavigationBar.liquidNavigationBarHeight,
+                height: navigationBarHeight,
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     final expansion = LiquidGlassLayout.nativeTabBarExpansion(
@@ -156,7 +152,7 @@ class _LiquidGlassBottomNavigation extends StatelessWidget {
                     final barWidth = constraints.maxWidth + expansion * 2;
                     final bar = ClipRRect(
                       borderRadius: BorderRadius.circular(
-                        LiquidGlassLayout.navigationBarHeight / 2,
+                        navigationBarHeight / 2,
                       ),
                       child: SizedBox(
                         width: barWidth,
@@ -164,8 +160,7 @@ class _LiquidGlassBottomNavigation extends StatelessWidget {
                           items: _itemsForDestinations(),
                           currentIndex: selectedIndex,
                           onTap: onDestinationSelected,
-                          height:
-                              MainBottomNavigationBar.liquidNavigationBarHeight,
+                          height: navigationBarHeight,
                           showLabels: true,
                           tint: Theme.of(context).colorScheme.primary,
                           fallbackIntensity: 0.86,
@@ -178,10 +173,8 @@ class _LiquidGlassBottomNavigation extends StatelessWidget {
                         : OverflowBox(
                             minWidth: barWidth,
                             maxWidth: barWidth,
-                            minHeight: MainBottomNavigationBar
-                                .liquidNavigationBarHeight,
-                            maxHeight: MainBottomNavigationBar
-                                .liquidNavigationBarHeight,
+                            minHeight: navigationBarHeight,
+                            maxHeight: navigationBarHeight,
                             alignment: Alignment.center,
                             child: bar,
                           );

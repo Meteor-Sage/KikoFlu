@@ -3659,7 +3659,7 @@ class SRu extends S {
   String get logEmpty => 'Логов пока нет';
 
   @override
-  String get proxySettingsOptional => 'Настройки прокси (необязательно)';
+  String get proxySettingsOptional => 'Прокси';
 
   @override
   String proxyEnabled(String address) {

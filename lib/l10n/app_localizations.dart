@@ -6483,7 +6483,7 @@ abstract class S {
   /// No description provided for @proxySettingsOptional.
   ///
   /// In en, this message translates to:
-  /// **'Proxy settings (optional)'**
+  /// **'Proxy'**
   String get proxySettingsOptional;
 
   /// No description provided for @proxyEnabled.

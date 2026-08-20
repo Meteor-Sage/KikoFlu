@@ -81,7 +81,8 @@ dependencies:
   desktop_multi_window: ^0.3.0
   audio_session: ^0.1.25
   ffi: ^2.1.4
-  real_liquid_glass: ^0.3.0
+  real_liquid_glass:
+    path: third_party/real_liquid_glass
 
 dev_dependencies:
   flutter_test:

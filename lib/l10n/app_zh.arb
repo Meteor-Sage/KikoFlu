@@ -1232,7 +1232,7 @@
   "logCount": "{count} 条日志",
   "logAutoScroll": "自动滚动",
   "logEmpty": "暂无日志",
-  "proxySettingsOptional": "代理设置（可选）",
+  "proxySettingsOptional": "代理",
   "proxyEnabled": "已启用：{address}",
   "proxyAddressNotSet": "未设置（默认直连）",
   "proxyHttpDescription": "通过 HTTP 代理访问服务器（例如 Clash）",
