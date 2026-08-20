@@ -1,28 +1,40 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kikoeru_flutter/src/providers/settings_provider.dart';
 import 'package:kikoeru_flutter/src/widgets/floating_feed_toolbar.dart';
+import 'package:real_liquid_glass/real_liquid_glass.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-Widget _testApp(Widget child) {
-  return MaterialApp(
+Widget _testApp(Widget child, {ProviderContainer? container}) {
+  final app = MaterialApp(
     home: Scaffold(
-      body: Center(
-        child: SizedBox(width: 390, child: child),
-      ),
+      body: Center(child: SizedBox(width: 390, child: child)),
     ),
   );
+  return container == null
+      ? ProviderScope(child: app)
+      : UncontrolledProviderScope(container: container, child: app);
 }
 
 Widget _wideTestApp(Widget child) {
-  return MaterialApp(
-    home: Scaffold(
-      body: Center(
-        child: SizedBox(width: 700, child: child),
+  return ProviderScope(
+    child: MaterialApp(
+      home: Scaffold(
+        body: Center(child: SizedBox(width: 700, child: child)),
       ),
     ),
   );
 }
 
 void main() {
+  setUp(
+    () => SharedPreferences.setMockInitialValues({
+      LiquidGlassNavigationNotifier.preferenceKey: false,
+    }),
+  );
+
   testWidgets('renders two capsules and keeps their actions interactive',
       (tester) async {
     var selectedMode = '';
@@ -77,6 +89,60 @@ void main() {
     await tester.tap(find.byTooltip('Subtitles'));
     expect(selectedMode, 'popular');
     expect(toolTaps, 1);
+  });
+
+  testWidgets('uses real liquid glass when the navigation style is enabled', (
+    tester,
+  ) async {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    await container
+        .read(liquidGlassNavigationProvider.notifier)
+        .setEnabled(true);
+
+    await tester.pumpWidget(
+      _testApp(
+        const FloatingToolbarSurface(child: SizedBox(width: 80, height: 40)),
+        container: container,
+      ),
+    );
+
+    expect(find.byType(LiquidGlassContainer), findsOneWidget);
+    final material = tester.widget<Material>(find.byType(Material).last);
+    expect(material.type, MaterialType.transparency);
+  });
+
+  testWidgets('fallback liquid glass keeps page content visible',
+      (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    await container
+        .read(liquidGlassNavigationProvider.notifier)
+        .setEnabled(true);
+
+    await tester.pumpWidget(
+      _testApp(
+        const FloatingToolbarSurface(child: SizedBox(width: 80, height: 40)),
+        container: container,
+      ),
+    );
+
+    final glass = find.byType(LiquidGlassContainer);
+    final fallbackDecoration = tester
+        .widgetList<DecoratedBox>(
+          find.descendant(of: glass, matching: find.byType(DecoratedBox)),
+        )
+        .map((widget) => widget.decoration)
+        .whereType<BoxDecoration>()
+        .firstWhere((decoration) => decoration.color != null);
+    expect(fallbackDecoration.color!.a, lessThan(0.5));
+    expect(
+      find.descendant(of: glass, matching: find.byType(BackdropFilter)),
+      findsOneWidget,
+    );
+    debugDefaultTargetPlatformOverride = null;
   });
 
   testWidgets('progressive top treatment uses one bounded blur pass',

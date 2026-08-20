@@ -2,6 +2,10 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:real_liquid_glass/real_liquid_glass.dart';
+
+import '../providers/settings_provider.dart';
 
 class FloatingFeedModeAction {
   const FloatingFeedModeAction({
@@ -109,8 +113,9 @@ class FloatingToolbarLayout {
 }
 
 /// Shared translucent capsule surface for toolbars that need custom content.
-class FloatingToolbarSurface extends StatelessWidget {
-  static const double backgroundOpacity = 0.88;
+class FloatingToolbarSurface extends ConsumerWidget {
+  static const double backgroundOpacity = 0.94;
+  static const double _radius = 24;
 
   const FloatingToolbarSurface({
     super.key,
@@ -122,11 +127,29 @@ class FloatingToolbarSurface extends StatelessWidget {
   final EdgeInsetsGeometry padding;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final useLiquidGlass = ref.watch(liquidGlassNavigationProvider);
+    final content = Material(
+      type: MaterialType.transparency,
+      child: Padding(padding: padding, child: child),
+    );
+
+    if (useLiquidGlass) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(_radius),
+        child: LiquidGlassContainer(
+          shape: const LiquidGlassShape.capsule(),
+          style: LiquidGlassStyle.regular,
+          fallbackIntensity: 0.86,
+          child: content,
+        ),
+      );
+    }
+
     return DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(_radius),
         boxShadow: [
           BoxShadow(
             color: theme.colorScheme.shadow.withValues(alpha: 0.16),
@@ -136,15 +159,12 @@ class FloatingToolbarSurface extends StatelessWidget {
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(_radius),
         child: Material(
           color: theme.colorScheme.surfaceContainer.withValues(
             alpha: backgroundOpacity,
           ),
-          child: Padding(
-            padding: padding,
-            child: child,
-          ),
+          child: Padding(padding: padding, child: child),
         ),
       ),
     );

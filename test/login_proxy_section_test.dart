@@ -38,6 +38,21 @@ void main() {
       expect(find.byIcon(Icons.vpn_lock_outlined), findsNothing);
       expect(find.text('应用代理地址'), findsNothing);
 
+      await tester.ensureVisible(find.text('Cookie'));
+      await tester.pumpAndSettle();
+      final proxyTile = find.ancestor(
+        of: find.text('代理'),
+        matching: find.byType(ExpansionTile),
+      );
+      final cookieTile = find.ancestor(
+        of: find.text('Cookie'),
+        matching: find.byType(ExpansionTile),
+      );
+      expect(
+        tester.getTopLeft(cookieTile).dy,
+        closeTo(tester.getBottomLeft(proxyTile).dy, 0.01),
+      );
+
       await tester.ensureVisible(find.text('代理'));
       await tester.tap(find.text('代理'));
       await tester.pumpAndSettle();

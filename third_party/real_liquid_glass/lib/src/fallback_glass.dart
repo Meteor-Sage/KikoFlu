@@ -5,7 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'glass_style.dart';
 
 /// Flutter-drawn frosted-glass surface used where native Liquid Glass is
-/// unavailable (Android, web, desktop).
+/// unavailable (Android, web, Windows, and Linux).
 ///
 /// Approximates the iOS material: background blur, a translucent fill
 /// derived from the ambient brightness, and a hairline edge highlight.
@@ -45,13 +45,16 @@ class FallbackGlass extends StatelessWidget {
     final clamped = intensity.clamp(0.0, 1.0);
 
     final base = tint ?? (dark ? _fillDark : _fillLight);
-    final maxTranslucency = style == LiquidGlassStyle.clear ? 0.85 : 0.55;
+    // Keep fallback surfaces clearer than a conventional frosted panel. The
+    // native Apple material supplies refraction and edge definition; a heavy
+    // Gaussian blur on fallback platforms instead reads as opaque frosting.
+    final maxTranslucency = style == LiquidGlassStyle.clear ? 0.88 : 0.62;
     // High contrast (or intensity 0) collapses toward an opaque panel.
     final fillAlpha = highContrast
         ? 0.98
         : 1.0 - maxTranslucency * clamped;
     final sigma =
-        (style == LiquidGlassStyle.clear ? 12.0 : 24.0) * clamped;
+        (style == LiquidGlassStyle.clear ? 10.0 : 16.0) * clamped;
 
     return LayoutBuilder(
       builder: (context, constraints) {

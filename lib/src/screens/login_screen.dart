@@ -794,8 +794,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       const SizedBox(height: 8),
       _buildLoginProxySection(context),
 
-      const SizedBox(height: 15),
-
       // Cookie field (collapsible)
       ExpansionTile(
         title: const Text('Cookie'),

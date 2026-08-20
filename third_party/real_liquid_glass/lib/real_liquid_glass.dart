@@ -4,7 +4,7 @@
 /// actual refractive Liquid Glass that automatically adapts to iOS 27's
 /// transparency slider and the Reduce Transparency / Increase Contrast
 /// accessibility settings. On older iOS versions they degrade to a native
-/// system blur, and on Android/web/desktop to a Flutter-drawn frosted
+/// system blur, and on Android/web/Windows/Linux to a Flutter-drawn frosted
 /// fallback, all behind one API.
 library;
 

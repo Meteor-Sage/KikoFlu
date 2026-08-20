@@ -8,12 +8,9 @@ import 'native_glass_view.dart';
 
 /// A container whose background is Liquid Glass.
 ///
-/// On iOS this hosts Apple's real glass material (UIGlassEffect on
-/// iOS 26+, a system blur material on older versions), so it refracts the
-/// content behind it and automatically follows system appearance — the
-/// iOS 27 transparency slider, Reduce Transparency, and Increase Contrast
-/// all just work. Everywhere else it renders a Flutter-drawn frosted
-/// fallback with the same API.
+/// On iOS and macOS this hosts Apple's native glass material on version 26+
+/// and a system blur on older versions. Android, web, Windows, and Linux use
+/// a Flutter-drawn fallback with the same API.
 ///
 /// Use it like a [Container]:
 ///

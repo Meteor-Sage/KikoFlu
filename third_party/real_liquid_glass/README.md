@@ -18,6 +18,8 @@ appearance setting, including:
 Elsewhere it degrades gracefully behind the same API: a native system blur
 on iOS/macOS < 26, and a Flutter-drawn frosted material on Android, web,
 Windows, and Linux (with high-contrast support and an intensity dial).
+The Flutter fallback uses a clearer fill and restrained blur so page content
+remains visible instead of turning into a heavily frosted backdrop.
 
 ## Widgets
 
