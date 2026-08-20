@@ -13,15 +13,26 @@ abstract final class LiquidGlassLayout {
   static const double cornerRadius = 24;
 
   static const double navigationBarBottomPadding = 0;
-  static const double dockSafeAreaReduction = 8;
 
   static double nativeTabBarExpansion(BuildContext context) {
     return defaultTargetPlatform == TargetPlatform.iOS ? 20 : 0;
   }
 
   static double dockBottomInset(BuildContext context) {
-    final systemInset = MediaQuery.viewPaddingOf(context).bottom;
-    return (systemInset - dockSafeAreaReduction).clamp(0, double.infinity);
+    final mediaQuery = MediaQuery.of(context);
+    final systemInset = mediaQuery.viewPadding.bottom;
+    if (systemInset <= 0) return 0;
+
+    // UIKit floating controls intentionally sit inside part of the home-
+    // indicator safe area. Deriving the position from the device inset keeps
+    // phones with different indicators and landscape insets aligned without
+    // applying a model-specific point offset. Other platforms retain their
+    // complete system-navigation inset.
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      final isLandscape = mediaQuery.orientation == Orientation.landscape;
+      return systemInset * (isLandscape ? 0.25 : 1 / 3);
+    }
+    return systemInset;
   }
 }
 
@@ -67,6 +78,47 @@ class LiquidGlassDockScope extends InheritedNotifier<ValueNotifier<double>> {
             ?.notifier
             ?.value ??
         0;
+  }
+}
+
+/// Places a floating glass dock over full-size page content.
+///
+/// Keeping both layers in one stack lets native glass and Flutter fallbacks
+/// sample page content instead of an intermediate Scaffold background.
+class LiquidGlassDockOverlay extends StatelessWidget {
+  const LiquidGlassDockOverlay({
+    super.key,
+    required this.child,
+    required this.dock,
+    required this.onExtentChanged,
+  });
+
+  final Widget child;
+  final Widget dock;
+  final ValueChanged<double> onExtentChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        LiquidGlassDockMediaQuery(child: child),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: LiquidGlassDockExtentReporter(
+            onChanged: onExtentChanged,
+            child: Padding(
+              padding: EdgeInsets.only(
+                bottom: LiquidGlassLayout.dockBottomInset(context),
+              ),
+              child: dock,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 

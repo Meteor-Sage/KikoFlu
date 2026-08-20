@@ -24,6 +24,7 @@ import '../widgets/scrollable_appbar.dart';
 import '../widgets/download_fab.dart';
 import '../widgets/radio_option_group.dart';
 import '../widgets/settings_section.dart';
+import '../widgets/liquid_glass_layout.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -113,6 +114,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
+    final dockExtent = LiquidGlassDockScope.extentOf(context);
     final cards = [
       _buildAccountCard(context),
       _buildDownloadAndCacheCard(context),
@@ -126,9 +128,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             style: const TextStyle(fontSize: 18)),
       ),
       body: isLandscape
-          ? _buildLandscapeLayout(cards)
+          ? _buildLandscapeLayout(cards, dockExtent: dockExtent)
           : ListView.separated(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + dockExtent),
               itemBuilder: (context, index) => cards[index],
               separatorBuilder: (context, index) => const SizedBox(height: 16),
               itemCount: cards.length,
@@ -136,7 +138,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _buildLandscapeLayout(List<Widget> cards) {
+  Widget _buildLandscapeLayout(
+    List<Widget> cards, {
+    required double dockExtent,
+  }) {
     final column1 = <Widget>[];
     final column2 = <Widget>[];
 
@@ -156,7 +161,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + dockExtent),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

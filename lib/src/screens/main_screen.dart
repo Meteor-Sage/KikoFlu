@@ -106,7 +106,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
     if (isLandscape) {
       // 横屏布局：使用 NavigationRail
-      return Scaffold(
+      final landscapeScaffold = Scaffold(
         body: Stack(
           children: [
             // 主内容区域
@@ -153,44 +153,59 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                           !authState.isLoggedIn &&
                           authState.error != null;
 
+                      final pages = PageStorage(
+                        bucket: _bucket,
+                        child: IndexedStack(
+                          index: _currentIndex,
+                          children: List.generate(_screens.length, (index) {
+                            return HeroMode(
+                              enabled: index == _currentIndex,
+                              child: _screens[index],
+                            );
+                          }),
+                        ),
+                      );
+                      final miniPlayer = Consumer(
+                        builder: (context, ref, child) {
+                          final currentTrack = ref.watch(currentTrackProvider);
+                          return currentTrack.when(
+                            data: (track) => track != null
+                                ? const MiniPlayer()
+                                : const SizedBox.shrink(),
+                            loading: () => const SizedBox.shrink(),
+                            error: (_, __) => const SizedBox.shrink(),
+                          );
+                        },
+                      );
+
+                      final content = useLiquidGlass
+                          ? LiquidGlassDockOverlay(
+                              onExtentChanged: (extent) {
+                                if (_liquidDockExtent.value != extent) {
+                                  _liquidDockExtent.value = extent;
+                                }
+                              },
+                              dock: AnimatedSize(
+                                duration: const Duration(milliseconds: 180),
+                                curve: Curves.easeOutCubic,
+                                alignment: Alignment.bottomCenter,
+                                child: miniPlayer,
+                              ),
+                              child: pages,
+                            )
+                          : Column(
+                              children: [
+                                Expanded(child: pages),
+                                miniPlayer,
+                              ],
+                            );
+
                       return Padding(
                         padding: EdgeInsets.only(top: isOfflineMode ? 30 : 0),
                         child: SafeArea(
                           top: false,
-                          child: Column(
-                            children: [
-                              // 主内容
-                              Expanded(
-                                child: PageStorage(
-                                  bucket: _bucket,
-                                  child: IndexedStack(
-                                    index: _currentIndex,
-                                    children:
-                                        List.generate(_screens.length, (index) {
-                                      return HeroMode(
-                                        enabled: index == _currentIndex,
-                                        child: _screens[index],
-                                      );
-                                    }),
-                                  ),
-                                ),
-                              ),
-                              // MiniPlayer
-                              Consumer(
-                                builder: (context, ref, child) {
-                                  final currentTrack =
-                                      ref.watch(currentTrackProvider);
-                                  return currentTrack.when(
-                                    data: (track) => track != null
-                                        ? const MiniPlayer()
-                                        : const SizedBox.shrink(),
-                                    loading: () => const SizedBox.shrink(),
-                                    error: (_, __) => const SizedBox.shrink(),
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
+                          bottom: !useLiquidGlass,
+                          child: content,
                         ),
                       );
                     },
@@ -266,6 +281,12 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           ],
         ),
       );
+      return useLiquidGlass
+          ? LiquidGlassDockScope(
+              notifier: _liquidDockExtent,
+              child: landscapeScaffold,
+            )
+          : landscapeScaffold;
     }
 
     // 竖屏布局：液态玻璃模式把导航栏悬浮在页面内容上方，经典模式

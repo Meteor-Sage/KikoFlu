@@ -11,6 +11,7 @@ import '../utils/l10n_extensions.dart';
 import '../widgets/works_grid_view.dart';
 import '../widgets/virtualized_sliver_collection.dart';
 import '../widgets/floating_feed_toolbar.dart';
+import '../widgets/liquid_glass_layout.dart';
 import '../widgets/download_fab.dart';
 import '../services/download_service.dart';
 import '../models/download_task.dart';
@@ -310,67 +311,69 @@ class _MyScreenState extends ConsumerState<MyScreen>
             return const SizedBox.shrink();
           },
         ),
-        body: Stack(
-          children: [
-            Positioned.fill(
-              child: NotificationListener<ScrollNotification>(
-                onNotification: _handleScrollNotification,
-                child: TabBarView(
-                  controller: _tabController,
-                  children: tabs.map((tab) => tab.widget).toList(),
-                ),
-              ),
-            ),
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: ProgressiveTopBlur(height: topPadding + 12),
-            ),
-            Positioned(
-              top: tabSwitcherTop,
-              left: horizontalPadding,
-              right: horizontalPadding,
-              child: ValueListenableBuilder<bool>(
-                valueListenable: _tabSwitcherVisible,
-                builder: (context, visible, child) => IgnorePointer(
-                  ignoring: !visible,
-                  child: AnimatedSlide(
-                    key: const ValueKey('my-tab-switcher'),
-                    offset: visible ? Offset.zero : const Offset(0, -2),
-                    duration: const Duration(milliseconds: 180),
-                    curve: Curves.easeOutCubic,
-                    child: AnimatedOpacity(
-                      opacity: visible ? 1 : 0,
-                      duration: const Duration(milliseconds: 140),
-                      child: child,
-                    ),
+        body: LiquidGlassDockMediaQuery(
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: _handleScrollNotification,
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: tabs.map((tab) => tab.widget).toList(),
                   ),
                 ),
-                child: FloatingToolbarSurface(
-                  child: SizedBox(
-                    height: 40,
-                    child: TabBar(
-                      controller: _tabController,
-                      isScrollable: true,
-                      tabAlignment: TabAlignment.start,
-                      dividerColor: Colors.transparent,
-                      indicatorSize: TabBarIndicatorSize.tab,
-                      indicator: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(20),
+              ),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: ProgressiveTopBlur(height: topPadding + 12),
+              ),
+              Positioned(
+                top: tabSwitcherTop,
+                left: horizontalPadding,
+                right: horizontalPadding,
+                child: ValueListenableBuilder<bool>(
+                  valueListenable: _tabSwitcherVisible,
+                  builder: (context, visible, child) => IgnorePointer(
+                    ignoring: !visible,
+                    child: AnimatedSlide(
+                      key: const ValueKey('my-tab-switcher'),
+                      offset: visible ? Offset.zero : const Offset(0, -2),
+                      duration: const Duration(milliseconds: 180),
+                      curve: Curves.easeOutCubic,
+                      child: AnimatedOpacity(
+                        opacity: visible ? 1 : 0,
+                        duration: const Duration(milliseconds: 140),
+                        child: child,
                       ),
-                      labelColor: Theme.of(context).colorScheme.primary,
-                      unselectedLabelColor:
-                          Theme.of(context).colorScheme.onSurfaceVariant,
-                      splashBorderRadius: BorderRadius.circular(20),
-                      tabs: tabs.map((tab) => Tab(text: tab.title)).toList(),
+                    ),
+                  ),
+                  child: FloatingToolbarSurface(
+                    child: SizedBox(
+                      height: 40,
+                      child: TabBar(
+                        controller: _tabController,
+                        isScrollable: true,
+                        tabAlignment: TabAlignment.start,
+                        dividerColor: Colors.transparent,
+                        indicatorSize: TabBarIndicatorSize.tab,
+                        indicator: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primaryContainer,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        labelColor: Theme.of(context).colorScheme.primary,
+                        unselectedLabelColor:
+                            Theme.of(context).colorScheme.onSurfaceVariant,
+                        splashBorderRadius: BorderRadius.circular(20),
+                        tabs: tabs.map((tab) => Tab(text: tab.title)).toList(),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

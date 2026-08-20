@@ -49,38 +49,26 @@ class _GlobalAudioPlayerWrapperState
       return LiquidGlassDockScope(
         notifier: _liquidDockExtent,
         child: Scaffold(
-          body: Stack(
-            fit: StackFit.expand,
-            children: [
-              LiquidGlassDockMediaQuery(child: widget.child),
-              if (widget.showMiniPlayer)
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: LiquidGlassDockExtentReporter(
-                    onChanged: (extent) {
-                      if (_liquidDockExtent.value != extent) {
-                        _liquidDockExtent.value = extent;
-                      }
-                    },
-                    child: SafeArea(
-                      top: false,
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 180),
-                        switchInCurve: Curves.easeOutCubic,
-                        switchOutCurve: Curves.easeInCubic,
-                        child: AnimatedSize(
-                          duration: const Duration(milliseconds: 180),
-                          curve: Curves.easeOutCubic,
-                          alignment: Alignment.bottomCenter,
-                          child: miniPlayer,
-                        ),
-                      ),
+          body: LiquidGlassDockOverlay(
+            onExtentChanged: (extent) {
+              if (_liquidDockExtent.value != extent) {
+                _liquidDockExtent.value = extent;
+              }
+            },
+            dock: widget.showMiniPlayer
+                ? AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 180),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    child: AnimatedSize(
+                      duration: const Duration(milliseconds: 180),
+                      curve: Curves.easeOutCubic,
+                      alignment: Alignment.bottomCenter,
+                      child: miniPlayer,
                     ),
-                  ),
-                ),
-            ],
+                  )
+                : const SizedBox.shrink(),
+            child: widget.child,
           ),
         ),
       );
