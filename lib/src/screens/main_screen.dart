@@ -260,10 +260,28 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       );
     }
 
-    // 竖屏布局：使用 BottomNavigationBar
+    // 竖屏布局：液态玻璃模式把导航栏悬浮在页面内容上方，经典模式
+    // 继续使用 Scaffold 的 bottomNavigationBar 插槽。
+    final bottomNavigation = MainBottomNavigationBar(
+      selectedIndex: _currentIndex,
+      onDestinationSelected: _handleDestinationSelected,
+      destinations: destinations,
+      liquidGlass: useLiquidGlass,
+      showUpdateBadge: showUpdateBadge,
+      miniPlayer: Consumer(
+        builder: (context, ref, child) {
+          final currentTrack = ref.watch(currentTrackProvider);
+          return currentTrack.when(
+            data: (track) =>
+                track != null ? const MiniPlayer() : const SizedBox.shrink(),
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+          );
+        },
+      ),
+    );
+
     return Scaffold(
-      // The native glass bar must overlap the page to refract its content.
-      extendBody: useLiquidGlass,
       body: Stack(
         children: [
           // 主内容
@@ -359,26 +377,16 @@ class _MainScreenState extends ConsumerState<MainScreen> {
               },
             ),
           ),
+          if (useLiquidGlass)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: bottomNavigation,
+            ),
         ],
       ),
-      bottomNavigationBar: MainBottomNavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: _handleDestinationSelected,
-        destinations: destinations,
-        liquidGlass: useLiquidGlass,
-        showUpdateBadge: showUpdateBadge,
-        miniPlayer: Consumer(
-          builder: (context, ref, child) {
-            final currentTrack = ref.watch(currentTrackProvider);
-            return currentTrack.when(
-              data: (track) =>
-                  track != null ? const MiniPlayer() : const SizedBox.shrink(),
-              loading: () => const SizedBox.shrink(),
-              error: (_, __) => const SizedBox.shrink(),
-            );
-          },
-        ),
-      ),
+      bottomNavigationBar: useLiquidGlass ? null : bottomNavigation,
     );
   }
 

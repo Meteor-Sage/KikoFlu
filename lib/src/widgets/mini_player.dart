@@ -15,6 +15,7 @@ import '../screens/audio_player_screen.dart';
 import '../utils/local_file_url.dart';
 import 'privacy_blur_cover.dart';
 import 'volume_control.dart';
+import 'liquid_glass_layout.dart';
 
 class MiniPlayer extends ConsumerStatefulWidget {
   final bool enableArtworkHero;
@@ -478,18 +479,24 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
               if (!useLiquidGlass) return playerContent;
 
               return Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: LiquidGlassLayout.horizontalPadding,
+                  vertical: LiquidGlassLayout.verticalPadding,
+                ),
                 child: AnimatedSize(
                   duration: const Duration(milliseconds: 180),
                   curve: Curves.easeOutCubic,
                   alignment: Alignment.bottomCenter,
                   child: LiquidGlassContainer(
-                    shape: const LiquidGlassShape.roundedRectangle(24),
+                    shape: const LiquidGlassShape.roundedRectangle(
+                      LiquidGlassLayout.cornerRadius,
+                    ),
                     style: LiquidGlassStyle.regular,
                     fallbackIntensity: 0.86,
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(
+                        LiquidGlassLayout.cornerRadius,
+                      ),
                       child: playerContent,
                     ),
                   ),

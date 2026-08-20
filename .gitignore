@@ -115,3 +115,6 @@ KikoFlu_Key.pfx
 scripts/tag_translations_*.json
 
 logs
+
+# FVM Version Cache
+.fvm/

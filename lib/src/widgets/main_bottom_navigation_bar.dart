@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:real_liquid_glass/real_liquid_glass.dart';
 
+import 'liquid_glass_layout.dart';
+
 class MainBottomNavigationBar extends StatelessWidget {
   const MainBottomNavigationBar({
     super.key,
@@ -13,6 +15,11 @@ class MainBottomNavigationBar extends StatelessWidget {
   });
 
   static const double navigationBarHeight = 58;
+  // Apple's floating tab bar keeps a taller touch target than the legacy
+  // Material bar, while the surrounding SafeArea supplies the home-indicator
+  // inset separately.
+  static const double liquidNavigationBarHeight =
+      LiquidGlassLayout.navigationBarHeight;
 
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
@@ -113,6 +120,8 @@ class _LiquidGlassBottomNavigation extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       top: false,
+      left: false,
+      right: false,
       minimum: const EdgeInsets.only(bottom: 8),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -124,47 +133,58 @@ class _LiquidGlassBottomNavigation extends StatelessWidget {
             child: miniPlayer,
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final bar = LiquidGlassBottomBar(
-                  items: _itemsForDestinations(),
-                  currentIndex: selectedIndex,
-                  onTap: onDestinationSelected,
-                  height: MainBottomNavigationBar.navigationBarHeight + 8,
-                  showLabels: true,
-                  tint: Theme.of(context).colorScheme.primary,
-                  fallbackIntensity: 0.86,
-                );
+            padding: const EdgeInsets.symmetric(
+              horizontal: LiquidGlassLayout.horizontalPadding,
+              vertical: LiquidGlassLayout.verticalPadding,
+            ),
+            child: SizedBox(
+              width: double.infinity,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final bar = ClipRRect(
+                    borderRadius: BorderRadius.circular(
+                      LiquidGlassLayout.navigationBarHeight / 2,
+                    ),
+                    child: LiquidGlassBottomBar(
+                      items: _itemsForDestinations(),
+                      currentIndex: selectedIndex,
+                      onTap: onDestinationSelected,
+                      height: MainBottomNavigationBar.liquidNavigationBarHeight,
+                      showLabels: true,
+                      tint: Theme.of(context).colorScheme.primary,
+                      fallbackIntensity: 0.86,
+                    ),
+                  );
 
-                if (!showUpdateBadge || destinations.isEmpty) return bar;
+                  if (!showUpdateBadge || destinations.isEmpty) return bar;
 
-                final itemWidth = constraints.maxWidth / destinations.length;
-                return Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    bar,
-                    Positioned(
-                      top: 10,
-                      left: itemWidth * (destinations.length - 0.5) - 4,
-                      child: IgnorePointer(
-                        child: Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.error,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Theme.of(context).colorScheme.surface,
-                              width: 1.5,
+                  final itemWidth = constraints.maxWidth / destinations.length;
+                  return Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      bar,
+                      Positioned(
+                        top: 10,
+                        left: itemWidth * (destinations.length - 0.5) - 4,
+                        child: IgnorePointer(
+                          child: Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.error,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Theme.of(context).colorScheme.surface,
+                                width: 1.5,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                );
-              },
+                    ],
+                  );
+                },
+              ),
             ),
           ),
         ],
