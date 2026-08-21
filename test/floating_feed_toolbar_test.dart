@@ -316,4 +316,39 @@ void main() {
     await tester.pumpAndSettle();
     expect(selectedMode, 1);
   });
+
+  testWidgets('can keep every mode as buttons in a narrow toolbar', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _testApp(
+        FloatingFeedToolbar(
+          collapseModesWhenNeeded: false,
+          modeActions: [
+            for (final label in ['全部', '热门', '推荐'])
+              FloatingFeedModeAction(
+                icon: Icons.filter_alt,
+                label: label,
+                isSelected: label == '全部',
+                onPressed: () {},
+              ),
+          ],
+          toolActions: [
+            for (var index = 0; index < 4; index++)
+              FloatingFeedToolAction(
+                icon: Icons.tune,
+                tooltip: 'Tool $index',
+                onPressed: () {},
+              ),
+          ],
+        ),
+      ),
+    );
+
+    expect(find.byKey(const ValueKey('feed-mode-dropdown')), findsNothing);
+    expect(find.byKey(const ValueKey('feed-mode-scroll')), findsOneWidget);
+    expect(find.text('全部'), findsOneWidget);
+    expect(find.text('热门'), findsOneWidget);
+    expect(find.text('推荐'), findsOneWidget);
+  });
 }

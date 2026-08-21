@@ -43,10 +43,18 @@ class FloatingFeedToolbar extends StatelessWidget {
     super.key,
     required this.modeActions,
     required this.toolActions,
+    this.collapseModesWhenNeeded = true,
   }) : assert(modeActions.length > 0);
 
   final List<FloatingFeedModeAction> modeActions;
   final List<FloatingFeedToolAction> toolActions;
+
+  /// Replaces the mode row with a dropdown when it cannot fit beside tools.
+  ///
+  /// Dense filter sets such as online bookmarks use the dropdown. Short,
+  /// primary navigation sets can disable this to keep every option visible;
+  /// in very narrow layouts their capsule scrolls horizontally instead.
+  final bool collapseModesWhenNeeded;
 
   @override
   Widget build(BuildContext context) {
@@ -72,7 +80,8 @@ class FloatingFeedToolbar extends StatelessWidget {
                 (width, action) =>
                     width + _modeActionWidth(context, action.label),
               );
-          final useDropdown = requiredModeWidth > availableModeWidth;
+          final modesOverflow = requiredModeWidth > availableModeWidth;
+          final useDropdown = collapseModesWhenNeeded && modesOverflow;
           final selectedIndex = modeActions.indexWhere(
             (action) => action.isSelected,
           );
@@ -87,17 +96,27 @@ class FloatingFeedToolbar extends StatelessWidget {
               ? desiredDropdownWidth
               : maxDropdownWidth;
 
+          final modeRow = Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final action in modeActions) _ModeButton(action: action),
+            ],
+          );
+          final modeContent = !collapseModesWhenNeeded && modesOverflow
+              ? SizedBox(
+                  width: availableModeWidth,
+                  child: SingleChildScrollView(
+                    key: const ValueKey('feed-mode-scroll'),
+                    scrollDirection: Axis.horizontal,
+                    child: modeRow,
+                  ),
+                )
+              : modeRow;
           final modeSurface = FloatingToolbarSurface(
             key: const ValueKey('feed-mode-capsule'),
             child: useDropdown
                 ? _ModeDropdown(actions: modeActions, maxWidth: dropdownWidth)
-                : Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      for (final action in modeActions)
-                        _ModeButton(action: action),
-                    ],
-                  ),
+                : modeContent,
           );
 
           return Row(

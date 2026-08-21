@@ -249,6 +249,7 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
               left: horizontalPadding,
               right: horizontalPadding,
               child: FloatingFeedToolbar(
+                collapseModesWhenNeeded: false,
                 modeActions: _buildModeActions(context, worksState),
                 toolActions: _buildToolActions(
                   context,
