@@ -13,6 +13,7 @@ import '../utils/tag_localizer.dart';
 import '../services/log_service.dart';
 import '../widgets/scrollable_appbar.dart';
 import '../widgets/download_fab.dart';
+import '../widgets/floating_feed_toolbar.dart';
 import 'search_result_screen.dart';
 
 // 搜索条件项
@@ -303,30 +304,28 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
               Text(S.of(context).search, style: const TextStyle(fontSize: 18)),
           actions: [
             // 筛选按钮移到右上角
-            IconButton(
-              icon: Icon(
-                _showAdvancedFilters
-                    ? Icons.filter_alt
-                    : Icons.filter_alt_outlined,
-                color: _showAdvancedFilters
-                    ? Theme.of(context).colorScheme.primary
-                    : null,
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: FloatingToolbarSurface(
+                child: FloatingToolbarIconButton(
+                  icon: _showAdvancedFilters
+                      ? Icons.filter_alt
+                      : Icons.filter_alt_outlined,
+                  tooltip: S.of(context).filter,
+                  isSelected: _showAdvancedFilters,
+                  onPressed: () {
+                    setState(() {
+                      _showAdvancedFilters = !_showAdvancedFilters;
+                      // 关闭高级筛选时重置参数为默认值
+                      if (!_showAdvancedFilters) {
+                        _minRate = 0;
+                        _ageRating = AgeRating.all;
+                        _salesRange = SalesRange.all;
+                      }
+                    });
+                  },
+                ),
               ),
-              iconSize: 22,
-              padding: const EdgeInsets.all(8),
-              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-              onPressed: () {
-                setState(() {
-                  _showAdvancedFilters = !_showAdvancedFilters;
-                  // 关闭高级筛选时重置参数为默认值
-                  if (!_showAdvancedFilters) {
-                    _minRate = 0;
-                    _ageRating = AgeRating.all;
-                    _salesRange = SalesRange.all;
-                  }
-                });
-              },
-              tooltip: S.of(context).filter,
             ),
           ],
         ),
@@ -478,60 +477,19 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
         ),
         const SizedBox(height: 12),
       ],
-      SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: SearchType.values.map((type) {
-            final supportsExclude = type == SearchType.tag ||
-                type == SearchType.va ||
-                type == SearchType.circle;
-            final isCurrentType = _currentSearchType == type;
-            final buttonTextStyle = theme.textTheme.labelLarge!;
-
-            return Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: ChoiceChip(
-                avatar: isCurrentType && _isExcludeMode && supportsExclude
-                    ? Icon(
-                        Icons.remove_circle_outline,
-                        size: 18,
-                        color: theme.colorScheme.onErrorContainer,
-                      )
-                    : null,
-                label: Text(type.localizedLabel(context)),
-                selected: isCurrentType,
-                showCheckmark:
-                    !(isCurrentType && _isExcludeMode && supportsExclude),
-                selectedColor:
-                    isCurrentType && _isExcludeMode && supportsExclude
-                        ? theme.colorScheme.errorContainer
-                        : theme.colorScheme.primary,
-                labelStyle: buttonTextStyle.copyWith(
-                  color: isCurrentType
-                      ? (isCurrentType && _isExcludeMode && supportsExclude
-                          ? theme.colorScheme.onErrorContainer
-                          : theme.colorScheme.onPrimary)
-                      : theme.colorScheme.onSurface,
-                ),
-                checkmarkColor: theme.colorScheme.onPrimary,
-                onSelected: (selected) {
-                  setState(() {
-                    if (isCurrentType && supportsExclude) {
-                      _isExcludeMode = !_isExcludeMode;
-                    } else {
-                      _currentSearchType = type;
-                      _isExcludeMode = false;
-                      _searchController.clear();
-                      _autocompleteKey = UniqueKey();
-                      if (supportsExclude) {
-                        _loadSuggestions();
-                      }
-                    }
-                  });
-                },
-              ),
-            );
-          }).toList(),
+      FloatingToolbarSurface(
+        padding: const EdgeInsets.all(4),
+        child: SizedBox(
+          height: 48,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: SearchType.values
+                  .map((type) => _buildSearchTypeButton(type, theme))
+                  .toList(),
+            ),
+          ),
         ),
       ),
       if (_currentSearchType == SearchType.tag ||
@@ -572,7 +530,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: (_currentSearchType == SearchType.tag ||
+            child: FloatingToolbarSurface(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: (_currentSearchType == SearchType.tag ||
                     _currentSearchType == SearchType.va ||
                     _currentSearchType == SearchType.circle)
                 ? Autocomplete<String>(
@@ -649,9 +609,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                       return TextField(
                         controller: controller,
                         focusNode: focusNode,
-                        decoration: InputDecoration(
-                          hintText: _currentSearchType.localizedHint(context),
-                          prefixIcon: const Icon(Icons.search),
+                        decoration: _searchInputDecoration(
+                          theme,
                           suffixIcon: _isLoadingSuggestions
                               ? const Padding(
                                   padding: EdgeInsets.all(12.0),
@@ -664,14 +623,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                                   ),
                                 )
                               : null,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          filled: true,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
                         ),
                         textInputAction: TextInputAction.done,
                         onSubmitted: (_) {
@@ -683,26 +634,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                   )
                 : TextField(
                     controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: _currentSearchType.localizedHint(context),
-                      prefixIcon: const Icon(Icons.search),
-                      prefixText: _currentSearchType == SearchType.rjNumber
-                          ? 'RJ'
-                          : null,
-                      prefixStyle: TextStyle(
-                        color: theme.colorScheme.onSurface,
-                        fontSize: 16,
-                        fontWeight: FontWeight.normal,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      filled: true,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                    ),
+                    decoration: _searchInputDecoration(theme),
                     keyboardType: _currentSearchType == SearchType.rjNumber
                         ? TextInputType.number
                         : TextInputType.text,
@@ -712,6 +644,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                     textInputAction: TextInputAction.done,
                     onSubmitted: (_) => _addSearchCondition(),
                   ),
+              ),
           ),
           const SizedBox(width: 8),
           SizedBox(
@@ -720,6 +653,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
               onPressed: _addSearchCondition,
               icon: const Icon(Icons.add),
               label: Text(S.of(context).add),
+              style: FilledButton.styleFrom(
+                shape: const StadiumBorder(),
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+              ),
             ),
           ),
         ],
@@ -739,6 +676,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
             _searchConditions.isEmpty
                 ? S.of(context).enterSearchContent
                 : '${S.of(context).search} (${_searchConditions.length})',
+          ),
+          style: FilledButton.styleFrom(
+            minimumSize: const Size.fromHeight(48),
+            shape: const StadiumBorder(),
           ),
         ),
       ),
@@ -867,6 +808,125 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
     }
   }
 
+  Widget _buildSearchTypeButton(SearchType type, ThemeData theme) {
+    final supportsExclude = type == SearchType.tag ||
+        type == SearchType.va ||
+        type == SearchType.circle;
+    final isCurrentType = _currentSearchType == type;
+    final isExcluded = isCurrentType && _isExcludeMode && supportsExclude;
+    final colors = theme.colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: Semantics(
+        selected: isCurrentType,
+        button: true,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: () {
+              setState(() {
+                if (isCurrentType && supportsExclude) {
+                  _isExcludeMode = !_isExcludeMode;
+                } else {
+                  _currentSearchType = type;
+                  _isExcludeMode = false;
+                  _searchController.clear();
+                  _autocompleteKey = UniqueKey();
+                  if (supportsExclude) {
+                    _loadSuggestions();
+                  }
+                }
+              });
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOut,
+              height: 40,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: isCurrentType
+                    ? (isExcluded
+                        ? colors.errorContainer
+                        : colors.primaryContainer)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (isCurrentType) ...[
+                    Icon(
+                      isExcluded ? Icons.remove_circle_outline : Icons.check,
+                      size: 18,
+                      color: isExcluded
+                          ? colors.onErrorContainer
+                          : colors.primary,
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+                  Text(
+                    type.localizedLabel(context),
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: isCurrentType
+                          ? (isExcluded
+                              ? colors.onErrorContainer
+                              : colors.primary)
+                          : colors.onSurfaceVariant,
+                      fontWeight:
+                          isCurrentType ? FontWeight.w700 : FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _searchInputDecoration(
+    ThemeData theme, {
+    Widget? suffixIcon,
+  }) {
+    return InputDecoration(
+      hintText: _currentSearchType.localizedHint(context),
+      prefixIcon: const Icon(Icons.search),
+      prefixText: _currentSearchType == SearchType.rjNumber ? 'RJ' : null,
+      prefixStyle: TextStyle(
+        color: theme.colorScheme.onSurface,
+        fontSize: 16,
+        fontWeight: FontWeight.normal,
+      ),
+      suffixIcon: suffixIcon,
+      border: InputBorder.none,
+      enabledBorder: InputBorder.none,
+      focusedBorder: InputBorder.none,
+      filled: false,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+    );
+  }
+
+  InputDecoration _filterInputDecoration(
+    ThemeData theme, {
+    required String labelText,
+    required Widget prefixIcon,
+  }) {
+    return InputDecoration(
+      labelText: labelText,
+      prefixIcon: prefixIcon,
+      border: InputBorder.none,
+      enabledBorder: InputBorder.none,
+      focusedBorder: InputBorder.none,
+      filled: false,
+      isDense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+      labelStyle: theme.textTheme.labelMedium,
+    );
+  }
+
   List<Widget> _buildAdvancedFilterSections() {
     final theme = Theme.of(context);
     final authState = ref.watch(authProvider);
@@ -904,62 +964,52 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
       Row(
         children: [
           Expanded(
-            child: DropdownButtonFormField<AgeRating>(
-              initialValue: _ageRating,
-              decoration: InputDecoration(
-                labelText: S.of(context).ageRatingLabel,
-                prefixIcon: const Icon(Icons.shield),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+            child: FloatingToolbarSurface(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: DropdownButtonFormField<AgeRating>(
+                initialValue: _ageRating,
+                decoration: _filterInputDecoration(
+                  theme,
+                  labelText: S.of(context).ageRatingLabel,
+                  prefixIcon: const Icon(Icons.shield),
                 ),
-                filled: true,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                isDense: true,
+                items: AgeRating.values
+                    .where(
+                        (rating) => isOfficialServer || rating != AgeRating.r15)
+                    .map((rating) {
+                  return DropdownMenuItem(
+                    value: rating,
+                    child: Text(rating.localizedLabel(context)),
+                  );
+                }).toList(),
+                onChanged: (value) =>
+                    setState(() => _ageRating = value ?? AgeRating.all),
               ),
-              items: AgeRating.values
-                  .where(
-                      (rating) => isOfficialServer || rating != AgeRating.r15)
-                  .map((rating) {
-                return DropdownMenuItem(
-                  value: rating,
-                  child: Text(rating.localizedLabel(context)),
-                );
-              }).toList(),
-              onChanged: (value) =>
-                  setState(() => _ageRating = value ?? AgeRating.all),
             ),
           ),
           if (isOfficialServer) ...[
             const SizedBox(width: 12),
             Expanded(
-              child: DropdownButtonFormField<SalesRange>(
-                initialValue: _salesRange,
-                decoration: InputDecoration(
-                  labelText: S.of(context).salesLabel,
-                  prefixIcon: const Icon(Icons.trending_up),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+              child: FloatingToolbarSurface(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: DropdownButtonFormField<SalesRange>(
+                  initialValue: _salesRange,
+                  decoration: _filterInputDecoration(
+                    theme,
+                    labelText: S.of(context).salesLabel,
+                    prefixIcon: const Icon(Icons.trending_up),
                   ),
-                  filled: true,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  isDense: true,
+                  items: SalesRange.values.map((range) {
+                    return DropdownMenuItem(
+                      value: range,
+                      child: Text(range == SalesRange.all
+                          ? S.of(context).salesRangeAll
+                          : range.label),
+                    );
+                  }).toList(),
+                  onChanged: (value) =>
+                      setState(() => _salesRange = value ?? SalesRange.all),
                 ),
-                items: SalesRange.values.map((range) {
-                  return DropdownMenuItem(
-                    value: range,
-                    child: Text(range == SalesRange.all
-                        ? S.of(context).salesRangeAll
-                        : range.label),
-                  );
-                }).toList(),
-                onChanged: (value) =>
-                    setState(() => _salesRange = value ?? SalesRange.all),
               ),
             ),
           ],
