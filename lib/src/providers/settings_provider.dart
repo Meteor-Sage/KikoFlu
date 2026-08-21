@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:real_liquid_glass/real_liquid_glass.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/audio_gain_settings.dart';
 import '../models/sort_options.dart';
@@ -14,8 +15,8 @@ final settingsCacheRefreshTriggerProvider = StateProvider<int>((ref) => 0);
 final subtitleLibraryRefreshTriggerProvider = StateProvider<int>((ref) => 0);
 
 /// Controls the optional liquid-glass treatment for the main navigation and
-/// the mini player. The platform defaults intentionally preserve the legacy
-/// navigation on Android, Windows and Linux.
+/// the mini player. Only Apple OS versions with native Liquid Glass support
+/// enable it by default; fallback remains available as an explicit choice.
 class LiquidGlassNavigationNotifier extends StateNotifier<bool> {
   static const String preferenceKey = 'liquid_glass_navigation_enabled';
 
@@ -23,9 +24,15 @@ class LiquidGlassNavigationNotifier extends StateNotifier<bool> {
     _loadPreference();
   }
 
+  static bool defaultForCapabilities(LiquidGlassCapabilities? capabilities) {
+    final isApplePlatform =
+        defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS;
+    return isApplePlatform && capabilities?.nativeGlass == true;
+  }
+
   static bool get defaultValue =>
-      defaultTargetPlatform == TargetPlatform.iOS ||
-      defaultTargetPlatform == TargetPlatform.macOS;
+      defaultForCapabilities(LiquidGlass.cachedCapabilities);
 
   bool _changedLocally = false;
 
@@ -33,7 +40,16 @@ class LiquidGlassNavigationNotifier extends StateNotifier<bool> {
     try {
       final prefs = await SharedPreferences.getInstance();
       if (!mounted || _changedLocally) return;
-      state = prefs.getBool(preferenceKey) ?? defaultValue;
+      final savedValue = prefs.getBool(preferenceKey);
+      if (savedValue != null) {
+        state = savedValue;
+        return;
+      }
+
+      final capabilities =
+          LiquidGlass.cachedCapabilities ?? await LiquidGlass.capabilities();
+      if (!mounted || _changedLocally) return;
+      state = defaultForCapabilities(capabilities);
     } catch (_) {
       if (!mounted || _changedLocally) return;
       state = defaultValue;
@@ -51,7 +67,11 @@ class LiquidGlassNavigationNotifier extends StateNotifier<bool> {
     }
   }
 
-  Future<void> resetToDefault() => setEnabled(defaultValue);
+  Future<void> resetToDefault() async {
+    final capabilities =
+        LiquidGlass.cachedCapabilities ?? await LiquidGlass.capabilities();
+    await setEnabled(defaultForCapabilities(capabilities));
+  }
 }
 
 final liquidGlassNavigationProvider =

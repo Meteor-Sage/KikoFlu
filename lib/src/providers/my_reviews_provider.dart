@@ -138,6 +138,7 @@ class MyReviewsState extends Equatable {
 
 class MyReviewsNotifier extends StateNotifier<MyReviewsState> {
   static const String layoutPreferenceKey = 'my_reviews_layout_type';
+  static const String filterPreferenceKey = 'my_reviews_filter';
 
   final KikoeruApiService _apiService;
   final Ref _ref;
@@ -147,19 +148,42 @@ class MyReviewsNotifier extends StateNotifier<MyReviewsState> {
     values: MyReviewLayoutType.values,
     fallback: MyReviewLayoutType.bigGrid,
   );
+  final _filterPreference = PersistentEnumPreference<MyReviewFilter>(
+    key: filterPreferenceKey,
+    values: MyReviewFilter.values,
+    fallback: MyReviewFilter.all,
+  );
+  late final Future<void> preferencesReady;
 
   MyReviewsNotifier(this._apiService, this._ref, {int initialPageSize = 20})
       : super(MyReviewsState(pageSize: initialPageSize)) {
-    _loadLayoutPreference();
+    preferencesReady = _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    await Future.wait([
+      _loadLayoutPreference(),
+      _loadFilterPreference(),
+    ]);
   }
 
   Future<void> _loadLayoutPreference() async {
     final layoutType = await _layoutPreference.load();
-    if (!mounted || layoutType == null || layoutType == state.layoutType) {
-      return;
-    }
+    if (!mounted || layoutType == null) return;
+
     state = state.copyWith(
       layoutType: layoutType,
+      error: state.error,
+      loadMoreError: state.loadMoreError,
+    );
+  }
+
+  Future<void> _loadFilterPreference() async {
+    final filter = await _filterPreference.load();
+    if (!mounted || filter == null) return;
+
+    state = state.copyWith(
+      filter: filter,
       error: state.error,
       loadMoreError: state.loadMoreError,
     );
@@ -177,6 +201,9 @@ class MyReviewsNotifier extends StateNotifier<MyReviewsState> {
     bool append = false,
     bool supersede = false,
   }) async {
+    await preferencesReady;
+    if (!mounted) return;
+
     final requestToken = _requestGate.begin(supersede: supersede);
     if (requestToken == null) return;
     final page = targetPage ?? state.currentPage;
@@ -292,11 +319,13 @@ class MyReviewsNotifier extends StateNotifier<MyReviewsState> {
   }
 
   void changeFilter(MyReviewFilter filter) {
+    if (state.filter == filter) return;
     state = state.copyWith(
       filter: filter,
       currentPage: 1,
       totalCount: 0,
     );
+    unawaited(_filterPreference.save(filter));
     load(targetPage: 1, supersede: true);
   }
 

@@ -939,25 +939,7 @@ class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
             self?.handleMethodCall(call, result: result)
         }
         
-        setupAudioSession()
         setupPlayer(in: controller.view)
-    }
-    
-    private func setupAudioSession() {
-        do {
-            // Use .playback category with .mixWithOthers option to allow background audio from other apps (or our own main player)
-            // However, for PiP to work, we generally need to be the "active" audio session or at least compatible.
-            // Since we have a main audio player in Flutter (just_audio), we need to be careful not to interrupt it.
-            // The main player likely sets the category to .playback.
-            // We should try to use the existing session configuration or ensure we don't conflict.
-            
-            // Actually, for PiP to work, the AVPlayerLayer must be attached to a player that is "playing".
-            // If we set .mixWithOthers, it might help with not pausing the main audio.
-            try AVAudioSession.sharedInstance().setCategory(.playback, options: .mixWithOthers)
-            try AVAudioSession.sharedInstance().setActive(true)
-        } catch {
-            print("Audio session setup failed: \(error)")
-        }
     }
     
     private func setupPlayer(in view: UIView) {

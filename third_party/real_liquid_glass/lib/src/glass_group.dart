@@ -1,7 +1,7 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart' show PlatformViewHitTestBehavior;
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
 
 import 'capabilities.dart';
 import 'glass_style.dart';
@@ -22,11 +22,7 @@ import 'glass_style.dart';
 /// its containers render their individual fallback surfaces.
 class LiquidGlassGroup extends StatefulWidget {
   /// Creates a merge group around [child].
-  const LiquidGlassGroup({
-    super.key,
-    required this.child,
-    this.spacing = 24,
-  });
+  const LiquidGlassGroup({super.key, required this.child, this.spacing = 24});
 
   /// Subtree whose [LiquidGlassContainer]s share one glass container.
   final Widget child;
@@ -79,6 +75,7 @@ class LiquidGlassGroupState extends State<LiquidGlassGroup> {
     if (channel == null || !mounted) return;
     channel.invokeMethod<void>('setRegions', {
       'spacing': widget.spacing,
+      'dark': CupertinoTheme.brightnessOf(context) == Brightness.dark,
       'regions': [
         for (final r in _regions.values)
           {
@@ -100,6 +97,12 @@ class LiquidGlassGroupState extends State<LiquidGlassGroup> {
   void didUpdateWidget(LiquidGlassGroup oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.spacing != oldWidget.spacing) _scheduleFlush();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _scheduleFlush();
   }
 
   @override
@@ -180,11 +183,7 @@ class GlassRegion {
 /// Inherited handle that lets containers find their enclosing group.
 class GlassGroupScope extends InheritedWidget {
   /// Wires [state] into the tree below the group.
-  const GlassGroupScope({
-    super.key,
-    required this.state,
-    required super.child,
-  });
+  const GlassGroupScope({super.key, required this.state, required super.child});
 
   /// The group these containers belong to.
   final LiquidGlassGroupState state;
@@ -229,7 +228,9 @@ class GlassRegionReporter extends LeafRenderObjectWidget {
 
   @override
   void updateRenderObject(
-      BuildContext context, RenderGlassRegion renderObject) {
+    BuildContext context,
+    RenderGlassRegion renderObject,
+  ) {
     renderObject
       ..group = group
       ..style = style
@@ -294,13 +295,15 @@ class RenderGlassRegion extends RenderBox {
     if (groupBox == null || !groupBox.attached) return;
     final topLeft = localToGlobal(Offset.zero, ancestor: groupBox);
     _id ??= _group.registerRegion();
-    _group.updateRegion(GlassRegion(
-      id: _id!,
-      rect: topLeft & size,
-      style: _style,
-      shape: _shape,
-      tint: _tint,
-    ));
+    _group.updateRegion(
+      GlassRegion(
+        id: _id!,
+        rect: topLeft & size,
+        style: _style,
+        shape: _shape,
+        tint: _tint,
+      ),
+    );
   }
 
   void _leaveGroup() {

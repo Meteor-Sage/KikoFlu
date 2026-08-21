@@ -40,7 +40,7 @@ class _NativeGlassViewState extends State<NativeGlassView> {
     'interactive': widget.interactive,
     'capsule': widget.shape.capsule,
     'cornerRadius': widget.shape.cornerRadius,
-        'dark': CupertinoTheme.of(context).brightness == Brightness.dark,
+    'dark': CupertinoTheme.brightnessOf(context) == Brightness.dark,
   };
 
   @override

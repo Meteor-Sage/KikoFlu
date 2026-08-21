@@ -24,32 +24,37 @@ final audioPlayerServiceProvider = Provider<AudioPlayerService>((ref) {
 // Current Track Provider
 final currentTrackProvider = StreamProvider<AudioTrack?>((ref) {
   final service = ref.watch(audioPlayerServiceProvider);
-  return service.currentTrackStream;
+  return _withInitialValue(service.currentTrack, service.currentTrackStream);
 });
 
 // Player State Provider
 final playerStateProvider = StreamProvider<PlayerState>((ref) {
   final service = ref.watch(audioPlayerServiceProvider);
-  return service.playerStateStream;
+  return _withInitialValue(service.playerState, service.playerStateStream);
 });
 
 // Position Provider
 final positionProvider = StreamProvider<Duration>((ref) {
   final service = ref.watch(audioPlayerServiceProvider);
-  return service.positionStream;
+  return _withInitialValue(service.position, service.positionStream);
 });
 
 // Duration Provider
 final durationProvider = StreamProvider<Duration?>((ref) {
   final service = ref.watch(audioPlayerServiceProvider);
-  return service.durationStream;
+  return _withInitialValue(service.duration, service.durationStream);
 });
 
 // Queue Provider
 final queueProvider = StreamProvider<List<AudioTrack>>((ref) {
   final service = ref.watch(audioPlayerServiceProvider);
-  return service.queueStream;
+  return _withInitialValue(service.queue, service.queueStream);
 });
+
+Stream<T> _withInitialValue<T>(T initialValue, Stream<T> updates) async* {
+  yield initialValue;
+  yield* updates;
+}
 
 // Playing State Provider (convenience)
 final isPlayingProvider = Provider<bool>((ref) {
@@ -204,6 +209,10 @@ class AudioPlayerController extends StateNotifier<AudioPlayerState> {
     _service.updatePreloadThreshold(
       preloadSeconds == null ? null : Duration(seconds: preloadSeconds),
     );
+
+    // Restore only after privacy and output settings are active. Restored
+    // sessions stay paused until the user explicitly resumes playback.
+    await _service.restorePlaybackSession();
 
     // Listen to player state changes
     _service.playerStateStream.listen((playerState) {

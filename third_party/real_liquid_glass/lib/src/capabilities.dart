@@ -38,6 +38,7 @@ class LiquidGlassCapabilities {
 abstract final class LiquidGlass {
   static const MethodChannel _channel = MethodChannel('real_liquid_glass');
   static Future<LiquidGlassCapabilities>? _capabilities;
+  static LiquidGlassCapabilities? _resolvedCapabilities;
 
   /// Whether this platform hosts the native glass platform view at all.
   ///
@@ -57,25 +58,39 @@ abstract final class LiquidGlass {
     return _capabilities ??= _fetch();
   }
 
+  /// Last resolved capability snapshot, if capability detection has completed.
+  ///
+  /// Apps can preload [capabilities] before building their settings providers
+  /// to avoid briefly rendering a platform-based default on older Apple OSes.
+  static LiquidGlassCapabilities? get cachedCapabilities =>
+      _resolvedCapabilities;
+
   static Future<LiquidGlassCapabilities> _fetch() async {
-    if (!isNativePlatform) return LiquidGlassCapabilities.none;
+    if (!isNativePlatform) {
+      return _resolvedCapabilities = LiquidGlassCapabilities.none;
+    }
     try {
       final raw =
           await _channel.invokeMapMethod<String, dynamic>('getCapabilities');
-      if (raw == null) return LiquidGlassCapabilities.none;
-      return LiquidGlassCapabilities(
+      if (raw == null) {
+        return _resolvedCapabilities = LiquidGlassCapabilities.none;
+      }
+      return _resolvedCapabilities = LiquidGlassCapabilities(
         nativeGlass: raw['nativeGlass'] as bool? ?? false,
         reduceTransparency: raw['reduceTransparency'] as bool? ?? false,
         osMajorVersion: raw['osMajorVersion'] as int? ?? 0,
       );
     } on MissingPluginException {
-      return LiquidGlassCapabilities.none;
+      return _resolvedCapabilities = LiquidGlassCapabilities.none;
+    } on PlatformException {
+      return _resolvedCapabilities = LiquidGlassCapabilities.none;
     }
   }
 
   /// Test hook: replaces the cached capabilities.
   @visibleForTesting
   static void debugOverrideCapabilities(LiquidGlassCapabilities? value) {
+    _resolvedCapabilities = value;
     _capabilities = value == null ? null : Future.value(value);
   }
 }

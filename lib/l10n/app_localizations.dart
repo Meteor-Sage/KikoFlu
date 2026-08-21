@@ -945,7 +945,7 @@ abstract class S {
   /// No description provided for @liquidGlassNavigationDesc.
   ///
   /// In en, this message translates to:
-  /// **'Use translucent glass navigation and mini player surfaces. Enabled by default on iOS and macOS.'**
+  /// **'Use translucent glass navigation and mini player surfaces. Enabled by default only on supported iOS and macOS versions.'**
   String get liquidGlassNavigationDesc;
 
   /// No description provided for @preferenceSettings.

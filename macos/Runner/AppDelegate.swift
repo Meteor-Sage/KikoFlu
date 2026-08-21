@@ -3,6 +3,9 @@ import FlutterMacOS
 
 @main
 class AppDelegate: FlutterAppDelegate {
+  private var appearanceChannel: FlutterMethodChannel?
+  private var appearanceObservation: NSKeyValueObservation?
+
   override func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
     return true
   }
@@ -10,7 +13,59 @@ class AppDelegate: FlutterAppDelegate {
   override func applicationDidFinishLaunching(_ notification: Notification) {
     let controller : FlutterViewController = mainFlutterWindow?.contentViewController as! FlutterViewController
     FloatingLyricPlugin.register(with: controller.registrar(forPlugin: "FloatingLyricPlugin"))
+    setupAppearanceBridge(controller: controller)
     super.applicationDidFinishLaunching(notification)
+  }
+
+  private func setupAppearanceBridge(controller: FlutterViewController) {
+    let channel = FlutterMethodChannel(
+      name: "com.meteor.kikoeruflutter/appearance",
+      binaryMessenger: controller.engine.binaryMessenger
+    )
+    channel.setMethodCallHandler { [weak self] call, result in
+      guard let self else {
+        result(FlutterError(code: "unavailable", message: nil, details: nil))
+        return
+      }
+      switch call.method {
+      case "getEffectiveBrightness":
+        result(self.effectiveBrightness())
+      case "setAppearance":
+        let arguments = call.arguments as? [String: Any]
+        switch arguments?["mode"] as? String {
+        case "light":
+          NSApp.appearance = NSAppearance(named: .aqua)
+        case "dark":
+          NSApp.appearance = NSAppearance(named: .darkAqua)
+        default:
+          NSApp.appearance = nil
+        }
+        result(self.effectiveBrightness())
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+    appearanceChannel = channel
+
+    // AppKit documents effectiveAppearance as KVO-compliant. Observing NSApp
+    // gives us both automatic system changes and app-level overrides.
+    appearanceObservation = NSApp.observe(
+      \.effectiveAppearance,
+      options: [.new]
+    ) { [weak self] _, _ in
+      guard let self else { return }
+      DispatchQueue.main.async {
+        self.appearanceChannel?.invokeMethod(
+          "effectiveBrightnessChanged",
+          arguments: self.effectiveBrightness()
+        )
+      }
+    }
+  }
+
+  private func effectiveBrightness() -> String {
+    let match = NSApp.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua])
+    return match == .darkAqua ? "dark" : "light"
   }
 }
 

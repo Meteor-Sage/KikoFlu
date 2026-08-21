@@ -442,7 +442,7 @@ class SJa extends S {
 
   @override
   String get liquidGlassNavigationDesc =>
-      '半透明のリキッドグラスナビゲーションとミニプレーヤーを使用します。iOS と macOS ではデフォルトで有効です。';
+      '半透明のリキッドグラスナビゲーションとミニプレーヤーを使用します。ネイティブのリキッドグラスに対応する iOS と macOS でのみデフォルトで有効です。';
 
   @override
   String get preferenceSettings => '環境設定';

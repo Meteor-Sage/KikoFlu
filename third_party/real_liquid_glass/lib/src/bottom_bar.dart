@@ -156,7 +156,7 @@ class _LiquidGlassBottomBarState extends State<LiquidGlassBottomBar> {
         ),
       );
     }
-    final dark = MediaQuery.platformBrightnessOf(context) == Brightness.dark;
+    final dark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: dark
@@ -319,7 +319,7 @@ class _NativeLiquidGlassTabBarState extends State<_NativeLiquidGlassTabBar> {
         .toList(),
     'currentIndex': widget.currentIndex,
     'tint': widget.tint.toARGB32(),
-    'dark': CupertinoTheme.of(context).brightness == Brightness.dark,
+    'dark': CupertinoTheme.brightnessOf(context) == Brightness.dark,
   };
 
   @override

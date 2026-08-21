@@ -130,10 +130,13 @@ class _MyScreenState extends ConsumerState<MyScreen>
     _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(_handleTabChanged);
     // 只在首次加载时获取数据，如果已有数据则不重新加载
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final notifier = ref.read(myReviewsProvider.notifier);
+      await notifier.preferencesReady;
+      if (!mounted) return;
       final myState = ref.read(myReviewsProvider);
       if (myState.works.isEmpty) {
-        ref.read(myReviewsProvider.notifier).load(refresh: true);
+        notifier.load(refresh: true);
       }
     });
   }

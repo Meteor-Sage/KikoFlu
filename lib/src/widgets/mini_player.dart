@@ -48,7 +48,7 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
     // 启用自动字幕加载器
     ref.watch(lyricAutoLoaderProvider);
 
-    return currentTrack.when(
+    final player = currentTrack.when(
       data: (track) {
         // 当播放新音轨时（并且不是因为重建导致的检查），重新显示MiniPlayer
         if (track != null && _lastTrackId != null && track.id != _lastTrackId) {
@@ -509,6 +509,9 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
       loading: () => const SizedBox.shrink(),
       error: (error, stack) => const SizedBox.shrink(),
     );
+
+    if (!useLiquidGlass) return player;
+    return LiquidGlassRouteTransitionFallback(child: player);
   }
 
   Widget _buildArtwork(

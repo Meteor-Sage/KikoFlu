@@ -160,7 +160,7 @@
   "uiSettings": "介面設定",
   "uiSettingsSubtitle": "播放器、詳情頁、卡片等",
   "liquidGlassNavigation": "液態玻璃導覽",
-  "liquidGlassNavigationDesc": "使用半透明液態玻璃導覽列和迷你播放器。iOS 和 macOS 預設開啟。",
+  "liquidGlassNavigationDesc": "使用半透明液態玻璃導覽列和迷你播放器。僅支援原生液態玻璃的 iOS 和 macOS 版本預設開啟。",
   "preferenceSettings": "偏好設定",
   "preferenceSettingsSubtitle": "翻譯源、封鎖、音訊偏好等",
 

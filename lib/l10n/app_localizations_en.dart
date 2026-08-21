@@ -452,7 +452,7 @@ class SEn extends S {
 
   @override
   String get liquidGlassNavigationDesc =>
-      'Use translucent glass navigation and mini player surfaces. Enabled by default on iOS and macOS.';
+      'Use translucent glass navigation and mini player surfaces. Enabled by default only on supported iOS and macOS versions.';
 
   @override
   String get preferenceSettings => 'Preference Settings';

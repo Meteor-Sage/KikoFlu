@@ -36,7 +36,13 @@ dependencies:
   media_kit: ^1.2.0
   media_kit_libs_windows_audio: ^1.0.9
   media_kit_libs_linux: ^1.1.5
-  audio_service: ^0.18.12
+  # Includes the upstream Darwin Now Playing fixes queued for audio_service
+  # 0.18.20, without pulling the unrelated AGP 9 migration.
+  audio_service:
+    git:
+      url: https://github.com/ryanheise/audio_service.git
+      ref: e0ce7e02a0759cf8aea997655351804517f2442d
+      path: audio_service
   smtc_windows: ^0.1.3
   flutter_pdfview: ^1.3.2
   

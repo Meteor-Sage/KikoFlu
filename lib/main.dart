@@ -12,6 +12,7 @@ import 'package:window_manager/window_manager.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path/path.dart' as p;
+import 'package:real_liquid_glass/real_liquid_glass.dart';
 import 'dart:ffi' as ffi;
 import 'package:ffi/ffi.dart';
 import 'package:sqlite3/open.dart' as sqlite3_open;
@@ -30,6 +31,7 @@ import 'src/services/floating_lyric_service.dart';
 import 'src/services/log_service.dart';
 import 'src/services/audio_player_service.dart';
 import 'src/services/playback_history_service.dart';
+import 'src/services/platform_appearance_service.dart';
 import 'src/models/work.dart';
 import 'l10n/app_localizations.dart';
 import 'src/providers/audio_provider.dart';
@@ -305,6 +307,14 @@ void main(List<String> args) async {
     DeviceOrientation.landscapeRight,
   ]);
 
+  if (Platform.isMacOS) {
+    await PlatformAppearanceService.instance.initialize();
+  }
+
+  // Resolve the real native-material capability before providers choose the
+  // first-run navigation style. Older Apple OSes stay on the classic default.
+  await LiquidGlass.capabilities();
+
   runZonedGuarded(
     () => runApp(const ProviderScope(child: KikoeruApp())),
     (error, stack) {
@@ -328,10 +338,16 @@ class KikoeruApp extends ConsumerStatefulWidget {
 
 class _KikoeruAppState extends ConsumerState<KikoeruApp>
     with WindowListener, WidgetsBindingObserver {
+  final _appearanceService = PlatformAppearanceService.instance;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    if (Platform.isMacOS) {
+      _appearanceService.addListener(_handleAppearanceChanged);
+      unawaited(_initializeMacOSAppearance());
+    }
     if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       windowManager.addListener(this);
     }
@@ -343,6 +359,17 @@ class _KikoeruAppState extends ConsumerState<KikoeruApp>
       // Silent update check on startup
       _checkForUpdates();
     });
+  }
+
+  Future<void> _initializeMacOSAppearance() async {
+    await _appearanceService.initialize();
+    await _appearanceService.setMode(
+      ref.read(themeSettingsProvider).toThemeMode(),
+    );
+  }
+
+  void _handleAppearanceChanged() {
+    if (mounted) setState(() {});
   }
 
   void _initPlaybackHistoryService() {
@@ -362,6 +389,9 @@ class _KikoeruAppState extends ConsumerState<KikoeruApp>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    if (Platform.isMacOS) {
+      _appearanceService.removeListener(_handleAppearanceChanged);
+    }
     if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       windowManager.removeListener(this);
     }
@@ -381,6 +411,7 @@ class _KikoeruAppState extends ConsumerState<KikoeruApp>
         state == AppLifecycleState.detached) {
       PlaybackHistoryService.instance
           .flushNow(reason: FlushReason.appBackground);
+      AudioPlayerService.instance.persistPlaybackPosition();
     }
   }
 
@@ -388,6 +419,7 @@ class _KikoeruAppState extends ConsumerState<KikoeruApp>
   void onWindowClose() async {
     // 桌面端关闭窗口时 flush 播放历史
     await PlaybackHistoryService.instance.flushNow(reason: FlushReason.dispose);
+    await AudioPlayerService.instance.persistPlaybackPosition();
     if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       // 关闭主窗口时，同时关闭悬浮字幕窗口
       await FloatingLyricService.instance.hide();
@@ -417,6 +449,20 @@ class _KikoeruAppState extends ConsumerState<KikoeruApp>
   @override
   Widget build(BuildContext context) {
     final themeSettings = ref.watch(themeSettingsProvider);
+    if (Platform.isMacOS) {
+      ref.listen<AppThemeMode>(
+        themeSettingsProvider.select((settings) => settings.themeMode),
+        (previous, next) {
+          unawaited(
+            _appearanceService.setMode(switch (next) {
+              AppThemeMode.system => ThemeMode.system,
+              AppThemeMode.light => ThemeMode.light,
+              AppThemeMode.dark => ThemeMode.dark,
+            }),
+          );
+        },
+      );
+    }
     final locale = ref.watch(localeProvider);
     final effectiveLocale =
         locale ?? WidgetsBinding.instance.platformDispatcher.locale;
@@ -434,11 +480,17 @@ class _KikoeruAppState extends ConsumerState<KikoeruApp>
                 : null;
 
         // 根据用户设置决定主题模式
-        final ThemeMode mode = switch (themeSettings.themeMode) {
+        final requestedMode = switch (themeSettings.themeMode) {
           AppThemeMode.system => ThemeMode.system,
           AppThemeMode.light => ThemeMode.light,
           AppThemeMode.dark => ThemeMode.dark,
         };
+        final mode = Platform.isMacOS
+            ? PlatformAppearanceService.resolveMacOSThemeMode(
+                requestedMode,
+                _appearanceService.effectiveBrightness,
+              )
+            : requestedMode;
 
         return MaterialApp(
           scaffoldMessengerKey: rootScaffoldMessengerKey,

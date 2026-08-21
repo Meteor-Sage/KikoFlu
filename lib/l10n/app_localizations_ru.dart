@@ -453,7 +453,7 @@ class SRu extends S {
 
   @override
   String get liquidGlassNavigationDesc =>
-      'Использовать полупрозрачные стеклянные панели навигации и мини-плеера. По умолчанию включено на iOS и macOS.';
+      'Использовать полупрозрачные стеклянные панели навигации и мини-плеера. По умолчанию включено только в поддерживаемых версиях iOS и macOS.';
 
   @override
   String get preferenceSettings => 'Предпочтения';

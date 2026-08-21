@@ -1,6 +1,6 @@
 import 'dart:ui';
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/cupertino.dart';
 
 import 'glass_style.dart';
 
@@ -39,8 +39,7 @@ class FallbackGlass extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark =
-        MediaQuery.platformBrightnessOf(context) == Brightness.dark;
+    final dark = CupertinoTheme.brightnessOf(context) == Brightness.dark;
     final highContrast = MediaQuery.highContrastOf(context);
     final clamped = intensity.clamp(0.0, 1.0);
 
@@ -50,17 +49,12 @@ class FallbackGlass extends StatelessWidget {
     // Gaussian blur on fallback platforms instead reads as opaque frosting.
     final maxTranslucency = style == LiquidGlassStyle.clear ? 0.88 : 0.62;
     // High contrast (or intensity 0) collapses toward an opaque panel.
-    final fillAlpha = highContrast
-        ? 0.98
-        : 1.0 - maxTranslucency * clamped;
-    final sigma =
-        (style == LiquidGlassStyle.clear ? 10.0 : 16.0) * clamped;
+    final fillAlpha = highContrast ? 0.98 : 1.0 - maxTranslucency * clamped;
+    final sigma = (style == LiquidGlassStyle.clear ? 10.0 : 16.0) * clamped;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final radius = BorderRadius.all(
-          shape.radiusFor(constraints.biggest),
-        );
+        final radius = BorderRadius.all(shape.radiusFor(constraints.biggest));
         Widget surface = DecoratedBox(
           decoration: BoxDecoration(
             color: base.withValues(alpha: fillAlpha),

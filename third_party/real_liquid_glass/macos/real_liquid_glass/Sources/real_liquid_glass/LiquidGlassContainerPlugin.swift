@@ -90,6 +90,9 @@ final class GlassHostView: NSView {
   required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 
   func apply(args: [String: Any]) {
+    if let dark = args["dark"] as? Bool {
+      appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+    }
     capsule = args["capsule"] as? Bool ?? false
     cornerRadius = CGFloat((args["cornerRadius"] as? NSNumber)?.doubleValue ?? 0)
     let tint = (args["tint"] as? NSNumber)
@@ -225,6 +228,9 @@ final class GlassGroupHostView: NSView {
   }
 
   private func setRegions(_ args: [String: Any]) {
+    if let dark = args["dark"] as? Bool {
+      appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+    }
     let container = hostContainer()
     let newSpacing = CGFloat((args["spacing"] as? NSNumber)?.doubleValue ?? 24)
     if #available(macOS 26.0, *), newSpacing != spacing,

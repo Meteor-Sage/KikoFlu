@@ -367,6 +367,9 @@ final class GlassGroupPlatformView: NSObject, FlutterPlatformView {
   func view() -> UIView { container }
 
   private func setRegions(_ args: [String: Any]) {
+    if let dark = args["dark"] as? Bool, #available(iOS 13.0, *) {
+      container.overrideUserInterfaceStyle = dark ? .dark : .light
+    }
     let newSpacing = CGFloat((args["spacing"] as? NSNumber)?.doubleValue ?? 24)
     if #available(iOS 26.0, *), newSpacing != spacing {
       spacing = newSpacing
