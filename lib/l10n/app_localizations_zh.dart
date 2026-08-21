@@ -3373,6 +3373,9 @@ class SZh extends S {
   String get showSubtitleTagOnCover => '在封面图上显示字幕标签';
 
   @override
+  String get showAgeRatingOnDetail => '在作品详情页显示年龄分级';
+
+  @override
   String get recommendationsLabel => '相关推荐';
 
   @override
@@ -3413,6 +3416,9 @@ class SZh extends S {
 
   @override
   String get showSubtitleTagOnCard => '显示作品卡片上的字幕标签';
+
+  @override
+  String get showAgeRatingOnCard => '显示作品卡片上的年龄分级';
 
   @override
   String get showOnlineMarks => '显示在线标记的作品';
@@ -6928,6 +6934,9 @@ class SZhHant extends SZh {
   String get showSubtitleTagOnCover => '在封面圖上顯示字幕標籤';
 
   @override
+  String get showAgeRatingOnDetail => '在作品詳情頁顯示年齡分級';
+
+  @override
   String get recommendationsLabel => '相關推薦';
 
   @override
@@ -6968,6 +6977,9 @@ class SZhHant extends SZh {
 
   @override
   String get showSubtitleTagOnCard => '顯示作品卡片上的字幕標籤';
+
+  @override
+  String get showAgeRatingOnCard => '顯示作品卡片上的年齡分級';
 
   @override
   String get showOnlineMarks => '顯示線上標記的作品';

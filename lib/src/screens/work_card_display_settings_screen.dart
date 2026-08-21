@@ -102,6 +102,13 @@ class WorkCardDisplaySettingsScreen extends ConsumerWidget {
                 value: settings.showSubtitleTag,
                 onChanged: (_) => notifier.toggleSubtitleTag(),
               ),
+              SettingsSwitchTile(
+                icon: Icons.person,
+                title: S.of(context).ageRatingLabel,
+                subtitle: S.of(context).showAgeRatingOnCard,
+                value: settings.showAgeRating,
+                onChanged: (_) => notifier.toggleAgeRating(),
+              ),
             ],
           ),
         ],

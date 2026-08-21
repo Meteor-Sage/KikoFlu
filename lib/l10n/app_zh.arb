@@ -1176,6 +1176,7 @@
   "showTranslateButton": "显示作品标题的翻译按钮",
   "subtitleTagLabel": "字幕标签",
   "showSubtitleTagOnCover": "在封面图上显示字幕标签",
+  "showAgeRatingOnDetail": "在作品详情页显示年龄分级",
   "recommendationsLabel": "相关推荐",
   "showRecommendations": "在作品详情页显示相关推荐",
 
@@ -1192,6 +1193,7 @@
   "fontSizeLarge": "大",
   "fontSizeExtraLarge": "特大",
   "showSubtitleTagOnCard": "显示作品卡片上的字幕标签",
+  "showAgeRatingOnCard": "显示作品卡片上的年龄分级",
 
   "myTabsDisplaySettings": "\"我的\"界面设置",
   "showOnlineMarks": "显示在线标记的作品",

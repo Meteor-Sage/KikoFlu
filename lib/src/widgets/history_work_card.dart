@@ -15,8 +15,11 @@ import '../screens/work_detail_screen.dart';
 import '../services/storage_service.dart';
 import '../utils/string_utils.dart';
 import '../providers/lyric_provider.dart';
+import '../providers/work_card_display_provider.dart';
+import '../utils/age_rating.dart';
 import '../../l10n/app_localizations.dart';
 import 'privacy_blur_cover.dart';
+import 'age_rating_chip.dart';
 
 final _log = LogService.instance;
 
@@ -36,6 +39,7 @@ class HistoryWorkCard extends ConsumerWidget {
     final host = authState.host ?? '';
     final token = authState.token ?? '';
     final work = record.work;
+    final showAgeRating = ref.watch(workCardDisplayProvider).showAgeRating;
 
     final httpHeaders = StorageService.serverCookieHeaders;
 
@@ -128,6 +132,12 @@ class HistoryWorkCard extends ConsumerWidget {
                       ),
                     ),
                   ),
+                  if (showAgeRating && AgeRatingFormatter.hasValue(work.age))
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: AgeRatingChip(age: work.age, compact: true),
+                    ),
                   // Play Button
                   if (record.lastTrack != null)
                     Positioned(

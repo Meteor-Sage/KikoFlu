@@ -1142,6 +1142,7 @@
   "showTranslateButton": "作品タイトルの翻訳ボタンを表示",
   "subtitleTagLabel": "字幕タグ",
   "showSubtitleTagOnCover": "カバー画像に字幕タグを表示",
+  "showAgeRatingOnDetail": "作品詳細ページに年齢区分を表示",
   "recommendationsLabel": "関連おすすめ",
   "showRecommendations": "作品詳細ページに関連おすすめを表示",
 
@@ -1149,6 +1150,7 @@
   "circleInfo": "サークル情報",
   "showWorkCircle": "作品のサークルを表示",
   "showSubtitleTagOnCard": "作品カードに字幕タグを表示",
+  "showAgeRatingOnCard": "作品カードに年齢区分を表示",
 
   "myTabsDisplaySettings": "「マイ」ページ設定",
   "showOnlineMarks": "オンラインマークの作品を表示",

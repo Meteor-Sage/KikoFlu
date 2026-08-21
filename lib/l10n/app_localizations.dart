@@ -6198,6 +6198,12 @@ abstract class S {
   /// **'Show subtitle tag on cover image'**
   String get showSubtitleTagOnCover;
 
+  /// No description provided for @showAgeRatingOnDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Show age rating on work detail page'**
+  String get showAgeRatingOnDetail;
+
   /// No description provided for @recommendationsLabel.
   ///
   /// In en, this message translates to:
@@ -6281,6 +6287,12 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Show subtitle tag on work card'**
   String get showSubtitleTagOnCard;
+
+  /// No description provided for @showAgeRatingOnCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Show age rating on work card'**
+  String get showAgeRatingOnCard;
 
   /// No description provided for @showOnlineMarks.
   ///

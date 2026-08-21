@@ -24,6 +24,7 @@ void main() {
         container.read(workCardDisplayProvider).cardSize, WorkCardSize.normal);
     expect(container.read(workCardDisplayProvider).fontScale,
         WorkCardFontScale.normal);
+    expect(container.read(workCardDisplayProvider).showAgeRating, isFalse);
     await _pumpAsyncPreferenceLoad();
 
     final settings = container.read(workCardDisplayProvider);
@@ -102,6 +103,7 @@ void main() {
     final notifier = container.read(workCardDisplayProvider.notifier);
     await notifier.toggleRating();
     await notifier.toggleDuration();
+    await notifier.toggleAgeRating();
     await notifier.updateCardSize(WorkCardSize.extraLarge);
     await notifier.updateFontScale(WorkCardFontScale.large);
     await notifier.resetToDefault();
@@ -109,12 +111,14 @@ void main() {
     final settings = container.read(workCardDisplayProvider);
     expect(settings.showRating, isTrue);
     expect(settings.showDuration, isFalse);
+    expect(settings.showAgeRating, isFalse);
     expect(settings.cardSize, WorkCardSize.normal);
     expect(settings.fontScale, WorkCardFontScale.normal);
 
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getBool('work_card_display_rating'), isTrue);
     expect(prefs.getBool('work_card_display_duration'), isFalse);
+    expect(prefs.getBool(WorkCardDisplayNotifier.keyAgeRating), isFalse);
     expect(
       prefs.getString(WorkCardDisplayNotifier.keyCardSize),
       WorkCardSize.normal.value,

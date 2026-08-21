@@ -91,6 +91,17 @@ class Work extends Equatable {
     Map<String, dynamic> processingJson = json;
     bool isModified = false;
 
+    // ASMR.one/Kikoeru returns the age rating as age_category_string.
+    // Keep accepting age for custom servers that already use the app's field.
+    if ((processingJson['age'] == null ||
+            (processingJson['age'] is String &&
+                (processingJson['age'] as String).trim().isEmpty)) &&
+        processingJson['age_category_string'] != null) {
+      processingJson = Map<String, dynamic>.from(json);
+      processingJson['age'] = processingJson['age_category_string'];
+      isModified = true;
+    }
+
     // 兼容 custom 服务端：如果 duration 为空，尝试从 memo.totalDuration 获取
     if (processingJson['duration'] == null || processingJson['duration'] == 0) {
       if (processingJson['memo'] != null && processingJson['memo'] is Map) {

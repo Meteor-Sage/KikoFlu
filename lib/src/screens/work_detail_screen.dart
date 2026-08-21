@@ -32,6 +32,8 @@ import '../widgets/work_detail/work_cover_frame.dart';
 import '../widgets/work_detail/work_detail_responsive_layout.dart';
 import '../widgets/work_detail/work_detail_error_banner.dart';
 import '../widgets/work_detail/work_progress_action_button.dart';
+import '../widgets/age_rating_chip.dart';
+import '../utils/age_rating.dart';
 
 import '../widgets/image_gallery_screen.dart';
 
@@ -492,9 +494,9 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
     // 封面图片组件
     final effectiveHeroTag = widget.heroTag ?? 'work_cover_${widget.work.id}';
     final coverUrl = work.getCoverImageUrl(host, token: token);
+    final displaySettings = ref.watch(workDetailDisplayProvider);
     final showSubtitleBadge =
-        ref.watch(workDetailDisplayProvider).showSubtitleTag &&
-            work.hasSubtitle == true;
+        displaySettings.showSubtitleTag && work.hasSubtitle == true;
 
     // 信息内容组件
     final infoWidget = Padding(
@@ -526,6 +528,12 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
             },
           ),
           const SizedBox(height: 8),
+
+          if (displaySettings.showAgeRating &&
+              AgeRatingFormatter.hasValue(work.age)) ...[
+            AgeRatingChip(age: work.age),
+            const SizedBox(height: 8),
+          ],
 
           WorkDetailErrorBanner(
             message: _errorMessage,

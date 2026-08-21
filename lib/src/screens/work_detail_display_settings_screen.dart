@@ -85,6 +85,13 @@ class WorkDetailDisplaySettingsScreen extends ConsumerWidget {
                 onChanged: (_) => notifier.toggleSubtitleTag(),
               ),
               SettingsSwitchTile(
+                icon: Icons.person,
+                title: S.of(context).ageRatingLabel,
+                subtitle: S.of(context).showAgeRatingOnDetail,
+                value: settings.showAgeRating,
+                onChanged: (_) => notifier.toggleAgeRating(),
+              ),
+              SettingsSwitchTile(
                 icon: Icons.recommend_outlined,
                 title: S.of(context).recommendationsLabel,
                 subtitle: S.of(context).showRecommendations,

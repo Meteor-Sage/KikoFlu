@@ -1142,6 +1142,7 @@
   "showTranslateButton": "顯示作品標題的翻譯按鈕",
   "subtitleTagLabel": "字幕標籤",
   "showSubtitleTagOnCover": "在封面圖上顯示字幕標籤",
+  "showAgeRatingOnDetail": "在作品詳情頁顯示年齡分級",
   "recommendationsLabel": "相關推薦",
   "showRecommendations": "在作品詳情頁顯示相關推薦",
 
@@ -1149,6 +1150,7 @@
   "circleInfo": "社團資訊",
   "showWorkCircle": "顯示作品所屬社團",
   "showSubtitleTagOnCard": "顯示作品卡片上的字幕標籤",
+  "showAgeRatingOnCard": "顯示作品卡片上的年齡分級",
 
   "myTabsDisplaySettings": "「我的」介面設定",
   "showOnlineMarks": "顯示線上標記的作品",

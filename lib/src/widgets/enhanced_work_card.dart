@@ -9,10 +9,12 @@ import '../services/storage_service.dart';
 import '../screens/work_detail_screen.dart';
 import '../utils/snackbar_util.dart';
 import '../utils/string_utils.dart';
+import '../utils/age_rating.dart';
 import '../utils/work_cover_prefetch.dart';
 import '../../l10n/app_localizations.dart';
 import 'tag_chip.dart';
 import 'va_chip.dart';
+import 'age_rating_chip.dart';
 import 'work_bookmark_manager.dart';
 import 'privacy_blur_cover.dart';
 
@@ -187,6 +189,13 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                     left: 4,
                     child: _buildRjTag(),
                   ),
+                  if (displaySettings.showAgeRating &&
+                      AgeRatingFormatter.hasValue(widget.work.age))
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: AgeRatingChip(age: widget.work.age, compact: true),
+                    ),
                   // 字幕标签 (左下角)
                   if (displaySettings.showSubtitleTag &&
                       (widget.work.hasSubtitle == true || hasLocalSubtitle))
@@ -277,6 +286,13 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                     left: 6,
                     child: _buildRjTag(),
                   ),
+                  if (displaySettings.showAgeRating &&
+                      AgeRatingFormatter.hasValue(widget.work.age))
+                    Positioned(
+                      top: 6,
+                      right: 6,
+                      child: AgeRatingChip(age: widget.work.age, compact: true),
+                    ),
                   // 字幕标签 (左下角)
                   if (displaySettings.showSubtitleTag &&
                       (widget.work.hasSubtitle == true || hasLocalSubtitle))
@@ -471,6 +487,17 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                             ),
                           ),
                         ),
+                        if (displaySettings.showAgeRating &&
+                            AgeRatingFormatter.hasValue(widget.work.age))
+                          Positioned(
+                            top: 2,
+                            right: 2,
+                            child: AgeRatingChip(
+                              age: widget.work.age,
+                              compact: true,
+                              fontSize: rjFontSize,
+                            ),
+                          ),
                         // 字幕标签 (左下角)
                         if (displaySettings.showSubtitleTag &&
                             (widget.work.hasSubtitle == true ||

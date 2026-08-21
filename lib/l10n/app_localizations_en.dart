@@ -3486,6 +3486,9 @@ class SEn extends S {
   String get showSubtitleTagOnCover => 'Show subtitle tag on cover image';
 
   @override
+  String get showAgeRatingOnDetail => 'Show age rating on work detail page';
+
+  @override
   String get recommendationsLabel => 'Related Recommendations';
 
   @override
@@ -3529,6 +3532,9 @@ class SEn extends S {
 
   @override
   String get showSubtitleTagOnCard => 'Show subtitle tag on work card';
+
+  @override
+  String get showAgeRatingOnCard => 'Show age rating on work card';
 
   @override
   String get showOnlineMarks => 'Show online marked works';

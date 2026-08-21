@@ -3393,6 +3393,9 @@ class SJa extends S {
   String get showSubtitleTagOnCover => 'カバー画像に字幕タグを表示';
 
   @override
+  String get showAgeRatingOnDetail => '作品詳細ページに年齢区分を表示';
+
+  @override
   String get recommendationsLabel => '関連おすすめ';
 
   @override
@@ -3433,6 +3436,9 @@ class SJa extends S {
 
   @override
   String get showSubtitleTagOnCard => '作品カードに字幕タグを表示';
+
+  @override
+  String get showAgeRatingOnCard => '作品カードに年齢区分を表示';
 
   @override
   String get showOnlineMarks => 'オンラインマークの作品を表示';

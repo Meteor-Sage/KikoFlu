@@ -1429,6 +1429,7 @@
   "showTranslateButton": "Show translate button for work title",
   "subtitleTagLabel": "Subtitle Tag",
   "showSubtitleTagOnCover": "Show subtitle tag on cover image",
+  "showAgeRatingOnDetail": "Show age rating on work detail page",
   "recommendationsLabel": "Related Recommendations",
   "showRecommendations": "Show related recommendations on work detail page",
 
@@ -1445,6 +1446,7 @@
   "fontSizeLarge": "Large",
   "fontSizeExtraLarge": "XL",
   "showSubtitleTagOnCard": "Show subtitle tag on work card",
+  "showAgeRatingOnCard": "Show age rating on work card",
 
   "myTabsDisplaySettings": "\"My\" Page Settings",
   "showOnlineMarks": "Show online marked works",

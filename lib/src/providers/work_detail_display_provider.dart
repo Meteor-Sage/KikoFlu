@@ -11,6 +11,7 @@ class WorkDetailDisplaySettings {
   final bool showReleaseDate;
   final bool showTranslateButton;
   final bool showSubtitleTag;
+  final bool showAgeRating;
   final bool showRecommendations;
 
   const WorkDetailDisplaySettings({
@@ -22,6 +23,7 @@ class WorkDetailDisplaySettings {
     this.showReleaseDate = true,
     this.showTranslateButton = true,
     this.showSubtitleTag = true,
+    this.showAgeRating = false,
     this.showRecommendations = true,
   });
 
@@ -34,6 +36,7 @@ class WorkDetailDisplaySettings {
     bool? showReleaseDate,
     bool? showTranslateButton,
     bool? showSubtitleTag,
+    bool? showAgeRating,
     bool? showRecommendations,
   }) {
     return WorkDetailDisplaySettings(
@@ -45,6 +48,7 @@ class WorkDetailDisplaySettings {
       showReleaseDate: showReleaseDate ?? this.showReleaseDate,
       showTranslateButton: showTranslateButton ?? this.showTranslateButton,
       showSubtitleTag: showSubtitleTag ?? this.showSubtitleTag,
+      showAgeRating: showAgeRating ?? this.showAgeRating,
       showRecommendations: showRecommendations ?? this.showRecommendations,
     );
   }
@@ -62,6 +66,7 @@ class WorkDetailDisplayNotifier
   static const String _keyReleaseDate = '${_keyPrefix}release_date';
   static const String _keyTranslateButton = '${_keyPrefix}translate_button';
   static const String _keySubtitleTag = '${_keyPrefix}subtitle_tag';
+  static const String keyAgeRating = '${_keyPrefix}age_rating';
   static const String _keyRecommendations = '${_keyPrefix}recommendations';
   bool _changedLocally = false;
 
@@ -82,6 +87,7 @@ class WorkDetailDisplayNotifier
         showReleaseDate: prefs.getBool(_keyReleaseDate) ?? true,
         showTranslateButton: prefs.getBool(_keyTranslateButton) ?? true,
         showSubtitleTag: prefs.getBool(_keySubtitleTag) ?? true,
+        showAgeRating: prefs.getBool(keyAgeRating) ?? false,
         showRecommendations: prefs.getBool(_keyRecommendations) ?? true,
       );
     } catch (e) {
@@ -133,6 +139,11 @@ class WorkDetailDisplayNotifier
     await _saveSettings();
   }
 
+  Future<void> toggleAgeRating() async {
+    _applyLocalChange(state.copyWith(showAgeRating: !state.showAgeRating));
+    await _saveSettings();
+  }
+
   Future<void> toggleRecommendations() async {
     _applyLocalChange(
       state.copyWith(showRecommendations: !state.showRecommendations),
@@ -161,6 +172,7 @@ class WorkDetailDisplayNotifier
       await prefs.setBool(_keyReleaseDate, state.showReleaseDate);
       await prefs.setBool(_keyTranslateButton, state.showTranslateButton);
       await prefs.setBool(_keySubtitleTag, state.showSubtitleTag);
+      await prefs.setBool(keyAgeRating, state.showAgeRating);
       await prefs.setBool(_keyRecommendations, state.showRecommendations);
     } catch (e) {
       // 保存失败时静默处理

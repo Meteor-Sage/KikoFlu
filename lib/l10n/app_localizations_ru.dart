@@ -3502,6 +3502,10 @@ class SRu extends S {
   String get showSubtitleTagOnCover => 'Показывать метку субтитров на обложке';
 
   @override
+  String get showAgeRatingOnDetail =>
+      'Показывать возрастной рейтинг на странице произведения';
+
+  @override
   String get recommendationsLabel => 'Похожие рекомендации';
 
   @override
@@ -3546,6 +3550,10 @@ class SRu extends S {
   @override
   String get showSubtitleTagOnCard =>
       'Показывать метку субтитров на карточке произведения';
+
+  @override
+  String get showAgeRatingOnCard =>
+      'Показывать возрастной рейтинг на карточке произведения';
 
   @override
   String get showOnlineMarks => 'Показывать произведения с онлайн-метками';
