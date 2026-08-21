@@ -23,6 +23,10 @@ class DownloadService {
   DownloadService._();
 
   final Map<String, CancelToken> _cancelTokens = {};
+  final Map<String, Future<void>> _runningDownloads = {};
+  // Prevent two rapid addTask calls for the same file from both passing the
+  // duplicate check while either call is waiting on the cache/filesystem.
+  final Map<String, Future<DownloadTask>> _pendingTaskAdds = {};
   final StreamController<List<DownloadTask>> _tasksController =
       StreamController<List<DownloadTask>>.broadcast();
   final List<DownloadTask> _tasks = [];
@@ -44,9 +48,11 @@ class DownloadService {
 
   // 获取正在下载或等待下载的任务数量
   int get activeDownloadCount => _tasks
-      .where((task) =>
-          task.status == DownloadStatus.downloading ||
-          task.status == DownloadStatus.pending)
+      .where(
+        (task) =>
+            task.status == DownloadStatus.downloading ||
+            task.status == DownloadStatus.pending,
+      )
       .length;
 
   // 检查是否有任务正在下载
@@ -105,8 +111,9 @@ class DownloadService {
     final localDirName =
         metadata?[LocalWorkMetadataService.localWorkDirNameKey];
     if (localDirName is String && localDirName.trim().isNotEmpty) {
-      final relativeDir =
-          DownloadFilePathService.normalizeRelativePath(localDirName);
+      final relativeDir = DownloadFilePathService.normalizeRelativePath(
+        localDirName,
+      );
       if (relativeDir.isNotEmpty) {
         return Directory(
           DownloadFilePathService.localPathForRelativePath(
@@ -203,15 +210,19 @@ class DownloadService {
 
   // 保存作品元数据到硬盘。元数据先落盘，封面再后台补齐，避免封面请求影响离线详情。
   Future<void> _saveWorkMetadata(
-      int workId, Map<String, dynamic> metadata, String? coverUrl) async {
+    int workId,
+    Map<String, dynamic> metadata,
+    String? coverUrl,
+  ) async {
     try {
       final workDir = Directory(await _getWorkDownloadDirectory(workId));
       final metadataToSave = Map<String, dynamic>.from(metadata);
       if (_metadataIdAsPositiveInt(metadataToSave['id']) == null) {
         metadataToSave['id'] = workId;
       }
-      metadataToSave[LocalWorkMetadataService.localWorkDirNameKey] =
-          p.basename(workDir.path);
+      metadataToSave[LocalWorkMetadataService.localWorkDirNameKey] = p.basename(
+        workDir.path,
+      );
 
       final metadataFile = _workMetadataFile(workDir);
       await metadataFile.writeAsString(jsonEncode(metadataToSave), flush: true);
@@ -222,12 +233,14 @@ class DownloadService {
       );
 
       if (coverUrl != null && coverUrl.isNotEmpty) {
-        unawaited(_saveCoverForMetadata(
-          workId: workId,
-          workDir: workDir,
-          coverUrl: coverUrl,
-          metadata: metadataToSave,
-        ));
+        unawaited(
+          _saveCoverForMetadata(
+            workId: workId,
+            workDir: workDir,
+            coverUrl: coverUrl,
+            metadata: metadataToSave,
+          ),
+        );
       }
     } catch (e) {
       _log.error('保存作品元数据失败: $e', tag: 'Download');
@@ -250,10 +263,9 @@ class DownloadService {
     try {
       final updatedMetadata = Map<String, dynamic>.from(metadata)
         ..['localCoverPath'] = 'cover.jpg';
-      await _workMetadataFile(workDir).writeAsString(
-        jsonEncode(updatedMetadata),
-        flush: true,
-      );
+      await _workMetadataFile(
+        workDir,
+      ).writeAsString(jsonEncode(updatedMetadata), flush: true);
       _log.debug('已更新作品封面元数据: workId=$workId', tag: 'Download');
     } catch (e) {
       _log.error('更新作品封面元数据失败: $e', tag: 'Download');
@@ -265,10 +277,7 @@ class DownloadService {
     try {
       final workDir = await _findExistingWorkDirectory(workId);
       if (workDir == null) {
-        _log.warning(
-          '未找到作品目录，无法加载元数据: workId=$workId',
-          tag: 'Download',
-        );
+        _log.warning('未找到作品目录，无法加载元数据: workId=$workId', tag: 'Download');
         return null;
       }
 
@@ -280,8 +289,9 @@ class DownloadService {
         if (_metadataIdAsPositiveInt(metadata['id']) == null) {
           metadata['id'] = workId;
         }
-        metadata[LocalWorkMetadataService.localWorkDirNameKey] =
-            p.basename(workDir.path);
+        metadata[LocalWorkMetadataService.localWorkDirNameKey] = p.basename(
+          workDir.path,
+        );
         _log.debug(
           '已从磁盘加载元数据: workId=$workId, dir=${p.basename(workDir.path)}, '
           'metadataId=${metadata['id']}, sourceId=${metadata['source_id']}, '
@@ -381,6 +391,44 @@ class DownloadService {
     return await _loadWorkMetadata(workId);
   }
 
+  String _taskIdentity({
+    required int workId,
+    required String? hash,
+    required String fileName,
+  }) {
+    final normalizedHash = hash?.trim();
+    if (normalizedHash != null && normalizedHash.isNotEmpty) {
+      return '$workId:hash:$normalizedHash';
+    }
+    // Hash-less files still need a stable identity. The previous null-hash
+    // comparison treated every file in a work as the same task.
+    return '$workId:path:$fileName';
+  }
+
+  String _taskIdentityForTask(DownloadTask task) {
+    return _taskIdentity(
+      workId: task.workId,
+      hash: task.hash,
+      fileName: task.fileName,
+    );
+  }
+
+  DownloadTask? _findTask({
+    required int workId,
+    required String? hash,
+    required String fileName,
+  }) {
+    final identity = _taskIdentity(
+      workId: workId,
+      hash: hash,
+      fileName: fileName,
+    );
+    for (final task in _tasks) {
+      if (_taskIdentityForTask(task) == identity) return task;
+    }
+    return null;
+  }
+
   // 添加下载任务
   Future<DownloadTask> addTask({
     required int workId,
@@ -392,26 +440,66 @@ class DownloadService {
     Map<String, dynamic>? workMetadata,
     String? coverUrl,
     String? relativePath, // 相对路径，用于按文件树组织
-  }) async {
+  }) {
     final safeFileName = relativePath != null && relativePath.isNotEmpty
         ? '${DownloadFilePathService.safeRelativePath(relativePath)}/'
-            '${DownloadFilePathService.safePathSegment(fileName)}'
+              '${DownloadFilePathService.safePathSegment(fileName)}'
         : DownloadFilePathService.safeRelativePath(fileName);
 
-    // 检查是否已存在
-    final existingTask = _tasks.firstWhere(
-      (t) => t.hash == hash && t.workId == workId,
-      orElse: () => DownloadTask(
-        id: '',
-        workId: 0,
-        workTitle: '',
-        fileName: '',
-        downloadUrl: '',
-        createdAt: DateTime.now(),
+    final identity = _taskIdentity(
+      workId: workId,
+      hash: hash,
+      fileName: safeFileName,
+    );
+    final inFlight = _pendingTaskAdds[identity];
+    if (inFlight != null) return inFlight;
+
+    final operation = _addTaskInternal(
+      workId: workId,
+      workTitle: workTitle,
+      fileName: safeFileName,
+      downloadUrl: downloadUrl,
+      hash: hash,
+      totalBytes: totalBytes,
+      workMetadata: workMetadata,
+      coverUrl: coverUrl,
+    );
+    _pendingTaskAdds[identity] = operation;
+    unawaited(
+      operation.then<void>(
+        (_) {
+          if (identical(_pendingTaskAdds[identity], operation)) {
+            _pendingTaskAdds.remove(identity);
+          }
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          if (identical(_pendingTaskAdds[identity], operation)) {
+            _pendingTaskAdds.remove(identity);
+          }
+        },
       ),
     );
+    return operation;
+  }
 
-    if (existingTask.id.isNotEmpty) {
+  Future<DownloadTask> _addTaskInternal({
+    required int workId,
+    required String workTitle,
+    required String fileName,
+    required String downloadUrl,
+    required String? hash,
+    int? totalBytes,
+    Map<String, dynamic>? workMetadata,
+    String? coverUrl,
+  }) async {
+    // 检查是否已存在
+    final existingTask = _findTask(
+      workId: workId,
+      hash: hash,
+      fileName: fileName,
+    );
+
+    if (existingTask != null) {
       if (existingTask.status == DownloadStatus.completed) {
         // 如果任务已完成但没有元数据，更新元数据
         if (existingTask.workMetadata == null && workMetadata != null) {
@@ -435,7 +523,7 @@ class DownloadService {
         final workDir = await _getWorkDownloadDirectory(workId);
         final targetPath = DownloadFilePathService.localPathForRelativePath(
           rootPath: workDir,
-          relativePath: safeFileName,
+          relativePath: fileName,
         );
         final targetFile = File(targetPath);
 
@@ -450,7 +538,7 @@ class DownloadService {
           id: hash,
           workId: workId,
           workTitle: workTitle,
-          fileName: safeFileName, // 使用包含路径的完整文件名
+          fileName: fileName, // 使用包含路径的完整文件名
           downloadUrl: downloadUrl,
           hash: hash,
           totalBytes: totalBytes ?? await targetFile.length(),
@@ -475,10 +563,10 @@ class DownloadService {
     }
 
     final task = DownloadTask(
-      id: hash ?? '${workId}_${DateTime.now().millisecondsSinceEpoch}',
+      id: hash?.trim().isNotEmpty == true ? hash! : '$workId:$fileName',
       workId: workId,
       workTitle: workTitle,
-      fileName: safeFileName,
+      fileName: fileName,
       downloadUrl: downloadUrl,
       hash: hash,
       totalBytes: totalBytes,
@@ -509,39 +597,101 @@ class DownloadService {
     _isProcessingQueue = true;
     try {
       // 获取所有等待中的任务
-      final pendingTasks =
-          _tasks.where((t) => t.status == DownloadStatus.pending).toList();
+      final pendingTasks = _tasks
+          .where((t) => t.status == DownloadStatus.pending)
+          .toList();
 
       if (pendingTasks.isNotEmpty) {
         _log.debug(
-            '调度下载队列: ${pendingTasks.length} 个等待中, $_activeDownloadCount/$_maxConcurrentDownloads 个进行中',
-            tag: 'Download');
+          '调度下载队列: ${pendingTasks.length} 个等待中, $_activeDownloadCount/$_maxConcurrentDownloads 个进行中',
+          tag: 'Download',
+        );
       }
 
       for (final task in pendingTasks) {
         if (_activeDownloadCount >= _maxConcurrentDownloads) break;
+        if (_runningDownloads.containsKey(task.id)) continue;
         _activeDownloadCount++;
-        unawaited(_startDownload(task).whenComplete(() {
-          _activeDownloadCount--;
-          _processQueue(); // 完成后继续调度
-        }));
+        final download = _startDownload(task);
+        _runningDownloads[task.id] = download;
+        unawaited(_finishDownload(task.id, download));
       }
     } finally {
       _isProcessingQueue = false;
     }
   }
 
+  Future<void> _finishDownload(String taskId, Future<void> download) async {
+    try {
+      await download;
+    } catch (e) {
+      // _startDownload normally records its own failures. This also covers
+      // setup errors that occur before its main try/catch block.
+      _log.error('下载任务异常退出: taskId=$taskId, error=$e', tag: 'Download');
+      final task = _tasks.cast<DownloadTask?>().firstWhere(
+        (candidate) => candidate?.id == taskId,
+        orElse: () => null,
+      );
+      if (task?.status == DownloadStatus.downloading) {
+        _updateTask(
+          task!.copyWith(status: DownloadStatus.failed, error: e.toString()),
+          immediate: true,
+        );
+      }
+    } finally {
+      if (identical(_runningDownloads[taskId], download)) {
+        _runningDownloads.remove(taskId);
+      }
+      _activeDownloadCount--;
+      unawaited(_processQueue()); // 完成后继续调度
+    }
+  }
+
+  Future<void> _waitForRunningDownload(String taskId) async {
+    final download = _runningDownloads[taskId];
+    if (download == null) return;
+    try {
+      await download;
+    } catch (_) {
+      // The download service records the failure; resume can still retry it.
+    }
+  }
+
+  void _markTaskFailedIfCurrent(String taskId, Object error) {
+    final currentTask = _tasks.cast<DownloadTask?>().firstWhere(
+      (candidate) => candidate?.id == taskId,
+      orElse: () => null,
+    );
+    if (currentTask?.status == DownloadStatus.downloading) {
+      _updateTask(
+        currentTask!.copyWith(
+          status: DownloadStatus.failed,
+          error: error.toString(),
+        ),
+        immediate: true,
+      );
+    }
+  }
+
   Future<void> _startDownload(DownloadTask task) async {
-    if (task.status == DownloadStatus.downloading ||
-        task.status == DownloadStatus.completed) {
+    final currentTask = _tasks.cast<DownloadTask?>().firstWhere(
+      (candidate) => candidate?.id == task.id,
+      orElse: () => null,
+    );
+    if (currentTask == null || currentTask.status != DownloadStatus.pending) {
       return;
     }
+    task = currentTask;
 
-    _log.info('开始下载: ${task.fileName} (workId: ${task.workId})',
-        tag: 'Download');
+    _log.info(
+      '开始下载: ${task.fileName} (workId: ${task.workId})',
+      tag: 'Download',
+    );
 
-    _updateTask(task.copyWith(status: DownloadStatus.downloading),
-        immediate: true);
+    _updateTask(
+      task.copyWith(status: DownloadStatus.downloading),
+      immediate: true,
+    );
 
     final workDir = await _getWorkDownloadDirectory(task.workId);
     await _ensureDirectoryWritable(Directory(workDir));
@@ -554,11 +704,21 @@ class DownloadService {
     final file = File(filePath);
     final tempFile = File(tempFilePath);
 
-    _log.debug('下载路径: filePath=$filePath, tempFile=$tempFilePath',
-        tag: 'Download');
+    _log.debug(
+      '下载路径: filePath=$filePath, tempFile=$tempFilePath',
+      tag: 'Download',
+    );
 
     // 确保父目录存在
     await file.parent.create(recursive: true);
+
+    final latestTask = _tasks.cast<DownloadTask?>().firstWhere(
+      (candidate) => candidate?.id == task.id,
+      orElse: () => null,
+    );
+    if (latestTask == null || latestTask.status != DownloadStatus.downloading) {
+      return;
+    }
 
     final cancelToken = CancelToken();
     _cancelTokens[task.id] = cancelToken;
@@ -587,7 +747,9 @@ class DownloadService {
               totalBytes: await file.length(),
             );
             _updateTask(completedTask, immediate: true);
-            _cancelTokens.remove(task.id);
+            if (identical(_cancelTokens[task.id], cancelToken)) {
+              _cancelTokens.remove(task.id);
+            }
             return;
           }
         }
@@ -601,8 +763,10 @@ class DownloadService {
 
       _dio.options.headers.addAll(StorageService.serverCookieHeaders);
 
-      _log.info('开始网络下载: ${task.fileName}, url=${task.downloadUrl}',
-          tag: 'Download');
+      _log.info(
+        '开始网络下载: ${task.fileName}, url=${task.downloadUrl}',
+        tag: 'Download',
+      );
 
       // 下载到临时文件，完成后再重命名
       await _dio.download(
@@ -634,11 +798,18 @@ class DownloadService {
             // 只在间隔足够时才更新，避免过于频繁的更新
             if (now - lastUpdateTime > updateInterval || received == total) {
               lastUpdateTime = now;
-              _updateTask(task.copyWith(
-                status: DownloadStatus.downloading,
-                downloadedBytes: received,
-                totalBytes: total,
-              )); // 不立即保存，使用延迟保存
+              final currentTask = _tasks.cast<DownloadTask?>().firstWhere(
+                (candidate) => candidate?.id == task.id,
+                orElse: () => null,
+              );
+              if (currentTask?.status == DownloadStatus.downloading) {
+                _updateTask(
+                  currentTask!.copyWith(
+                    downloadedBytes: received,
+                    totalBytes: total,
+                  ),
+                ); // 不立即保存，使用延迟保存
+              }
             }
           }
         },
@@ -650,73 +821,158 @@ class DownloadService {
       _log.info('下载完成: ${task.fileName}', tag: 'Download');
 
       // 从 _tasks 获取当前版本以保留进度数据
-      final currentTask =
-          _tasks.firstWhere((t) => t.id == task.id, orElse: () => task);
+      final currentTask = _tasks.firstWhere(
+        (t) => t.id == task.id,
+        orElse: () => task,
+      );
       final completedTask = currentTask.copyWith(
         status: DownloadStatus.completed,
         completedAt: DateTime.now(),
       );
       _updateTask(completedTask, immediate: true); // 完成时立即保存
-      _cancelTokens.remove(task.id);
+      if (identical(_cancelTokens[task.id], cancelToken)) {
+        _cancelTokens.remove(task.id);
+      }
     } catch (e) {
       if (e is DioException && e.type == DioExceptionType.cancel) {
         _log.info('下载已取消: ${task.fileName}', tag: 'Download');
-        _updateTask(task.copyWith(status: DownloadStatus.paused),
-            immediate: true);
+        final currentTask = _tasks.cast<DownloadTask?>().firstWhere(
+          (candidate) => candidate?.id == task.id,
+          orElse: () => null,
+        );
+        // A pause/resume or delete may have changed the state while Dio was
+        // unwinding. Do not overwrite that newer state with a stale snapshot.
+        if (currentTask?.status == DownloadStatus.downloading) {
+          _updateTask(
+            currentTask!.copyWith(status: DownloadStatus.paused),
+            immediate: true,
+          );
+        }
       } else if (e is PathNotFoundException) {
-        _log.error('路径不存在: ${task.fileName}, filePath=$filePath, error=$e',
-            tag: 'Download');
-        _updateTask(
-            task.copyWith(
-              status: DownloadStatus.failed,
-              error: e.toString(),
-            ),
-            immediate: true);
+        _log.error(
+          '路径不存在: ${task.fileName}, filePath=$filePath, error=$e',
+          tag: 'Download',
+        );
+        _markTaskFailedIfCurrent(task.id, e);
       } else if (e is FileSystemException) {
-        _log.error('文件系统错误: ${task.fileName}, filePath=$filePath, error=$e',
-            tag: 'Download');
-        _updateTask(
-            task.copyWith(
-              status: DownloadStatus.failed,
-              error: e.toString(),
-            ),
-            immediate: true);
+        _log.error(
+          '文件系统错误: ${task.fileName}, filePath=$filePath, error=$e',
+          tag: 'Download',
+        );
+        _markTaskFailedIfCurrent(task.id, e);
       } else if (e is DioException) {
         _log.error(
-            '网络错误: ${task.fileName}, type=${e.type}, message=${e.message}, url=${task.downloadUrl}',
-            tag: 'Download');
-        _updateTask(
-            task.copyWith(
-              status: DownloadStatus.failed,
-              error: e.toString(),
-            ),
-            immediate: true);
+          '网络错误: ${task.fileName}, type=${e.type}, message=${e.message}, url=${task.downloadUrl}',
+          tag: 'Download',
+        );
+        _markTaskFailedIfCurrent(task.id, e);
       } else {
         _log.error('下载失败: ${task.fileName}, error=$e', tag: 'Download');
-        _updateTask(
-            task.copyWith(
-              status: DownloadStatus.failed,
-              error: e.toString(),
-            ),
-            immediate: true);
+        _markTaskFailedIfCurrent(task.id, e);
       }
-      _cancelTokens.remove(task.id);
+      if (identical(_cancelTokens[task.id], cancelToken)) {
+        _cancelTokens.remove(task.id);
+      }
     }
   }
 
   Future<void> pauseTask(String taskId) async {
+    final task = _tasks.cast<DownloadTask?>().firstWhere(
+      (candidate) => candidate?.id == taskId,
+      orElse: () => null,
+    );
+    if (task == null ||
+        (task.status != DownloadStatus.downloading &&
+            task.status != DownloadStatus.pending)) {
+      return;
+    }
+
+    // Mark pending tasks as paused as well, otherwise the queue can start
+    // them after the user has requested a pause.
+    _updateTask(task.copyWith(status: DownloadStatus.paused), immediate: true);
     final token = _cancelTokens[taskId];
     if (token != null) {
       token.cancel();
     }
   }
 
+  Future<void> pauseTasks(Iterable<String> taskIds) async {
+    final ids = taskIds.toSet();
+    var changed = false;
+    for (final task in _tasks.where((task) => ids.contains(task.id)).toList()) {
+      if (task.status != DownloadStatus.downloading &&
+          task.status != DownloadStatus.pending) {
+        continue;
+      }
+
+      _updateTask(task.copyWith(status: DownloadStatus.paused));
+      _cancelTokens[task.id]?.cancel();
+      changed = true;
+    }
+
+    if (changed) {
+      _saveTimer?.cancel();
+      _saveTimer = null;
+      _needsSave = false;
+      await _saveTasks();
+    }
+  }
+
   Future<void> resumeTask(String taskId) async {
-    final task = _tasks.firstWhere((t) => t.id == taskId);
-    if (task.status == DownloadStatus.paused ||
-        task.status == DownloadStatus.failed) {
-      _updateTask(task.copyWith(status: DownloadStatus.pending),
-          immediate: true);
+    final initialTask = _tasks.cast<DownloadTask?>().firstWhere(
+      (candidate) => candidate?.id == taskId,
+      orElse: () => null,
+    );
+    if (initialTask == null ||
+        (initialTask.status != DownloadStatus.paused &&
+            initialTask.status != DownloadStatus.failed)) {
+      return;
+    }
+
+    await _waitForRunningDownload(taskId);
+    final task = _tasks.cast<DownloadTask?>().firstWhere(
+      (candidate) => candidate?.id == taskId,
+      orElse: () => null,
+    );
+    if (task != null &&
+        (task.status == DownloadStatus.paused ||
+            task.status == DownloadStatus.failed)) {
+      _updateTask(
+        task.copyWith(status: DownloadStatus.pending),
+        immediate: true,
+      );
+      unawaited(_processQueue());
+    }
+  }
+
+  Future<void> resumeTasks(Iterable<String> taskIds) async {
+    final ids = taskIds.toSet();
+    final resumableIds = _tasks
+        .where(
+          (task) =>
+              ids.contains(task.id) &&
+              (task.status == DownloadStatus.paused ||
+                  task.status == DownloadStatus.failed),
+        )
+        .map((task) => task.id)
+        .toSet();
+    await Future.wait(resumableIds.map(_waitForRunningDownload));
+    var changed = false;
+    for (final task in _tasks.where((task) => ids.contains(task.id)).toList()) {
+      if (task.status != DownloadStatus.paused &&
+          task.status != DownloadStatus.failed) {
+        continue;
+      }
+
+      _updateTask(task.copyWith(status: DownloadStatus.pending));
+      changed = true;
+    }
+
+    if (changed) {
+      _saveTimer?.cancel();
+      _saveTimer = null;
+      _needsSave = false;
+      await _saveTasks();
       unawaited(_processQueue());
     }
   }
@@ -797,10 +1053,12 @@ class DownloadService {
       await _cleanEmptyDirectories(file.parent, workDir);
 
       // 从任务列表中移除对应的任务
-      _tasks.removeWhere((t) =>
-          t.workId == workId &&
-          t.fileName == relativePath &&
-          t.status == DownloadStatus.completed);
+      _tasks.removeWhere(
+        (t) =>
+            t.workId == workId &&
+            t.fileName == relativePath &&
+            t.status == DownloadStatus.completed,
+      );
 
       // 检查该作品是否还有其他文件
       final workDirObj = Directory(workDir);
@@ -945,8 +1203,9 @@ class DownloadService {
         workData['children'] = tracks;
 
         // 保存元数据（使用相对路径）
-        workData[LocalWorkMetadataService.localWorkDirNameKey] =
-            p.basename(workDir.path);
+        workData[LocalWorkMetadataService.localWorkDirNameKey] = p.basename(
+          workDir.path,
+        );
         workData['localCoverPath'] = 'cover.jpg';
         await metadataFile.writeAsString(jsonEncode(workData));
         _log.info('已保存作品元数据: RJ$workId', tag: 'Download');
@@ -965,8 +1224,11 @@ class DownloadService {
               ? '$normalizedHost/api/cover/$workId?token=$token'
               : '$normalizedHost/api/cover/$workId';
 
-          await _downloadCoverImage(workId, coverUrl,
-              workDirPath: workDir.path);
+          await _downloadCoverImage(
+            workId,
+            coverUrl,
+            workDirPath: workDir.path,
+          );
           _log.info('已下载作品封面: RJ$workId', tag: 'Download');
         }
 
@@ -975,23 +1237,17 @@ class DownloadService {
 
         _log.info('作品升级成功: RJ$workId', tag: 'Download');
       } catch (e) {
-        _log.warning(
-          '在线补全作品元数据失败，改用本地基础元数据 RJ$workId: $e',
-          tag: 'Download',
-        );
+        _log.warning('在线补全作品元数据失败，改用本地基础元数据 RJ$workId: $e', tag: 'Download');
         try {
-          final importedMetadata =
-              await _localMetadataService.loadImportedMetadata(
-            workDir: workDir,
-            workId: workId,
-          );
-          final fallbackMetadata =
-              await _localMetadataService.buildFallbackMetadata(
-            workId: workId,
-            workDir: workDir,
-            directoryName: p.basename(workDir.path),
-            existingMetadata: importedMetadata,
-          );
+          final importedMetadata = await _localMetadataService
+              .loadImportedMetadata(workDir: workDir, workId: workId);
+          final fallbackMetadata = await _localMetadataService
+              .buildFallbackMetadata(
+                workId: workId,
+                workDir: workDir,
+                directoryName: p.basename(workDir.path),
+                existingMetadata: importedMetadata,
+              );
           await metadataFile.writeAsString(jsonEncode(fallbackMetadata));
           _log.info('已生成本地作品基础元数据: RJ$workId', tag: 'Download');
         } catch (fallbackError) {
@@ -1006,7 +1262,10 @@ class DownloadService {
 
   // 将扁平的文件结构组织成树形结构
   Future<void> _organizeFilesIntoTree(
-      int workId, Directory workDir, List<dynamic> tracks) async {
+    int workId,
+    Directory workDir,
+    List<dynamic> tracks,
+  ) async {
     try {
       // 构建文件树映射：hash -> 相对路径
       final Map<String, String> hashToPath = {};
@@ -1020,8 +1279,9 @@ class DownloadService {
 
           if (type == 'folder') {
             // 文件夹，递归处理子项
-            final folderPath =
-                parentPath.isEmpty ? title : '$parentPath/$title';
+            final folderPath = parentPath.isEmpty
+                ? title
+                : '$parentPath/$title';
             final children = item['children'] as List<dynamic>?;
             if (children != null) {
               buildPathMap(children, folderPath);
@@ -1078,8 +1338,10 @@ class DownloadService {
               // 如果 rename 失败（跨文件系统），尝试复制后删除
               await entity.copy(targetFile.path);
               await entity.delete();
-              _log.info('文件已复制并重新组织: $fileName -> $targetPath',
-                  tag: 'Download');
+              _log.info(
+                '文件已复制并重新组织: $fileName -> $targetPath',
+                tag: 'Download',
+              );
             }
           }
         }
@@ -1109,13 +1371,15 @@ class DownloadService {
           )) {
             continue;
           }
-          final fullName =
-              relativePath.isEmpty ? fileName : '$relativePath/$fileName';
+          final fullName = relativePath.isEmpty
+              ? fileName
+              : '$relativePath/$fileName';
           diskFiles[fullName] = entity;
         } else if (entity is Directory) {
           final dirName = entity.path.split(Platform.pathSeparator).last;
-          final subPath =
-              relativePath.isEmpty ? dirName : '$relativePath/$dirName';
+          final subPath = relativePath.isEmpty
+              ? dirName
+              : '$relativePath/$dirName';
           await collectFiles(entity, subPath);
         }
       }
@@ -1130,8 +1394,9 @@ class DownloadService {
 
     if (await metadataFile.exists()) {
       try {
-        metadata = jsonDecode(await metadataFile.readAsString())
-            as Map<String, dynamic>;
+        metadata =
+            jsonDecode(await metadataFile.readAsString())
+                as Map<String, dynamic>;
       } catch (e) {
         _log.error('读取元数据失败: RJ$workId, $e', tag: 'Download');
       }
@@ -1154,8 +1419,9 @@ class DownloadService {
       }
       if (metadata[LocalWorkMetadataService.localWorkDirNameKey] !=
           p.basename(workDir.path)) {
-        metadata[LocalWorkMetadataService.localWorkDirNameKey] =
-            p.basename(workDir.path);
+        metadata[LocalWorkMetadataService.localWorkDirNameKey] = p.basename(
+          workDir.path,
+        );
         metadataChanged = true;
       }
 
@@ -1273,8 +1539,10 @@ class DownloadService {
     if (newFiles.isNotEmpty || metadataCreated || metadataChanged) {
       metadata['children'] = mutableChildren;
       await metadataFile.writeAsString(jsonEncode(metadata));
-      _log.info('已更新作品文件树: RJ$workId, 新增 ${newFiles.length} 个文件',
-          tag: 'Download');
+      _log.info(
+        '已更新作品文件树: RJ$workId, 新增 ${newFiles.length} 个文件',
+        tag: 'Download',
+      );
     }
   }
 
@@ -1284,13 +1552,48 @@ class DownloadService {
       final tasksJson = prefs.getString(_tasksKey);
       if (tasksJson != null) {
         final List<dynamic> tasksList = jsonDecode(tasksJson);
-        _tasks.clear();
-        _tasks.addAll(
-          tasksList.map((json) => DownloadTask.fromJson(json)).toList(),
-        );
+        final loadedTasks = tasksList
+            .map((json) => DownloadTask.fromJson(json))
+            .toList();
+        final uniqueTasks = <String, DownloadTask>{};
+        for (final task in loadedTasks) {
+          final identity = _taskIdentityForTask(task);
+          final existing = uniqueTasks[identity];
+          if (existing == null ||
+              _taskStatusPriority(task.status) >
+                  _taskStatusPriority(existing.status)) {
+            uniqueTasks[identity] = task;
+          }
+        }
+
+        _tasks
+          ..clear()
+          ..addAll(uniqueTasks.values);
+        if (uniqueTasks.length != loadedTasks.length) {
+          await _saveTasks();
+          _log.warning(
+            '已清理重复下载任务: ${loadedTasks.length - uniqueTasks.length} 个',
+            tag: 'Download',
+          );
+        }
       }
     } catch (e) {
       _log.error('加载下载任务失败: $e', tag: 'Download');
+    }
+  }
+
+  int _taskStatusPriority(DownloadStatus status) {
+    switch (status) {
+      case DownloadStatus.completed:
+        return 4;
+      case DownloadStatus.downloading:
+        return 3;
+      case DownloadStatus.pending:
+        return 2;
+      case DownloadStatus.paused:
+        return 1;
+      case DownloadStatus.failed:
+        return 0;
     }
   }
 
@@ -1406,8 +1709,9 @@ class DownloadService {
               }
 
               // 构建相对路径下的文件名
-              final fullFileName =
-                  relativePath.isEmpty ? fileName : '$relativePath/$fileName';
+              final fullFileName = relativePath.isEmpty
+                  ? fileName
+                  : '$relativePath/$fileName';
 
               // 检查该文件是否已有对应的任务
               final existingTask = _tasks.firstWhere(
@@ -1443,8 +1747,9 @@ class DownloadService {
             } else if (entity is Directory) {
               // 递归扫描子目录
               final dirName = entity.path.split(Platform.pathSeparator).last;
-              final subPath =
-                  relativePath.isEmpty ? dirName : '$relativePath/$dirName';
+              final subPath = relativePath.isEmpty
+                  ? dirName
+                  : '$relativePath/$dirName';
               await scanDirectory(entity, subPath);
             }
           }
@@ -1480,8 +1785,10 @@ class DownloadService {
       _tasksController.add(List.from(_tasks));
       await _saveTasks();
 
-      _log.info('同步完成：删除 ${tasksToRemove.length} 个，新增 ${newTasks.length} 个',
-          tag: 'Download');
+      _log.info(
+        '同步完成：删除 ${tasksToRemove.length} 个，新增 ${newTasks.length} 个',
+        tag: 'Download',
+      );
     } catch (e) {
       _log.error('从硬盘同步任务失败: $e', tag: 'Download');
       rethrow;

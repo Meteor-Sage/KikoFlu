@@ -82,6 +82,18 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
     });
   }
 
+  Future<void> _pauseSelected() async {
+    final taskIds = List<String>.from(_selectedTaskIds);
+    if (taskIds.isEmpty) return;
+    await DownloadService.instance.pauseTasks(taskIds);
+  }
+
+  Future<void> _resumeSelected() async {
+    final taskIds = List<String>.from(_selectedTaskIds);
+    if (taskIds.isEmpty) return;
+    await DownloadService.instance.resumeTasks(taskIds);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -89,8 +101,10 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
         scrolledUnderElevation: 0,
         title: _isSelectionMode
             ? Text(S.of(context).selectedCount(_selectedTaskIds.length))
-            : Text(S.of(context).downloadTasks,
-                style: const TextStyle(fontSize: 18)),
+            : Text(
+                S.of(context).downloadTasks,
+                style: const TextStyle(fontSize: 18),
+              ),
         leading: _isSelectionMode
             ? IconButton(
                 icon: const Icon(Icons.close),
@@ -103,11 +117,13 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
                   icon: const Icon(Icons.select_all),
                   onPressed: () {
                     final tasks = DownloadService.instance.tasks;
-                    final currentTasks = tasks.where((t) =>
-                        t.status == DownloadStatus.downloading ||
-                        t.status == DownloadStatus.paused ||
-                        t.status == DownloadStatus.pending ||
-                        t.status == DownloadStatus.failed);
+                    final currentTasks = tasks.where(
+                      (t) =>
+                          t.status == DownloadStatus.downloading ||
+                          t.status == DownloadStatus.paused ||
+                          t.status == DownloadStatus.pending ||
+                          t.status == DownloadStatus.failed,
+                    );
                     _selectAll(currentTasks.toList());
                   },
                   tooltip: S.of(context).selectAll,
@@ -116,6 +132,24 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
                   icon: const Icon(Icons.deselect),
                   onPressed: _deselectAll,
                   tooltip: S.of(context).deselectAll,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.pause),
+                  onPressed: _selectedTaskIds.isEmpty
+                      ? null
+                      : () {
+                          _pauseSelected();
+                        },
+                  tooltip: S.of(context).pause,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.play_arrow),
+                  onPressed: _selectedTaskIds.isEmpty
+                      ? null
+                      : () {
+                          _resumeSelected();
+                        },
+                  tooltip: S.of(context).resume,
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete),
@@ -140,11 +174,13 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
           final tasks = snapshot.data ?? [];
 
           final downloadingTasks = tasks
-              .where((t) =>
-                  t.status == DownloadStatus.downloading ||
-                  t.status == DownloadStatus.paused ||
-                  t.status == DownloadStatus.pending ||
-                  t.status == DownloadStatus.failed)
+              .where(
+                (t) =>
+                    t.status == DownloadStatus.downloading ||
+                    t.status == DownloadStatus.paused ||
+                    t.status == DownloadStatus.pending ||
+                    t.status == DownloadStatus.failed,
+              )
               .toList();
 
           return _buildDownloadingList(downloadingTasks);
@@ -161,8 +197,10 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
           children: [
             const Icon(Icons.download_outlined, size: 64, color: Colors.grey),
             const SizedBox(height: 16),
-            Text(S.of(context).noDownloadTasks,
-                style: const TextStyle(color: Colors.grey)),
+            Text(
+              S.of(context).noDownloadTasks,
+              style: const TextStyle(color: Colors.grey),
+            ),
           ],
         ),
       );
@@ -227,11 +265,7 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
               onChanged: (_) => _toggleTaskSelection(task.id),
             )
           : _buildStatusIcon(task.status),
-      title: Text(
-        task.fileName,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
+      title: Text(task.fileName, maxLines: 1, overflow: TextOverflow.ellipsis),
       onTap: _isSelectionMode ? () => _toggleTaskSelection(task.id) : null,
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -329,9 +363,7 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
             child: Text(S.of(context).delete),
           ),
         ],
@@ -341,9 +373,9 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
     if (confirmed == true) {
       await DownloadService.instance.deleteTask(task.id);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(S.of(context).deleted)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(S.of(context).deleted)));
       }
     }
   }
@@ -354,7 +386,8 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
       builder: (context) => AlertDialog(
         title: Text(S.of(context).deletionConfirmTitle),
         content: Text(
-            S.of(context).deleteSelectedFilesConfirm(_selectedTaskIds.length)),
+          S.of(context).deleteSelectedFilesConfirm(_selectedTaskIds.length),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -362,9 +395,7 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
             child: Text(S.of(context).delete),
           ),
         ],

@@ -18,6 +18,7 @@ class ScrollableAppBar extends StatefulWidget implements PreferredSizeWidget {
     this.titleSpacing,
     this.centerTitle,
     this.systemOverlayStyle,
+    this.clipBehavior,
   });
 
   final Widget? title;
@@ -33,6 +34,7 @@ class ScrollableAppBar extends StatefulWidget implements PreferredSizeWidget {
   final double? titleSpacing;
   final bool? centerTitle;
   final SystemUiOverlayStyle? systemOverlayStyle;
+  final Clip? clipBehavior;
 
   @override
   State<ScrollableAppBar> createState() => _ScrollableAppBarState();
@@ -105,6 +107,7 @@ class _ScrollableAppBarState extends State<ScrollableAppBar> {
       automaticallyImplyLeading: widget.automaticallyImplyLeading,
       titleSpacing: widget.titleSpacing,
       centerTitle: widget.centerTitle,
+      clipBehavior: widget.clipBehavior,
       bottom: widget.bottom ??
           PreferredSize(
             preferredSize: const Size.fromHeight(1),

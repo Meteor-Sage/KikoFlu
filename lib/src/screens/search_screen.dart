@@ -302,6 +302,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
         appBar: ScrollableAppBar(
           title:
               Text(S.of(context).search, style: const TextStyle(fontSize: 18)),
+          clipBehavior: Clip.none,
           actions: [
             // 筛选按钮移到右上角
             Padding(
