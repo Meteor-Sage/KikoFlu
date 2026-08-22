@@ -292,7 +292,7 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
           children: [
             // 封面区域
             AspectRatio(
-              aspectRatio: 1.0,
+              aspectRatio: 1.3,
               child: Stack(
                 children: [
                   _buildCoverImage(context, host, token),

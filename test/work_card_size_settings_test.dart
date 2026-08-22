@@ -143,7 +143,7 @@ void main() {
     expect(find.byType(AspectRatio), findsOneWidget);
     expect(
       tester.widget<AspectRatio>(find.byType(AspectRatio)).aspectRatio,
-      1.0,
+      1.3,
     );
   });
 

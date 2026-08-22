@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../liquid_glass_layout.dart';
+
 typedef WorkDetailCoverBuilder = Widget Function(
   BuildContext context,
   bool isLandscape,
@@ -33,13 +35,14 @@ class WorkDetailResponsiveLayout extends StatelessWidget {
           ),
           Expanded(
             flex: 3,
-            child: _buildScrollable(info),
+            child: _buildScrollable(context, info),
           ),
         ],
       );
     }
 
     return _buildScrollable(
+      context,
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -50,11 +53,18 @@ class WorkDetailResponsiveLayout extends StatelessWidget {
     );
   }
 
-  Widget _buildScrollable(Widget child) {
+  Widget _buildScrollable(BuildContext context, Widget child) {
+    final dockExtent = LiquidGlassDockScope.extentOf(context);
+    final scrollContent = dockExtent > 0
+        ? Padding(
+            padding: EdgeInsets.only(bottom: dockExtent),
+            child: child,
+          )
+        : child;
     final scrollable = SingleChildScrollView(
       padding: EdgeInsets.zero,
       physics: const AlwaysScrollableScrollPhysics(),
-      child: child,
+      child: scrollContent,
     );
 
     if (onRefresh == null) return scrollable;
