@@ -868,6 +868,13 @@ class SEn extends S {
   String get translationTargetLanguage => 'Target Language';
 
   @override
+  String get autoSaveTranslatedLyrics => 'Automatically save translated lyrics';
+
+  @override
+  String get autoSaveTranslatedLyricsDesc =>
+      'Save translations to the Saved subtitle library folder; when disabled, show them only during current playback.';
+
+  @override
   String get selectTranslationTargetLanguage => 'Select target language:';
 
   @override
@@ -2123,7 +2130,7 @@ class SEn extends S {
 
   @override
   String get lyricTranslationConfirmMessage =>
-      'KikoFlu will translate the currently playing lyrics with your current translation settings. When finished, the translation is shown immediately and saved as a same-name .lrc file in the Saved subtitle library folder, overwriting any existing file. Switching tracks during translation discards this result.';
+      'Translate the currently playing lyrics and show the result immediately. When automatic saving is enabled, the same-name .lrc file in the subtitle library will be overwritten. Switching tracks during translation discards the result.';
 
   @override
   String get unlock => 'Unlock';
@@ -3008,6 +3015,10 @@ class SEn extends S {
 
   @override
   String get savedToSubtitleLibrary => 'Saved to subtitle library';
+
+  @override
+  String get translatedLyricsNotSaved =>
+      'Translation complete; shown only during current playback.';
 
   @override
   String get saveToLocal => 'Save to Local';

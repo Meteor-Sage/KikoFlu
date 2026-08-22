@@ -355,6 +355,41 @@ final translationSourceProvider =
   return TranslationSourceNotifier();
 });
 
+/// Controls whether translated lyrics are written to the subtitle library.
+class AutoSaveTranslatedLyricsNotifier extends StateNotifier<bool> {
+  static const String preferenceKey = 'auto_save_translated_lyrics';
+
+  AutoSaveTranslatedLyricsNotifier() : super(true) {
+    _loadPreference();
+  }
+
+  Future<void> _loadPreference() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (!mounted) return;
+      state = prefs.getBool(preferenceKey) ?? true;
+    } catch (_) {
+      if (!mounted) return;
+      state = true;
+    }
+  }
+
+  Future<void> setEnabled(bool enabled) async {
+    state = enabled;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(preferenceKey, enabled);
+    } catch (_) {
+      // Keep the in-memory value when persistence is unavailable.
+    }
+  }
+}
+
+final autoSaveTranslatedLyricsProvider =
+    StateNotifierProvider<AutoSaveTranslatedLyricsNotifier, bool>((ref) {
+  return AutoSaveTranslatedLyricsNotifier();
+});
+
 /// 翻译语言设置
 class TranslationLanguagePreferencesNotifier
     extends StateNotifier<TranslationLanguagePreferences> {

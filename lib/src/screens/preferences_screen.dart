@@ -703,6 +703,8 @@ class PreferencesScreen extends ConsumerWidget {
     final translationSource = ref.watch(translationSourceProvider);
     final translationLanguagePreferences =
         ref.watch(translationLanguagePreferencesProvider);
+    final autoSaveTranslatedLyrics =
+        ref.watch(autoSaveTranslatedLyricsProvider);
     final preloadSettings = ref.watch(preloadNextSettingsProvider);
 
     return SettingsSubpageScaffold(
@@ -746,6 +748,15 @@ class PreferencesScreen extends ConsumerWidget {
                       ),
                     ),
                 onTap: () => _showTranslationTargetLanguageDialog(context, ref),
+              ),
+              SettingsSwitchTile(
+                icon: Icons.save_alt,
+                title: S.of(context).autoSaveTranslatedLyrics,
+                subtitle: S.of(context).autoSaveTranslatedLyricsDesc,
+                value: autoSaveTranslatedLyrics,
+                onChanged: (enabled) => ref
+                    .read(autoSaveTranslatedLyricsProvider.notifier)
+                    .setEnabled(enabled),
               ),
               if (translationSource == TranslationSource.llm)
                 SettingsNavigationTile(

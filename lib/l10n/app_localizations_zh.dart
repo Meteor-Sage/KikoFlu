@@ -849,6 +849,13 @@ class SZh extends S {
   String get translationTargetLanguage => '目标语言';
 
   @override
+  String get autoSaveTranslatedLyrics => '自动保存翻译歌词';
+
+  @override
+  String get autoSaveTranslatedLyricsDesc =>
+      '翻译完成后保存到字幕库的“已保存”目录；关闭后仅在当前播放中显示。';
+
+  @override
   String get selectTranslationTargetLanguage => '选择目标语言：';
 
   @override
@@ -2060,7 +2067,7 @@ class SZh extends S {
 
   @override
   String get lyricTranslationConfirmMessage =>
-      '将使用当前翻译设置翻译正在播放的歌词。完成后会立即显示译文，并以同名 .lrc 覆盖保存到字幕库的“已保存”目录，之后可自动匹配读取。翻译过程中切歌会放弃本次结果。';
+      '翻译当前播放的歌词，完成后立即显示。开启自动保存时会以同名 .lrc 覆盖保存到字幕库；翻译中切歌会放弃本次结果。';
 
   @override
   String get unlock => '解锁';
@@ -2915,6 +2922,9 @@ class SZh extends S {
 
   @override
   String get savedToSubtitleLibrary => '已保存到字幕库';
+
+  @override
+  String get translatedLyricsNotSaved => '翻译已完成，仅在当前播放中显示';
 
   @override
   String get saveToLocal => '保存到本地';
@@ -4410,6 +4420,13 @@ class SZhHant extends SZh {
   String get translationTargetLanguage => '目標語言';
 
   @override
+  String get autoSaveTranslatedLyrics => '自動儲存翻譯歌詞';
+
+  @override
+  String get autoSaveTranslatedLyricsDesc =>
+      '翻譯完成後儲存到字幕庫的「已儲存」目錄；關閉後僅在目前播放中顯示。';
+
+  @override
   String get selectTranslationTargetLanguage => '選擇目標語言：';
 
   @override
@@ -5621,7 +5638,7 @@ class SZhHant extends SZh {
 
   @override
   String get lyricTranslationConfirmMessage =>
-      '將使用目前翻譯設定翻譯正在播放的歌詞。完成後會立即顯示譯文，並以同名 .lrc 覆蓋儲存到字幕庫的「已儲存」目錄，之後可自動匹配讀取。翻譯過程中切歌會放棄本次結果。';
+      '翻譯目前播放的歌詞，完成後立即顯示。開啟自動儲存時會以同名 .lrc 覆蓋儲存到字幕庫；翻譯中切歌會放棄本次結果。';
 
   @override
   String get unlock => '解鎖';
@@ -6476,6 +6493,9 @@ class SZhHant extends SZh {
 
   @override
   String get savedToSubtitleLibrary => '已儲存到字幕庫';
+
+  @override
+  String get translatedLyricsNotSaved => '翻譯已完成，僅在目前播放中顯示';
 
   @override
   String get saveToLocal => '儲存到本地';

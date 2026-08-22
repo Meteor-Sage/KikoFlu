@@ -574,7 +574,7 @@ class LyricController extends StateNotifier<LyricState> {
     await translateAndSaveCurrentLyrics();
   }
 
-  /// 翻译当前播放字幕，完成后立即显示翻译并保存到字幕库。
+  /// 翻译当前播放字幕，完成后立即显示翻译，并按偏好设置保存到字幕库。
   Future<String?> translateAndSaveCurrentLyrics() async {
     if (state.lyrics.isEmpty || state.isTranslating) return null;
 
@@ -660,11 +660,13 @@ class LyricController extends StateNotifier<LyricState> {
         translated[idx] = sourceLyrics[idx].copyWith(text: translatedTexts[i]);
       }
 
-      final savedPath = await _saveTranslatedLyricsToLibrary(
-        translated,
-        currentTrack: currentTrack,
-        timelineOffset: sourceOffset,
-      );
+      final savedPath = ref.read(autoSaveTranslatedLyricsProvider)
+          ? await _saveTranslatedLyricsToLibrary(
+              translated,
+              currentTrack: currentTrack,
+              timelineOffset: sourceOffset,
+            )
+          : null;
       if (!_isCurrentTranslationRequest(requestId)) return savedPath;
 
       state = state.copyWith(

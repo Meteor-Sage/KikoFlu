@@ -850,6 +850,13 @@ class SJa extends S {
   String get translationTargetLanguage => 'ターゲット言語';
 
   @override
+  String get autoSaveTranslatedLyrics => '翻訳した歌詞を自動保存';
+
+  @override
+  String get autoSaveTranslatedLyricsDesc =>
+      '翻訳完了後に字幕ライブラリの「保存済み」フォルダーへ保存します。オフの場合は現在の再生中のみ表示します。';
+
+  @override
   String get selectTranslationTargetLanguage => 'ターゲット言語を選択：';
 
   @override
@@ -2069,7 +2076,7 @@ class SJa extends S {
 
   @override
   String get lyricTranslationConfirmMessage =>
-      '現在の翻訳設定で再生中の歌詞を翻訳します。完了後はすぐに翻訳文を表示し、字幕ライブラリの「保存済み」フォルダーへ同名の .lrc として上書き保存します。翻訳中に曲を切り替えると、この結果は破棄されます。';
+      '再生中の歌詞を翻訳し、完了後すぐに表示します。自動保存がオンの場合は、字幕ライブラリの同名 .lrc を上書きします。翻訳中に曲を切り替えると結果は破棄されます。';
 
   @override
   String get unlock => 'ロック解除';
@@ -2930,6 +2937,9 @@ class SJa extends S {
 
   @override
   String get savedToSubtitleLibrary => '字幕ライブラリに保存しました';
+
+  @override
+  String get translatedLyricsNotSaved => '翻訳が完了しました。現在の再生中のみ表示します。';
 
   @override
   String get saveToLocal => 'ローカルに保存';

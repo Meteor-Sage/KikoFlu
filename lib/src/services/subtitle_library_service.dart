@@ -1171,6 +1171,7 @@ class SubtitleLibraryService {
 
       if (entity == FileSystemEntityType.file) {
         await File(path).delete();
+        await _deleteFileRecord(path);
       } else if (entity == FileSystemEntityType.directory) {
         await Directory(path).delete(recursive: true);
       } else {
@@ -1178,12 +1179,44 @@ class SubtitleLibraryService {
       }
 
       _log.captureOutput('[SubtitleLibrary] 已删除: $path');
-      final parentPath = FileSystemEntity.parentOf(path);
-      await _refreshDirectoriesAfterChange({parentPath});
+      if (entity == FileSystemEntityType.directory) {
+        final parentPath = FileSystemEntity.parentOf(path);
+        await _refreshDirectoriesAfterChange({parentPath});
+      } else {
+        _cacheUpdateController.add(null);
+      }
       return true;
     } catch (e) {
       _log.captureOutput('[SubtitleLibrary] 删除失败: $path, 错误: $e');
       return false;
+    }
+  }
+
+  /// 删除单个文件后只移除对应的数据库记录，避免重扫父目录影响其他文件。
+  static Future<void> _deleteFileRecord(String filePath) async {
+    try {
+      final libraryDir = await getSubtitleLibraryDirectory();
+      final libraryRoot = p.normalize(libraryDir.path);
+      final normalizedFilePath = p.normalize(filePath);
+      final relativePath = p.relative(
+        normalizedFilePath,
+        from: libraryRoot,
+      );
+
+      if (relativePath == '.' || relativePath == '..' ||
+          relativePath.startsWith('..${p.separator}')) {
+        _log.captureOutput(
+          '[SubtitleLibrary] 跳过库目录外文件的数据库清理: $filePath',
+        );
+        return;
+      }
+
+      await SubtitleDatabase.instance.deleteByRelativePath(
+        _toRelativePath(relativePath),
+      );
+    } catch (e) {
+      // 文件已删除时，数据库清理失败不应阻止删除结果返回成功。
+      _log.captureOutput('[SubtitleLibrary] 删除文件记录失败: $filePath, 错误: $e');
     }
   }
 

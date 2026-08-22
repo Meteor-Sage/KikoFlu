@@ -45,6 +45,30 @@ void main() {
     expect(find.text('Proxy address'), findsNothing);
   });
 
+  testWidgets('translated lyrics auto-save switch toggles and persists',
+      (tester) async {
+    await tester.pumpWidget(_testApp());
+    await tester.pump();
+
+    final tile = find.widgetWithText(
+      SwitchListTile,
+      'Automatically save translated lyrics',
+    );
+    await tester.ensureVisible(tile);
+    await tester.pump();
+
+    expect(tester.widget<SwitchListTile>(tile).value, isTrue);
+    await tester.tap(tile);
+    await tester.pump();
+
+    expect(tester.widget<SwitchListTile>(tile).value, isFalse);
+    final prefs = await SharedPreferences.getInstance();
+    expect(
+      prefs.getBool(AutoSaveTranslatedLyricsNotifier.preferenceKey),
+      isFalse,
+    );
+  });
+
   testWidgets('audio haptics exposes a working restore defaults action',
       (tester) async {
     tester.view.physicalSize = const Size(390, 844);

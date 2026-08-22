@@ -1686,6 +1686,18 @@ abstract class S {
   /// **'Target Language'**
   String get translationTargetLanguage;
 
+  /// No description provided for @autoSaveTranslatedLyrics.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatically save translated lyrics'**
+  String get autoSaveTranslatedLyrics;
+
+  /// No description provided for @autoSaveTranslatedLyricsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Save translations to the Saved subtitle library folder; when disabled, show them only during current playback.'**
+  String get autoSaveTranslatedLyricsDesc;
+
   /// No description provided for @selectTranslationTargetLanguage.
   ///
   /// In en, this message translates to:
@@ -3903,7 +3915,7 @@ abstract class S {
   /// No description provided for @lyricTranslationConfirmMessage.
   ///
   /// In en, this message translates to:
-  /// **'KikoFlu will translate the currently playing lyrics with your current translation settings. When finished, the translation is shown immediately and saved as a same-name .lrc file in the Saved subtitle library folder, overwriting any existing file. Switching tracks during translation discards this result.'**
+  /// **'Translate the currently playing lyrics and show the result immediately. When automatic saving is enabled, the same-name .lrc file in the subtitle library will be overwritten. Switching tracks during translation discards the result.'**
   String get lyricTranslationConfirmMessage;
 
   /// No description provided for @unlock.
@@ -5357,6 +5369,12 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Saved to subtitle library'**
   String get savedToSubtitleLibrary;
+
+  /// No description provided for @translatedLyricsNotSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation complete; shown only during current playback.'**
+  String get translatedLyricsNotSaved;
 
   /// No description provided for @saveToLocal.
   ///

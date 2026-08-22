@@ -853,10 +853,14 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
 
                     final savedPath =
                         await controller.translateAndSaveCurrentLyrics();
-                    if (context.mounted && savedPath != null) {
+                    if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text(S.of(context).savedToSubtitleLibrary),
+                          content: Text(
+                            savedPath != null
+                                ? S.of(context).savedToSubtitleLibrary
+                                : S.of(context).translatedLyricsNotSaved,
+                          ),
                           behavior: SnackBarBehavior.floating,
                         ),
                       );

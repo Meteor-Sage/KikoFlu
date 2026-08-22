@@ -870,6 +870,14 @@ class SRu extends S {
   String get translationTargetLanguage => 'Целевой язык';
 
   @override
+  String get autoSaveTranslatedLyrics =>
+      'Автоматически сохранять переведенный текст';
+
+  @override
+  String get autoSaveTranslatedLyricsDesc =>
+      'Сохранять перевод в папку «Сохраненные» библиотеки субтитров; при отключении показывать только во время текущего воспроизведения.';
+
+  @override
   String get selectTranslationTargetLanguage => 'Выберите целевой язык:';
 
   @override
@@ -2127,7 +2135,7 @@ class SRu extends S {
 
   @override
   String get lyricTranslationConfirmMessage =>
-      'KikoFlu переведет текст текущего трека с текущими настройками перевода. После завершения перевод сразу отобразится и будет сохранен в папку «Сохраненные» библиотеки субтитров как одноименный файл .lrc с заменой существующего файла. Если переключить трек во время перевода, этот результат будет отброшен.';
+      'Перевести текст текущего трека и сразу показать результат. При включенном автосохранении одноименный файл .lrc в библиотеке субтитров будет перезаписан. Если переключить трек во время перевода, результат будет отброшен.';
 
   @override
   String get unlock => 'Разблокировать';
@@ -3018,6 +3026,10 @@ class SRu extends S {
 
   @override
   String get savedToSubtitleLibrary => 'Сохранено в библиотеку субтитров';
+
+  @override
+  String get translatedLyricsNotSaved =>
+      'Перевод завершен; он отображается только во время текущего воспроизведения.';
 
   @override
   String get saveToLocal => 'Сохранить локально';
