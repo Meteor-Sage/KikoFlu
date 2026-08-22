@@ -45,6 +45,7 @@ class OfflineLocalFileScanner {
       parentPath: '',
       knownRelativePaths: knownRelativePaths,
     );
+    FileTreeUtils.sortItemsByTitle(files);
 
     return OfflineLocalFileScanResult(
       files: files,

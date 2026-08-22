@@ -204,6 +204,12 @@ void main() {
     final visibleTop = tester
         .getTopLeft(find.byKey(const ValueKey('secondary-toolbar')))
         .dy;
+    expect(find.byType(OverlayPortal), findsOneWidget);
+    expect(find.byType(CompositedTransformFollower), findsOneWidget);
+    expect(
+      tester.getSize(find.byKey(const ValueKey('secondary-toolbar'))).width,
+      390,
+    );
     primaryVisible.value = false;
     await tester.pumpAndSettle();
     final hiddenTop = tester

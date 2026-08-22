@@ -202,6 +202,12 @@ void main() {
 
       final folder = result.files.single as Map<String, dynamic>;
       final children = folder['children'] as List<dynamic>;
+      expect(
+        children
+            .cast<Map<String, dynamic>>()
+            .map((item) => item['title']),
+        ['bonus.srt', 'bonus.wav', 'track01.mp3'],
+      );
       final titles = children
           .map((item) => (item as Map<String, dynamic>)['title'])
           .toSet();
@@ -279,6 +285,37 @@ void main() {
             .cast<Map<String, dynamic>>()
             .where((item) => item['title'] == 'Disc_1'),
         isEmpty,
+      );
+    });
+
+    test('sorts existing metadata and newly discovered files together',
+        () async {
+      final workDir = await Directory.systemTemp.createTemp(
+        'offline_local_file_scanner_',
+      );
+      addTearDown(() async {
+        if (await workDir.exists()) {
+          await workDir.delete(recursive: true);
+        }
+      });
+
+      await File(p.join(workDir.path, 'Track02.vtt')).writeAsString('subtitle');
+      await File(p.join(workDir.path, 'Track00.mp3')).writeAsString('audio');
+      await File(p.join(workDir.path, 'Track01.mp3')).writeAsString('audio');
+
+      final result = await const OfflineLocalFileScanner().scan(
+        fileTree: [
+          fileItem('Track02.vtt', hash: 'subtitle'),
+          fileItem('Track01.mp3', hash: 'audio-1'),
+        ],
+        workDirPath: workDir.path,
+      );
+
+      expect(
+        result.files
+            .cast<Map<String, dynamic>>()
+            .map((item) => item['title']),
+        ['Track00.mp3', 'Track01.mp3', 'Track02.vtt'],
       );
     });
 

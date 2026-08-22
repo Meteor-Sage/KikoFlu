@@ -280,10 +280,7 @@ class _MyScreenState extends ConsumerState<MyScreen>
     final horizontalPadding = FloatingToolbarLayout.horizontalPadding(context);
     final tabSwitcherTop = topPadding + 8;
     final contentTop = tabSwitcherTop + kTextTabBarHeight + 8;
-    // Keep secondary toolbars clear of the top blur when the primary switcher hides.
-    const collapsedToolbarClearance = 3.0;
-    final collapsedToolbarTop =
-        tabSwitcherTop + (topPadding > 0 ? collapsedToolbarClearance : 0);
+    final collapsedToolbarTop = tabSwitcherTop;
     final tabs = _buildTabList(
       tabsSettings,
       contentTop: contentTop,

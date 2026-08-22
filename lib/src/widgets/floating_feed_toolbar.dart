@@ -327,6 +327,9 @@ class FloatingToolbarPositionFollower extends StatefulWidget {
 class _FloatingToolbarPositionFollowerState
     extends State<FloatingToolbarPositionFollower> {
   late bool _primaryToolbarVisible;
+  final LayerLink _toolbarLayerLink = LayerLink();
+  final OverlayPortalController _overlayController = OverlayPortalController()
+    ..show();
 
   @override
   void initState() {
@@ -365,7 +368,29 @@ class _FloatingToolbarPositionFollowerState
       top: _primaryToolbarVisible ? widget.visibleTop : widget.hiddenTop,
       left: widget.left,
       right: widget.right,
-      child: widget.child,
+      // Paint the toolbar in the root overlay so a page-level backdrop blur
+      // cannot cover the native glass capsule.
+      child: LayoutBuilder(
+        builder: (context, constraints) => OverlayPortal(
+          controller: _overlayController,
+          overlayLocation: OverlayChildLocation.rootOverlay,
+          overlayChildBuilder: (context) => CompositedTransformFollower(
+            link: _toolbarLayerLink,
+            showWhenUnlinked: false,
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: SizedBox(
+                width: constraints.maxWidth,
+                child: widget.child,
+              ),
+            ),
+          ),
+          child: CompositedTransformTarget(
+            link: _toolbarLayerLink,
+            child: const SizedBox(height: 48),
+          ),
+        ),
+      ),
     );
   }
 }

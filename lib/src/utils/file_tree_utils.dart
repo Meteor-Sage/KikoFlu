@@ -28,6 +28,23 @@ class FileTreeMainFolder {
 class FileTreeUtils {
   FileTreeUtils._();
 
+  /// Sorts a local file tree by display name at every directory level.
+  static void sortItemsByTitle(List<dynamic> items) {
+    for (final item in items) {
+      final children = childrenOf(item);
+      if (isFolder(item) && children != null) {
+        sortItemsByTitle(children);
+      }
+    }
+
+    items.sort((a, b) => compareTitles(titleOf(a), titleOf(b)));
+  }
+
+  static int compareTitles(String a, String b) {
+    final lowerCompare = a.toLowerCase().compareTo(b.toLowerCase());
+    return lowerCompare != 0 ? lowerCompare : a.compareTo(b);
+  }
+
   static dynamic property(
     dynamic item,
     String key, {
