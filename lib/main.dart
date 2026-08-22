@@ -39,6 +39,7 @@ import 'src/providers/auth_provider.dart';
 import 'src/providers/locale_provider.dart';
 import 'src/providers/theme_provider.dart';
 import 'src/providers/update_provider.dart';
+import 'src/utils/desktop_window_options.dart';
 import 'src/utils/global_keys.dart';
 import 'src/utils/system_ui_style.dart';
 import 'src/widgets/screen_awake_observer.dart';
@@ -259,13 +260,8 @@ void main(List<String> args) async {
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     await windowManager.ensureInitialized();
 
-    WindowOptions windowOptions = const WindowOptions(
-      size: Size(1280, 720),
-      minimumSize: Size(350, 600),
-      center: true,
-      backgroundColor: Colors.transparent,
-      skipTaskbar: false,
-      titleBarStyle: TitleBarStyle.normal,
+    final windowOptions = createDesktopWindowOptions(
+      isWindows: Platform.isWindows,
     );
 
     windowManager.waitUntilReadyToShow(windowOptions, () async {
