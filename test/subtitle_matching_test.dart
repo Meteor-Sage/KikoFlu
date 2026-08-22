@@ -26,6 +26,37 @@ void main() {
       expect(result.score, 1.0);
     });
 
+    test('keeps full-width track numbers distinct', () {
+      const fullWidthDigits = '１２３４５６７';
+
+      for (var audioIndex = 0; audioIndex < fullWidthDigits.length; audioIndex++) {
+        final audioName = 'トラック${fullWidthDigits[audioIndex]}.wav';
+
+        for (var subtitleIndex = 0;
+            subtitleIndex < fullWidthDigits.length;
+            subtitleIndex++) {
+          final subtitleName = 'トラック${fullWidthDigits[subtitleIndex]}.lrc';
+          final result = SubtitleMatcher.check(subtitleName, audioName);
+
+          expect(
+            result.isMatch,
+            subtitleIndex == audioIndex,
+            reason: '$subtitleName should match only $audioName',
+          );
+        }
+      }
+    });
+
+    test('matches mixed-width track numbers and ignores SE suffixes', () {
+      final result = SubtitleMatcher.check(
+        'トラック2.lrc',
+        'トラック２SEなし.wav',
+      );
+
+      expect(result.isMatch, true);
+      expect(result.score, 1.0);
+    });
+
     test('rejects unsupported subtitle extensions', () {
       final result = SubtitleMatcher.check('track01.json', 'track01.mp3');
 

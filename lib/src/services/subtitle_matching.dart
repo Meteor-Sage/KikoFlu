@@ -91,7 +91,7 @@ class SubtitleMatcher {
   }
 
   static String normalizeForMatching(String fileName) {
-    var result = fileName;
+    var result = _foldFullWidthAscii(fileName);
 
     result = result.replaceAll(RegExp(r'\（.*?\）'), '');
     result = result.replaceAll(RegExp(r'\(.*?\)'), '');
@@ -130,6 +130,18 @@ class SubtitleMatcher {
     );
 
     return result.trim();
+  }
+
+  static String _foldFullWidthAscii(String value) {
+    return String.fromCharCodes(
+      value.runes.map((codePoint) {
+        if (codePoint == 0x3000) return 0x20;
+        if (codePoint >= 0xFF01 && codePoint <= 0xFF5E) {
+          return codePoint - 0xFEE0;
+        }
+        return codePoint;
+      }),
+    );
   }
 
   static double _calculateSimilarity(String s1, String s2) {
