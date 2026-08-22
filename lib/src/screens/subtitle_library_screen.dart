@@ -1039,14 +1039,14 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
             onPressed: canNavigateUp ? _navigateUp : null,
           ),
           FloatingToolbarIconButton(
-            icon: Icons.search,
-            tooltip: S.of(context).search,
-            onPressed: () => setState(() => _isSearching = true),
-          ),
-          FloatingToolbarIconButton(
             icon: Icons.checklist,
             tooltip: S.of(context).select,
             onPressed: _toggleSelectionMode,
+          ),
+          FloatingToolbarIconButton(
+            icon: Icons.search,
+            tooltip: S.of(context).search,
+            onPressed: () => setState(() => _isSearching = true),
           ),
         ],
       ),

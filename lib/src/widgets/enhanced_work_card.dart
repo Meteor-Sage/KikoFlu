@@ -22,12 +22,14 @@ class EnhancedWorkCard extends ConsumerStatefulWidget {
   final Work work;
   final VoidCallback? onTap;
   final int crossAxisCount;
+  final bool? isListLayout;
 
   const EnhancedWorkCard({
     super.key,
     required this.work,
     this.onTap,
     this.crossAxisCount = 2,
+    this.isListLayout,
   });
 
   @override
@@ -35,6 +37,9 @@ class EnhancedWorkCard extends ConsumerStatefulWidget {
 }
 
 class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
+  bool get _isListLayout =>
+      widget.isListLayout ?? widget.crossAxisCount <= 1;
+
   String? _progress; // 当前收藏状态
   int? _rating; // 当前评分
   bool _loadingProgress = false; // 是否在获取状态
@@ -119,37 +124,47 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
 
-    // 横屏模式：4列显示中等卡片，5列显示紧凑卡片
-    // 竖屏模式：2列显示中等卡片，3列显示紧凑卡片
-    if (widget.crossAxisCount >= 5 ||
-        (widget.crossAxisCount == 3 && !isLandscape)) {
-      return _buildCompactCard(
-        context,
-        auth.host,
-        auth.token,
-        cardOnTap,
-        displaySettings,
-        hasLocalSubtitle,
-      );
-    } else if (widget.crossAxisCount >= 2) {
-      return _buildMediumCard(
-        context,
-        auth.host,
-        auth.token,
-        cardOnTap,
-        displaySettings,
-        hasLocalSubtitle,
-      );
-    } else {
-      return _buildFullCard(
-        context,
-        auth.host,
-        auth.token,
-        cardOnTap,
-        displaySettings,
-        hasLocalSubtitle,
-      );
-    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // A very narrow grid cell should use the compact content variant even
+        // when a responsive fallback reduced a nominal grid to two columns.
+        final isNarrowGridCell =
+            !_isListLayout && constraints.maxWidth < 160;
+        final isCompact = !_isListLayout &&
+            (widget.crossAxisCount >= 5 ||
+                (widget.crossAxisCount == 3 && !isLandscape) ||
+                isNarrowGridCell);
+
+        if (_isListLayout) {
+          return _buildFullCard(
+            context,
+            auth.host,
+            auth.token,
+            cardOnTap,
+            displaySettings,
+            hasLocalSubtitle,
+          );
+        }
+        if (isCompact) {
+          return _buildCompactCard(
+            context,
+            auth.host,
+            auth.token,
+            cardOnTap,
+            displaySettings,
+            hasLocalSubtitle,
+          );
+        }
+        return _buildMediumCard(
+          context,
+          auth.host,
+          auth.token,
+          cardOnTap,
+          displaySettings,
+          hasLocalSubtitle,
+        );
+      },
+    );
   }
 
   // 紧凑卡片 (3列布局)
@@ -277,7 +292,7 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
           children: [
             // 封面区域
             AspectRatio(
-              aspectRatio: 1.3,
+              aspectRatio: 1.0,
               child: Stack(
                 children: [
                   _buildCoverImage(context, host, token),
@@ -661,6 +676,7 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
     final targetWidth = resolveWorkCoverCacheWidth(
       context,
       crossAxisCount: widget.crossAxisCount,
+      isListCard: _isListLayout,
     );
 
     final httpHeaders = StorageService.serverCookieHeaders;

@@ -72,17 +72,39 @@ class WorksGridView extends ConsumerWidget {
     final auth = ref.watch(
       authProvider.select((state) => (state.host ?? '', state.token ?? '')),
     );
-    return LayoutBuilder(builder: (context, _) {
-      final isLandscape =
-          MediaQuery.orientationOf(context) == Orientation.landscape;
+    return LayoutBuilder(builder: (context, constraints) {
+      final mediaSize = MediaQuery.sizeOf(context);
+      final availableWidth = constraints.hasBoundedWidth
+          ? constraints.maxWidth.clamp(0.0, mediaSize.width).toDouble()
+          : mediaSize.width;
+      final availableHeight = constraints.hasBoundedHeight
+          ? constraints.maxHeight.clamp(0.0, mediaSize.height).toDouble()
+          : mediaSize.height;
+      final isLandscape = availableWidth > availableHeight;
       final spacing = isLandscape ? 24.0 : 8.0;
-      final padding = isLandscape ? 24.0 : 8.0;
+      final defaultPadding = spacing;
+      final collectionPadding = padding ?? EdgeInsets.all(defaultPadding);
+      final resolvedPadding =
+          collectionPadding.resolve(Directionality.of(context));
+      final horizontalPadding = resolvedPadding.horizontal / 2;
       final crossAxisCount = switch (layoutType) {
         LayoutType.bigGrid => displaySettings.applyCardSize(
-            ResponsiveGridHelper.getBigGridCrossAxisCount(context),
+            ResponsiveGridHelper.getBigGridCrossAxisCount(
+              context,
+              availableWidth: availableWidth,
+              availableHeight: availableHeight,
+              horizontalPadding: horizontalPadding,
+              crossAxisSpacing: spacing,
+            ),
           ),
         LayoutType.smallGrid => displaySettings.applyCardSize(
-            ResponsiveGridHelper.getSmallGridCrossAxisCount(context),
+            ResponsiveGridHelper.getSmallGridCrossAxisCount(
+              context,
+              availableWidth: availableWidth,
+              availableHeight: availableHeight,
+              horizontalPadding: horizontalPadding,
+              crossAxisSpacing: spacing,
+            ),
             minCrossAxisCount: 2,
           ),
         LayoutType.list => 1,
@@ -98,6 +120,7 @@ class WorksGridView extends ConsumerWidget {
           key: ValueKey(work.id),
           work: work,
           crossAxisCount: crossAxisCount,
+          isListLayout: layoutType == LayoutType.list,
         ),
         layout: isGrid
             ? VirtualizedCollectionLayout.masonry
@@ -105,7 +128,7 @@ class WorksGridView extends ConsumerWidget {
         masonryCrossAxisCount: isGrid ? crossAxisCount : null,
         masonryCrossAxisSpacing: spacing,
         masonryMainAxisSpacing: spacing,
-        padding: this.padding ?? EdgeInsets.all(padding),
+        padding: collectionPadding,
         isInitialLoading: isLoading && works.isEmpty,
         isRefreshing: isRefreshing,
         isLoadingMore: isLoadingMore,
@@ -115,7 +138,12 @@ class WorksGridView extends ConsumerWidget {
         onRefresh: onRefresh,
         onLoadMore: onLoadMore,
         pagination: pagination?.copyWith(
-          padding: EdgeInsets.fromLTRB(padding, spacing, padding, 24),
+          padding: EdgeInsets.fromLTRB(
+            resolvedPadding.left,
+            spacing,
+            resolvedPadding.right,
+            24,
+          ),
         ),
         onRetry: onRetry,
         onPrefetch: (items) {
@@ -125,6 +153,7 @@ class WorksGridView extends ConsumerWidget {
             host: auth.$1,
             token: auth.$2,
             crossAxisCount: crossAxisCount,
+            isListCard: layoutType == LayoutType.list,
           );
           onPrefetch?.call(items);
         },

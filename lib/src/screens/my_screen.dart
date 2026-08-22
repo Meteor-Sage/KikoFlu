@@ -57,6 +57,7 @@ class _MyScreenState extends ConsumerState<MyScreen>
     if (settings.showOnlineMarks) {
       tabs.add(_TabInfo(
         title: S.of(context).onlineMarks,
+        icon: Icons.bookmark,
         index: 0,
         widget: _buildOnlineBookmarksTab(
           toolbarTop: contentTop,
@@ -70,6 +71,7 @@ class _MyScreenState extends ConsumerState<MyScreen>
     // 历史记录
     tabs.add(_TabInfo(
       title: S.of(context).historyRecord,
+      icon: Icons.history,
       index: tabs.length,
       widget: HistoryScreen(topInset: contentTop),
     ));
@@ -77,6 +79,7 @@ class _MyScreenState extends ConsumerState<MyScreen>
     if (settings.showPlaylists && isOfficialServer) {
       tabs.add(_TabInfo(
         title: S.of(context).playlists,
+        icon: Icons.playlist_play,
         index: 1,
         widget: PlaylistsScreen(topInset: contentTop),
       ));
@@ -85,6 +88,7 @@ class _MyScreenState extends ConsumerState<MyScreen>
     // 已下载始终显示
     tabs.add(_TabInfo(
       title: S.of(context).downloaded,
+      icon: Icons.download_done,
       index: 2,
       widget: LocalDownloadsScreen(
         toolbarTop: contentTop,
@@ -112,6 +116,7 @@ class _MyScreenState extends ConsumerState<MyScreen>
     if (settings.showSubtitleLibrary) {
       tabs.add(_TabInfo(
         title: S.of(context).subtitleLibrary,
+        icon: Icons.subtitles,
         index: 3,
         widget: SubtitleLibraryScreen(
           toolbarTop: contentTop,
@@ -275,10 +280,14 @@ class _MyScreenState extends ConsumerState<MyScreen>
     final horizontalPadding = FloatingToolbarLayout.horizontalPadding(context);
     final tabSwitcherTop = topPadding + 8;
     final contentTop = tabSwitcherTop + kTextTabBarHeight + 8;
+    // Keep secondary toolbars below the top blur when the primary switcher hides.
+    const collapsedToolbarClearance = 8.0;
+    final collapsedToolbarTop =
+        tabSwitcherTop + (topPadding > 0 ? collapsedToolbarClearance : 0);
     final tabs = _buildTabList(
       tabsSettings,
       contentTop: contentTop,
-      collapsedToolbarTop: tabSwitcherTop,
+      collapsedToolbarTop: collapsedToolbarTop,
     );
 
     // 如果标签数量变化，需要重新创建 TabController
@@ -369,7 +378,20 @@ class _MyScreenState extends ConsumerState<MyScreen>
                         unselectedLabelColor:
                             Theme.of(context).colorScheme.onSurfaceVariant,
                         splashBorderRadius: BorderRadius.circular(20),
-                        tabs: tabs.map((tab) => Tab(text: tab.title)).toList(),
+                        tabs: tabs
+                            .map(
+                              (tab) => Tab(
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(tab.icon, size: 18),
+                                    const SizedBox(width: 6),
+                                    Text(tab.title),
+                                  ],
+                                ),
+                              ),
+                            )
+                            .toList(),
                       ),
                     ),
                   ),
@@ -411,9 +433,10 @@ class _MyScreenState extends ConsumerState<MyScreen>
             ],
             toolActions: [
               FloatingFeedToolAction(
-                icon: Icons.sort,
-                tooltip: S.of(context).sort,
-                onPressed: _showSortDialog,
+                icon: _getLayoutIcon(state.layoutType),
+                tooltip: _getLayoutTooltip(state.layoutType),
+                onPressed: () =>
+                    ref.read(myReviewsProvider.notifier).toggleLayoutType(),
               ),
               FloatingFeedToolAction(
                 icon: _getSubtitleFilterIcon(state.subtitleFilter),
@@ -425,10 +448,9 @@ class _MyScreenState extends ConsumerState<MyScreen>
                     ref.read(myReviewsProvider.notifier).toggleSubtitleFilter(),
               ),
               FloatingFeedToolAction(
-                icon: _getLayoutIcon(state.layoutType),
-                tooltip: _getLayoutTooltip(state.layoutType),
-                onPressed: () =>
-                    ref.read(myReviewsProvider.notifier).toggleLayoutType(),
+                icon: Icons.sort,
+                tooltip: S.of(context).sort,
+                onPressed: _showSortDialog,
               ),
             ],
           ),
@@ -524,6 +546,7 @@ class _MyScreenState extends ConsumerState<MyScreen>
 // Helper class to organize tab information
 class _TabInfo {
   final String title;
+  final IconData icon;
   final int index;
   final Widget widget;
   final bool showFab;
@@ -531,6 +554,7 @@ class _TabInfo {
 
   const _TabInfo({
     required this.title,
+    required this.icon,
     required this.index,
     required this.widget,
     this.showFab = false,

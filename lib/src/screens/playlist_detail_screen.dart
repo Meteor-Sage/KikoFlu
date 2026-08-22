@@ -462,6 +462,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
         host: auth.host,
         token: auth.token,
         crossAxisCount: isMasonry ? crossAxisCount : 1,
+        isListCard: !isMasonry,
       ),
       emptyBuilder: (context) => Center(
         child: Column(
@@ -533,7 +534,11 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
     return Stack(
       key: ValueKey(work.id),
       children: [
-        EnhancedWorkCard(work: work, crossAxisCount: crossAxisCount),
+        EnhancedWorkCard(
+          work: work,
+          crossAxisCount: crossAxisCount,
+          isListLayout: false,
+        ),
         if (isOwner)
           Positioned(
             top: 4,

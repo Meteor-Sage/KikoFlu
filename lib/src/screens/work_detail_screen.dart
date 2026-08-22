@@ -32,8 +32,6 @@ import '../widgets/work_detail/work_cover_frame.dart';
 import '../widgets/work_detail/work_detail_responsive_layout.dart';
 import '../widgets/work_detail/work_detail_error_banner.dart';
 import '../widgets/work_detail/work_progress_action_button.dart';
-import '../widgets/age_rating_chip.dart';
-import '../utils/age_rating.dart';
 
 import '../widgets/image_gallery_screen.dart';
 
@@ -529,12 +527,6 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
           ),
           const SizedBox(height: 8),
 
-          if (displaySettings.showAgeRating &&
-              AgeRatingFormatter.hasValue(work.age)) ...[
-            AgeRatingChip(age: work.age),
-            const SizedBox(height: 8),
-          ],
-
           WorkDetailErrorBanner(
             message: _errorMessage,
             onRetry: _loadWorkDetail,
@@ -613,7 +605,9 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
           heroTag: effectiveHeroTag,
           isLandscape: isLandscape,
           showSubtitleBadge: showSubtitleBadge,
-          onLongPress: () {
+          showAgeRating: displaySettings.showAgeRating,
+          age: work.age,
+          onTap: () {
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (context) => ImageGalleryScreen(

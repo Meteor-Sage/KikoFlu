@@ -110,6 +110,10 @@ void main() {
     await tester.tap(find.byIcon(Icons.info_outline));
     await tester.tap(find.text('parsed'));
 
+    expect(
+      tester.getCenter(find.byIcon(Icons.checklist)).dx,
+      lessThan(tester.getCenter(find.byIcon(Icons.search)).dx),
+    );
     expect(refreshCount, 1);
     expect(openFolderCount, 1);
     expect(searchCount, 1);

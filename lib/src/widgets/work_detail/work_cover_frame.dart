@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../utils/age_rating.dart';
+import '../age_rating_chip.dart';
 import '../privacy_blur_cover.dart';
+
+const double _coverBadgeInset = 12;
 
 class WorkCoverFrame extends StatelessWidget {
   const WorkCoverFrame({
@@ -10,21 +14,25 @@ class WorkCoverFrame extends StatelessWidget {
     required this.isLandscape,
     required this.layers,
     this.showSubtitleBadge = false,
-    this.onLongPress,
+    this.showAgeRating = false,
+    this.age,
+    this.onTap,
   });
 
   final Object heroTag;
   final bool isLandscape;
   final List<Widget> layers;
   final bool showSubtitleBadge;
-  final VoidCallback? onLongPress;
+  final bool showAgeRating;
+  final String? age;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final mediaSize = MediaQuery.sizeOf(context);
 
     return GestureDetector(
-      onLongPress: onLongPress,
+      onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         child: Hero(
@@ -46,6 +54,16 @@ class WorkCoverFrame extends StatelessWidget {
                   fit: StackFit.passthrough,
                   children: [
                     ...layers,
+                    if (showAgeRating && AgeRatingFormatter.hasValue(age))
+                      Positioned(
+                        left: _coverBadgeInset,
+                        bottom: _coverBadgeInset,
+                        child: AgeRatingChip(
+                          key: const ValueKey('work-cover-age-badge'),
+                          age: age,
+                          compact: true,
+                        ),
+                      ),
                     if (showSubtitleBadge) const _SubtitleBadge(),
                   ],
                 ),
@@ -66,9 +84,10 @@ class _SubtitleBadge extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Positioned(
-      right: 12,
-      bottom: 12,
+      right: _coverBadgeInset,
+      bottom: _coverBadgeInset,
       child: Container(
+        key: const ValueKey('work-cover-subtitle-badge'),
         padding: const EdgeInsets.symmetric(
           horizontal: 8,
           vertical: 4,

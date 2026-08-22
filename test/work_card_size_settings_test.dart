@@ -109,6 +109,44 @@ void main() {
     );
   });
 
+  testWidgets('uses the actual constrained width for narrow grid windows',
+      (tester) async {
+    final originalPhysicalSize = tester.view.physicalSize;
+    final originalDevicePixelRatio = tester.view.devicePixelRatio;
+    addTearDown(() {
+      tester.view.physicalSize = originalPhysicalSize;
+      tester.view.devicePixelRatio = originalDevicePixelRatio;
+    });
+    tester.view.physicalSize = const Size(300, 600);
+    tester.view.devicePixelRatio = 1;
+
+    await tester.pumpWidget(
+      _testApp(
+        const MediaQuery(
+          data: MediaQueryData(size: Size(800, 600)),
+          child: WorksGridView(
+            works: [_work],
+            layoutType: LayoutType.bigGrid,
+          ),
+        ),
+      ),
+    );
+    await _pumpAsyncPreferenceLoad(tester);
+
+    expect(
+      tester
+          .widget<SliverMasonryGrid>(find.byType(SliverMasonryGrid))
+          .gridDelegate,
+      isA<SliverSimpleGridDelegateWithFixedCrossAxisCount>()
+          .having((delegate) => delegate.crossAxisCount, 'crossAxisCount', 1),
+    );
+    expect(find.byType(AspectRatio), findsOneWidget);
+    expect(
+      tester.widget<AspectRatio>(find.byType(AspectRatio)).aspectRatio,
+      1.0,
+    );
+  });
+
   testWidgets('settings screen updates card text size segmented control',
       (tester) async {
     await tester.pumpWidget(_testApp(const WorkCardDisplaySettingsScreen()));

@@ -41,5 +41,19 @@ void main() {
         240,
       );
     });
+
+    test('uses the full cell width for a single-column grid card', () {
+      expect(
+        calculateWorkCoverCacheWidth(
+          viewportWidth: 390,
+          devicePixelRatio: 3,
+          crossAxisCount: 1,
+          horizontalPadding: 8,
+          crossAxisSpacing: 8,
+          isListCard: false,
+        ),
+        1024,
+      );
+    });
   });
 }

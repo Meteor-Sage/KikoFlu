@@ -18,12 +18,13 @@ int calculateWorkCoverCacheWidth({
   required int crossAxisCount,
   required double horizontalPadding,
   required double crossAxisSpacing,
+  bool isListCard = true,
 }) {
-  if (crossAxisCount <= 1) {
+  if (crossAxisCount <= 1 && isListCard) {
     return (80 * devicePixelRatio).round().clamp(160, 512);
   }
 
-  final columns = crossAxisCount.clamp(2, 6);
+  final columns = crossAxisCount.clamp(1, 6);
   final availableWidth =
       viewportWidth - horizontalPadding * 2 - crossAxisSpacing * (columns - 1);
   final logicalWidth = (availableWidth / columns).clamp(80.0, viewportWidth);
@@ -33,6 +34,7 @@ int calculateWorkCoverCacheWidth({
 int resolveWorkCoverCacheWidth(
   BuildContext context, {
   required int crossAxisCount,
+  bool isListCard = true,
 }) {
   final isLandscape =
       MediaQuery.orientationOf(context) == Orientation.landscape;
@@ -45,6 +47,7 @@ int resolveWorkCoverCacheWidth(
     crossAxisCount: crossAxisCount,
     horizontalPadding: padding,
     crossAxisSpacing: spacing,
+    isListCard: isListCard,
   );
 }
 
@@ -54,12 +57,14 @@ void prefetchWorkCovers(
   required String host,
   required String token,
   required int crossAxisCount,
+  bool isListCard = true,
 }) {
   if (host.isEmpty) return;
 
   final targetWidth = resolveWorkCoverCacheWidth(
     context,
     crossAxisCount: crossAxisCount,
+    isListCard: isListCard,
   );
   final headers = StorageService.serverCookieHeaders;
 
