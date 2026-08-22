@@ -9,7 +9,6 @@ import '../../l10n/app_localizations.dart';
 import '../models/work.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/scrollable_appbar.dart';
-import '../services/storage_service.dart';
 import '../services/work_track_file_builder.dart';
 import '../utils/system_ui_style.dart';
 import '../widgets/file_explorer_widget.dart';
@@ -59,6 +58,8 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
   bool _isUpdatingProgress = false; // 是否正在更新状态
   bool _isOpeningFileSelection = false; // iOS上防止快速重复点击造成对话框立即关闭
   bool _isOpeningProgressDialog = false; // 防止标记状态对话框重复快速打开
+  final FileExplorerController _fileExplorerController =
+      FileExplorerController();
 
   // 翻译相关状态
   String? _translatedTitle; // 翻译后的标题
@@ -354,13 +355,12 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
 
       final apiService = ref.read(kikoeruApiServiceProvider);
 
-      // 先清除缓存，确保获取最新数据
-      final prefs = await StorageService.getPrefs();
-      await prefs.remove('work_detail_${widget.work.id}');
-      await prefs.remove('work_detail_time_${widget.work.id}');
-
-      // 从网络获取最新数据
-      final response = await apiService.getWork(widget.work.id);
+      // 元数据和文件树都必须绕过缓存，并等待两者完成后再报告刷新成功。
+      final refreshResults = await Future.wait<dynamic>([
+        apiService.getWork(widget.work.id, forceRefresh: true),
+        _fileExplorerController.refresh(forceRefresh: true),
+      ]);
+      final response = refreshResults.first as Map<String, dynamic>;
       final detailedWork = Work.fromJson(response);
 
       if (mounted) {
@@ -590,7 +590,10 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
           ),
 
           // 文件浏览器组件 - 移除固定高度，让它自由展开
-          FileExplorerWidget(work: work),
+          FileExplorerWidget(
+            work: work,
+            controller: _fileExplorerController,
+          ),
 
           // 相关推荐
           RecommendationSection(work: work),

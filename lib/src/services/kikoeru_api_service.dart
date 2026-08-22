@@ -742,25 +742,31 @@ class KikoeruApiService {
     );
   }
 
-  Future<Map<String, dynamic>> getWork(int workId) async {
+  Future<Map<String, dynamic>> getWork(int workId,
+      {bool forceRefresh = false}) async {
     if (_isOfficialServer) {
-      return _getWorkOfficial(workId);
+      return _getWorkOfficial(workId, forceRefresh: forceRefresh);
     } else {
-      return _getWorkCustom(workId);
+      return _getWorkCustom(workId, forceRefresh: forceRefresh);
     }
   }
 
-  Future<Map<String, dynamic>> _getWorkOfficial(int workId) async {
+  Future<Map<String, dynamic>> _getWorkOfficial(int workId,
+      {required bool forceRefresh}) async {
     try {
       // 1. 先检查缓存
-      final cachedData = await CacheService.getCachedWorkDetail(workId);
-      if (cachedData != null) {
-        _logOutput('[API] 作品详情缓存命中: $workId');
-        return cachedData;
+      if (!forceRefresh) {
+        final cachedData = await CacheService.getCachedWorkDetail(workId);
+        if (cachedData != null) {
+          _logOutput('[API] 作品详情缓存命中: $workId');
+          return cachedData;
+        }
       }
 
       // 2. 缓存未命中，从网络获取
-      _logOutput('[API] 作品详情缓存未命中，从网络获取: $workId');
+      _logOutput(forceRefresh
+          ? '[API] 强制刷新作品详情: $workId'
+          : '[API] 作品详情缓存未命中，从网络获取: $workId');
       final response = await _dio.get('/api/work/$workId?v=2');
       final data = response.data as Map<String, dynamic>;
 
@@ -773,17 +779,22 @@ class KikoeruApiService {
     }
   }
 
-  Future<Map<String, dynamic>> _getWorkCustom(int workId) async {
+  Future<Map<String, dynamic>> _getWorkCustom(int workId,
+      {required bool forceRefresh}) async {
     try {
       // 1. 先检查缓存
-      final cachedData = await CacheService.getCachedWorkDetail(workId);
-      if (cachedData != null) {
-        _logOutput('[API] 作品详情缓存命中: $workId');
-        return cachedData;
+      if (!forceRefresh) {
+        final cachedData = await CacheService.getCachedWorkDetail(workId);
+        if (cachedData != null) {
+          _logOutput('[API] 作品详情缓存命中: $workId');
+          return cachedData;
+        }
       }
 
       // 2. 缓存未命中，从网络获取
-      _logOutput('[API] 作品详情缓存未命中，从网络获取: $workId');
+      _logOutput(forceRefresh
+          ? '[API] 强制刷新作品详情: $workId'
+          : '[API] 作品详情缓存未命中，从网络获取: $workId');
       final metadataResponse = await _dio.get('/api/work/$workId');
       final data = metadataResponse.data as Map<String, dynamic>;
 
@@ -1218,16 +1229,22 @@ class KikoeruApiService {
   }
 
   // Tracks API
-  Future<List<dynamic>> getWorkTracks(int workId) async {
+  Future<List<dynamic>> getWorkTracks(int workId,
+      {bool forceRefresh = false}) async {
     try {
       // 1. 尝试从缓存获取
-      final cachedJson = await CacheService.getCachedWorkTracks(workId);
-      if (cachedJson != null) {
-        _logOutput('[API] 从缓存加载作品文件列表: $workId');
-        return jsonDecode(cachedJson) as List<dynamic>;
+      if (!forceRefresh) {
+        final cachedJson = await CacheService.getCachedWorkTracks(workId);
+        if (cachedJson != null) {
+          _logOutput('[API] 从缓存加载作品文件列表: $workId');
+          return jsonDecode(cachedJson) as List<dynamic>;
+        }
       }
 
       // 2. 缓存未命中，从网络获取
+      if (forceRefresh) {
+        _logOutput('[API] 强制刷新作品文件列表: $workId');
+      }
       final response = await _dio.get('/api/tracks/$workId');
       final tracks = response.data as List<dynamic>;
 
