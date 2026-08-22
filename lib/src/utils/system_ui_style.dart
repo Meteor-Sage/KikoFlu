@@ -18,3 +18,23 @@ SystemUiOverlayStyle transparentSystemBarsForBrightness(Brightness brightness) {
     systemNavigationBarIconBrightness: iconBrightness,
   );
 }
+
+Future<void> enableEdgeToEdgeSystemUi() async {
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  SystemChrome.setSystemUIOverlayStyle(transparentSystemBarsStyle);
+}
+
+Future<void> restoreSystemUiAfterImmersiveMode({
+  required bool useEdgeToEdge,
+}) async {
+  if (useEdgeToEdge) {
+    await enableEdgeToEdgeSystemUi();
+    return;
+  }
+
+  await SystemChrome.setEnabledSystemUIMode(
+    SystemUiMode.manual,
+    overlays: SystemUiOverlay.values,
+  );
+  SystemChrome.setSystemUIOverlayStyle(transparentSystemBarsStyle);
+}

@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -63,11 +66,20 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
       _isLyricLocked = false;
       _showUnlockButton = false;
     });
-    // 恢复系统UI
-    SystemChrome.setEnabledSystemUIMode(
-      SystemUiMode.manual,
-      overlays: SystemUiOverlay.values,
+    // 恢复系统UI，并在 Android 上重新启用 edge-to-edge。
+    unawaited(
+      restoreSystemUiAfterImmersiveMode(useEdgeToEdge: Platform.isAndroid),
     );
+  }
+
+  @override
+  void dispose() {
+    if (_isLyricLocked) {
+      unawaited(
+        restoreSystemUiAfterImmersiveMode(useEdgeToEdge: Platform.isAndroid),
+      );
+    }
+    super.dispose();
   }
 
   /// 处理锁定状态下的点击

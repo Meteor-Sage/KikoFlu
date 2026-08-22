@@ -213,6 +213,10 @@ sub-auto=no
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  if (Platform.isAndroid) {
+    await enableEdgeToEdgeSystemUi();
+  }
+
   // 初始化代理配置，并让所有 HttpClient（API/下载/音频流）走代理
   await ProxyConfig.init();
   HttpOverrides.global = KikoFluHttpOverrides();
@@ -292,8 +296,10 @@ void main(List<String> args) async {
   // 初始化下载服�?
   await DownloadService.instance.initialize();
 
-  // Set system UI overlay style
-  SystemChrome.setSystemUIOverlayStyle(transparentSystemBarsStyle);
+  // Android applies this together with edge-to-edge before initialization.
+  if (!Platform.isAndroid) {
+    SystemChrome.setSystemUIOverlayStyle(transparentSystemBarsStyle);
+  }
 
   // 允许横竖屏旋�?
   SystemChrome.setPreferredOrientations([
