@@ -1,13 +1,15 @@
 package com.meteor.kikoeruflutter
 
+import android.content.Intent
+import android.view.WindowManager
+import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
-import com.ryanheise.audioservice.AudioServiceActivity
-import android.view.WindowManager
 
 class MainActivity : AudioServiceActivity() {
     private var floatingLyricPlugin: FloatingLyricPlugin? = null
     private var audioHapticsBridge: AudioHapticsBridge? = null
+    private var subtitleDirectoryPicker: SubtitleDirectoryPicker? = null
     private val screenAwakeChannelName = "com.meteor.kikoeruflutter/screen_awake"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -23,6 +25,10 @@ class MainActivity : AudioServiceActivity() {
         channel.setMethodCallHandler(floatingLyricPlugin)
         audioHapticsBridge = AudioHapticsBridge(
             context = this,
+            messenger = flutterEngine.dartExecutor.binaryMessenger
+        )
+        subtitleDirectoryPicker = SubtitleDirectoryPicker(
+            activity = this,
             messenger = flutterEngine.dartExecutor.binaryMessenger
         )
 
@@ -47,11 +53,21 @@ class MainActivity : AudioServiceActivity() {
         }
     }
 
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (subtitleDirectoryPicker?.handleActivityResult(requestCode, resultCode, data) == true) {
+            return
+        }
+        super.onActivityResult(requestCode, resultCode, data)
+    }
+
     override fun onDestroy() {
         // 不在 Activity 销毁时清理悬浮窗，以便在后台（如侧滑返回桌面）时保持显示
         // floatingLyricPlugin?.cleanup()
         audioHapticsBridge?.dispose()
         audioHapticsBridge = null
+        subtitleDirectoryPicker?.dispose()
+        subtitleDirectoryPicker = null
         super.onDestroy()
     }
 }

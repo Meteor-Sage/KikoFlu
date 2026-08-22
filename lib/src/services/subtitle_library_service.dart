@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:archive/archive.dart';
 import 'package:gbk_codec/gbk_codec.dart';
 import 'package:path/path.dart' as p;
+import 'android_subtitle_directory_picker.dart';
 import 'download_path_service.dart';
 import 'log_service.dart';
 import 'subtitle_database.dart';
@@ -17,6 +18,20 @@ class SubtitleLibraryService {
   static final _log = LogService.instance;
   static const String _libraryFolderName = 'subtitle_library';
   static const String _cacheFileName = 'library_cache.json';
+  static const List<String> _supportedSubtitleExtensions = [
+    'vtt',
+    'srt',
+    'lrc',
+    'txt',
+    'ass',
+    'ssa',
+    'sub',
+    'idx',
+    'sbv',
+    'dfxp',
+    'ttml',
+  ];
+  static const _androidDirectoryPicker = AndroidSubtitleDirectoryPicker();
 
   // Windows 路径长度限制 (保留一些余量)
   static const int _maxPathLength = SubtitleLibraryRules.maxPathLength;
@@ -445,19 +460,7 @@ class SubtitleLibraryService {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: [
-          'vtt',
-          'srt',
-          'lrc',
-          'txt',
-          'ass',
-          'ssa',
-          'sub',
-          'idx',
-          'sbv',
-          'dfxp',
-          'ttml'
-        ],
+        allowedExtensions: _supportedSubtitleExtensions,
         allowMultiple: true,
       );
 
@@ -551,8 +554,17 @@ class SubtitleLibraryService {
   /// [onProgress] - 进度回调，参数为当前进度消息
   static Future<ImportResult> importFolder(
       {Function(String)? onProgress}) async {
+    AndroidSubtitleDirectorySelection? androidSelection;
     try {
-      final directoryPath = await FilePicker.platform.getDirectoryPath();
+      final String? directoryPath;
+      if (Platform.isAndroid) {
+        androidSelection = await _androidDirectoryPicker.pick(
+          allowedExtensions: _supportedSubtitleExtensions,
+        );
+        directoryPath = androidSelection?.path;
+      } else {
+        directoryPath = await FilePicker.platform.getDirectoryPath();
+      }
 
       if (directoryPath == null) {
         return ImportResult(
@@ -636,8 +648,10 @@ class SubtitleLibraryService {
       }
 
       totalSuccess = result['successCount'] ?? 0;
-      totalError = result['errorCount'] ?? 0;
-      totalSkipped = result['skippedCount'] ?? 0;
+      totalError =
+          (result['errorCount'] ?? 0) + (androidSelection?.errorCount ?? 0);
+      totalSkipped =
+          (result['skippedCount'] ?? 0) + (androidSelection?.skippedCount ?? 0);
 
       if (totalSuccess == 0) {
         return ImportResult(
@@ -685,6 +699,15 @@ class SubtitleLibraryService {
         success: false,
         message: '导入文件夹失败: $e',
       );
+    } finally {
+      final selection = androidSelection;
+      if (selection != null) {
+        try {
+          await _androidDirectoryPicker.release(selection.token);
+        } catch (e) {
+          _log.captureOutput('[SubtitleLibrary] 清理 Android 导入缓存失败: $e');
+        }
+      }
     }
   }
 
