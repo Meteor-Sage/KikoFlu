@@ -163,8 +163,6 @@
   "liquidGlassNavigationDesc": "使用半透明液态玻璃导航栏和迷你播放器。仅支持原生液态玻璃的 iOS 和 macOS 版本默认开启。",
   "fallbackGlassTransparency": "液态玻璃透明度",
   "fallbackGlassTransparencyDesc": "调整当前平台由应用绘制的玻璃材质透明度。",
-  "legacyAppleGlassTest": "低版本 Apple 材质测试",
-  "legacyAppleGlassTestDesc": "使用旧版系统模糊材质替代原生液态玻璃。",
   "preferenceSettings": "偏好设置",
   "preferenceSettingsSubtitle": "翻译源、屏蔽、音频偏好等",
 

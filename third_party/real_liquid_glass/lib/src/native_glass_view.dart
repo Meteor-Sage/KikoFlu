@@ -4,7 +4,6 @@ import 'package:flutter/rendering.dart' show PlatformViewHitTestBehavior;
 import 'package:flutter/services.dart';
 
 import 'glass_style.dart';
-import 'legacy_material_scope.dart';
 
 /// Embeds the native effect view that carries the glass material.
 ///
@@ -42,7 +41,6 @@ class _NativeGlassViewState extends State<NativeGlassView> {
     'capsule': widget.shape.capsule,
     'cornerRadius': widget.shape.cornerRadius,
     'dark': CupertinoTheme.brightnessOf(context) == Brightness.dark,
-    'forceLegacyMaterial': LiquidGlassLegacyMaterialScope.enabledOf(context),
   };
 
   @override

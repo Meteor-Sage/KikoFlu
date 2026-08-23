@@ -227,7 +227,6 @@ final class GlassHostView: UIView {
     target: self, action: #selector(didTap))
   private var capsule = false
   private var cornerRadius: CGFloat = 0
-  private var forceLegacyMaterial = false
   var onTap: (() -> Void)?
 
   init(frame: CGRect, args: [String: Any]) {
@@ -251,7 +250,6 @@ final class GlassHostView: UIView {
     }
     capsule = args["capsule"] as? Bool ?? false
     cornerRadius = CGFloat((args["cornerRadius"] as? NSNumber)?.doubleValue ?? 0)
-    forceLegacyMaterial = args["forceLegacyMaterial"] as? Bool ?? false
     isUserInteractionEnabled = interactive
     effectView.isUserInteractionEnabled = interactive
     if interactive && tapRecognizer.view == nil {
@@ -260,7 +258,7 @@ final class GlassHostView: UIView {
       removeGestureRecognizer(tapRecognizer)
     }
 
-    if #available(iOS 26.0, *), !forceLegacyMaterial {
+    if #available(iOS 26.0, *) {
       let glass: UIGlassEffect
       if style == "clear" {
         glass = UIGlassEffect(style: .clear)
@@ -270,7 +268,6 @@ final class GlassHostView: UIView {
       glass.isInteractive = interactive
       if let tint { glass.tintColor = tint }
       effectView.effect = glass
-      effectView.contentView.backgroundColor = nil
       effectView.cornerConfiguration =
         capsule
         ? .capsule()
@@ -290,11 +287,7 @@ final class GlassHostView: UIView {
 
   override func layoutSubviews() {
     super.layoutSubviews()
-    if forceLegacyMaterial {
-      updateLegacyCorners()
-    } else if #unavailable(iOS 26.0) {
-      updateLegacyCorners()
-    }
+    if #unavailable(iOS 26.0) { updateLegacyCorners() }
   }
 
   private func updateLegacyCorners() {

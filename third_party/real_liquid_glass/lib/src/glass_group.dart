@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 
 import 'capabilities.dart';
 import 'glass_style.dart';
-import 'legacy_material_scope.dart';
 
 /// Lets nearby glass shapes merge fluidly, like droplets.
 ///
@@ -108,8 +107,7 @@ class LiquidGlassGroupState extends State<LiquidGlassGroup> {
 
   @override
   Widget build(BuildContext context) {
-    if (!LiquidGlass.isNativePlatform ||
-        LiquidGlassLegacyMaterialScope.enabledOf(context)) {
+    if (!LiquidGlass.isNativePlatform) {
       return widget.child;
     }
     final view = defaultTargetPlatform == TargetPlatform.macOS

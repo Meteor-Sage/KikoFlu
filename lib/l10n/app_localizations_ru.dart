@@ -463,13 +463,6 @@ class SRu extends S {
       'Настройте прозрачность стеклянных поверхностей, отрисованных приложением на этой платформе.';
 
   @override
-  String get legacyAppleGlassTest => 'Тест прежнего материала Apple';
-
-  @override
-  String get legacyAppleGlassTestDesc =>
-      'Использовать прежний системный материал размытия вместо нативного Liquid Glass.';
-
-  @override
   String get preferenceSettings => 'Предпочтения';
 
   @override

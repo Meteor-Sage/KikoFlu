@@ -452,13 +452,6 @@ class SJa extends S {
       'このプラットフォームでアプリが描画するガラス素材の透明度を調整します。';
 
   @override
-  String get legacyAppleGlassTest => '旧バージョン Apple マテリアルテスト';
-
-  @override
-  String get legacyAppleGlassTestDesc =>
-      'ネイティブのリキッドグラスの代わりに従来のシステムぼかし素材を使用します。';
-
-  @override
   String get preferenceSettings => '環境設定';
 
   @override
