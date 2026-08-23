@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
+import 'package:real_liquid_glass/real_liquid_glass.dart';
 
 /// Shared geometry for the liquid-glass navigation stack.
 ///
@@ -53,7 +54,12 @@ abstract final class LiquidGlassLayout {
   }
 
   static double nativeTabBarExpansion(BuildContext context) {
-    return defaultTargetPlatform == TargetPlatform.iOS ? 20 : 0;
+    if (defaultTargetPlatform != TargetPlatform.iOS) return 0;
+
+    // iOS 26's floating UITabBar has additional internal horizontal insets.
+    // Older system tab bars and Flutter-drawn fallbacks do not, so expanding
+    // those surfaces would make them overflow the viewport.
+    return LiquidGlass.cachedCapabilities?.nativeGlass == true ? 20 : 0;
   }
 
   static double dockBottomInset(BuildContext context) {

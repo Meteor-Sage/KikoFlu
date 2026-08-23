@@ -118,6 +118,8 @@ class FallbackGlassTransparencyNotifier extends StateNotifier<double> {
       // Keep the in-memory value when persistence is unavailable.
     }
   }
+
+  Future<void> resetToDefault() => setTransparency(defaultValue);
 }
 
 final fallbackGlassTransparencyProvider = StateNotifierProvider<

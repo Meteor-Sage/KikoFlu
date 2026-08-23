@@ -442,20 +442,19 @@ class SJa extends S {
 
   @override
   String get liquidGlassNavigationDesc =>
-      '半透明のリキッドグラスナビゲーションとミニプレーヤーを使用します。ネイティブのリキッドグラスに対応する iOS と macOS でのみデフォルトで有効です。';
+      'ガラス素材のナビゲーションとミニプレーヤー。対応環境ではデフォルトで有効';
 
   @override
   String get fallbackGlassTransparency => 'リキッドグラスの透明度';
 
   @override
-  String get fallbackGlassTransparencyDesc =>
-      'このプラットフォームでアプリが描画するガラス素材の透明度を調整します。';
+  String get fallbackGlassTransparencyDesc => 'アプリ描画のガラス透明度を調整';
 
   @override
   String get preferenceSettings => '環境設定';
 
   @override
-  String get preferenceSettingsSubtitle => '翻訳ソース、ブロック、オーディオ設定など';
+  String get preferenceSettingsSubtitle => '翻訳、再生、ネットワーク';
 
   @override
   String get aboutTitle => 'について';
@@ -860,8 +859,7 @@ class SJa extends S {
   String get autoSaveTranslatedLyrics => '翻訳した歌詞を自動保存';
 
   @override
-  String get autoSaveTranslatedLyricsDesc =>
-      '翻訳完了後に字幕ライブラリの「保存済み」フォルダーへ保存します。オフの場合は現在の再生中のみ表示します。';
+  String get autoSaveTranslatedLyricsDesc => '翻訳を字幕ライブラリに保存。オフでは一時表示のみ';
 
   @override
   String get selectTranslationTargetLanguage => 'ターゲット言語を選択：';
@@ -923,13 +921,13 @@ class SJa extends S {
   String get llmSettings => 'LLM設定';
 
   @override
-  String get llmSettingsSubtitle => 'API URL、キー、モデルを設定';
+  String get llmSettingsSubtitle => 'API URL、キー、モデル';
 
   @override
   String get audioFormatPreference => 'オーディオフォーマット設定';
 
   @override
-  String get audioFormatSubtitle => 'オーディオフォーマットの優先順位を設定';
+  String get audioFormatSubtitle => '音声形式の優先順位';
 
   @override
   String get preloadNextTitle => '次をプリロード';
@@ -969,15 +967,13 @@ class SJa extends S {
   String get keepScreenAwake => '画面を常にオン';
 
   @override
-  String get keepScreenAwakeDesc =>
-      '有効にすると、音声トラックがある間は字幕を見やすくするため画面をオンのままにします。';
+  String get keepScreenAwakeDesc => '再生中は画面を点灯';
 
   @override
   String get audioHaptics => 'オーディオ触覚フィードバック(Beta)';
 
   @override
-  String get audioHapticsDesc =>
-      'ダウンロード済み音声のみ対応し、アプリが前面にある時だけ有効です。音声の特徴に合わせて端末を振動させます。バッテリー消費が増える場合があります。';
+  String get audioHapticsDesc => 'ダウンロード音声に合わせて振動（フォアグラウンドのみ）';
 
   @override
   String get audioHapticsIntensity => '強度';
@@ -986,29 +982,28 @@ class SJa extends S {
   String get audioGain => 'グローバルオーディオゲイン';
 
   @override
-  String get audioGainDesc =>
-      'すべての音声を減衰または増幅します。0 dB では原音を維持します。高い正のゲインは歪みや聴力への損傷を引き起こす可能性があります。';
+  String get audioGainDesc => '0 dB は原音。過度な増幅は歪みや聴力障害の原因になります';
 
   @override
-  String get audioGainAttenuationDesc => 'すべての音声を減衰します。0 dB では原音を維持します。';
+  String get audioGainAttenuationDesc => '全音声を減衰。0 dB は原音';
 
   @override
-  String get audioGainPassthroughDesc => 'オーディオパススルーが有効な間は使用できません。';
+  String get audioGainPassthroughDesc => 'オーディオパススルー中は使用不可';
 
   @override
   String get blockingSettings => 'ブロック設定';
 
   @override
-  String get blockingSettingsSubtitle => 'ブロック中のタグ、声優、サークルを管理';
+  String get blockingSettingsSubtitle => 'ブロック中のタグ、声優、サークル';
 
   @override
   String get audioPassthrough => 'オーディオパススルー(Beta)';
 
   @override
-  String get audioPassthroughDescWindows => 'WASAPI排他モードを有効にしてロスレス出力（再起動が必要）';
+  String get audioPassthroughDescWindows => 'WASAPI 排他出力を使用（再起動が必要）';
 
   @override
-  String get audioPassthroughDescMac => 'CoreAudio排他モードを有効にしてロスレス出力';
+  String get audioPassthroughDescMac => 'CoreAudio 排他出力を使用';
 
   @override
   String get audioPassthroughDisableDesc => 'オーディオパススルーモードを無効にする';
@@ -1652,26 +1647,26 @@ class SJa extends S {
   String get surfaceColor => 'サーフェス';
 
   @override
-  String get playerButtonSettingsSubtitle => 'プレーヤーコントロールボタンの順序をカスタマイズ';
+  String get playerButtonSettingsSubtitle => 'プレーヤーボタンの順序';
 
   @override
-  String get playerLyricStyleSubtitle => 'ミニプレーヤーとフルスクリーンプレーヤーの字幕スタイルをカスタマイズ';
+  String get playerLyricStyleSubtitle => 'ミニ・全画面の歌詞スタイル';
 
   @override
-  String get workDetailDisplaySubtitle => '作品詳細ページの表示項目を制御';
+  String get workDetailDisplaySubtitle => '詳細ページの表示内容';
 
   @override
-  String get workCardDisplaySubtitle => '作品カードの表示項目を制御';
+  String get workCardDisplaySubtitle => '作品カードの表示内容';
 
   @override
-  String get myTabsDisplaySubtitle => 'マイページのタブ表示を制御';
+  String get myTabsDisplaySubtitle => 'マイページに表示するタブ';
 
   @override
   String get pageSizeSettings => 'ページあたりの表示数';
 
   @override
   String pageSizeCurrent(int size) {
-    return '現在の設定: $size 件/ページ';
+    return '1ページ $size 件';
   }
 
   @override
@@ -1692,20 +1687,19 @@ class SJa extends S {
   String get autoSwitchedToLlm => '自動切替: LLM翻訳';
 
   @override
-  String get translationDescGoogle => 'Googleサービスへのネットワークアクセスが必要';
+  String get translationDescGoogle => 'Google サービスへの接続が必要';
 
   @override
-  String get translationDescYoudao => 'デフォルトネットワークで動作';
+  String get translationDescYoudao => '現在のネットワークを使用';
 
   @override
-  String get translationDescMicrosoft => 'デフォルトネットワークで動作';
+  String get translationDescMicrosoft => '現在のネットワークを使用';
 
   @override
-  String get translationDescLlm => 'OpenAI互換API、手動でAPI Keyの設定が必要';
+  String get translationDescLlm => 'OpenAI 互換 API の設定が必要';
 
   @override
-  String get audioPassthroughDescAndroid =>
-      '外部デコーダーへの生ビットストリーム出力 (AC3/DTS) を許可。オーディオデバイスを占有する場合があります。';
+  String get audioPassthroughDescAndroid => 'AC3/DTS の生音声を外部デコーダーへ出力';
 
   @override
   String get permissionExplanation => '権限の説明';
@@ -3577,7 +3571,7 @@ class SJa extends S {
   String get proxyAddressNotSet => '未設定（直接接続）';
 
   @override
-  String get proxyHttpDescription => 'HTTP プロキシ経由でサーバーに接続（例: Clash）';
+  String get proxyHttpDescription => 'HTTP プロキシ経由で接続';
 
   @override
   String get useProxy => 'プロキシを使用';

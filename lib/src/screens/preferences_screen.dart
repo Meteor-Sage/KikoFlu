@@ -715,21 +715,6 @@ class PreferencesScreen extends ConsumerWidget {
           SettingsSectionList(
             children: [
               SettingsNavigationTile(
-                icon: Icons.library_books,
-                title: S.of(context).subtitleLibraryPriority,
-                subtitle: S
-                    .of(context)
-                    .currentSettingLabel(priority.localizedName(context)),
-                onTap: () => _showSubtitleLibraryPriorityDialog(context, ref),
-              ),
-              SettingsNavigationTile(
-                icon: Icons.sort,
-                title: S.of(context).defaultSortSettingTitle,
-                subtitle:
-                    '${defaultSort.order.localizedLabel(context)} - ${defaultSort.direction.localizedLabel(context)}',
-                onTap: () => _showDefaultSortDialog(context, ref),
-              ),
-              SettingsNavigationTile(
                 icon: Icons.translate,
                 title: S.of(context).translationSource,
                 subtitle: S.of(context).currentSettingLabel(
@@ -771,6 +756,43 @@ class PreferencesScreen extends ConsumerWidget {
                     );
                   },
                 ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SettingsSectionList(
+            children: [
+              SettingsNavigationTile(
+                icon: Icons.library_books,
+                title: S.of(context).subtitleLibraryPriority,
+                subtitle: S
+                    .of(context)
+                    .currentSettingLabel(priority.localizedName(context)),
+                onTap: () => _showSubtitleLibraryPriorityDialog(context, ref),
+              ),
+              SettingsNavigationTile(
+                icon: Icons.sort,
+                title: S.of(context).defaultSortSettingTitle,
+                subtitle:
+                    '${defaultSort.order.localizedLabel(context)} - ${defaultSort.direction.localizedLabel(context)}',
+                onTap: () => _showDefaultSortDialog(context, ref),
+              ),
+              SettingsNavigationTile(
+                icon: Icons.block,
+                title: S.of(context).blockingSettings,
+                subtitle: S.of(context).blockingSettingsSubtitle,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const BlockedItemsScreen(),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SettingsSectionList(
+            children: [
               SettingsNavigationTile(
                 icon: Icons.audio_file,
                 title: S.of(context).audioFormatPreference,
@@ -793,7 +815,6 @@ class PreferencesScreen extends ConsumerWidget {
               ),
               if (_supportsAudioGain(Theme.of(context).platform))
                 _AudioGainSettingsTile(ref: ref),
-              _buildProxySettings(context, ref),
               SettingsSwitchTile(
                 icon: Icons.screen_lock_portrait,
                 title: S.of(context).keepScreenAwake,
@@ -806,18 +827,6 @@ class PreferencesScreen extends ConsumerWidget {
               if (Theme.of(context).platform == TargetPlatform.android ||
                   Theme.of(context).platform == TargetPlatform.iOS)
                 _AudioHapticsSettingsTile(ref: ref),
-              SettingsNavigationTile(
-                icon: Icons.block,
-                title: S.of(context).blockingSettings,
-                subtitle: S.of(context).blockingSettingsSubtitle,
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const BlockedItemsScreen(),
-                    ),
-                  );
-                },
-              ),
               // 仅在 Android, Windows 和 macOS 平台上显示音频直通设置
               if (Theme.of(context).platform == TargetPlatform.android ||
                   Theme.of(context).platform == TargetPlatform.windows ||
@@ -825,11 +834,12 @@ class PreferencesScreen extends ConsumerWidget {
                 SettingsSwitchTile(
                   icon: Icons.surround_sound,
                   title: S.of(context).audioPassthrough,
-                  subtitle: (Theme.of(context).platform ==
-                              TargetPlatform.windows ||
-                          Theme.of(context).platform == TargetPlatform.macOS)
+                  subtitle: Theme.of(context).platform ==
+                          TargetPlatform.windows
                       ? S.of(context).audioPassthroughDescWindows
-                      : S.of(context).audioPassthroughDescAndroid,
+                      : Theme.of(context).platform == TargetPlatform.macOS
+                          ? S.of(context).audioPassthroughDescMac
+                          : S.of(context).audioPassthroughDescAndroid,
                   subtitleStyle: const TextStyle(fontSize: 12),
                   value: ref.watch(audioPassthroughProvider),
                   onChanged: (value) async {
@@ -873,6 +883,8 @@ class PreferencesScreen extends ConsumerWidget {
                 ),
             ],
           ),
+          const SizedBox(height: 16),
+          SettingsSectionCard(child: _buildProxySettings(context, ref)),
         ],
       ),
     );
@@ -926,13 +938,6 @@ class _AudioGainSettingsTile extends StatelessWidget {
                     ? S.of(context).audioGainDesc
                     : S.of(context).audioGainAttenuationDesc,
           ),
-          trailing: IconButton(
-            onPressed: settings.decibels == AudioGainSettings.defaultDecibels
-                ? null
-                : notifier.resetToDefault,
-            icon: const Icon(Icons.restart_alt),
-            tooltip: S.of(context).restoreDefaultSettings,
-          ),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(72, 0, 16, 12),
@@ -971,13 +976,6 @@ class _AudioHapticsSettingsTile extends StatelessWidget {
 
   final WidgetRef ref;
 
-  Future<void> _resetToDefault(BuildContext context) async {
-    await confirmAndRestoreSettingsDefaults(
-      context: context,
-      restore: ref.read(audioHapticsSettingsProvider.notifier).resetToDefault,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(audioHapticsSettingsProvider);
@@ -991,16 +989,9 @@ class _AudioHapticsSettingsTile extends StatelessWidget {
           title: Text(S.of(context).audioHaptics),
           subtitle: Text(S.of(context).audioHapticsDesc),
           onTap: () => notifier.setEnabled(!settings.enabled),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                onPressed: () => _resetToDefault(context),
-                icon: const Icon(Icons.restart_alt),
-                tooltip: S.of(context).restoreDefaultSettings,
-              ),
-              Switch(value: settings.enabled, onChanged: notifier.setEnabled),
-            ],
+          trailing: Switch(
+            value: settings.enabled,
+            onChanged: notifier.setEnabled,
           ),
         ),
         if (settings.enabled)

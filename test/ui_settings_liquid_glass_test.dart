@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kikoeru_flutter/l10n/app_localizations.dart';
 import 'package:kikoeru_flutter/src/providers/settings_provider.dart';
-import 'package:kikoeru_flutter/src/screens/ui_settings_screen.dart';
+import 'package:kikoeru_flutter/src/screens/theme_settings_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Widget _testApp(
@@ -21,7 +21,7 @@ Widget _testApp(
         data: MediaQuery.of(context).copyWith(textScaler: textScaler),
         child: child!,
       ),
-      home: const UiSettingsScreen(),
+      home: const ThemeSettingsScreen(),
     ),
   );
 }

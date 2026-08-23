@@ -31,9 +31,14 @@ void main() {
     await tester.pumpWidget(_testApp());
     await tester.pump();
 
-    final proxySwitch = find.widgetWithText(SwitchListTile, 'Use proxy');
-    await tester.ensureVisible(proxySwitch);
+    await tester.scrollUntilVisible(
+      find.text('Use proxy'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.pumpAndSettle();
+    final proxySwitch = find.widgetWithText(SwitchListTile, 'Use proxy');
+    expect(proxySwitch, findsOneWidget);
     expect(find.text('Proxy address'), findsNothing);
 
     await tester.tap(proxySwitch);
@@ -69,9 +74,9 @@ void main() {
     );
   });
 
-  testWidgets('audio haptics exposes a working restore defaults action',
+  testWidgets('audio gain and haptics omit restore defaults actions',
       (tester) async {
-    tester.view.physicalSize = const Size(390, 844);
+    tester.view.physicalSize = const Size(390, 1600);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -89,25 +94,18 @@ void main() {
     );
     await tester.pump();
 
-    final hapticsTile = find.ancestor(
-      of: find.text('Audio Haptics (Beta)'),
-      matching: find.byType(ListTile),
+    expect(find.text('Global Audio Gain'), findsOneWidget);
+    expect(find.byTooltip('Restore Default Settings'), findsNothing);
+    expect(
+      find.descendant(
+        of: find.ancestor(
+          of: find.text('Audio Haptics (Beta)'),
+          matching: find.byType(ListTile),
+        ),
+        matching: find.byType(Switch),
+      ),
+      findsOneWidget,
     );
-    final resetButton = find.descendant(
-      of: hapticsTile,
-      matching: find.byTooltip('Restore Default Settings'),
-    );
-    await tester.tap(resetButton);
-    await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Confirm'));
-    await tester.pumpAndSettle();
-
-    final container = ProviderScope.containerOf(
-      tester.element(find.byType(PreferencesScreen)),
-    );
-    final settings = container.read(audioHapticsSettingsProvider);
-    expect(settings.enabled, isFalse);
-    expect(settings.intensity, AudioHapticsSettings.defaultIntensity);
   });
 
   testWidgets('global audio gain updates immediately and persists',
@@ -163,7 +161,7 @@ void main() {
     await tester.pump();
 
     expect(
-      find.text('Unavailable while audio passthrough is enabled.'),
+      find.text('Unavailable while audio passthrough is on'),
       findsOneWidget,
     );
     expect(tester.widget<Slider>(find.byType(Slider).first).onChanged, isNull);
@@ -186,8 +184,7 @@ void main() {
     await tester.pump();
 
     expect(
-      find.text(
-          'Reduce all audio globally. 0 dB preserves the original sound.'),
+      find.text('Reduce all audio; 0 dB keeps the original level'),
       findsOneWidget,
     );
     final gainSlider = tester.widget<Slider>(find.byType(Slider).first);

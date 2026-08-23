@@ -8,8 +8,8 @@ KikoFlu includes these local adjustments:
 - `GlassHostView` clips its composited AppKit layer to the same rounded boundary
   as the native glass view, so native shadows cannot leak into rectangular
   corners.
-- Calibrate the non-Apple Flutter fallback with a clearer fill and restrained
-  blur. Native iOS/macOS materials are unchanged.
+- Calibrate the non-Apple Flutter fallback with a wider transparency range,
+  clearer fill, and restrained blur. Native iOS/macOS materials are unchanged.
 
 The local mirror can be removed after an upstream release includes equivalent
 behavior.

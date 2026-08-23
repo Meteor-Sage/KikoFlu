@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:real_liquid_glass/real_liquid_glass.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../providers/settings_provider.dart';
 import '../providers/theme_provider.dart';
 import '../widgets/radio_option_group.dart';
 import '../widgets/settings_section.dart';
@@ -12,13 +14,24 @@ class ThemeSettingsScreen extends ConsumerWidget {
   Future<void> _resetToDefault(BuildContext context, WidgetRef ref) async {
     await confirmAndRestoreSettingsDefaults(
       context: context,
-      restore: ref.read(themeSettingsProvider.notifier).resetToDefault,
+      restore: () async {
+        await Future.wait([
+          ref.read(themeSettingsProvider.notifier).resetToDefault(),
+          ref.read(liquidGlassNavigationProvider.notifier).resetToDefault(),
+          ref
+              .read(fallbackGlassTransparencyProvider.notifier)
+              .resetToDefault(),
+        ]);
+      },
     );
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeSettings = ref.watch(themeSettingsProvider);
+    final useLiquidGlass = ref.watch(liquidGlassNavigationProvider);
+    final fallbackGlassTransparency =
+        ref.watch(fallbackGlassTransparencyProvider);
 
     return SettingsSubpageScaffold(
       title: S.of(context).themeSettings,
@@ -233,6 +246,34 @@ class ThemeSettingsScreen extends ConsumerWidget {
 
           const SizedBox(height: 16),
 
+          SettingsSectionList(
+            children: [
+              SettingsSwitchTile(
+                icon: Icons.blur_on,
+                title: S.of(context).liquidGlassNavigation,
+                subtitle: S.of(context).liquidGlassNavigationDesc,
+                value: useLiquidGlass,
+                onChanged: (value) {
+                  ref
+                      .read(liquidGlassNavigationProvider.notifier)
+                      .setEnabled(value);
+                },
+              ),
+              if (useLiquidGlass && !LiquidGlass.isNativePlatform)
+                _FallbackGlassTransparencyTile(
+                  value: fallbackGlassTransparency,
+                  onChanged: ref
+                      .read(fallbackGlassTransparencyProvider.notifier)
+                      .previewTransparency,
+                  onChangeEnd: ref
+                      .read(fallbackGlassTransparencyProvider.notifier)
+                      .setTransparency,
+                ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
           // 预览卡片
           SettingsSectionCard(
             child: Padding(
@@ -425,6 +466,52 @@ class ThemeSettingsScreen extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _FallbackGlassTransparencyTile extends StatelessWidget {
+  const _FallbackGlassTransparencyTile({
+    required this.value,
+    required this.onChanged,
+    required this.onChangeEnd,
+  });
+
+  final double value;
+  final ValueChanged<double> onChanged;
+  final ValueChanged<double> onChangeEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    final percentage = (value * 100).round();
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return ListTile(
+      leading: Icon(Icons.opacity, color: colorScheme.primary),
+      title: Text(S.of(context).fallbackGlassTransparency),
+      trailing: SizedBox(
+        width: 48,
+        child: Text(
+          '$percentage%',
+          textAlign: TextAlign.end,
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+      ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(S.of(context).fallbackGlassTransparencyDesc),
+          Slider(
+            value: value,
+            min: 0,
+            max: 1,
+            divisions: 20,
+            label: '$percentage%',
+            onChanged: onChanged,
+            onChangeEnd: onChangeEnd,
+          ),
+        ],
       ),
     );
   }

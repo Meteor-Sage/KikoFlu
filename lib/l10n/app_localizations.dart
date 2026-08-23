@@ -945,7 +945,7 @@ abstract class S {
   /// No description provided for @liquidGlassNavigationDesc.
   ///
   /// In en, this message translates to:
-  /// **'Use translucent glass navigation and mini player surfaces. Enabled by default only on supported iOS and macOS versions.'**
+  /// **'Glass navigation and mini player; enabled by default where supported.'**
   String get liquidGlassNavigationDesc;
 
   /// No description provided for @fallbackGlassTransparency.
@@ -957,7 +957,7 @@ abstract class S {
   /// No description provided for @fallbackGlassTransparencyDesc.
   ///
   /// In en, this message translates to:
-  /// **'Adjust the transparency of app-rendered glass surfaces on this platform.'**
+  /// **'Adjust app-rendered glass transparency.'**
   String get fallbackGlassTransparencyDesc;
 
   /// No description provided for @preferenceSettings.
@@ -969,7 +969,7 @@ abstract class S {
   /// No description provided for @preferenceSettingsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Translation source, blocking, audio preferences, etc.'**
+  /// **'Translation, playback, and network'**
   String get preferenceSettingsSubtitle;
 
   /// No description provided for @aboutTitle.
@@ -1707,7 +1707,7 @@ abstract class S {
   /// No description provided for @autoSaveTranslatedLyricsDesc.
   ///
   /// In en, this message translates to:
-  /// **'Save translations to the Saved subtitle library folder; when disabled, show them only during current playback.'**
+  /// **'Save translations to the subtitle library; otherwise show them temporarily.'**
   String get autoSaveTranslatedLyricsDesc;
 
   /// No description provided for @selectTranslationTargetLanguage.
@@ -1827,7 +1827,7 @@ abstract class S {
   /// No description provided for @llmSettingsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Configure API URL, Key, and model'**
+  /// **'API URL, key, and model'**
   String get llmSettingsSubtitle;
 
   /// No description provided for @audioFormatPreference.
@@ -1839,7 +1839,7 @@ abstract class S {
   /// No description provided for @audioFormatSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Set audio format priority order'**
+  /// **'Audio format priority'**
   String get audioFormatSubtitle;
 
   /// No description provided for @preloadNextTitle.
@@ -1911,7 +1911,7 @@ abstract class S {
   /// No description provided for @keepScreenAwakeDesc.
   ///
   /// In en, this message translates to:
-  /// **'Keep the screen on while an audio track is active for easier subtitle reading.'**
+  /// **'Keep the screen on during playback'**
   String get keepScreenAwakeDesc;
 
   /// No description provided for @audioHaptics.
@@ -1923,7 +1923,7 @@ abstract class S {
   /// No description provided for @audioHapticsDesc.
   ///
   /// In en, this message translates to:
-  /// **'Downloaded audio only, foreground only. Make the device vibrate with audio features. May increase battery use.'**
+  /// **'Vibrate with downloaded audio while the app is foregrounded'**
   String get audioHapticsDesc;
 
   /// No description provided for @audioHapticsIntensity.
@@ -1941,19 +1941,19 @@ abstract class S {
   /// No description provided for @audioGainDesc.
   ///
   /// In en, this message translates to:
-  /// **'Attenuate or boost all audio globally. 0 dB preserves the original sound. High positive gain may cause distortion or hearing damage.'**
+  /// **'0 dB is original audio; excessive boost may distort or damage hearing'**
   String get audioGainDesc;
 
   /// No description provided for @audioGainAttenuationDesc.
   ///
   /// In en, this message translates to:
-  /// **'Reduce all audio globally. 0 dB preserves the original sound.'**
+  /// **'Reduce all audio; 0 dB keeps the original level'**
   String get audioGainAttenuationDesc;
 
   /// No description provided for @audioGainPassthroughDesc.
   ///
   /// In en, this message translates to:
-  /// **'Unavailable while audio passthrough is enabled.'**
+  /// **'Unavailable while audio passthrough is on'**
   String get audioGainPassthroughDesc;
 
   /// No description provided for @blockingSettings.
@@ -1965,7 +1965,7 @@ abstract class S {
   /// No description provided for @blockingSettingsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Manage blocked tags, voice actors, and circles'**
+  /// **'Blocked tags, voice actors, and circles'**
   String get blockingSettingsSubtitle;
 
   /// No description provided for @audioPassthrough.
@@ -1977,13 +1977,13 @@ abstract class S {
   /// No description provided for @audioPassthroughDescWindows.
   ///
   /// In en, this message translates to:
-  /// **'Enable WASAPI exclusive mode for lossless output (restart required)'**
+  /// **'Use WASAPI exclusive output (restart required)'**
   String get audioPassthroughDescWindows;
 
   /// No description provided for @audioPassthroughDescMac.
   ///
   /// In en, this message translates to:
-  /// **'Enable CoreAudio exclusive mode for lossless output'**
+  /// **'Use CoreAudio exclusive output'**
   String get audioPassthroughDescMac;
 
   /// No description provided for @audioPassthroughDisableDesc.
@@ -3213,31 +3213,31 @@ abstract class S {
   /// No description provided for @playerButtonSettingsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Customize player control button order'**
+  /// **'Player button order'**
   String get playerButtonSettingsSubtitle;
 
   /// No description provided for @playerLyricStyleSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Customize subtitle style for mini and fullscreen player'**
+  /// **'Mini and fullscreen lyric styles'**
   String get playerLyricStyleSubtitle;
 
   /// No description provided for @workDetailDisplaySubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Control info items on work detail page'**
+  /// **'Detail page content'**
   String get workDetailDisplaySubtitle;
 
   /// No description provided for @workCardDisplaySubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Control info items on work cards'**
+  /// **'Work card content'**
   String get workCardDisplaySubtitle;
 
   /// No description provided for @myTabsDisplaySubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Control tab display in My page'**
+  /// **'Tabs shown on My'**
   String get myTabsDisplaySubtitle;
 
   /// No description provided for @pageSizeSettings.
@@ -3249,7 +3249,7 @@ abstract class S {
   /// No description provided for @pageSizeCurrent.
   ///
   /// In en, this message translates to:
-  /// **'Current: {size} items/page'**
+  /// **'{size} items per page'**
   String pageSizeCurrent(int size);
 
   /// No description provided for @currentSettingLabel.
@@ -3279,31 +3279,31 @@ abstract class S {
   /// No description provided for @translationDescGoogle.
   ///
   /// In en, this message translates to:
-  /// **'Requires network access to Google services'**
+  /// **'Requires Google services'**
   String get translationDescGoogle;
 
   /// No description provided for @translationDescYoudao.
   ///
   /// In en, this message translates to:
-  /// **'Works with default network'**
+  /// **'Uses the current network'**
   String get translationDescYoudao;
 
   /// No description provided for @translationDescMicrosoft.
   ///
   /// In en, this message translates to:
-  /// **'Works with default network'**
+  /// **'Uses the current network'**
   String get translationDescMicrosoft;
 
   /// No description provided for @translationDescLlm.
   ///
   /// In en, this message translates to:
-  /// **'OpenAI-compatible API, requires manual API Key configuration'**
+  /// **'Requires an OpenAI-compatible API'**
   String get translationDescLlm;
 
   /// No description provided for @audioPassthroughDescAndroid.
   ///
   /// In en, this message translates to:
-  /// **'Allow raw bitstream output (AC3/DTS) to external decoder. May take exclusive audio control.'**
+  /// **'Send raw AC3/DTS audio to an external decoder'**
   String get audioPassthroughDescAndroid;
 
   /// No description provided for @permissionExplanation.
@@ -6549,7 +6549,7 @@ abstract class S {
   /// No description provided for @proxyHttpDescription.
   ///
   /// In en, this message translates to:
-  /// **'Access servers through an HTTP proxy (for example, Clash)'**
+  /// **'Connect through an HTTP proxy'**
   String get proxyHttpDescription;
 
   /// No description provided for @useProxy.

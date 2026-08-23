@@ -453,21 +453,20 @@ class SRu extends S {
 
   @override
   String get liquidGlassNavigationDesc =>
-      'Использовать полупрозрачные стеклянные панели навигации и мини-плеера. По умолчанию включено только в поддерживаемых версиях iOS и macOS.';
+      'Стеклянная навигация и мини-плеер; включено по умолчанию при поддержке.';
 
   @override
   String get fallbackGlassTransparency => 'Прозрачность Liquid Glass';
 
   @override
   String get fallbackGlassTransparencyDesc =>
-      'Настройте прозрачность стеклянных поверхностей, отрисованных приложением на этой платформе.';
+      'Прозрачность стекла, отрисованного приложением.';
 
   @override
   String get preferenceSettings => 'Предпочтения';
 
   @override
-  String get preferenceSettingsSubtitle =>
-      'Переводчик, блокировки, аудио и т.д.';
+  String get preferenceSettingsSubtitle => 'Перевод, воспроизведение и сеть';
 
   @override
   String get aboutTitle => 'О приложении';
@@ -882,7 +881,7 @@ class SRu extends S {
 
   @override
   String get autoSaveTranslatedLyricsDesc =>
-      'Сохранять перевод в папку «Сохраненные» библиотеки субтитров; при отключении показывать только во время текущего воспроизведения.';
+      'Сохранять перевод в библиотеку; иначе показывать временно.';
 
   @override
   String get selectTranslationTargetLanguage => 'Выберите целевой язык:';
@@ -994,14 +993,14 @@ class SRu extends S {
 
   @override
   String get keepScreenAwakeDesc =>
-      'Если включено, экран не будет гаснуть при наличии аудиодорожки, чтобы было удобнее читать субтитры.';
+      'Не выключать экран во время воспроизведения';
 
   @override
   String get audioHaptics => 'Аудиотактильная отдача (Beta)';
 
   @override
   String get audioHapticsDesc =>
-      'Только для загруженного аудио и только на переднем плане. Устройство вибрирует в соответствии с аудиопризнаками. Может увеличить расход батареи.';
+      'Вибрация с загруженным аудио только на переднем плане';
 
   @override
   String get audioHapticsIntensity => 'Интенсивность';
@@ -1011,15 +1010,14 @@ class SRu extends S {
 
   @override
   String get audioGainDesc =>
-      'Ослабляет или усиливает весь звук. 0 дБ сохраняет исходное звучание. Слишком высокое положительное усиление может вызвать искажения или повредить слух.';
+      '0 дБ — исходный звук; чрезмерное усиление искажает звук и опасно для слуха';
 
   @override
   String get audioGainAttenuationDesc =>
-      'Ослабляет весь звук. 0 дБ сохраняет исходное звучание.';
+      'Ослабить весь звук; 0 дБ — исходный уровень';
 
   @override
-  String get audioGainPassthroughDesc =>
-      'Недоступно, пока включён сквозной вывод звука.';
+  String get audioGainPassthroughDesc => 'Недоступно при сквозном выводе звука';
 
   @override
   String get blockingSettings => 'Блокировки';
@@ -1032,11 +1030,10 @@ class SRu extends S {
 
   @override
   String get audioPassthroughDescWindows =>
-      'Включить эксклюзивный режим WASAPI для lossless (требуется перезапуск)';
+      'Эксклюзивный вывод WASAPI (нужен перезапуск)';
 
   @override
-  String get audioPassthroughDescMac =>
-      'Включить эксклюзивный режим CoreAudio для lossless';
+  String get audioPassthroughDescMac => 'Эксклюзивный вывод CoreAudio';
 
   @override
   String get audioPassthroughDisableDesc => 'Отключить режим аудио-прохода';
@@ -1688,31 +1685,27 @@ class SRu extends S {
   String get surfaceColor => 'Поверхность';
 
   @override
-  String get playerButtonSettingsSubtitle =>
-      'Настроить порядок кнопок управления плеером';
+  String get playerButtonSettingsSubtitle => 'Порядок кнопок плеера';
 
   @override
   String get playerLyricStyleSubtitle =>
-      'Настроить стиль субтитров мини- и полноэкранного плеера';
+      'Стиль текста в мини- и полноэкранном плеере';
 
   @override
-  String get workDetailDisplaySubtitle =>
-      'Управление информацией на странице деталей';
+  String get workDetailDisplaySubtitle => 'Содержимое страницы работы';
 
   @override
-  String get workCardDisplaySubtitle =>
-      'Управление информацией на карточках работ';
+  String get workCardDisplaySubtitle => 'Содержимое карточек работ';
 
   @override
-  String get myTabsDisplaySubtitle =>
-      'Управление отображением вкладок на странице «Моё»';
+  String get myTabsDisplaySubtitle => 'Вкладки на странице «Моё»';
 
   @override
   String get pageSizeSettings => 'Элементов на странице';
 
   @override
   String pageSizeCurrent(int size) {
-    return 'Текущее: $size элементов/стр.';
+    return '$size элементов на странице';
   }
 
   @override
@@ -1733,21 +1726,20 @@ class SRu extends S {
   String get autoSwitchedToLlm => 'Автопереключение: перевод LLM';
 
   @override
-  String get translationDescGoogle => 'Требуется доступ к сервисам Google';
+  String get translationDescGoogle => 'Требуются сервисы Google';
 
   @override
-  String get translationDescYoudao => 'Работает с сетью по умолчанию';
+  String get translationDescYoudao => 'Использует текущую сеть';
 
   @override
-  String get translationDescMicrosoft => 'Работает с сетью по умолчанию';
+  String get translationDescMicrosoft => 'Использует текущую сеть';
 
   @override
-  String get translationDescLlm =>
-      'OpenAI-совместимый API, требуется ручная настройка API Key';
+  String get translationDescLlm => 'Требуется OpenAI-совместимый API';
 
   @override
   String get audioPassthroughDescAndroid =>
-      'Разрешить вывод необработанного битового потока (AC3/DTS) на внешний декодер. Может занять эксклюзивный доступ к аудио.';
+      'Передавать AC3/DTS на внешний декодер';
 
   @override
   String get permissionExplanation => 'Описание разрешений';
@@ -3700,8 +3692,7 @@ class SRu extends S {
   String get proxyAddressNotSet => 'Не задан (прямое подключение)';
 
   @override
-  String get proxyHttpDescription =>
-      'Подключение к серверам через HTTP-прокси (например, Clash)';
+  String get proxyHttpDescription => 'Подключаться через HTTP-прокси';
 
   @override
   String get useProxy => 'Использовать прокси';

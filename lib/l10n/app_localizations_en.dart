@@ -452,21 +452,20 @@ class SEn extends S {
 
   @override
   String get liquidGlassNavigationDesc =>
-      'Use translucent glass navigation and mini player surfaces. Enabled by default only on supported iOS and macOS versions.';
+      'Glass navigation and mini player; enabled by default where supported.';
 
   @override
   String get fallbackGlassTransparency => 'Liquid Glass Transparency';
 
   @override
   String get fallbackGlassTransparencyDesc =>
-      'Adjust the transparency of app-rendered glass surfaces on this platform.';
+      'Adjust app-rendered glass transparency.';
 
   @override
   String get preferenceSettings => 'Preference Settings';
 
   @override
-  String get preferenceSettingsSubtitle =>
-      'Translation source, blocking, audio preferences, etc.';
+  String get preferenceSettingsSubtitle => 'Translation, playback, and network';
 
   @override
   String get aboutTitle => 'About';
@@ -879,7 +878,7 @@ class SEn extends S {
 
   @override
   String get autoSaveTranslatedLyricsDesc =>
-      'Save translations to the Saved subtitle library folder; when disabled, show them only during current playback.';
+      'Save translations to the subtitle library; otherwise show them temporarily.';
 
   @override
   String get selectTranslationTargetLanguage => 'Select target language:';
@@ -941,13 +940,13 @@ class SEn extends S {
   String get llmSettings => 'LLM Settings';
 
   @override
-  String get llmSettingsSubtitle => 'Configure API URL, Key, and model';
+  String get llmSettingsSubtitle => 'API URL, key, and model';
 
   @override
   String get audioFormatPreference => 'Audio Format Preference';
 
   @override
-  String get audioFormatSubtitle => 'Set audio format priority order';
+  String get audioFormatSubtitle => 'Audio format priority';
 
   @override
   String get preloadNextTitle => 'Preload Next Track';
@@ -990,15 +989,14 @@ class SEn extends S {
   String get keepScreenAwake => 'Keep Screen Awake';
 
   @override
-  String get keepScreenAwakeDesc =>
-      'Keep the screen on while an audio track is active for easier subtitle reading.';
+  String get keepScreenAwakeDesc => 'Keep the screen on during playback';
 
   @override
   String get audioHaptics => 'Audio Haptics (Beta)';
 
   @override
   String get audioHapticsDesc =>
-      'Downloaded audio only, foreground only. Make the device vibrate with audio features. May increase battery use.';
+      'Vibrate with downloaded audio while the app is foregrounded';
 
   @override
   String get audioHapticsIntensity => 'Intensity';
@@ -1008,33 +1006,32 @@ class SEn extends S {
 
   @override
   String get audioGainDesc =>
-      'Attenuate or boost all audio globally. 0 dB preserves the original sound. High positive gain may cause distortion or hearing damage.';
+      '0 dB is original audio; excessive boost may distort or damage hearing';
 
   @override
   String get audioGainAttenuationDesc =>
-      'Reduce all audio globally. 0 dB preserves the original sound.';
+      'Reduce all audio; 0 dB keeps the original level';
 
   @override
   String get audioGainPassthroughDesc =>
-      'Unavailable while audio passthrough is enabled.';
+      'Unavailable while audio passthrough is on';
 
   @override
   String get blockingSettings => 'Blocking Settings';
 
   @override
   String get blockingSettingsSubtitle =>
-      'Manage blocked tags, voice actors, and circles';
+      'Blocked tags, voice actors, and circles';
 
   @override
   String get audioPassthrough => 'Audio Passthrough (Beta)';
 
   @override
   String get audioPassthroughDescWindows =>
-      'Enable WASAPI exclusive mode for lossless output (restart required)';
+      'Use WASAPI exclusive output (restart required)';
 
   @override
-  String get audioPassthroughDescMac =>
-      'Enable CoreAudio exclusive mode for lossless output';
+  String get audioPassthroughDescMac => 'Use CoreAudio exclusive output';
 
   @override
   String get audioPassthroughDisableDesc => 'Disable audio passthrough mode';
@@ -1687,29 +1684,26 @@ class SEn extends S {
   String get surfaceColor => 'Surface';
 
   @override
-  String get playerButtonSettingsSubtitle =>
-      'Customize player control button order';
+  String get playerButtonSettingsSubtitle => 'Player button order';
 
   @override
-  String get playerLyricStyleSubtitle =>
-      'Customize subtitle style for mini and fullscreen player';
+  String get playerLyricStyleSubtitle => 'Mini and fullscreen lyric styles';
 
   @override
-  String get workDetailDisplaySubtitle =>
-      'Control info items on work detail page';
+  String get workDetailDisplaySubtitle => 'Detail page content';
 
   @override
-  String get workCardDisplaySubtitle => 'Control info items on work cards';
+  String get workCardDisplaySubtitle => 'Work card content';
 
   @override
-  String get myTabsDisplaySubtitle => 'Control tab display in My page';
+  String get myTabsDisplaySubtitle => 'Tabs shown on My';
 
   @override
   String get pageSizeSettings => 'Items Per Page';
 
   @override
   String pageSizeCurrent(int size) {
-    return 'Current: $size items/page';
+    return '$size items per page';
   }
 
   @override
@@ -1730,22 +1724,20 @@ class SEn extends S {
   String get autoSwitchedToLlm => 'Auto-switched to: LLM Translation';
 
   @override
-  String get translationDescGoogle =>
-      'Requires network access to Google services';
+  String get translationDescGoogle => 'Requires Google services';
 
   @override
-  String get translationDescYoudao => 'Works with default network';
+  String get translationDescYoudao => 'Uses the current network';
 
   @override
-  String get translationDescMicrosoft => 'Works with default network';
+  String get translationDescMicrosoft => 'Uses the current network';
 
   @override
-  String get translationDescLlm =>
-      'OpenAI-compatible API, requires manual API Key configuration';
+  String get translationDescLlm => 'Requires an OpenAI-compatible API';
 
   @override
   String get audioPassthroughDescAndroid =>
-      'Allow raw bitstream output (AC3/DTS) to external decoder. May take exclusive audio control.';
+      'Send raw AC3/DTS audio to an external decoder';
 
   @override
   String get permissionExplanation => 'Permission Explanation';
@@ -3679,8 +3671,7 @@ class SEn extends S {
   String get proxyAddressNotSet => 'Not set (direct connection)';
 
   @override
-  String get proxyHttpDescription =>
-      'Access servers through an HTTP proxy (for example, Clash)';
+  String get proxyHttpDescription => 'Connect through an HTTP proxy';
 
   @override
   String get useProxy => 'Use proxy';

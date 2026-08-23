@@ -6,6 +6,11 @@ import 'package:kikoeru_flutter/src/widgets/main_bottom_navigation_bar.dart';
 import 'package:kikoeru_flutter/src/widgets/liquid_glass_layout.dart';
 
 void main() {
+  tearDown(() {
+    debugDefaultTargetPlatformOverride = null;
+    LiquidGlass.debugOverrideCapabilities(null);
+  });
+
   testWidgets('keeps iOS home indicator safe area below navigation content', (
     tester,
   ) async {
@@ -72,10 +77,16 @@ void main() {
   });
 
   testWidgets(
-    'iOS glass bar compensates native inset and reports dock height',
+    'modern iOS glass bar compensates native inset and reports dock height',
     (tester) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
-      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      LiquidGlass.debugOverrideCapabilities(
+        const LiquidGlassCapabilities(
+          nativeGlass: true,
+          reduceTransparency: false,
+          osMajorVersion: 26,
+        ),
+      );
       double? reportedExtent;
 
       await tester.pumpWidget(
@@ -131,6 +142,98 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     },
   );
+
+  testWidgets('legacy iOS and fallback bars align with the mini player', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    const destinations = [
+      NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
+      NavigationDestination(icon: Icon(Icons.search_outlined), label: 'Search'),
+    ];
+    const viewportKey = ValueKey('viewport');
+    const miniPlayerSurfaceKey = ValueKey('mini-player-surface');
+
+    Future<void> expectAligned({
+      required TargetPlatform platform,
+      required Size size,
+    }) async {
+      tester.view.physicalSize = size;
+      debugDefaultTargetPlatformOverride = platform;
+      LiquidGlass.debugOverrideCapabilities(
+        const LiquidGlassCapabilities(
+          nativeGlass: false,
+          reduceTransparency: false,
+          osMajorVersion: 18,
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MediaQuery(
+            data: MediaQueryData(size: size),
+            child: Scaffold(
+              body: Align(
+                alignment: Alignment.bottomCenter,
+                child: SizedBox(
+                  key: viewportKey,
+                  width: size.width,
+                  child: MainBottomNavigationBar(
+                    selectedIndex: 0,
+                    liquidGlass: true,
+                    onDestinationSelected: (_) {},
+                    destinations: destinations,
+                    miniPlayer: const Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: LiquidGlassLayout.horizontalPadding,
+                      ),
+                      child: SizedBox(
+                        key: miniPlayerSurfaceKey,
+                        width: double.infinity,
+                        height: 72,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final viewportRect = tester.getRect(find.byKey(viewportKey));
+      final miniPlayerRect = tester.getRect(find.byKey(miniPlayerSurfaceKey));
+      final navigationRect = tester.getRect(find.byType(LiquidGlassBottomBar));
+      expect(navigationRect.left, viewportRect.left + 12);
+      expect(navigationRect.right, viewportRect.right - 12);
+      expect(navigationRect.left, miniPlayerRect.left);
+      expect(navigationRect.right, miniPlayerRect.right);
+    }
+
+    await expectAligned(
+      platform: TargetPlatform.iOS,
+      size: const Size(320, 568),
+    );
+    await expectAligned(
+      platform: TargetPlatform.android,
+      size: const Size(390, 844),
+    );
+    await expectAligned(
+      platform: TargetPlatform.macOS,
+      size: const Size(768, 1024),
+    );
+    await expectAligned(
+      platform: TargetPlatform.windows,
+      size: const Size(1280, 800),
+    );
+    await expectAligned(
+      platform: TargetPlatform.linux,
+      size: const Size(1024, 768),
+    );
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
+    debugDefaultTargetPlatformOverride = null;
+  });
 
   testWidgets('fallback glass bar adapts to available height and text scale', (
     tester,

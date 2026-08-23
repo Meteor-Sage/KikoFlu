@@ -44,13 +44,13 @@ class FallbackGlass extends StatelessWidget {
     final clamped = intensity.clamp(0.0, 1.0);
 
     final base = tint ?? (dark ? _fillDark : _fillLight);
-    // Keep fallback surfaces clearer than a conventional frosted panel. The
-    // native Apple material supplies refraction and edge definition; a heavy
-    // Gaussian blur on fallback platforms instead reads as opaque frosting.
-    final maxTranslucency = style == LiquidGlassStyle.clear ? 0.88 : 0.62;
+    // Keep the upper end visibly transparent. A strong color veil and heavy
+    // Gaussian blur both make fallback glass read as opaque frosting even
+    // when the caller has selected maximum transparency.
+    final maxTranslucency = style == LiquidGlassStyle.clear ? 0.96 : 0.92;
     // High contrast (or intensity 0) collapses toward an opaque panel.
     final fillAlpha = highContrast ? 0.98 : 1.0 - maxTranslucency * clamped;
-    final sigma = (style == LiquidGlassStyle.clear ? 10.0 : 16.0) * clamped;
+    final sigma = (style == LiquidGlassStyle.clear ? 6.0 : 10.0) * clamped;
 
     return LayoutBuilder(
       builder: (context, constraints) {

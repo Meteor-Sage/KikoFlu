@@ -11,8 +11,10 @@ import 'package:kikoeru_flutter/src/providers/theme_provider.dart';
 import 'package:kikoeru_flutter/src/screens/audio_format_settings_screen.dart';
 import 'package:kikoeru_flutter/src/screens/player_buttons_settings_screen.dart';
 import 'package:kikoeru_flutter/src/screens/player_lyric_style_screen.dart';
+import 'package:kikoeru_flutter/src/screens/ui_settings_screen.dart';
 import 'package:kikoeru_flutter/src/screens/theme_settings_screen.dart';
 import 'package:kikoeru_flutter/src/widgets/settings_section.dart';
+import 'package:real_liquid_glass/real_liquid_glass.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Widget _testApp(Widget home, {ProviderContainer? container}) {
@@ -193,9 +195,13 @@ void main() {
 
   testWidgets('theme settings restores defaults from the app bar',
       (tester) async {
+    LiquidGlass.debugOverrideCapabilities(LiquidGlassCapabilities.none);
+    addTearDown(() => LiquidGlass.debugOverrideCapabilities(null));
     SharedPreferences.setMockInitialValues({
       'theme_mode': AppThemeMode.dark.index,
       'color_scheme_type': ColorSchemeType.dynamic.index,
+      LiquidGlassNavigationNotifier.preferenceKey: true,
+      FallbackGlassTransparencyNotifier.preferenceKey: 0.25,
     });
     final container = ProviderContainer();
     addTearDown(container.dispose);
@@ -223,6 +229,42 @@ void main() {
       container.read(themeSettingsProvider).colorSchemeType,
       ColorSchemeType.oceanBlue,
     );
+    expect(container.read(liquidGlassNavigationProvider), isFalse);
+    expect(
+      container.read(fallbackGlassTransparencyProvider),
+      FallbackGlassTransparencyNotifier.defaultValue,
+    );
+  });
+
+  testWidgets('page settings group player and content options separately',
+      (tester) async {
+    tester.view.physicalSize = const Size(390, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      _testApp(const UiSettingsScreen(), container: container),
+    );
+    await tester.pump();
+
+    expect(find.byType(SettingsSectionCard), findsNWidgets(2));
+    expect(find.text('Liquid Glass Navigation'), findsNothing);
+
+    final playerCard = find.ancestor(
+      of: find.text('Player Button Settings'),
+      matching: find.byType(SettingsSectionCard),
+    );
+    final contentCard = find.ancestor(
+      of: find.text('Work Detail Display Settings'),
+      matching: find.byType(SettingsSectionCard),
+    );
+    expect(playerCard, findsOneWidget);
+    expect(contentCard, findsOneWidget);
+    expect(playerCard.evaluate().single, isNot(contentCard.evaluate().single));
   });
 
   test('immediate reorder wins over asynchronous stored preference loading',
