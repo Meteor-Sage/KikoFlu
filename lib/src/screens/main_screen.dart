@@ -127,15 +127,21 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                               ? const EdgeInsets.all(8)
                               : EdgeInsets.zero,
                           child: useLiquidGlass
-                              ? LiquidGlassContainer(
-                                  shape:
-                                      const LiquidGlassShape.roundedRectangle(
-                                          28),
-                                  fallbackIntensity: 0.86,
+                              ? Consumer(
                                   child: ClipRRect(
                                     borderRadius: BorderRadius.circular(28),
                                     child: _buildNavigationRail(destinations),
                                   ),
+                                  builder: (context, ref, child) {
+                                    return LiquidGlassContainer(
+                                      shape: const LiquidGlassShape
+                                          .roundedRectangle(28),
+                                      fallbackIntensity: ref.watch(
+                                        fallbackGlassTransparencyProvider,
+                                      ),
+                                      child: child,
+                                    );
+                                  },
                                 )
                               : _buildNavigationRail(destinations),
                         ),
@@ -291,28 +297,36 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
     // 竖屏布局：液态玻璃模式把导航栏悬浮在页面内容上方，经典模式
     // 继续使用 Scaffold 的 bottomNavigationBar 插槽。
-    final bottomNavigation = MainBottomNavigationBar(
-      selectedIndex: _currentIndex,
-      onDestinationSelected: _handleDestinationSelected,
-      destinations: destinations,
-      liquidGlass: useLiquidGlass,
-      showUpdateBadge: showUpdateBadge,
-      onLayoutExtentChanged: (extent) {
-        if (_liquidDockExtent.value != extent) {
-          _liquidDockExtent.value = extent;
-        }
+    final miniPlayer = Consumer(
+      builder: (context, ref, child) {
+        final currentTrack = ref.watch(currentTrackProvider);
+        return currentTrack.when(
+          data: (track) =>
+              track != null ? const MiniPlayer() : const SizedBox.shrink(),
+          loading: () => const SizedBox.shrink(),
+          error: (_, __) => const SizedBox.shrink(),
+        );
       },
-      miniPlayer: Consumer(
-        builder: (context, ref, child) {
-          final currentTrack = ref.watch(currentTrackProvider);
-          return currentTrack.when(
-            data: (track) =>
-                track != null ? const MiniPlayer() : const SizedBox.shrink(),
-            loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
-          );
-        },
-      ),
+    );
+    final bottomNavigation = Consumer(
+      child: miniPlayer,
+      builder: (context, ref, child) {
+        return MainBottomNavigationBar(
+          selectedIndex: _currentIndex,
+          onDestinationSelected: _handleDestinationSelected,
+          destinations: destinations,
+          liquidGlass: useLiquidGlass,
+          fallbackGlassTransparency:
+              ref.watch(fallbackGlassTransparencyProvider),
+          showUpdateBadge: showUpdateBadge,
+          onLayoutExtentChanged: (extent) {
+            if (_liquidDockExtent.value != extent) {
+              _liquidDockExtent.value = extent;
+            }
+          },
+          miniPlayer: child!,
+        );
+      },
     );
 
     final portraitScaffold = Scaffold(

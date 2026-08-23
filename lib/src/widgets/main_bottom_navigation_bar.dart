@@ -11,6 +11,7 @@ class MainBottomNavigationBar extends StatelessWidget {
     required this.destinations,
     this.miniPlayer = const SizedBox.shrink(),
     this.liquidGlass = false,
+    this.fallbackGlassTransparency = 0.86,
     this.showUpdateBadge = false,
     this.onLayoutExtentChanged,
   });
@@ -22,6 +23,7 @@ class MainBottomNavigationBar extends StatelessWidget {
   final List<NavigationDestination> destinations;
   final Widget miniPlayer;
   final bool liquidGlass;
+  final double fallbackGlassTransparency;
   final bool showUpdateBadge;
   final ValueChanged<double>? onLayoutExtentChanged;
 
@@ -33,6 +35,7 @@ class MainBottomNavigationBar extends StatelessWidget {
         onDestinationSelected: onDestinationSelected,
         destinations: destinations,
         miniPlayer: miniPlayer,
+        fallbackGlassTransparency: fallbackGlassTransparency,
         showUpdateBadge: showUpdateBadge,
         onLayoutExtentChanged: onLayoutExtentChanged,
       );
@@ -60,6 +63,7 @@ class _LiquidGlassBottomNavigation extends StatelessWidget {
     required this.onDestinationSelected,
     required this.destinations,
     required this.miniPlayer,
+    required this.fallbackGlassTransparency,
     required this.showUpdateBadge,
     required this.onLayoutExtentChanged,
   });
@@ -68,6 +72,7 @@ class _LiquidGlassBottomNavigation extends StatelessWidget {
   final ValueChanged<int> onDestinationSelected;
   final List<NavigationDestination> destinations;
   final Widget miniPlayer;
+  final double fallbackGlassTransparency;
   final bool showUpdateBadge;
   final ValueChanged<double>? onLayoutExtentChanged;
 
@@ -163,7 +168,7 @@ class _LiquidGlassBottomNavigation extends StatelessWidget {
                           height: navigationBarHeight,
                           showLabels: true,
                           tint: Theme.of(context).colorScheme.primary,
-                          fallbackIntensity: 0.86,
+                          fallbackIntensity: fallbackGlassTransparency,
                         ),
                       ),
                     );

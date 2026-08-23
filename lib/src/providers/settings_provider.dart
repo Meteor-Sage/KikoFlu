@@ -79,6 +79,52 @@ final liquidGlassNavigationProvider =
   return LiquidGlassNavigationNotifier();
 });
 
+/// Controls the transparency of Flutter-drawn glass on non-Apple platforms.
+/// Native iOS and macOS materials continue to follow the system appearance.
+class FallbackGlassTransparencyNotifier extends StateNotifier<double> {
+  static const String preferenceKey = 'fallback_glass_transparency';
+  static const double defaultValue = 0.86;
+
+  FallbackGlassTransparencyNotifier() : super(defaultValue) {
+    _loadPreference();
+  }
+
+  bool _changedLocally = false;
+
+  static double normalize(double value) => value.clamp(0.0, 1.0).toDouble();
+
+  Future<void> _loadPreference() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (!mounted || _changedLocally) return;
+      state = normalize(prefs.getDouble(preferenceKey) ?? defaultValue);
+    } catch (_) {
+      if (!mounted || _changedLocally) return;
+      state = defaultValue;
+    }
+  }
+
+  void previewTransparency(double value) {
+    _changedLocally = true;
+    state = normalize(value);
+  }
+
+  Future<void> setTransparency(double value) async {
+    previewTransparency(value);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble(preferenceKey, state);
+    } catch (_) {
+      // Keep the in-memory value when persistence is unavailable.
+    }
+  }
+}
+
+final fallbackGlassTransparencyProvider = StateNotifierProvider<
+    FallbackGlassTransparencyNotifier, double>((ref) {
+  return FallbackGlassTransparencyNotifier();
+});
+
 /// 字幕库匹配优先级
 enum SubtitleLibraryPriority {
   /// 最优先 - 字幕库优先于文件树匹配

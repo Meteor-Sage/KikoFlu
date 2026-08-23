@@ -123,6 +123,9 @@ void main() {
     await container
         .read(liquidGlassNavigationProvider.notifier)
         .setEnabled(true);
+    await container
+        .read(fallbackGlassTransparencyProvider.notifier)
+        .setTransparency(0.9);
 
     await tester.pumpWidget(
       _testApp(
@@ -132,6 +135,10 @@ void main() {
     );
 
     final glass = find.byType(LiquidGlassContainer);
+    expect(
+      tester.widget<LiquidGlassContainer>(glass).fallbackIntensity,
+      0.9,
+    );
     final fallbackDecoration = tester
         .widgetList<DecoratedBox>(
           find.descendant(of: glass, matching: find.byType(DecoratedBox)),

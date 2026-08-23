@@ -186,6 +186,8 @@
   "uiSettingsSubtitle": "Player, detail page, cards, etc.",
   "liquidGlassNavigation": "Liquid Glass Navigation",
   "liquidGlassNavigationDesc": "Use translucent glass navigation and mini player surfaces. Enabled by default only on supported iOS and macOS versions.",
+  "fallbackGlassTransparency": "Liquid Glass Transparency",
+  "fallbackGlassTransparencyDesc": "Adjust the transparency of app-rendered glass surfaces on this platform.",
   "preferenceSettings": "Preference Settings",
   "preferenceSettingsSubtitle": "Translation source, blocking, audio preferences, etc.",
 

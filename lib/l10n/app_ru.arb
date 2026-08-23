@@ -161,6 +161,8 @@
   "uiSettingsSubtitle": "Плеер, страница деталей, карточки и т.д.",
   "liquidGlassNavigation": "Навигация Liquid Glass",
   "liquidGlassNavigationDesc": "Использовать полупрозрачные стеклянные панели навигации и мини-плеера. По умолчанию включено только в поддерживаемых версиях iOS и macOS.",
+  "fallbackGlassTransparency": "Прозрачность Liquid Glass",
+  "fallbackGlassTransparencyDesc": "Настройте прозрачность стеклянных поверхностей, отрисованных приложением на этой платформе.",
   "preferenceSettings": "Предпочтения",
   "preferenceSettingsSubtitle": "Переводчик, блокировки, аудио и т.д.",
 

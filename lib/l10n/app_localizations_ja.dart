@@ -445,6 +445,13 @@ class SJa extends S {
       '半透明のリキッドグラスナビゲーションとミニプレーヤーを使用します。ネイティブのリキッドグラスに対応する iOS と macOS でのみデフォルトで有効です。';
 
   @override
+  String get fallbackGlassTransparency => 'リキッドグラスの透明度';
+
+  @override
+  String get fallbackGlassTransparencyDesc =>
+      'このプラットフォームでアプリが描画するガラス素材の透明度を調整します。';
+
+  @override
   String get preferenceSettings => '環境設定';
 
   @override

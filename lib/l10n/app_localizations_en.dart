@@ -455,6 +455,13 @@ class SEn extends S {
       'Use translucent glass navigation and mini player surfaces. Enabled by default only on supported iOS and macOS versions.';
 
   @override
+  String get fallbackGlassTransparency => 'Liquid Glass Transparency';
+
+  @override
+  String get fallbackGlassTransparencyDesc =>
+      'Adjust the transparency of app-rendered glass surfaces on this platform.';
+
+  @override
   String get preferenceSettings => 'Preference Settings';
 
   @override

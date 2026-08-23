@@ -139,4 +139,43 @@ void main() {
 
     expect(container.read(liquidGlassNavigationProvider), isTrue);
   });
+
+  test('fallback glass transparency loads, normalizes, and persists',
+      () async {
+    SharedPreferences.setMockInitialValues({
+      FallbackGlassTransparencyNotifier.preferenceKey: 0.4,
+    });
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    container.read(fallbackGlassTransparencyProvider);
+    await _pumpAsyncPreferenceLoad();
+    expect(container.read(fallbackGlassTransparencyProvider), 0.4);
+
+    await container
+        .read(fallbackGlassTransparencyProvider.notifier)
+        .setTransparency(1.5);
+    expect(container.read(fallbackGlassTransparencyProvider), 1.0);
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(
+      prefs.getDouble(FallbackGlassTransparencyNotifier.preferenceKey),
+      1.0,
+    );
+  });
+
+  test('fallback glass transparency preview wins over async load', () async {
+    SharedPreferences.setMockInitialValues({
+      FallbackGlassTransparencyNotifier.preferenceKey: 0.2,
+    });
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    container
+        .read(fallbackGlassTransparencyProvider.notifier)
+        .previewTransparency(0.7);
+    await _pumpAsyncPreferenceLoad();
+
+    expect(container.read(fallbackGlassTransparencyProvider), 0.7);
+  });
 }

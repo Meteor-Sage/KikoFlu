@@ -948,6 +948,18 @@ abstract class S {
   /// **'Use translucent glass navigation and mini player surfaces. Enabled by default only on supported iOS and macOS versions.'**
   String get liquidGlassNavigationDesc;
 
+  /// No description provided for @fallbackGlassTransparency.
+  ///
+  /// In en, this message translates to:
+  /// **'Liquid Glass Transparency'**
+  String get fallbackGlassTransparency;
+
+  /// No description provided for @fallbackGlassTransparencyDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust the transparency of app-rendered glass surfaces on this platform.'**
+  String get fallbackGlassTransparencyDesc;
+
   /// No description provided for @preferenceSettings.
   ///
   /// In en, this message translates to:

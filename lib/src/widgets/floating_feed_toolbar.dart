@@ -256,6 +256,8 @@ class FloatingToolbarSurface extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final useLiquidGlass = ref.watch(liquidGlassNavigationProvider);
+    final fallbackGlassTransparency =
+        ref.watch(fallbackGlassTransparencyProvider);
     final content = Material(
       type: MaterialType.transparency,
       child: Padding(padding: padding, child: child),
@@ -267,7 +269,7 @@ class FloatingToolbarSurface extends ConsumerWidget {
         child: LiquidGlassContainer(
           shape: const LiquidGlassShape.capsule(),
           style: LiquidGlassStyle.regular,
-          fallbackIntensity: 0.86,
+          fallbackIntensity: fallbackGlassTransparency,
           child: content,
         ),
       );

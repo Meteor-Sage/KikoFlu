@@ -444,6 +444,12 @@ class SZh extends S {
       '使用半透明液态玻璃导航栏和迷你播放器。仅支持原生液态玻璃的 iOS 和 macOS 版本默认开启。';
 
   @override
+  String get fallbackGlassTransparency => '液态玻璃透明度';
+
+  @override
+  String get fallbackGlassTransparencyDesc => '调整当前平台由应用绘制的玻璃材质透明度。';
+
+  @override
   String get preferenceSettings => '偏好设置';
 
   @override
@@ -4013,6 +4019,12 @@ class SZhHant extends SZh {
   @override
   String get liquidGlassNavigationDesc =>
       '使用半透明液態玻璃導覽列和迷你播放器。僅支援原生液態玻璃的 iOS 和 macOS 版本預設開啟。';
+
+  @override
+  String get fallbackGlassTransparency => '液態玻璃透明度';
+
+  @override
+  String get fallbackGlassTransparencyDesc => '調整目前平台由應用程式繪製的玻璃材質透明度。';
 
   @override
   String get preferenceSettings => '偏好設定';

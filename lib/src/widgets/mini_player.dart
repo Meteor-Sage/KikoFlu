@@ -44,6 +44,8 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
     final authState = ref.watch(authProvider);
     final isMiniPlayerVisible = ref.watch(miniPlayerVisibilityProvider);
     final useLiquidGlass = ref.watch(liquidGlassNavigationProvider);
+    final fallbackGlassTransparency =
+        ref.watch(fallbackGlassTransparencyProvider);
 
     // 启用自动字幕加载器
     ref.watch(lyricAutoLoaderProvider);
@@ -492,7 +494,7 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
                       LiquidGlassLayout.cornerRadius,
                     ),
                     style: LiquidGlassStyle.regular,
-                    fallbackIntensity: 0.86,
+                    fallbackIntensity: fallbackGlassTransparency,
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(
                         LiquidGlassLayout.cornerRadius,
