@@ -18,6 +18,13 @@
       "tintColor": "6750A4",
       "versions": [
         {
+          "version": "3.8.0",
+          "date": "2026-08-23",
+          "size": 13286950,
+          "downloadURL": "https://github.com/pa-jesusf/KikoFlu/releases/download/v3.8.0/KikoFlu-ios-unsigned_380.ipa",
+          "localizedDescription": "**新增：**\r\n1. 大幅调整页面布局与组件，提升信息流覆盖率\r\n2. 新增液态玻璃导航、全局音频增益、下一首预加载和 HTTP 代理\r\n3. 播放列表支持瀑布流/列表切换并自动保存\r\n4. 新增年龄分级标签、Mini Player 播放状态恢复和翻译歌词自动保存\r\n5. 信息流布局、在线标记筛选和页面视图选择支持持久化\r\n\r\n**修复：**\r\n1. 重构多个页面的虚拟化列表，改善长列表滚动与图片加载性能\r\n2. 修复瀑布流、卡片比例、分页、安全区和多平台布局问题\r\n3. 修复字幕匹配、文件树缓存、字幕数据库删除及下载刷新问题\r\n4. 修复 Android 低噪与导航栏显示问题，并改善 iOS/macOS 外观适配\r\n\r\n**New:**\r\n1. Revamped layouts and components with broader feed coverage\r\n2. Added Liquid Glass navigation, global audio gain, next-track preloading, and HTTP proxy settings\r\n3. Added playlist layout switching, age-rating labels, Mini Player state restoration, and translated-lyrics auto-save\r\n\r\n**Fixes:**\r\n1. Improved virtualized feeds, masonry layout, pagination, scrolling, and image loading\r\n2. Fixed subtitle matching, stale file trees, subtitle database deletion, Android low-level noise, and cross-platform layout issues"
+        },
+        {
           "version": "3.5.0",
           "date": "2026-06-19",
           "size": 13149303,
