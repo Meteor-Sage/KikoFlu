@@ -38,6 +38,7 @@ import 'src/providers/audio_provider.dart';
 import 'src/providers/auth_provider.dart';
 import 'src/providers/locale_provider.dart';
 import 'src/providers/theme_provider.dart';
+import 'src/providers/settings_provider.dart';
 import 'src/providers/update_provider.dart';
 import 'src/utils/desktop_window_options.dart';
 import 'src/utils/global_keys.dart';
@@ -451,6 +452,9 @@ class _KikoeruAppState extends ConsumerState<KikoeruApp>
   @override
   Widget build(BuildContext context) {
     final themeSettings = ref.watch(themeSettingsProvider);
+    final legacyAppleGlassTest = ref.watch(legacyAppleGlassTestProvider);
+    final forceLegacyAppleGlass =
+        LegacyAppleGlassTestNotifier.effectiveValue(legacyAppleGlassTest);
     if (Platform.isMacOS) {
       ref.listen<AppThemeMode>(
         themeSettingsProvider.select((settings) => settings.themeMode),
@@ -512,6 +516,10 @@ class _KikoeruAppState extends ConsumerState<KikoeruApp>
             effectiveLocale,
           ),
           themeMode: mode,
+          builder: (context, child) => LiquidGlassLegacyMaterialScope(
+            enabled: forceLegacyAppleGlass,
+            child: child ?? const SizedBox.shrink(),
+          ),
           home: ScreenAwakeObserver(child: _buildHomeScreen()),
         );
       },

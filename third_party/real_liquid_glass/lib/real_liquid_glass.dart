@@ -14,3 +14,4 @@ export 'src/glass_container.dart';
 export 'src/glass_group.dart'
     show LiquidGlassGroup, LiquidGlassGroupState, GlassRegion;
 export 'src/glass_style.dart';
+export 'src/legacy_material_scope.dart';

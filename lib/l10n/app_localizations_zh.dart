@@ -450,6 +450,12 @@ class SZh extends S {
   String get fallbackGlassTransparencyDesc => '调整当前平台由应用绘制的玻璃材质透明度。';
 
   @override
+  String get legacyAppleGlassTest => '低版本 Apple 材质测试';
+
+  @override
+  String get legacyAppleGlassTestDesc => '使用旧版系统模糊材质替代原生液态玻璃。';
+
+  @override
   String get preferenceSettings => '偏好设置';
 
   @override
@@ -4025,6 +4031,12 @@ class SZhHant extends SZh {
 
   @override
   String get fallbackGlassTransparencyDesc => '調整目前平台由應用程式繪製的玻璃材質透明度。';
+
+  @override
+  String get legacyAppleGlassTest => '舊版 Apple 材質測試';
+
+  @override
+  String get legacyAppleGlassTestDesc => '使用舊版系統模糊材質取代原生液態玻璃。';
 
   @override
   String get preferenceSettings => '偏好設定';

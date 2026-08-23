@@ -163,6 +163,8 @@
   "liquidGlassNavigationDesc": "半透明のリキッドグラスナビゲーションとミニプレーヤーを使用します。ネイティブのリキッドグラスに対応する iOS と macOS でのみデフォルトで有効です。",
   "fallbackGlassTransparency": "リキッドグラスの透明度",
   "fallbackGlassTransparencyDesc": "このプラットフォームでアプリが描画するガラス素材の透明度を調整します。",
+  "legacyAppleGlassTest": "旧バージョン Apple マテリアルテスト",
+  "legacyAppleGlassTestDesc": "ネイティブのリキッドグラスの代わりに従来のシステムぼかし素材を使用します。",
   "preferenceSettings": "環境設定",
   "preferenceSettingsSubtitle": "翻訳ソース、ブロック、オーディオ設定など",
 

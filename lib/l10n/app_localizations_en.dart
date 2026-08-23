@@ -462,6 +462,13 @@ class SEn extends S {
       'Adjust the transparency of app-rendered glass surfaces on this platform.';
 
   @override
+  String get legacyAppleGlassTest => 'Legacy Apple Material Test';
+
+  @override
+  String get legacyAppleGlassTestDesc =>
+      'Use the older system blur material instead of native Liquid Glass.';
+
+  @override
   String get preferenceSettings => 'Preference Settings';
 
   @override

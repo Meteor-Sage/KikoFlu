@@ -17,6 +17,7 @@ class UiSettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final pageSize = ref.watch(pageSizeProvider);
     final useLiquidGlass = ref.watch(liquidGlassNavigationProvider);
+    final useLegacyAppleGlass = ref.watch(legacyAppleGlassTestProvider);
     final fallbackGlassTransparency =
         ref.watch(fallbackGlassTransparencyProvider);
 
@@ -100,6 +101,16 @@ class UiSettingsScreen extends ConsumerWidget {
                       .setEnabled(value);
                 },
               ),
+              if (useLiquidGlass && LegacyAppleGlassTestNotifier.isAvailable)
+                SettingsSwitchTile(
+                  icon: Icons.layers_outlined,
+                  title: S.of(context).legacyAppleGlassTest,
+                  subtitle: S.of(context).legacyAppleGlassTestDesc,
+                  value: useLegacyAppleGlass,
+                  onChanged: ref
+                      .read(legacyAppleGlassTestProvider.notifier)
+                      .setEnabled,
+                ),
               if (useLiquidGlass && !LiquidGlass.isNativePlatform)
                 _FallbackGlassTransparencyTile(
                   value: fallbackGlassTransparency,

@@ -960,6 +960,18 @@ abstract class S {
   /// **'Adjust the transparency of app-rendered glass surfaces on this platform.'**
   String get fallbackGlassTransparencyDesc;
 
+  /// No description provided for @legacyAppleGlassTest.
+  ///
+  /// In en, this message translates to:
+  /// **'Legacy Apple Material Test'**
+  String get legacyAppleGlassTest;
+
+  /// No description provided for @legacyAppleGlassTestDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Use the older system blur material instead of native Liquid Glass.'**
+  String get legacyAppleGlassTestDesc;
+
   /// No description provided for @preferenceSettings.
   ///
   /// In en, this message translates to:

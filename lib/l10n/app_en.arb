@@ -188,6 +188,8 @@
   "liquidGlassNavigationDesc": "Use translucent glass navigation and mini player surfaces. Enabled by default only on supported iOS and macOS versions.",
   "fallbackGlassTransparency": "Liquid Glass Transparency",
   "fallbackGlassTransparencyDesc": "Adjust the transparency of app-rendered glass surfaces on this platform.",
+  "legacyAppleGlassTest": "Legacy Apple Material Test",
+  "legacyAppleGlassTestDesc": "Use the older system blur material instead of native Liquid Glass.",
   "preferenceSettings": "Preference Settings",
   "preferenceSettingsSubtitle": "Translation source, blocking, audio preferences, etc.",
 

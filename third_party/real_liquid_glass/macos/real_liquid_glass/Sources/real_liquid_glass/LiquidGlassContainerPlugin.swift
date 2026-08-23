@@ -97,9 +97,10 @@ final class GlassHostView: NSView {
     cornerRadius = CGFloat((args["cornerRadius"] as? NSNumber)?.doubleValue ?? 0)
     let tint = (args["tint"] as? NSNumber)
       .map { LiquidGlassContainerPlugin.color(argb: $0.int64Value) }
+    let forceLegacyMaterial = args["forceLegacyMaterial"] as? Bool ?? false
 
     glassView?.removeFromSuperview()
-    if #available(macOS 26.0, *) {
+    if #available(macOS 26.0, *), !forceLegacyMaterial {
       let glass = NSGlassEffectView()
       if (args["style"] as? String) == "clear" {
         glass.style = .clear

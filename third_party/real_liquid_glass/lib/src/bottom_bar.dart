@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'capabilities.dart';
 import 'glass_container.dart';
 import 'glass_style.dart';
+import 'legacy_material_scope.dart';
 import 'native_glass_view.dart';
 
 /// One destination in a [LiquidGlassBottomBar].
@@ -169,7 +170,9 @@ class _LiquidGlassBottomBarState extends State<LiquidGlassBottomBar> {
 
   @override
   Widget build(BuildContext context) {
-    if (defaultTargetPlatform == TargetPlatform.iOS) {
+    final forceLegacyMaterial =
+        LiquidGlassLegacyMaterialScope.enabledOf(context);
+    if (defaultTargetPlatform == TargetPlatform.iOS && !forceLegacyMaterial) {
       return Padding(
         padding: widget.margin,
         child: SizedBox(

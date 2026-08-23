@@ -79,6 +79,51 @@ final liquidGlassNavigationProvider =
   return LiquidGlassNavigationNotifier();
 });
 
+/// Temporarily forces the pre-Liquid-Glass Apple material on supported
+/// iOS/macOS versions so the legacy appearance can be tested on new devices.
+class LegacyAppleGlassTestNotifier extends StateNotifier<bool> {
+  static const String preferenceKey = 'legacy_apple_glass_test_enabled';
+
+  LegacyAppleGlassTestNotifier() : super(false) {
+    _loadPreference();
+  }
+
+  bool _changedLocally = false;
+
+  static bool get isAvailable =>
+      LiquidGlass.isNativePlatform &&
+      LiquidGlass.cachedCapabilities?.nativeGlass == true;
+
+  static bool effectiveValue(bool enabled) => enabled && isAvailable;
+
+  Future<void> _loadPreference() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (!mounted || _changedLocally) return;
+      state = prefs.getBool(preferenceKey) ?? false;
+    } catch (_) {
+      if (!mounted || _changedLocally) return;
+      state = false;
+    }
+  }
+
+  Future<void> setEnabled(bool enabled) async {
+    _changedLocally = true;
+    state = enabled;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(preferenceKey, enabled);
+    } catch (_) {
+      // Keep the in-memory test override when persistence is unavailable.
+    }
+  }
+}
+
+final legacyAppleGlassTestProvider =
+    StateNotifierProvider<LegacyAppleGlassTestNotifier, bool>((ref) {
+  return LegacyAppleGlassTestNotifier();
+});
+
 /// Controls the transparency of Flutter-drawn glass on non-Apple platforms.
 /// Native iOS and macOS materials continue to follow the system appearance.
 class FallbackGlassTransparencyNotifier extends StateNotifier<double> {

@@ -140,6 +140,47 @@ void main() {
     expect(container.read(liquidGlassNavigationProvider), isTrue);
   });
 
+  test('legacy Apple material test is available only with native glass', () {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    LiquidGlass.debugOverrideCapabilities(
+      const LiquidGlassCapabilities(
+        nativeGlass: true,
+        reduceTransparency: false,
+        osMajorVersion: 26,
+      ),
+    );
+
+    expect(LegacyAppleGlassTestNotifier.isAvailable, isTrue);
+    expect(LegacyAppleGlassTestNotifier.effectiveValue(true), isTrue);
+
+    LiquidGlass.debugOverrideCapabilities(
+      const LiquidGlassCapabilities(
+        nativeGlass: false,
+        reduceTransparency: false,
+        osMajorVersion: 18,
+      ),
+    );
+    expect(LegacyAppleGlassTestNotifier.isAvailable, isFalse);
+    expect(LegacyAppleGlassTestNotifier.effectiveValue(true), isFalse);
+  });
+
+  test('legacy Apple material test defaults off and persists', () async {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    expect(container.read(legacyAppleGlassTestProvider), isFalse);
+    await container
+        .read(legacyAppleGlassTestProvider.notifier)
+        .setEnabled(true);
+
+    expect(container.read(legacyAppleGlassTestProvider), isTrue);
+    final prefs = await SharedPreferences.getInstance();
+    expect(
+      prefs.getBool(LegacyAppleGlassTestNotifier.preferenceKey),
+      isTrue,
+    );
+  });
+
   test('fallback glass transparency loads, normalizes, and persists',
       () async {
     SharedPreferences.setMockInitialValues({
