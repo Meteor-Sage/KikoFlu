@@ -177,7 +177,11 @@ class FloatingLyricEnabledNotifier extends StateNotifier<bool> {
 
     // 如果已启用，尝试显示悬浮窗
     if (state) {
-      _showFloatingLyric();
+      final shown = await _showFloatingLyric();
+      if (!shown) {
+        state = false;
+        await prefs.setBool(_key, false);
+      }
     }
   }
 
@@ -196,7 +200,8 @@ class FloatingLyricEnabledNotifier extends StateNotifier<bool> {
       }
 
       // 显示悬浮窗
-      await _showFloatingLyric();
+      final shown = await _showFloatingLyric();
+      if (!shown) return;
     } else {
       // 停止后台更新
       _stopBackgroundUpdate();
@@ -210,7 +215,7 @@ class FloatingLyricEnabledNotifier extends StateNotifier<bool> {
     state = newValue;
   }
 
-  Future<void> _showFloatingLyric() async {
+  Future<bool> _showFloatingLyric() async {
     // 使用 Provider 中的样式，确保与当前设置一致
     final style = ref.read(floatingLyricStyleProvider);
 
@@ -223,7 +228,14 @@ class FloatingLyricEnabledNotifier extends StateNotifier<bool> {
       'paddingVertical': style.paddingVertical,
     };
 
-    await FloatingLyricService.instance.show('♪ - ♪', style: styleMap);
+    final shown = await FloatingLyricService.instance.show(
+      '♪ - ♪',
+      style: styleMap,
+    );
+    if (!shown) {
+      _log.captureOutput('[FloatingLyric] 悬浮窗启动失败');
+      return false;
+    }
 
     // Windows 平台需要给予窗口一点初始化时间，避免立即发送消息导致 CHANNEL_UNREGISTERED
     if (Platform.isWindows || Platform.isLinux) {
@@ -244,6 +256,7 @@ class FloatingLyricEnabledNotifier extends StateNotifier<bool> {
 
     // 启动后台更新
     _startBackgroundUpdate();
+    return true;
   }
 
   /// 启动后台更新监听

@@ -1,6 +1,7 @@
 import Flutter
 import UIKit
 import AVKit
+import CoreImage
 import AudioToolbox
 import CoreHaptics
 
@@ -910,375 +911,622 @@ class FPSMonitor {
     }
 }
 
+@available(iOS 15.0, *)
+private final class FloatingLyricSampleBufferPlaybackDelegate: NSObject,
+    AVPictureInPictureSampleBufferPlaybackDelegate {
+    weak var manager: FloatingLyricManager?
+
+    init(manager: FloatingLyricManager) {
+        self.manager = manager
+    }
+
+    func pictureInPictureController(
+        _ pictureInPictureController: AVPictureInPictureController,
+        setPlaying playing: Bool
+    ) {
+        manager?.setPictureInPicturePlaybackActive(playing)
+    }
+
+    func pictureInPictureControllerTimeRangeForPlayback(
+        _ pictureInPictureController: AVPictureInPictureController
+    ) -> CMTimeRange {
+        CMTimeRange(start: .zero, duration: .positiveInfinity)
+    }
+
+    func pictureInPictureControllerIsPlaybackPaused(
+        _ pictureInPictureController: AVPictureInPictureController
+    ) -> Bool {
+        false
+    }
+
+    func pictureInPictureController(
+        _ pictureInPictureController: AVPictureInPictureController,
+        didTransitionToRenderSize newRenderSize: CMVideoDimensions
+    ) {
+        manager?.refreshPictureInPictureFrame()
+    }
+
+    func pictureInPictureController(
+        _ pictureInPictureController: AVPictureInPictureController,
+        skipByInterval skipInterval: CMTime,
+        completion: @escaping () -> Void
+    ) {
+        completion()
+    }
+
+}
+
 class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
     private var pipController: AVPictureInPictureController?
+    private var pipPossibleObservation: NSKeyValueObservation?
     private var playerLayer: AVPlayerLayer?
     private var player: AVPlayer?
-    private var lyricView: UILabel?
-    private var fpsLabel: UILabel?
-    private var networkSpeedLabel: UILabel?
+    private var sampleBufferDisplayLayer: AVSampleBufferDisplayLayer?
+    private var sampleBufferPlaybackDelegate: AnyObject?
     private var channel: FlutterMethodChannel
-    
+
     private var fpsMonitor = FPSMonitor()
     private var networkSpeedMonitor = NetworkSpeedMonitor()
     private var showFPS: Bool = false
     private var showNetworkSpeed: Bool = false
-    
-    // Cached subtitle style for info labels (follows lyric style except font size)
+    private var currentFPS: Int?
+    private var currentNetworkSpeed: String?
+
+    private var currentText = "♪ - ♪"
+    private var lyricFontSize: CGFloat = 14
+    private var lyricTextColor: UIColor = .white
+    private var lyricBackgroundColor = UIColor(red: 0.13, green: 0.59, blue: 0.95, alpha: 0.88)
+    private var lyricCornerRadius: CGFloat = 16
+    private var lyricPaddingHorizontal: CGFloat = 20
+    private var lyricPaddingVertical: CGFloat = 10
     private var infoTextColor: UIColor = .white
-    private var infoCornerRadius: CGFloat = 4
+    private let renderSize = CGSize(width: 828, height: 208)
+    private let renderScale: CGFloat = 2
+    private let ciContext = CIContext(options: [.cacheIntermediates: false])
+    private let renderedFrameLock = NSLock()
+    private var renderedFrame: CGImage?
+    private var renderedCIImage: CIImage?
+    private var pendingShowResult: FlutterResult?
+    private var startGeneration = 0
+    private var startRequestedGeneration: Int?
     
     // Base64 of a 1-second black MP4 video
     private let dummyVideoBase64 = "AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAAAzxtZGF0AAACnwYF//+b3EXpvebZSLeWLNgg2SPu73gyNjQgLSBjb3JlIDE2NSAtIEguMjY0L01QRUctNCBBVkMgY29kZWMgLSBDb3B5bGVmdCAyMDAzLTIwMjUgLSBodHRwOi8vd3d3LnZpZGVvbGFuLm9yZy94MjY0Lmh0bWwgLSBvcHRpb25zOiBjYWJhYz0xIHJlZj0zIGRlYmxvY2s9MTowOjAgYW5hbHlzZT0weDM6MHgxMTMgbWU9aGV4IHN1Ym1lPTcgcHN5PTEgcHN5X3JkPTEuMDA6MC4wMCBtaXhlZF9yZWY9MSBtZV9yYW5nZT0xNiBjaHJvbWFfbWU9MSB0cmVsbGlzPTEgOHg4ZGN0PTEgY3FtPTAgZGVhZHpvbmU9MjEsMTEgZmFzdF9wc2tpcD0xIGNocm9tYV9xcF9vZmZzZXQ9LTIgdGhyZWFkcz0zIGxvb2thaGVhZF90aHJlYWRzPTEgc2xpY2VkX3RocmVhZHM9MCBucj0wIGRlY2ltYXRlPTEgaW50ZXJsYWNlZD0wIGJsdXJheV9jb21wYXQ9MCBjb25zdHJhaW5lZF9pbnRyYT0wIGJmcmFtZXM9MyBiX3B5cmFtaWQ9MiBiX2FkYXB0PTEgYl9iaWFzPTAgZGlyZWN0PTEgd2VpZ2h0Yj0xIG9wZW5fZ29wPTAgd2VpZ2h0cD0yIGtleWludD0yNTAga2V5aW50X21pbj0xIHNjZW5lY3V0PTQwIGludHJhX3JlZnJlc2g9MCByY19sb29rYWhlYWQ9NDAgcmM9Y3JmIG1idHJlZT0xIGNyZj0yMy4wIHFjb21wPTAuNjAgcXBtaW49MCBxcG1heD02OSBxcHN0ZXA9NCBpcF9yYXRpbz0xLjQwIGFxPTE6MS4wMACAAAAAbmWIhAAX//731LfMsu4HIrYLqPeiniZfQ3UlAZuWxO06gAAAAwH59sMvUJl+D/6JZYfSbX+N2G0zTmpT8MS5Z28oYXk80p7dd2r0R/+AAe9UAACvQpMjU6B8PVjHQ4Eclp5iBuAWr7bKk+fDOdstAAAADUGaImxBX/7WpVAAJmAAAAAKAZ5BeQV/AAAZ8QAAA1Ntb292AAAAbG12aGQAAAAAAAAAAAAAAAAAAAPoAAAPoAABAAABAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAACfnRyYWsAAABcdGtoZAAAAAMAAAAAAAAAAAAAAAEAAAAAAAAPoAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAEAAAAABngAAAGgAAAAAACRlZHRzAAAAHGVsc3QAAAAAAAAAAQAAD6AAAIAAAAEAAAAAAfZtZGlhAAAAIG1kaGQAAAAAAAAAAAAAAAAAAEAAAAFAAFXEAAAAAAAxaGRscgAAAAAAAAAAdmlkZQAAAAAAAAAAAAAAAENvcmUgTWVkaWEgVmlkZW8AAAABnW1pbmYAAAAUdm1oZAAAAAEAAAAAAAAAAAAAACRkaW5mAAAAHGRyZWYAAAAAAAAAAQAAAAx1cmwgAAAAAQAAAV1zdGJsAAAAsXN0c2QAAAAAAAAAAQAAAKFhdmMxAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAZ4AaABIAAAASAAAAAAAAAABFUxhdmM2Mi4xNi4xMDAgbGlieDI2NAAAAAAAAAAAAAAAGP//AAAAN2F2Y0MBZAAL/+EAGmdkAAus2UGj+pYpQAAAAwBAAAADAIPFCmWAAQAGaOvjyyLA/fj4AAAAABRidHJ0AAAAAAAACIoAAAAAAAAAGHN0dHMAAAAAAAAAAQAAAAMAAEAAAAAAFHN0c3MAAAAAAAAAAQAAAAEAAAAoY3R0cwAAAAAAAAADAAAAAQAAgAAAAAABAADAAAAAAAEAAEAAAAAAHHN0c2MAAAAAAAAAAQAAAAEAAAADAAAAAQAAACBzdHN6AAAAAAAAAAAAAAADAAADFQAAABEAAAAOAAAAFHN0Y28AAAAAAAAAAQAAADAAAABhdWR0YQAAAFltZXRhAAAAAAAAACFoZGxyAAAAAAAAAABtZGlyYXBwbAAAAAAAAAAAAAAAACxpbHN0AAAAJKl0b28AAAAcZGF0YQAAAAEAAAAATGF2ZjYyLjYuMTAx"
 
     init(controller: FlutterViewController) {
-        channel = FlutterMethodChannel(name: "com.kikoeru.flutter/floating_lyric", binaryMessenger: controller.binaryMessenger)
+        channel = FlutterMethodChannel(
+            name: "com.kikoeru.flutter/floating_lyric",
+            binaryMessenger: controller.binaryMessenger
+        )
         super.init()
-        
-        channel.setMethodCallHandler { [weak self] (call, result) in
+
+        channel.setMethodCallHandler { [weak self] call, result in
             self?.handleMethodCall(call, result: result)
         }
-        
-        setupPlayer(in: controller.view)
+
+        rebuildRenderedFrame()
+        setupPictureInPicture(in: controller.view)
     }
-    
-    private func setupPlayer(in view: UIView) {
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    private func setupPictureInPicture(in view: UIView) {
+        guard AVPictureInPictureController.isPictureInPictureSupported() else {
+            return
+        }
+
+        if #available(iOS 15.0, *) {
+            setupSampleBufferPictureInPicture(in: view)
+        } else {
+            setupLegacyPictureInPicture(in: view)
+        }
+    }
+
+    @available(iOS 15.0, *)
+    private func setupSampleBufferPictureInPicture(in view: UIView) {
+        let displayLayer = AVSampleBufferDisplayLayer()
+        displayLayer.frame = CGRect(x: 0, y: 0, width: 1, height: 1)
+        displayLayer.opacity = 0.01
+        displayLayer.videoGravity = .resizeAspect
+        view.layer.addSublayer(displayLayer)
+        sampleBufferDisplayLayer = displayLayer
+
+        let playbackDelegate = FloatingLyricSampleBufferPlaybackDelegate(manager: self)
+        sampleBufferPlaybackDelegate = playbackDelegate
+        let contentSource = AVPictureInPictureController.ContentSource(
+            sampleBufferDisplayLayer: displayLayer,
+            playbackDelegate: playbackDelegate
+        )
+        pipController = AVPictureInPictureController(contentSource: contentSource)
+        pipController?.delegate = self
+        pipController?.requiresLinearPlayback = true
+        pipController?.setValue(1, forKey: "controlsStyle")
+        observePictureInPicturePossibility()
+        enqueueCurrentSampleBuffer()
+    }
+
+    private func setupLegacyPictureInPicture(in view: UIView) {
         guard let data = Data(base64Encoded: dummyVideoBase64) else { return }
-        let tempDir = FileManager.default.temporaryDirectory
-        let fileURL = tempDir.appendingPathComponent("pip_video.mp4")
+        let fileURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pip_video.mp4")
         try? data.write(to: fileURL)
-        
-        let playerItem = AVPlayerItem(url: fileURL)
-        player = AVPlayer(playerItem: playerItem)
+
+        let asset = AVURLAsset(url: fileURL)
+        let item = AVPlayerItem(asset: asset)
+        item.preferredForwardBufferDuration = 0
+        item.videoComposition = AVVideoComposition(
+            asset: asset,
+            applyingCIFiltersWithHandler: { [weak self] request in
+                guard let self, let overlay = self.currentRenderedCIImage() else {
+                    request.finish(with: request.sourceImage, context: nil)
+                    return
+                }
+                let sourceExtent = request.sourceImage.extent
+                let scale = CGAffineTransform(
+                    scaleX: sourceExtent.width / overlay.extent.width,
+                    y: sourceExtent.height / overlay.extent.height
+                )
+                let output = overlay.transformed(by: scale).cropped(to: sourceExtent)
+                request.finish(with: output, context: nil)
+            }
+        )
+        player = AVPlayer(playerItem: item)
         player?.isMuted = true
         player?.allowsExternalPlayback = true
-        // Important: prevent this player from pausing other audio
-        if #available(iOS 10.0, *) {
-            player?.automaticallyWaitsToMinimizeStalling = false
-        }
-        // Loop the video
+        player?.automaticallyWaitsToMinimizeStalling = false
         player?.actionAtItemEnd = .none
-        NotificationCenter.default.addObserver(self,
-                                             selector: #selector(playerItemDidReachEnd(notification:)),
-                                             name: .AVPlayerItemDidPlayToEndTime,
-                                             object: player?.currentItem)
-        
-        playerLayer = AVPlayerLayer(player: player)
-        playerLayer?.frame = CGRect(x: 0, y: 0, width: 1, height: 1)
-        playerLayer?.opacity = 0.01
-        view.layer.addSublayer(playerLayer!)
-        
-        if AVPictureInPictureController.isPictureInPictureSupported() {
-            pipController = AVPictureInPictureController(playerLayer: playerLayer!)
-            pipController?.delegate = self
-            // Hide controls
-            pipController?.setValue(1, forKey: "controlsStyle")
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(playerItemDidReachEnd(notification:)),
+            name: .AVPlayerItemDidPlayToEndTime,
+            object: item
+        )
+
+        let layer = AVPlayerLayer(player: player)
+        layer.frame = CGRect(x: 0, y: 0, width: 1, height: 1)
+        layer.opacity = 0.01
+        view.layer.addSublayer(layer)
+        playerLayer = layer
+        pipController = AVPictureInPictureController(playerLayer: layer)
+        pipController?.delegate = self
+        pipController?.setValue(1, forKey: "controlsStyle")
+        observePictureInPicturePossibility()
+    }
+
+    private func observePictureInPicturePossibility() {
+        pipPossibleObservation = pipController?.observe(
+            \.isPictureInPicturePossible,
+            options: [.new]
+        ) { [weak self] _, change in
+            guard change.newValue == true else { return }
+            DispatchQueue.main.async {
+                self?.startPendingPictureInPictureIfPossible()
+            }
         }
     }
-    
-    @objc func playerItemDidReachEnd(notification: Notification) {
-        if let playerItem = notification.object as? AVPlayerItem {
-            playerItem.seek(to: CMTime.zero, completionHandler: nil)
-        }
+
+    @objc private func playerItemDidReachEnd(notification: Notification) {
+        guard let item = notification.object as? AVPlayerItem else { return }
+        item.seek(to: .zero, completionHandler: nil)
     }
-    
+
     private func handleMethodCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
         case "show":
             let args = call.arguments as? [String: Any]
-            let text = args?["text"] as? String ?? "Lyrics"
-            show(text: text, args: args)
-            result(true)
+            currentText = args?["text"] as? String ?? "Lyrics"
+            applyStyleArguments(args)
+            rebuildRenderedFrame()
+            show(result: result)
         case "hide":
             hide()
             result(true)
         case "updateText":
             let args = call.arguments as? [String: Any]
-            let text = args?["text"] as? String ?? ""
-            updateText(text)
+            updateText(args?["text"] as? String ?? "")
             result(true)
         case "updateStyle":
-            let args = call.arguments as? [String: Any]
-            updateStyle(args: args)
+            updateStyle(args: call.arguments as? [String: Any])
             result(true)
         case "setFPSEnabled":
             let args = call.arguments as? [String: Any]
-            let enabled = args?["enabled"] as? Bool ?? false
-            setFPSEnabled(enabled)
+            setFPSEnabled(args?["enabled"] as? Bool ?? false)
             result(true)
         case "setNetworkSpeedEnabled":
             let args = call.arguments as? [String: Any]
-            let enabled = args?["enabled"] as? Bool ?? false
-            setNetworkSpeedEnabled(enabled)
+            setNetworkSpeedEnabled(args?["enabled"] as? Bool ?? false)
             result(true)
-        case "hasPermission":
-            result(true)
-        case "requestPermission":
-            result(true)
+        case "hasPermission", "requestPermission":
+            result(pipController != nil)
         default:
             result(FlutterMethodNotImplemented)
         }
     }
-    
-    private func show(text: String, args: [String: Any]?) {
-        if pipController?.isPictureInPictureActive == true {
-            updateText(text)
-            updateStyle(args: args)
+
+    private func show(result: @escaping FlutterResult) {
+        guard let pipController else {
+            result(false)
             return
         }
-        
+        if pipController.isPictureInPictureActive {
+            result(true)
+            return
+        }
+
+        completePendingShow(false)
+        pendingShowResult = result
+        startGeneration += 1
+        let generation = startGeneration
         player?.play()
-        pipController?.startPictureInPicture()
-        prepareLyricView(text: text)
-        updateStyle(args: args)
+        enqueueCurrentSampleBufferIfAvailable()
+        startPendingPictureInPictureIfPossible()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+            guard let self, generation == self.startGeneration,
+                  self.pendingShowResult != nil else { return }
+            self.player?.pause()
+            self.completePendingShow(false)
+        }
     }
-    
+
+    private func startPendingPictureInPictureIfPossible() {
+        guard pendingShowResult != nil, let pipController,
+              pipController.isPictureInPicturePossible,
+              startRequestedGeneration != startGeneration else { return }
+        startRequestedGeneration = startGeneration
+        pipController.startPictureInPicture()
+    }
+
+    private func completePendingShow(_ success: Bool) {
+        guard let result = pendingShowResult else { return }
+        pendingShowResult = nil
+        startRequestedGeneration = nil
+        result(success)
+    }
+
     private func hide() {
+        startGeneration += 1
+        completePendingShow(false)
         pipController?.stopPictureInPicture()
         player?.pause()
         stopMonitors()
     }
-    
+
     private func setFPSEnabled(_ enabled: Bool) {
         showFPS = enabled
-        if enabled {
+        currentFPS = nil
+        if enabled, pipController?.isPictureInPictureActive == true {
             fpsMonitor.onFPSUpdate = { [weak self] fps in
-                self?.updateFPSLabel(fps)
+                self?.updateFPS(fps)
             }
-            if pipController?.isPictureInPictureActive == true {
-                fpsMonitor.start()
-                ensureFPSLabel()
-            }
-        } else {
+            fpsMonitor.start()
+        } else if !enabled {
             fpsMonitor.stop()
-            DispatchQueue.main.async {
-                self.fpsLabel?.removeFromSuperview()
-                self.fpsLabel = nil
-            }
         }
+        rebuildRenderedFrame()
     }
-    
+
     private func setNetworkSpeedEnabled(_ enabled: Bool) {
         showNetworkSpeed = enabled
-        if enabled {
+        currentNetworkSpeed = nil
+        if enabled, pipController?.isPictureInPictureActive == true {
             networkSpeedMonitor.onSpeedUpdate = { [weak self] speed in
-                self?.updateNetworkSpeedLabel(speed)
+                self?.updateNetworkSpeed(speed)
             }
-            if pipController?.isPictureInPictureActive == true {
-                networkSpeedMonitor.start()
-                ensureNetworkSpeedLabel()
-            }
-        } else {
+            networkSpeedMonitor.start()
+        } else if !enabled {
             networkSpeedMonitor.stop()
-            DispatchQueue.main.async {
-                self.networkSpeedLabel?.removeFromSuperview()
-                self.networkSpeedLabel = nil
-            }
         }
+        rebuildRenderedFrame()
     }
-    
-    private func stopMonitors() {
-        fpsMonitor.stop()
-        networkSpeedMonitor.stop()
-    }
-    
+
     private func startMonitorsIfNeeded() {
         if showFPS {
             fpsMonitor.onFPSUpdate = { [weak self] fps in
-                self?.updateFPSLabel(fps)
+                self?.updateFPS(fps)
             }
             fpsMonitor.start()
         }
         if showNetworkSpeed {
             networkSpeedMonitor.onSpeedUpdate = { [weak self] speed in
-                self?.updateNetworkSpeedLabel(speed)
+                self?.updateNetworkSpeed(speed)
             }
             networkSpeedMonitor.start()
         }
     }
-    
-    private func ensureFPSLabel() {
+
+    private func stopMonitors() {
+        fpsMonitor.stop()
+        networkSpeedMonitor.stop()
+    }
+
+    private func updateFPS(_ fps: Int) {
         DispatchQueue.main.async {
-            guard self.showFPS else { return }
-            if self.fpsLabel == nil {
-                let label = UILabel()
-                label.textColor = self.infoTextColor.withAlphaComponent(0.8)
-                label.backgroundColor = .clear
-                label.font = UIFont.monospacedDigitSystemFont(ofSize: 10, weight: .medium)
-                label.textAlignment = .center
-                label.layer.cornerRadius = self.infoCornerRadius
-                label.clipsToBounds = true
-                self.fpsLabel = label
-            }
-            if let window = UIApplication.shared.windows.first, self.fpsLabel?.superview == nil {
-                if let label = self.fpsLabel {
-                    window.addSubview(label)
-                    window.bringSubviewToFront(label)
-                    self.layoutInfoLabels(in: window)
-                }
-            }
+            self.currentFPS = fps
+            self.rebuildRenderedFrame()
         }
     }
-    
-    private func ensureNetworkSpeedLabel() {
+
+    private func updateNetworkSpeed(_ speed: String) {
         DispatchQueue.main.async {
-            guard self.showNetworkSpeed else { return }
-            if self.networkSpeedLabel == nil {
-                let label = UILabel()
-                label.textColor = self.infoTextColor.withAlphaComponent(0.8)
-                label.backgroundColor = .clear
-                label.font = UIFont.monospacedDigitSystemFont(ofSize: 10, weight: .medium)
-                label.textAlignment = .center
-                label.layer.cornerRadius = self.infoCornerRadius
-                label.clipsToBounds = true
-                self.networkSpeedLabel = label
-            }
-            if let window = UIApplication.shared.windows.first, self.networkSpeedLabel?.superview == nil {
-                if let label = self.networkSpeedLabel {
-                    window.addSubview(label)
-                    window.bringSubviewToFront(label)
-                    self.layoutInfoLabels(in: window)
-                }
-            }
+            self.currentNetworkSpeed = speed
+            self.rebuildRenderedFrame()
         }
     }
-    
-    private func layoutInfoLabels(in window: UIWindow) {
-        let margin: CGFloat = 4
-        let height: CGFloat = 16
-        if let label = fpsLabel {
-            let width: CGFloat = 50
-            label.frame = CGRect(
-                x: margin,
-                y: window.bounds.height - height - margin,
-                width: width,
-                height: height
-            )
-        }
-        if let label = networkSpeedLabel {
-            let width: CGFloat = 140
-            label.frame = CGRect(
-                x: window.bounds.width - width - margin,
-                y: window.bounds.height - height - margin,
-                width: width,
-                height: height
-            )
-        }
-    }
-    
-    private func updateFPSLabel(_ fps: Int) {
-        DispatchQueue.main.async {
-            self.fpsLabel?.text = "\(fps) FPS"
-        }
-    }
-    
-    private func updateNetworkSpeedLabel(_ speed: String) {
-        DispatchQueue.main.async {
-            self.networkSpeedLabel?.text = speed
-        }
-    }
-    
+
     private func updateText(_ text: String) {
         DispatchQueue.main.async {
-            self.lyricView?.text = text
-            self.lyricView?.setNeedsLayout()
+            self.currentText = text
+            self.rebuildRenderedFrame()
         }
     }
-    
+
     private func updateStyle(args: [String: Any]?) {
-        guard let args = args else { return }
-        
+        guard let args else { return }
         DispatchQueue.main.async {
-            guard let view = self.lyricView else { return }
-            
-            if let fontSize = args["fontSize"] as? Double {
-                view.font = UIFont.systemFont(ofSize: CGFloat(fontSize), weight: .medium)
-            }
-            
-            if let textColorInt = args["textColor"] as? Int {
-                let color = self.colorFromInt(textColorInt)
-                view.textColor = color
-                self.infoTextColor = color
-            }
-            
-            if let backgroundColorInt = args["backgroundColor"] as? Int {
-                view.backgroundColor = self.colorFromInt(backgroundColorInt)
-            }
-            
-            if let cornerRadius = args["cornerRadius"] as? Double {
-                view.layer.cornerRadius = CGFloat(cornerRadius)
-                self.infoCornerRadius = CGFloat(cornerRadius)
-            }
-            
-            // Sync style to info labels (text color + corner radius, no background)
-            self.applyStyleToInfoLabels()
+            self.applyStyleArguments(args)
+            self.rebuildRenderedFrame()
         }
     }
-    
+
+    private func applyStyleArguments(_ args: [String: Any]?) {
+        guard let args else { return }
+        if let value = args["fontSize"] as? Double {
+            lyricFontSize = CGFloat(value)
+        }
+        if let value = args["textColor"] as? Int {
+            lyricTextColor = colorFromInt(value)
+            infoTextColor = lyricTextColor
+        }
+        if let value = args["backgroundColor"] as? Int {
+            lyricBackgroundColor = colorFromInt(value)
+        }
+        if let value = args["cornerRadius"] as? Double {
+            lyricCornerRadius = CGFloat(value)
+        }
+        if let value = args["paddingHorizontal"] as? Double {
+            lyricPaddingHorizontal = CGFloat(value)
+        }
+        if let value = args["paddingVertical"] as? Double {
+            lyricPaddingVertical = CGFloat(value)
+        }
+    }
+
     private func colorFromInt(_ argb: Int) -> UIColor {
-        let a = CGFloat((argb >> 24) & 0xFF) / 255.0
-        let r = CGFloat((argb >> 16) & 0xFF) / 255.0
-        let g = CGFloat((argb >> 8) & 0xFF) / 255.0
-        let b = CGFloat(argb & 0xFF) / 255.0
-        return UIColor(red: r, green: g, blue: b, alpha: a)
+        let alpha = CGFloat((argb >> 24) & 0xFF) / 255
+        let red = CGFloat((argb >> 16) & 0xFF) / 255
+        let green = CGFloat((argb >> 8) & 0xFF) / 255
+        let blue = CGFloat(argb & 0xFF) / 255
+        return UIColor(red: red, green: green, blue: blue, alpha: alpha)
     }
-    
-    private func applyStyleToInfoLabels() {
-        for label in [fpsLabel, networkSpeedLabel] {
-            guard let label = label else { continue }
-            label.textColor = infoTextColor.withAlphaComponent(0.8)
-            label.layer.cornerRadius = infoCornerRadius
-        }
-    }
-    
-    private func prepareLyricView(text: String) {
-        if lyricView == nil {
-            lyricView = UILabel()
-            lyricView?.textColor = .white
-            lyricView?.backgroundColor = UIColor(white: 0.0, alpha: 0.3) // Default style
-            lyricView?.font = UIFont.systemFont(ofSize: 20, weight: .medium)
-            lyricView?.textAlignment = .center
-            lyricView?.numberOfLines = 0
-            lyricView?.layer.cornerRadius = 8
-            lyricView?.clipsToBounds = true
-            // Remove shadow
-            lyricView?.shadowColor = .clear
-            lyricView?.shadowOffset = .zero
-        }
-        lyricView?.text = text
-    }
-    
-    // MARK: - AVPictureInPictureControllerDelegate
-    
-    func pictureInPictureControllerWillStartPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
-        // Add view to the PiP window
-        // Note: This relies on the fact that the PiP window becomes available in windows list
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            if let window = UIApplication.shared.windows.first {
-                if let view = self.lyricView {
-                    view.frame = window.bounds
-                    view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-                    window.addSubview(view)
-                    window.bringSubviewToFront(view)
-                }
-                // Add info labels and start monitors
-                self.startMonitorsIfNeeded()
-                if self.showFPS { self.ensureFPSLabel() }
-                if self.showNetworkSpeed { self.ensureNetworkSpeedLabel() }
+
+    private func rebuildRenderedFrame() {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = true
+        let renderer = UIGraphicsImageRenderer(size: renderSize, format: format)
+        let image = renderer.image { context in
+            let bounds = CGRect(origin: .zero, size: renderSize)
+            UIColor.black.setFill()
+            context.fill(bounds)
+
+            lyricBackgroundColor.setFill()
+            let backgroundPath = UIBezierPath(
+                roundedRect: bounds,
+                cornerRadius: lyricCornerRadius * renderScale
+            )
+            backgroundPath.fill()
+
+            let paragraphStyle = NSMutableParagraphStyle()
+            paragraphStyle.alignment = .center
+            paragraphStyle.lineBreakMode = .byWordWrapping
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(
+                    ofSize: lyricFontSize * renderScale,
+                    weight: .medium
+                ),
+                .foregroundColor: lyricTextColor,
+                .paragraphStyle: paragraphStyle,
+            ]
+            let horizontalInset = lyricPaddingHorizontal * renderScale
+            let verticalInset = lyricPaddingVertical * renderScale
+            var textBounds = bounds.insetBy(
+                dx: horizontalInset,
+                dy: verticalInset
+            )
+            if showFPS || showNetworkSpeed {
+                textBounds.size.height = max(0, textBounds.height - 24)
+            }
+            let attributedText = NSAttributedString(
+                string: currentText,
+                attributes: attributes
+            )
+            let measured = attributedText.boundingRect(
+                with: textBounds.size,
+                options: [.usesLineFragmentOrigin, .usesFontLeading],
+                context: nil
+            )
+            let drawHeight = min(textBounds.height, ceil(measured.height))
+            let drawRect = CGRect(
+                x: textBounds.minX,
+                y: textBounds.midY - drawHeight / 2,
+                width: textBounds.width,
+                height: drawHeight
+            )
+            attributedText.draw(
+                with: drawRect,
+                options: [.usesLineFragmentOrigin, .usesFontLeading],
+                context: nil
+            )
+
+            let infoAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.monospacedDigitSystemFont(
+                    ofSize: 10 * renderScale,
+                    weight: .medium
+                ),
+                .foregroundColor: infoTextColor.withAlphaComponent(0.8),
+            ]
+            let infoY = renderSize.height - (18 * renderScale)
+            if showFPS, let currentFPS {
+                NSString(string: "\(currentFPS) FPS").draw(
+                    in: CGRect(
+                        x: 4 * renderScale,
+                        y: infoY,
+                        width: 60 * renderScale,
+                        height: 14 * renderScale
+                    ),
+                    withAttributes: infoAttributes
+                )
+            }
+            if showNetworkSpeed, let currentNetworkSpeed {
+                let width = 150 * renderScale
+                let speedParagraphStyle = NSMutableParagraphStyle()
+                speedParagraphStyle.alignment = .right
+                var speedAttributes = infoAttributes
+                speedAttributes[.paragraphStyle] = speedParagraphStyle
+                NSString(string: currentNetworkSpeed).draw(
+                    in: CGRect(
+                        x: renderSize.width - width - (4 * renderScale),
+                        y: infoY,
+                        width: width,
+                        height: 14 * renderScale
+                    ),
+                    withAttributes: speedAttributes
+                )
             }
         }
+        guard let cgImage = image.cgImage else { return }
+        renderedFrameLock.lock()
+        renderedFrame = cgImage
+        renderedCIImage = CIImage(cgImage: cgImage)
+        renderedFrameLock.unlock()
+        enqueueCurrentSampleBufferIfAvailable()
     }
-    
-    func pictureInPictureControllerDidStopPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
-        lyricView?.removeFromSuperview()
-        fpsLabel?.removeFromSuperview()
-        networkSpeedLabel?.removeFromSuperview()
+
+    private func currentRenderedCIImage() -> CIImage? {
+        renderedFrameLock.lock()
+        defer { renderedFrameLock.unlock() }
+        return renderedCIImage
+    }
+
+    private func currentRenderedFrame() -> CGImage? {
+        renderedFrameLock.lock()
+        defer { renderedFrameLock.unlock() }
+        return renderedFrame
+    }
+
+    private func enqueueCurrentSampleBufferIfAvailable() {
+        guard #available(iOS 15.0, *), sampleBufferDisplayLayer != nil else {
+            return
+        }
+        enqueueCurrentSampleBuffer()
+    }
+
+    @available(iOS 15.0, *)
+    private func enqueueCurrentSampleBuffer() {
+        guard let displayLayer = sampleBufferDisplayLayer,
+              let image = currentRenderedFrame(),
+              let sampleBuffer = makeSampleBuffer(from: image) else { return }
+        if displayLayer.status == .failed {
+            displayLayer.flush()
+        }
+        displayLayer.enqueue(sampleBuffer)
+    }
+
+    @available(iOS 15.0, *)
+    private func makeSampleBuffer(from image: CGImage) -> CMSampleBuffer? {
+        var pixelBuffer: CVPixelBuffer?
+        let attributes: [CFString: Any] = [
+            kCVPixelBufferCGImageCompatibilityKey: true,
+            kCVPixelBufferCGBitmapContextCompatibilityKey: true,
+            kCVPixelBufferIOSurfacePropertiesKey: [:],
+        ]
+        let status = CVPixelBufferCreate(
+            kCFAllocatorDefault,
+            image.width,
+            image.height,
+            kCVPixelFormatType_32BGRA,
+            attributes as CFDictionary,
+            &pixelBuffer
+        )
+        guard status == kCVReturnSuccess, let pixelBuffer else { return nil }
+
+        ciContext.render(
+            CIImage(cgImage: image),
+            to: pixelBuffer,
+            bounds: CGRect(x: 0, y: 0, width: image.width, height: image.height),
+            colorSpace: CGColorSpaceCreateDeviceRGB()
+        )
+
+        var formatDescription: CMVideoFormatDescription?
+        guard CMVideoFormatDescriptionCreateForImageBuffer(
+            allocator: kCFAllocatorDefault,
+            imageBuffer: pixelBuffer,
+            formatDescriptionOut: &formatDescription
+        ) == noErr, let formatDescription else { return nil }
+
+        var timing = CMSampleTimingInfo(
+            duration: CMTime(value: 1, timescale: 30),
+            presentationTimeStamp: CMClockGetTime(CMClockGetHostTimeClock()),
+            decodeTimeStamp: .invalid
+        )
+        var sampleBuffer: CMSampleBuffer?
+        guard CMSampleBufferCreateReadyWithImageBuffer(
+            allocator: kCFAllocatorDefault,
+            imageBuffer: pixelBuffer,
+            formatDescription: formatDescription,
+            sampleTiming: &timing,
+            sampleBufferOut: &sampleBuffer
+        ) == noErr, let sampleBuffer else { return nil }
+        CMSetAttachment(
+            sampleBuffer,
+            key: kCMSampleAttachmentKey_DisplayImmediately,
+            value: kCFBooleanTrue,
+            attachmentMode: kCMAttachmentMode_ShouldNotPropagate
+        )
+        return sampleBuffer
+    }
+
+    fileprivate func setPictureInPicturePlaybackActive(_ active: Bool) {
+        if active {
+            refreshPictureInPictureFrame()
+        }
+    }
+
+    fileprivate func refreshPictureInPictureFrame() {
+        DispatchQueue.main.async {
+            self.rebuildRenderedFrame()
+        }
+    }
+
+    // MARK: - AVPictureInPictureControllerDelegate
+
+    func pictureInPictureControllerDidStartPictureInPicture(
+        _ pictureInPictureController: AVPictureInPictureController
+    ) {
+        completePendingShow(true)
+        startMonitorsIfNeeded()
+    }
+
+    func pictureInPictureControllerDidStopPictureInPicture(
+        _ pictureInPictureController: AVPictureInPictureController
+    ) {
+        startGeneration += 1
+        completePendingShow(false)
         stopMonitors()
         player?.pause()
         channel.invokeMethod("onClose", arguments: nil)
     }
-    
-    func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, failedToStartPictureInPictureWithError error: Error) {
-        print("PiP failed: \(error)")
+
+    func pictureInPictureController(
+        _ pictureInPictureController: AVPictureInPictureController,
+        failedToStartPictureInPictureWithError error: Error
+    ) {
+        print("Floating lyric PiP failed: \(error)")
+        startGeneration += 1
+        completePendingShow(false)
+        stopMonitors()
+        player?.pause()
     }
 }
