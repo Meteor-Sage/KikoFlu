@@ -9,7 +9,7 @@ enum DownloadStatus {
 }
 
 class DownloadTask extends Equatable {
-  final String id; // 使用 hash 作为唯一标识
+  final String id; // 作品内资源身份，用于下载调度和状态更新
   final int workId;
   final String workTitle;
   final String fileName;
@@ -38,6 +38,18 @@ class DownloadTask extends Equatable {
     this.completedAt,
     this.workMetadata,
   });
+
+  static String createId({
+    required int workId,
+    required String? hash,
+    required String fileName,
+  }) {
+    final normalizedHash = hash?.trim();
+    if (normalizedHash != null && normalizedHash.isNotEmpty) {
+      return '$workId:hash:$normalizedHash';
+    }
+    return '$workId:path:$fileName';
+  }
 
   double get progress {
     if (totalBytes == null || totalBytes == 0) return 0.0;
@@ -95,13 +107,16 @@ class DownloadTask extends Equatable {
   }
 
   factory DownloadTask.fromJson(Map<String, dynamic> json) {
+    final workId = json['workId'] as int;
+    final fileName = json['fileName'] as String;
+    final hash = json['hash'] as String?;
     return DownloadTask(
-      id: json['id'] as String,
-      workId: json['workId'] as int,
+      id: createId(workId: workId, hash: hash, fileName: fileName),
+      workId: workId,
       workTitle: json['workTitle'] as String,
-      fileName: json['fileName'] as String,
+      fileName: fileName,
       downloadUrl: json['downloadUrl'] as String,
-      hash: json['hash'] as String?,
+      hash: hash,
       totalBytes: json['totalBytes'] as int?,
       downloadedBytes: json['downloadedBytes'] as int? ?? 0,
       status: DownloadStatus.values.firstWhere(

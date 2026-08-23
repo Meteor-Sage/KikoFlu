@@ -1166,12 +1166,26 @@ class SubtitleLibraryService {
 
   /// 删除字幕文件或文件夹
   static Future<bool> delete(String path) async {
+    var indexRefreshed = false;
     try {
       final entity = FileSystemEntity.typeSync(path);
 
       if (entity == FileSystemEntityType.file) {
         await File(path).delete();
-        await _deleteFileRecord(path);
+        try {
+          await _deleteFileRecord(path);
+        } catch (e) {
+          // The file is already gone. Reconcile only its parent directory,
+          // then retry the targeted deletion so success never leaves a stale
+          // database row behind.
+          _log.captureOutput(
+            '[SubtitleLibrary] 删除文件记录失败，尝试恢复索引: $path, 错误: $e',
+          );
+          final parentPath = FileSystemEntity.parentOf(path);
+          await _refreshDirectoriesAfterChange({parentPath});
+          indexRefreshed = true;
+          await _deleteFileRecord(path);
+        }
       } else if (entity == FileSystemEntityType.directory) {
         await Directory(path).delete(recursive: true);
       } else {
@@ -1182,7 +1196,7 @@ class SubtitleLibraryService {
       if (entity == FileSystemEntityType.directory) {
         final parentPath = FileSystemEntity.parentOf(path);
         await _refreshDirectoriesAfterChange({parentPath});
-      } else {
+      } else if (!indexRefreshed) {
         _cacheUpdateController.add(null);
       }
       return true;
@@ -1194,30 +1208,25 @@ class SubtitleLibraryService {
 
   /// 删除单个文件后只移除对应的数据库记录，避免重扫父目录影响其他文件。
   static Future<void> _deleteFileRecord(String filePath) async {
-    try {
-      final libraryDir = await getSubtitleLibraryDirectory();
-      final libraryRoot = p.normalize(libraryDir.path);
-      final normalizedFilePath = p.normalize(filePath);
-      final relativePath = p.relative(
-        normalizedFilePath,
-        from: libraryRoot,
-      );
+    final libraryDir = await getSubtitleLibraryDirectory();
+    final libraryRoot = p.normalize(libraryDir.path);
+    final normalizedFilePath = p.normalize(filePath);
+    final relativePath = p.relative(
+      normalizedFilePath,
+      from: libraryRoot,
+    );
 
-      if (relativePath == '.' || relativePath == '..' ||
-          relativePath.startsWith('..${p.separator}')) {
-        _log.captureOutput(
-          '[SubtitleLibrary] 跳过库目录外文件的数据库清理: $filePath',
-        );
-        return;
-      }
-
-      await SubtitleDatabase.instance.deleteByRelativePath(
-        _toRelativePath(relativePath),
+    if (relativePath == '.' || relativePath == '..' ||
+        relativePath.startsWith('..${p.separator}')) {
+      _log.captureOutput(
+        '[SubtitleLibrary] 跳过库目录外文件的数据库清理: $filePath',
       );
-    } catch (e) {
-      // 文件已删除时，数据库清理失败不应阻止删除结果返回成功。
-      _log.captureOutput('[SubtitleLibrary] 删除文件记录失败: $filePath, 错误: $e');
+      return;
     }
+
+    await SubtitleDatabase.instance.deleteByRelativePath(
+      _toRelativePath(relativePath),
+    );
   }
 
   /// 重命名字幕文件或文件夹

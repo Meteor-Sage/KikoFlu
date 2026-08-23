@@ -660,14 +660,23 @@ class LyricController extends StateNotifier<LyricState> {
         translated[idx] = sourceLyrics[idx].copyWith(text: translatedTexts[i]);
       }
 
-      final savedPath = ref.read(autoSaveTranslatedLyricsProvider)
+      final shouldAutoSave = await ref
+          .read(autoSaveTranslatedLyricsProvider.notifier)
+          .resolvedEnabled();
+      if (!_isCurrentTranslationRequest(requestId) ||
+          !_isSameTrack(currentTrack, ref.read(currentTrackProvider).value)) {
+        return null;
+      }
+
+      final savedPath = shouldAutoSave
           ? await _saveTranslatedLyricsToLibrary(
               translated,
+              requestId: requestId,
               currentTrack: currentTrack,
               timelineOffset: sourceOffset,
             )
           : null;
-      if (!_isCurrentTranslationRequest(requestId)) return savedPath;
+      if (!_isCurrentTranslationRequest(requestId)) return null;
 
       state = state.copyWith(
         translatedLyrics: translated,
@@ -689,19 +698,28 @@ class LyricController extends StateNotifier<LyricState> {
 
   Future<String?> _saveTranslatedLyricsToLibrary(
     List<LyricLine> lyrics, {
+    required int requestId,
     required AudioTrack? currentTrack,
     required Duration timelineOffset,
   }) async {
-    if (currentTrack == null || lyrics.isEmpty) return null;
+    bool isCurrentRequest() =>
+        _isCurrentTranslationRequest(requestId) &&
+        _isSameTrack(currentTrack, ref.read(currentTrackProvider).value);
+
+    if (currentTrack == null || lyrics.isEmpty || !isCurrentRequest()) {
+      return null;
+    }
 
     final libraryDir =
         await SubtitleLibraryService.getSubtitleLibraryDirectory();
+    if (!isCurrentRequest()) return null;
     final savedDir = Directory(
       path.join(libraryDir.path, SubtitleLibraryService.savedFolderName),
     );
     if (!await savedDir.exists()) {
       await savedDir.create(recursive: true);
     }
+    if (!isCurrentRequest()) return null;
 
     final audioNameWithoutExt =
         SubtitleLibraryService.removeAudioExtension(currentTrack.title);
@@ -713,7 +731,23 @@ class LyricController extends StateNotifier<LyricState> {
     );
     if (content.isEmpty) return null;
 
-    await File(filePath).writeAsString(content);
+    final tempFile = File('$filePath.translation-$requestId.tmp');
+    try {
+      await tempFile.writeAsString(content, flush: true);
+      if (!isCurrentRequest()) return null;
+
+      // Commit synchronously after the last identity check so a track-change
+      // event cannot interleave between validation and the atomic rename.
+      try {
+        tempFile.renameSync(filePath);
+      } on FileSystemException {
+        final destination = File(filePath);
+        if (destination.existsSync()) destination.deleteSync();
+        tempFile.renameSync(filePath);
+      }
+    } finally {
+      if (tempFile.existsSync()) tempFile.deleteSync();
+    }
     await SubtitleLibraryService.refreshDirectoryCache(savedDir.path);
     return filePath;
   }

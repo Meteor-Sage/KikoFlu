@@ -406,21 +406,30 @@ class AutoSaveTranslatedLyricsNotifier extends StateNotifier<bool> {
   static const String preferenceKey = 'auto_save_translated_lyrics';
 
   AutoSaveTranslatedLyricsNotifier() : super(true) {
-    _loadPreference();
+    _preferenceLoad = _loadPreference();
   }
+
+  late final Future<void> _preferenceLoad;
+  bool _changedLocally = false;
 
   Future<void> _loadPreference() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      if (!mounted) return;
+      if (!mounted || _changedLocally) return;
       state = prefs.getBool(preferenceKey) ?? true;
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted || _changedLocally) return;
       state = true;
     }
   }
 
+  Future<bool> resolvedEnabled() async {
+    await _preferenceLoad;
+    return state;
+  }
+
   Future<void> setEnabled(bool enabled) async {
+    _changedLocally = true;
     state = enabled;
     try {
       final prefs = await SharedPreferences.getInstance();

@@ -448,7 +448,9 @@ class AudioPlayerService {
 
       // 如果不是本地文件，且有 hash，尝试使用缓存
       if (!loaded && track.hash != null && track.hash!.isNotEmpty) {
-        audioFilePath = await CacheService.getCachedAudioFile(track.hash!);
+        audioFilePath = await CacheService.settleAudioCacheDownload(
+          track.hash!,
+        );
 
         if (audioFilePath != null) {
           await _player.setFilePath(audioFilePath);
@@ -613,11 +615,11 @@ class AudioPlayerService {
 
     // 本地文件 / 已预取过 / 已缓存：无需再次预取
     if (_prefetchedNextHash == hash) return;
-    _prefetchedNextHash = hash;
 
     final localPath = LocalFileUrl.pathFromUrl(url);
     if (localPath != null) return; // 本地文件，秒加载，无需预取
 
+    _prefetchedNextHash = hash;
     unawaited(_preloadNextTrackToCache(nextTrack));
   }
 
@@ -626,16 +628,15 @@ class AudioPlayerService {
     if (hash == null || hash.isEmpty) return;
     final url = track.url;
 
+    var succeeded = false;
     try {
       // 若已命中缓存（含已下载文件），直接跳过
       final cached = await CacheService.getCachedAudioFile(hash);
       if (cached != null) {
         _log.captureOutput('[Audio] 下一首已缓存，无需预加载: ${track.title}');
+        succeeded = true;
         return;
       }
-
-      // 清理可能存在的损坏临时文件，避免追加写入脏数据
-      await CacheService.resetAudioCachePartial(hash);
 
       // 复用 CacheService 的下载 + finalize 流程，把整首流式音频写到本地缓存
       final dio = Dio();
@@ -644,10 +645,23 @@ class AudioPlayerService {
       dio.options.receiveTimeout = const Duration(seconds: 60);
 
       _log.captureOutput('[Audio] 开始预加载下一首: ${track.title}');
-      await CacheService.cacheAudioFile(hash: hash, url: url, dio: dio);
+      final cachedPath = await CacheService.cacheAudioFile(
+        hash: hash,
+        url: url,
+        dio: dio,
+      );
+      if (cachedPath == null) {
+        _log.captureOutput('[Audio] 预加载下一首未完成: ${track.title}');
+        return;
+      }
+      succeeded = true;
       _log.captureOutput('[Audio] 预加载下一首完成: ${track.title}');
     } catch (e) {
       _log.captureOutput('[Audio] 预加载下一首失败: ${track.title} - $e');
+    } finally {
+      if (!succeeded && _prefetchedNextHash == hash) {
+        _prefetchedNextHash = null;
+      }
     }
   }
 

@@ -66,6 +66,34 @@ void main() {
     expect(container.read(autoSaveTranslatedLyricsProvider), isFalse);
   });
 
+  test('translated lyrics auto-save resolves persisted value before use',
+      () async {
+    SharedPreferences.setMockInitialValues({
+      AutoSaveTranslatedLyricsNotifier.preferenceKey: false,
+    });
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    final enabled = await container
+        .read(autoSaveTranslatedLyricsProvider.notifier)
+        .resolvedEnabled();
+
+    expect(enabled, isFalse);
+  });
+
+  test('local auto-save change wins over an unfinished preference load',
+      () async {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    final notifier =
+        container.read(autoSaveTranslatedLyricsProvider.notifier);
+
+    await notifier.setEnabled(false);
+    await notifier.resolvedEnabled();
+
+    expect(container.read(autoSaveTranslatedLyricsProvider), isFalse);
+  });
+
   test('translation language preferences load and persist target values',
       () async {
     SharedPreferences.setMockInitialValues({

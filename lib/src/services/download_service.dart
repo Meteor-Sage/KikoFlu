@@ -396,13 +396,11 @@ class DownloadService {
     required String? hash,
     required String fileName,
   }) {
-    final normalizedHash = hash?.trim();
-    if (normalizedHash != null && normalizedHash.isNotEmpty) {
-      return '$workId:hash:$normalizedHash';
-    }
-    // Hash-less files still need a stable identity. The previous null-hash
-    // comparison treated every file in a work as the same task.
-    return '$workId:path:$fileName';
+    return DownloadTask.createId(
+      workId: workId,
+      hash: hash,
+      fileName: fileName,
+    );
   }
 
   String _taskIdentityForTask(DownloadTask task) {
@@ -535,7 +533,11 @@ class DownloadService {
         }
 
         final task = DownloadTask(
-          id: hash,
+          id: _taskIdentity(
+            workId: workId,
+            hash: hash,
+            fileName: fileName,
+          ),
           workId: workId,
           workTitle: workTitle,
           fileName: fileName, // 使用包含路径的完整文件名
@@ -563,7 +565,11 @@ class DownloadService {
     }
 
     final task = DownloadTask(
-      id: hash?.trim().isNotEmpty == true ? hash! : '$workId:$fileName',
+      id: _taskIdentity(
+        workId: workId,
+        hash: hash,
+        fileName: fileName,
+      ),
       workId: workId,
       workTitle: workTitle,
       fileName: fileName,
@@ -1552,9 +1558,13 @@ class DownloadService {
       final tasksJson = prefs.getString(_tasksKey);
       if (tasksJson != null) {
         final List<dynamic> tasksList = jsonDecode(tasksJson);
-        final loadedTasks = tasksList
-            .map((json) => DownloadTask.fromJson(json))
-            .toList();
+        var taskIdsMigrated = false;
+        final loadedTasks = tasksList.map((json) {
+          final taskJson = Map<String, dynamic>.from(json as Map);
+          final task = DownloadTask.fromJson(taskJson);
+          if (taskJson['id'] != task.id) taskIdsMigrated = true;
+          return task;
+        }).toList();
         final uniqueTasks = <String, DownloadTask>{};
         for (final task in loadedTasks) {
           final identity = _taskIdentityForTask(task);
@@ -1569,10 +1579,11 @@ class DownloadService {
         _tasks
           ..clear()
           ..addAll(uniqueTasks.values);
-        if (uniqueTasks.length != loadedTasks.length) {
+        if (taskIdsMigrated || uniqueTasks.length != loadedTasks.length) {
           await _saveTasks();
-          _log.warning(
-            '已清理重复下载任务: ${loadedTasks.length - uniqueTasks.length} 个',
+          _log.info(
+            '已迁移下载任务身份并清理重复项: '
+            '${loadedTasks.length - uniqueTasks.length} 个重复任务',
             tag: 'Download',
           );
         }
@@ -1729,7 +1740,11 @@ class DownloadService {
               if (existingTask.id.isEmpty) {
                 // 发现新文件，创建任务
                 final newTask = DownloadTask(
-                  id: '${workId}_${fullFileName}_${DateTime.now().millisecondsSinceEpoch}',
+                  id: DownloadTask.createId(
+                    workId: workId,
+                    hash: null,
+                    fileName: fullFileName,
+                  ),
                   workId: workId,
                   workTitle: workTitle,
                   fileName: fullFileName,
