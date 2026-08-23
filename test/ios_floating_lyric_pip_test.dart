@@ -38,6 +38,11 @@ void main() {
     );
     expect(
       source,
+      contains('outputFrameRate: Int32 = 30'),
+      reason: 'Active PiP rendering should not add visible subtitle latency.',
+    );
+    expect(
+      source,
       isNot(contains('AVSampleBufferDisplayLayer')),
       reason:
           'The unverified sample-buffer pipeline produced black PiP output.',
@@ -68,5 +73,18 @@ void main() {
     expect(nativeSource, contains('video_compositor_first_frame'));
     expect(dartSource, contains("case 'onDiagnostic':"));
     expect(dartSource, contains("tag: 'FloatingLyric.iOS'"));
+  });
+
+  test('floating lyrics use a low-latency playback position timer', () {
+    final providerSource = File(
+      'lib/src/providers/floating_lyric_provider.dart',
+    ).readAsStringSync();
+
+    expect(providerSource, contains('Timer.periodic('));
+    expect(
+      providerSource,
+      contains('Timer.periodic(const Duration(milliseconds: 50)'),
+    );
+    expect(providerSource, contains('_positionTimer?.cancel()'));
   });
 }

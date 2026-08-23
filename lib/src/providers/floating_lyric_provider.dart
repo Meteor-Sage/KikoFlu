@@ -140,7 +140,7 @@ class FloatingLyricNetworkSpeedEnabledNotifier extends StateNotifier<bool> {
 class FloatingLyricEnabledNotifier extends StateNotifier<bool> {
   static const _key = 'floating_lyric_enabled';
   final Ref ref;
-  StreamSubscription? _positionSubscription;
+  Timer? _positionTimer;
   StreamSubscription? _playingSubscription;
   StreamSubscription? _trackSubscription;
   StreamSubscription? _closeSubscription;
@@ -267,10 +267,11 @@ class FloatingLyricEnabledNotifier extends StateNotifier<bool> {
     // 确保字幕自动加载器始终激活（即使在后台）
     ref.read(lyricAutoLoaderProvider);
 
-    // 监听播放位置变化，每次变化都更新字幕
-    _positionSubscription =
-        AudioPlayerService.instance.positionStream.listen((_) {
-      _updateLyricInBackground();
+    // 独立的低延迟计时器只在悬浮字幕启用期间运行。
+    _positionTimer = Timer.periodic(const Duration(milliseconds: 50), (_) {
+      if (AudioPlayerService.instance.playing) {
+        _updateLyricInBackground();
+      }
     });
 
     // 监听播放状态变化
@@ -328,8 +329,8 @@ class FloatingLyricEnabledNotifier extends StateNotifier<bool> {
 
   /// 停止后台更新监听
   void _stopBackgroundUpdate() {
-    _positionSubscription?.cancel();
-    _positionSubscription = null;
+    _positionTimer?.cancel();
+    _positionTimer = null;
     _playingSubscription?.cancel();
     _playingSubscription = null;
     _trackSubscription?.cancel();

@@ -938,7 +938,7 @@ class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
     private var lyricPaddingVertical: CGFloat = 10
     private var infoTextColor: UIColor = .white
     private let logicalFrameSize = CGSize(width: 414, height: 104)
-    private let outputFrameRate: Int32 = 4
+    private let outputFrameRate: Int32 = 30
     private var renderSize = CGSize(width: 828, height: 208)
     private var renderScale: CGFloat = 2
     private var renderInputLogicalWidth: CGFloat = 414
