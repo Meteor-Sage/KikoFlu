@@ -37,6 +37,43 @@ class FloatingLyricService {
         final enabled = arguments is Map ? arguments['enabled'] == true : false;
         _onTouchEnabledChangedController.add(enabled);
         break;
+      case 'onDiagnostic':
+        _recordNativeDiagnostic(call.arguments);
+        break;
+    }
+  }
+
+  void _recordNativeDiagnostic(dynamic arguments) {
+    if (arguments is! Map) {
+      _log.warning('收到无法解析的原生诊断数据: $arguments', tag: 'FloatingLyric.iOS');
+      return;
+    }
+
+    final event = arguments['event']?.toString() ?? 'unknown_event';
+    final level = arguments['level']?.toString() ?? 'info';
+    final rawDetails = arguments['details'];
+    var details = '';
+    if (rawDetails is Map && rawDetails.isNotEmpty) {
+      final entries =
+          rawDetails.entries
+              .map((entry) => MapEntry(entry.key.toString(), entry.value))
+              .toList()
+            ..sort((a, b) => a.key.compareTo(b.key));
+      details = entries
+          .map((entry) => '${entry.key}=${entry.value}')
+          .join(', ');
+    }
+    final message = details.isEmpty ? event : '$event | $details';
+
+    switch (level) {
+      case 'error':
+        _log.error(message, tag: 'FloatingLyric.iOS');
+        break;
+      case 'warning':
+        _log.warning(message, tag: 'FloatingLyric.iOS');
+        break;
+      default:
+        _log.info(message, tag: 'FloatingLyric.iOS');
     }
   }
 
@@ -108,8 +145,12 @@ class FloatingLyricService {
         args.addAll(style);
       }
       final result = await _platform.invokeMethod('show', args);
-      _log.captureOutput('[FloatingLyric] 显示悬浮窗: $text');
-      return result == true;
+      final shown = result == true;
+      _log.info(
+        '悬浮窗启动结果: $shown',
+        tag: Platform.isIOS ? 'FloatingLyric.iOS' : 'FloatingLyric',
+      );
+      return shown;
     } catch (e) {
       _log.captureOutput('[FloatingLyric] 显示悬浮窗失败: $e');
       return false;
