@@ -11,7 +11,7 @@ class MainBottomNavigationBar extends StatelessWidget {
     required this.destinations,
     this.miniPlayer = const SizedBox.shrink(),
     this.liquidGlass = false,
-    this.fallbackGlassTransparency = 0.86,
+    this.fallbackGlassTransparency = 0.4,
     this.showUpdateBadge = false,
     this.onLayoutExtentChanged,
   });

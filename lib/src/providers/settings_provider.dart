@@ -83,7 +83,7 @@ final liquidGlassNavigationProvider =
 /// Native iOS and macOS materials continue to follow the system appearance.
 class FallbackGlassTransparencyNotifier extends StateNotifier<double> {
   static const String preferenceKey = 'fallback_glass_transparency';
-  static const double defaultValue = 0.86;
+  static const double defaultValue = 0.4;
 
   FallbackGlassTransparencyNotifier() : super(defaultValue) {
     _loadPreference();

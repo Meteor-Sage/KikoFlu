@@ -66,7 +66,7 @@ void main() {
     );
 
     expect(find.text('Liquid Glass Transparency'), findsOneWidget);
-    expect(tester.widget<Slider>(find.byType(Slider)).value, 0.86);
+    expect(tester.widget<Slider>(find.byType(Slider)).value, 0.4);
     expect(tester.takeException(), isNull);
     debugDefaultTargetPlatformOverride = null;
   });
