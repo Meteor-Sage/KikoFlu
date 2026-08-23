@@ -18,6 +18,26 @@ void main() {
     );
     expect(
       source,
+      contains('screen.nativeScale'),
+      reason: 'PiP render density should follow the active display.',
+    );
+    expect(
+      source,
+      contains('composition.renderSize = renderSize'),
+      reason: 'The video compositor should output the adaptive frame size.',
+    );
+    expect(
+      source,
+      contains('CGRect(origin: .zero, size: request.renderSize)'),
+      reason: 'Each lyric frame should render at the requested output size.',
+    );
+    expect(
+      source,
+      contains('composition.frameDuration = CMTime'),
+      reason: 'Lyric updates should not be limited by the 1 fps source video.',
+    );
+    expect(
+      source,
       isNot(contains('AVSampleBufferDisplayLayer')),
       reason:
           'The unverified sample-buffer pipeline produced black PiP output.',

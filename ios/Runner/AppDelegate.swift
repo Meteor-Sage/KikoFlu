@@ -918,6 +918,8 @@ class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
     private var playerLayerReadyObservation: NSKeyValueObservation?
     private var playerLayer: AVPlayerLayer?
     private var player: AVPlayer?
+    private var videoComposition: AVMutableVideoComposition?
+    private weak var hostView: UIView?
     private var channel: FlutterMethodChannel
 
     private var fpsMonitor = FPSMonitor()
@@ -935,8 +937,12 @@ class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
     private var lyricPaddingHorizontal: CGFloat = 20
     private var lyricPaddingVertical: CGFloat = 10
     private var infoTextColor: UIColor = .white
-    private let renderSize = CGSize(width: 828, height: 208)
-    private let renderScale: CGFloat = 2
+    private let logicalFrameSize = CGSize(width: 414, height: 104)
+    private let outputFrameRate: Int32 = 4
+    private var renderSize = CGSize(width: 828, height: 208)
+    private var renderScale: CGFloat = 2
+    private var renderInputLogicalWidth: CGFloat = 414
+    private var renderInputNativeScale: CGFloat = 2
     private let renderedFrameLock = NSLock()
     private var renderedCIImage: CIImage?
     private var renderedFrameGeneration = 0
@@ -961,12 +967,47 @@ class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
             self?.handleMethodCall(call, result: result)
         }
 
+        hostView = controller.view
+        updateRenderMetrics(for: controller.view)
         rebuildRenderedFrame()
         setupPictureInPicture(in: controller.view)
     }
 
     deinit {
         NotificationCenter.default.removeObserver(self)
+    }
+
+    private func updateRenderMetrics(for view: UIView?) {
+        guard let view else { return }
+        let screen = view.window?.screen ?? UIScreen.main
+        let logicalWidth = view.bounds.width > 0
+            ? view.bounds.width
+            : screen.bounds.width
+        let nativeScale = screen.nativeScale > 0 ? screen.nativeScale : screen.scale
+        let physicalWidth = logicalWidth * nativeScale
+        let minimumWidth = logicalFrameSize.width * 2
+        let maximumWidth = logicalFrameSize.width * 4
+        let preferredWidth = physicalWidth * 0.5
+        let outputWidth = evenPixelValue(
+            min(max(preferredWidth, minimumWidth), maximumWidth)
+        )
+        let scale = outputWidth / logicalFrameSize.width
+        let outputHeight = evenPixelValue(logicalFrameSize.height * scale)
+
+        renderInputLogicalWidth = logicalWidth
+        renderInputNativeScale = nativeScale
+        renderScale = scale
+        renderSize = CGSize(width: outputWidth, height: outputHeight)
+
+        if let videoComposition {
+            videoComposition.renderSize = renderSize
+            videoComposition.frameDuration = CMTime(value: 1, timescale: outputFrameRate)
+            player?.currentItem?.videoComposition = videoComposition
+        }
+    }
+
+    private func evenPixelValue(_ value: CGFloat) -> CGFloat {
+        CGFloat(max(2, Int(value.rounded()) / 2 * 2))
     }
 
     private func setupPictureInPicture(in view: UIView) {
@@ -990,7 +1031,7 @@ class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
         let asset = AVURLAsset(url: fileURL)
         let item = AVPlayerItem(asset: asset)
         item.preferredForwardBufferDuration = 0
-        item.videoComposition = AVVideoComposition(
+        let composition = AVMutableVideoComposition(
             asset: asset,
             applyingCIFiltersWithHandler: { [weak self] request in
                 guard let self, let overlay = self.currentRenderedCIImage() else {
@@ -998,14 +1039,15 @@ class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
                     return
                 }
                 let sourceExtent = request.sourceImage.extent
+                let outputExtent = CGRect(origin: .zero, size: request.renderSize)
                 let scaledOverlay = overlay.transformed(by: CGAffineTransform(
-                    scaleX: sourceExtent.width / overlay.extent.width,
-                    y: sourceExtent.height / overlay.extent.height
+                    scaleX: outputExtent.width / overlay.extent.width,
+                    y: outputExtent.height / overlay.extent.height
                 ))
                 let output = scaledOverlay.transformed(by: CGAffineTransform(
-                    translationX: sourceExtent.minX - scaledOverlay.extent.minX,
-                    y: sourceExtent.minY - scaledOverlay.extent.minY
-                )).cropped(to: sourceExtent)
+                    translationX: outputExtent.minX - scaledOverlay.extent.minX,
+                    y: outputExtent.minY - scaledOverlay.extent.minY
+                )).cropped(to: outputExtent)
                 request.finish(with: output, context: nil)
                 self.recordCompositionFrame(
                     sourceSize: sourceExtent.size,
@@ -1013,6 +1055,10 @@ class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
                 )
             }
         )
+        composition.renderSize = renderSize
+        composition.frameDuration = CMTime(value: 1, timescale: outputFrameRate)
+        videoComposition = composition
+        item.videoComposition = composition
         player = AVPlayer(playerItem: item)
         player?.isMuted = true
         player?.allowsExternalPlayback = true
@@ -1138,6 +1184,7 @@ class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
         switch call.method {
         case "show":
             let args = call.arguments as? [String: Any]
+            updateRenderMetrics(for: hostView)
             currentText = args?["text"] as? String ?? "Lyrics"
             applyStyleArguments(args)
             rebuildRenderedFrame()
@@ -1177,6 +1224,7 @@ class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
             result(false)
             return
         }
+        emitDiagnostic("render_metrics_selected", details: renderMetricsDetails())
         emitDiagnostic("show_requested", details: diagnosticSnapshot())
         if pipController.isPictureInPictureActive {
             emitDiagnostic("show_reused_active_pip", details: diagnosticSnapshot())
@@ -1383,6 +1431,10 @@ class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
             "renderGeneration": renderGeneration,
             "renderWidth": Int(renderSize.width),
             "renderHeight": Int(renderSize.height),
+            "renderScale": Double(renderScale),
+            "outputFrameRate": outputFrameRate,
+            "windowLogicalWidth": Double(renderInputLogicalWidth),
+            "screenNativeScale": Double(renderInputNativeScale),
             "textLength": currentText.count,
         ]
         if let error = player?.currentItem?.error as NSError? {
@@ -1396,6 +1448,19 @@ class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
             details["playerError"] = error.localizedDescription
         }
         return details
+    }
+
+    private func renderMetricsDetails() -> [String: Any] {
+        [
+            "logicalFrameWidth": Int(logicalFrameSize.width),
+            "logicalFrameHeight": Int(logicalFrameSize.height),
+            "windowLogicalWidth": Double(renderInputLogicalWidth),
+            "screenNativeScale": Double(renderInputNativeScale),
+            "renderScale": Double(renderScale),
+            "renderWidth": Int(renderSize.width),
+            "renderHeight": Int(renderSize.height),
+            "outputFrameRate": outputFrameRate,
+        ]
     }
 
     private func playerItemStatusDescription(_ status: AVPlayerItem.Status?) -> String {
