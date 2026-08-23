@@ -923,6 +923,11 @@ class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
     private var networkSpeedMonitor = NetworkSpeedMonitor()
     private var showFPS: Bool = false
     private var showNetworkSpeed: Bool = false
+    private weak var hostView: UIView?
+
+    // iOS 15+ provides a supported PiP content view for custom UIKit content.
+    // Older iOS versions keep the legacy AVPlayerLayer fallback below.
+    private var pipVideoCallController: AnyObject?
     
     // Cached subtitle style for info labels (follows lyric style except font size)
     private var infoTextColor: UIColor = .white
@@ -934,6 +939,7 @@ class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
     init(controller: FlutterViewController) {
         channel = FlutterMethodChannel(name: "com.kikoeru.flutter/floating_lyric", binaryMessenger: controller.binaryMessenger)
         super.init()
+        hostView = controller.view
         
         channel.setMethodCallHandler { [weak self] (call, result) in
             self?.handleMethodCall(call, result: result)
@@ -943,6 +949,48 @@ class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
     }
     
     private func setupPlayer(in view: UIView) {
+        prepareLyricView(text: "♪ - ♪")
+
+        if #available(iOS 15.0, *) {
+            setupModernPictureInPicture(in: view)
+            return
+        }
+
+        setupLegacyPictureInPicture(in: view)
+    }
+
+    @available(iOS 15.0, *)
+    private func setupModernPictureInPicture(in view: UIView) {
+        guard AVPictureInPictureController.isPictureInPictureSupported() else {
+            print("Floating lyric PiP is not supported on this device")
+            return
+        }
+
+        let contentController = AVPictureInPictureVideoCallViewController()
+        contentController.preferredContentSize = CGSize(width: 414, height: 104)
+        contentController.view.backgroundColor = .black
+
+        if let lyricView = lyricView {
+            lyricView.translatesAutoresizingMaskIntoConstraints = false
+            contentController.view.addSubview(lyricView)
+            NSLayoutConstraint.activate([
+                lyricView.leadingAnchor.constraint(equalTo: contentController.view.leadingAnchor),
+                lyricView.trailingAnchor.constraint(equalTo: contentController.view.trailingAnchor),
+                lyricView.topAnchor.constraint(equalTo: contentController.view.topAnchor),
+                lyricView.bottomAnchor.constraint(equalTo: contentController.view.bottomAnchor),
+            ])
+        }
+
+        let contentSource = AVPictureInPictureController.ContentSource(
+            activeVideoCallSourceView: view,
+            contentViewController: contentController
+        )
+        pipVideoCallController = contentController
+        pipController = AVPictureInPictureController(contentSource: contentSource)
+        pipController?.delegate = self
+    }
+
+    private func setupLegacyPictureInPicture(in view: UIView) {
         guard let data = Data(base64Encoded: dummyVideoBase64) else { return }
         let tempDir = FileManager.default.temporaryDirectory
         let fileURL = tempDir.appendingPathComponent("pip_video.mp4")
@@ -987,8 +1035,7 @@ class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
         case "show":
             let args = call.arguments as? [String: Any]
             let text = args?["text"] as? String ?? "Lyrics"
-            show(text: text, args: args)
-            result(true)
+            result(show(text: text, args: args))
         case "hide":
             hide()
             result(true)
@@ -1020,17 +1067,29 @@ class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
         }
     }
     
-    private func show(text: String, args: [String: Any]?) {
+    @discardableResult
+    private func show(text: String, args: [String: Any]?) -> Bool {
         if pipController?.isPictureInPictureActive == true {
             updateText(text)
             updateStyle(args: args)
-            return
+            return true
         }
-        
-        player?.play()
-        pipController?.startPictureInPicture()
+
         prepareLyricView(text: text)
         updateStyle(args: args)
+
+        guard let pipController = pipController else {
+            print("Floating lyric PiP is unavailable")
+            return false
+        }
+
+        if #available(iOS 15.0, *), pipVideoCallController != nil {
+            pipController.startPictureInPicture()
+        } else {
+            player?.play()
+            pipController.startPictureInPicture()
+        }
+        return true
     }
     
     private func hide() {
@@ -1110,8 +1169,16 @@ class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
                 label.clipsToBounds = true
                 self.fpsLabel = label
             }
-            if let window = UIApplication.shared.windows.first, self.fpsLabel?.superview == nil {
+            if #available(iOS 15.0, *), let contentView = self.modernPictureInPictureView(), self.fpsLabel?.superview == nil {
                 if let label = self.fpsLabel {
+                    label.translatesAutoresizingMaskIntoConstraints = true
+                    contentView.addSubview(label)
+                    contentView.bringSubviewToFront(label)
+                    self.layoutInfoLabels(in: contentView)
+                }
+            } else if let window = self.legacyPictureInPictureWindow(), self.fpsLabel?.superview == nil {
+                if let label = self.fpsLabel {
+                    label.translatesAutoresizingMaskIntoConstraints = true
                     window.addSubview(label)
                     window.bringSubviewToFront(label)
                     self.layoutInfoLabels(in: window)
@@ -1133,8 +1200,16 @@ class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
                 label.clipsToBounds = true
                 self.networkSpeedLabel = label
             }
-            if let window = UIApplication.shared.windows.first, self.networkSpeedLabel?.superview == nil {
+            if #available(iOS 15.0, *), let contentView = self.modernPictureInPictureView(), self.networkSpeedLabel?.superview == nil {
                 if let label = self.networkSpeedLabel {
+                    label.translatesAutoresizingMaskIntoConstraints = true
+                    contentView.addSubview(label)
+                    contentView.bringSubviewToFront(label)
+                    self.layoutInfoLabels(in: contentView)
+                }
+            } else if let window = self.legacyPictureInPictureWindow(), self.networkSpeedLabel?.superview == nil {
+                if let label = self.networkSpeedLabel {
+                    label.translatesAutoresizingMaskIntoConstraints = true
                     window.addSubview(label)
                     window.bringSubviewToFront(label)
                     self.layoutInfoLabels(in: window)
@@ -1143,7 +1218,7 @@ class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
         }
     }
     
-    private func layoutInfoLabels(in window: UIWindow) {
+    private func layoutInfoLabels(in window: UIView) {
         let margin: CGFloat = 4
         let height: CGFloat = 16
         if let label = fpsLabel {
@@ -1230,6 +1305,60 @@ class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
             label.layer.cornerRadius = infoCornerRadius
         }
     }
+
+    @available(iOS 15.0, *)
+    private func modernPictureInPictureView() -> UIView? {
+        return (pipVideoCallController as? AVPictureInPictureVideoCallViewController)?.view
+    }
+
+    private func legacyPictureInPictureWindow() -> UIWindow? {
+        var windows = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap { $0.windows }
+        for window in UIApplication.shared.windows where !windows.contains(where: { $0 === window }) {
+            windows.append(window)
+        }
+        let mainWindow = hostView?.window
+        let candidates = windows.filter { window in
+            window !== mainWindow && !window.isHidden && window.alpha > 0 && !window.bounds.isEmpty
+        }
+
+        // PiP is system-managed and is not guaranteed to be in the app scene.
+        // Prefer the identifiable system window, then a non-app elevated window.
+        if let pipWindow = candidates.first(where: {
+            String(describing: type(of: $0)).localizedCaseInsensitiveContains("pip")
+        }) {
+            return pipWindow
+        }
+        return candidates.first(where: { $0.windowLevel > .normal })
+    }
+
+    private func attachLegacyOverlay(attempt: Int = 0) {
+        if #available(iOS 15.0, *), pipVideoCallController != nil {
+            return
+        }
+        guard let window = legacyPictureInPictureWindow() else {
+            if attempt < 12 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    self.attachLegacyOverlay(attempt: attempt + 1)
+                }
+            } else {
+                print("Floating lyric PiP window was not found")
+            }
+            return
+        }
+
+        if let view = lyricView, view.superview !== window {
+            view.translatesAutoresizingMaskIntoConstraints = true
+            view.frame = window.bounds
+            view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            window.addSubview(view)
+            window.bringSubviewToFront(view)
+        }
+        startMonitorsIfNeeded()
+        if showFPS { ensureFPSLabel() }
+        if showNetworkSpeed { ensureNetworkSpeedLabel() }
+    }
     
     private func prepareLyricView(text: String) {
         if lyricView == nil {
@@ -1251,26 +1380,25 @@ class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
     // MARK: - AVPictureInPictureControllerDelegate
     
     func pictureInPictureControllerWillStartPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
-        // Add view to the PiP window
-        // Note: This relies on the fact that the PiP window becomes available in windows list
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            if let window = UIApplication.shared.windows.first {
-                if let view = self.lyricView {
-                    view.frame = window.bounds
-                    view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-                    window.addSubview(view)
-                    window.bringSubviewToFront(view)
-                }
-                // Add info labels and start monitors
-                self.startMonitorsIfNeeded()
-                if self.showFPS { self.ensureFPSLabel() }
-                if self.showNetworkSpeed { self.ensureNetworkSpeedLabel() }
-            }
+        if #available(iOS 15.0, *), pipVideoCallController != nil {
+            return
         }
+        attachLegacyOverlay()
+    }
+
+    func pictureInPictureControllerDidStartPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+        startMonitorsIfNeeded()
+        if showFPS { ensureFPSLabel() }
+        if showNetworkSpeed { ensureNetworkSpeedLabel() }
     }
     
     func pictureInPictureControllerDidStopPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
-        lyricView?.removeFromSuperview()
+        if #available(iOS 15.0, *), pipVideoCallController != nil {
+            // Keep the lyric view attached to the system-managed content view
+            // so the next PiP session can reuse it without a timing race.
+        } else {
+            lyricView?.removeFromSuperview()
+        }
         fpsLabel?.removeFromSuperview()
         networkSpeedLabel?.removeFromSuperview()
         stopMonitors()
