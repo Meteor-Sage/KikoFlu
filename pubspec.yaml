@@ -3,7 +3,7 @@ description: A cross-platform Flutter app for browsing and playing Kikoeru serve
 
 publish_to: 'none'
 
-version: 3.8.0
+version: 3.8.1
 
 environment:
   sdk: '>=3.12.1 <4.0.0'
