@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -177,8 +178,12 @@ class AudioPlayerController extends StateNotifier<AudioPlayerState> {
   }
 
   Future<void> initialize() async {
-    // Request notification permission for Android 13+
-    await Permission.notification.request();
+    // Notification permission is an Android-only requirement here. The
+    // permission_handler Apple implementation is iOS-only, so requesting it
+    // on macOS aborts audio initialization before session restoration.
+    if (Platform.isAndroid) {
+      await Permission.notification.request();
+    }
 
     await _service.initialize();
 
