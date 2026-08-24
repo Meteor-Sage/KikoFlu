@@ -495,10 +495,15 @@ class _VirtualizedSliverCollectionState<T>
       },
       childCount: widget.items.length +
           (widget.collectionTrailingBuilder == null ? 0 : 1),
-      findChildIndexCallback: (key) {
-        if (key is! _VirtualizedItemKey) return null;
-        return indexById[key.value];
-      },
+      // flutter_staggered_grid_view 0.7.0 does not correctly re-layout
+      // masonry children reparented through findChildIndexCallback.
+      findChildIndexCallback:
+          widget.layout == VirtualizedCollectionLayout.masonry
+              ? null
+              : (key) {
+                  if (key is! _VirtualizedItemKey) return null;
+                  return indexById[key.value];
+                },
       addAutomaticKeepAlives: widget.addAutomaticKeepAlives,
       addRepaintBoundaries: widget.addRepaintBoundaries,
     );

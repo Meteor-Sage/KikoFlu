@@ -287,6 +287,43 @@ void main() {
     );
   });
 
+  testWidgets('masonry fills every column when filtered items are restored',
+      (tester) async {
+    final items = ValueNotifier<List<int>>([0, 2, 4, 6, 8, 10]);
+
+    await tester.pumpWidget(_app(
+      ValueListenableBuilder<List<int>>(
+        valueListenable: items,
+        builder: (context, value, child) =>
+            VirtualizedSliverCollection<int>(
+          items: value,
+          itemId: (item) => item,
+          layout: VirtualizedCollectionLayout.masonry,
+          masonryCrossAxisCount: 3,
+          masonryMainAxisSpacing: 8,
+          masonryCrossAxisSpacing: 8,
+          showEndIndicator: false,
+          itemBuilder: (context, item, index) => SizedBox(
+            key: ValueKey('masonry-item-$item'),
+            height: 72,
+          ),
+        ),
+      ),
+    ));
+    await tester.pump();
+
+    items.value = List.generate(12, (index) => index);
+    await tester.pump();
+
+    final firstRowX = {
+      for (final item in const [0, 1, 2])
+        tester
+            .getTopLeft(find.byKey(ValueKey('masonry-item-$item')))
+            .dx,
+    };
+    expect(firstRowX, hasLength(3));
+  });
+
   testWidgets('explicit pagination never auto-loads and prevents reentry',
       (tester) async {
     final controller = ScrollController();
