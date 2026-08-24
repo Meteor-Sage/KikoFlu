@@ -501,17 +501,17 @@ jobs:
             assets+=("$path")
           done
 
-          printf '%s\n' "$RELEASE_NOTES" > release-notes.md
-
+          release_id=""
+          release_tag=""
           draft_created=false
           cleanup_draft() {
             status="$1"
             trap - ERR INT TERM
-            if [ "$draft_created" = "true" ]; then
-              is_draft="$(gh release view "$TAG" --json isDraft --jq '.isDraft' 2>/dev/null || true)"
-              if [ "$is_draft" = "true" ]; then
-                echo "Cleaning up incomplete draft release $TAG"
-                gh release delete "$TAG" --cleanup-tag --yes || true
+            if [ "$draft_created" = "true" ] && [ -n "$release_id" ]; then
+              echo "Cleaning up incomplete draft release $TAG (id $release_id)"
+              gh api --method DELETE "repos/${GH_REPO}/releases/${release_id}" || true
+              if [ "$release_tag" = "$TAG" ] && gh api "repos/${GH_REPO}/git/ref/tags/${TAG}" >/dev/null 2>&1; then
+                gh api --method DELETE "repos/${GH_REPO}/git/refs/tags/${TAG}" || true
               fi
             fi
             exit "$status"
@@ -520,16 +520,36 @@ jobs:
           trap 'cleanup_draft 130' INT
           trap 'cleanup_draft 143' TERM
 
-          gh release create "$TAG" \
-            --draft \
-            --target "$GITHUB_SHA" \
-            --title "$TAG" \
-            --notes-file release-notes.md
+          release_json="$(gh api --method POST "repos/${GH_REPO}/releases" \
+            -f "tag_name=${TAG}" \
+            -f "target_commitish=${GITHUB_SHA}" \
+            -f "name=${TAG}" \
+            -f "body=${RELEASE_NOTES}" \
+            -F 'draft=true' \
+            -F 'prerelease=false')"
+          release_id="$(jq -r '.id // empty' <<< "$release_json")"
+          release_tag="$(jq -r '.tag_name // empty' <<< "$release_json")"
+          upload_url="$(jq -r '.upload_url // empty' <<< "$release_json" | sed 's/{?name,label}$//')"
+          if [ -z "$release_id" ] || [ -z "$upload_url" ]; then
+            echo "::error::GitHub did not return a usable draft release id or upload URL."
+            printf '%s\n' "$release_json"
+            exit 1
+          fi
           draft_created=true
 
-          gh release upload "$TAG" "${assets[@]}"
+          for asset in "${assets[@]}"; do
+            asset_name="$(basename "$asset")"
+            encoded_name="$(jq -nr --arg name "$asset_name" '$name | @uri')"
+            echo "Uploading $asset_name"
+            curl --fail-with-body --silent --show-error \
+              --request POST "${upload_url}?name=${encoded_name}" \
+              --header "Authorization: Bearer ${GH_TOKEN}" \
+              --header 'Accept: application/vnd.github+json' \
+              --header 'Content-Type: application/octet-stream' \
+              --data-binary "@${asset}"
+          done
 
-          remote_assets="$(gh api "repos/${GH_REPO}/releases/tags/${TAG}" \
+          remote_assets="$(gh api "repos/${GH_REPO}/releases/${release_id}" \
             --jq '.assets[] | [.name, .size, .state] | @tsv')"
           mapfile -t uploaded < <(
             printf '%s\n' "$remote_assets" |
@@ -553,6 +573,8 @@ jobs:
             fi
           done
 
-          gh release edit "$TAG" --draft=false --latest
+          gh api --method PATCH "repos/${GH_REPO}/releases/${release_id}" \
+            -F 'draft=false' \
+            -f 'make_latest=true' >/dev/null
           draft_created=false
           trap - ERR INT TERM
