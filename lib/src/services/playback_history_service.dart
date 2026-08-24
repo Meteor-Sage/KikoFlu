@@ -17,6 +17,20 @@ enum FlushReason {
   dispose, // 服务销毁
 }
 
+class _TrackChangeSnapshot {
+  const _TrackChangeSnapshot({
+    required this.track,
+    required this.playlistIndex,
+    required this.playlistTotal,
+    required this.positionMs,
+  });
+
+  final AudioTrack track;
+  final int playlistIndex;
+  final int playlistTotal;
+  final int positionMs;
+}
+
 /// 播放历史服务 - 负责播放历史的写入、节流和即时落盘
 ///
 /// 职责:
@@ -46,6 +60,11 @@ class PlaybackHistoryService {
   Work? _currentWork;
   bool _dirty = false;
 
+  // Serialize state mutations and writes so a slow Work lookup or database
+  // write for track A cannot overwrite a newer track B event.
+  Future<void> _operationQueue = Future.value();
+  int _attachmentGeneration = 0;
+
   // --- Subscriptions ---
   StreamSubscription? _positionSubscription;
   StreamSubscription? _trackSubscription;
@@ -65,11 +84,21 @@ class PlaybackHistoryService {
   /// 绑定播放器服务，启动监听
   void attachPlayer(AudioPlayerService playerService) {
     detach(); // 先清理旧监听
+    final generation = ++_attachmentGeneration;
 
     // 监听轨道变化
     _trackSubscription = playerService.currentTrackStream.listen((track) {
       if (track != null && track.workId != null) {
-        _onTrackChanged(track, playerService);
+        final snapshot = _TrackChangeSnapshot(
+          track: track,
+          playlistIndex: playerService.currentIndex,
+          playlistTotal: playerService.queue.length,
+          positionMs: playerService.position.inMilliseconds,
+        );
+        unawaited(_enqueueOperation(() async {
+          if (generation != _attachmentGeneration) return;
+          await _onTrackChanged(snapshot, generation);
+        }));
       }
     });
 
@@ -82,37 +111,41 @@ class PlaybackHistoryService {
   /// 周期性 checkpoint: 只在 playing 且 position 真正推进时触发
   void _onCheckpointTick(AudioPlayerService playerService) {
     if (!playerService.playing) return;
-    if (_currentWorkId == null || _currentWork == null) return;
-
     final positionMs = playerService.position.inMilliseconds;
+    unawaited(_enqueueOperation(() async {
+      if (_currentWorkId == null || _currentWork == null) return;
 
-    // 与上次持久化位置差值不足 3 秒则不写
-    if ((positionMs - _lastPersistedPositionMs).abs() < 3000) return;
+      // 与上次持久化位置差值不足 3 秒则不写
+      if ((positionMs - _lastPersistedPositionMs).abs() < 3000) return;
 
-    _lastKnownPositionMs = positionMs;
-    _dirty = true;
-    _persistNow(FlushReason.checkpoint);
+      _lastKnownPositionMs = positionMs;
+      _dirty = true;
+      await _persistNow(FlushReason.checkpoint);
+    }));
   }
 
   /// 当轨道切换时，先 flush 上一首的进度，再更新会话
   Future<void> _onTrackChanged(
-      AudioTrack track, AudioPlayerService playerService) async {
+      _TrackChangeSnapshot snapshot, int generation) async {
     // flush 上一首的状态
     if (_dirty && _currentWork != null) {
       await _persistNow(FlushReason.trackChanged);
     }
+    if (generation != _attachmentGeneration) return;
 
     // 更新会话 snapshot
+    final track = snapshot.track;
     _currentTrack = track;
     _currentWorkId = track.workId;
-    _playlistIndex = playerService.currentIndex;
-    _playlistTotal = playerService.queue.length;
-    _lastKnownPositionMs = playerService.position.inMilliseconds;
+    _playlistIndex = snapshot.playlistIndex;
+    _playlistTotal = snapshot.playlistTotal;
+    _lastKnownPositionMs = snapshot.positionMs;
     _lastPersistedPositionMs = 0;
     _dirty = true;
 
     // 获取 Work 数据
     await _ensureWork(track.workId!);
+    if (generation != _attachmentGeneration) return;
 
     // 新轨道立即写一次
     if (_currentWork != null) {
@@ -124,6 +157,7 @@ class PlaybackHistoryService {
   Future<void> _ensureWork(int workId) async {
     // 如果当前已有且 id 匹配，直接用
     if (_currentWork != null && _currentWork!.id == workId) return;
+    _currentWork = null;
 
     // 从历史存储获取
     final dbRecord = await _store.getByWorkId(workId);
@@ -148,37 +182,44 @@ class PlaybackHistoryService {
   // ==========================================================================
 
   /// seek 提交后调用，立即落盘
-  Future<void> onSeekCommitted(Duration position) async {
-    _lastKnownPositionMs = position.inMilliseconds;
-    _dirty = true;
-    await _persistNow(FlushReason.seekCommitted);
-  }
+  Future<void> onSeekCommitted(Duration position) =>
+      _enqueueOperation(() async {
+        _lastKnownPositionMs = position.inMilliseconds;
+        _dirty = true;
+        await _persistNow(FlushReason.seekCommitted);
+      });
 
   /// 暂停时调用
-  Future<void> onPaused() async {
-    final playerService = AudioPlayerService.instance;
-    _lastKnownPositionMs = playerService.position.inMilliseconds;
-    _dirty = true;
-    await _persistNow(FlushReason.paused);
+  Future<void> onPaused() {
+    final positionMs = AudioPlayerService.instance.position.inMilliseconds;
+    return _enqueueOperation(() async {
+      _lastKnownPositionMs = positionMs;
+      _dirty = true;
+      await _persistNow(FlushReason.paused);
+    });
   }
 
   /// 停止时调用
-  Future<void> onStopped() async {
-    final playerService = AudioPlayerService.instance;
-    _lastKnownPositionMs = playerService.position.inMilliseconds;
-    _dirty = true;
-    await _persistNow(FlushReason.stopped);
+  Future<void> onStopped() {
+    final positionMs = AudioPlayerService.instance.position.inMilliseconds;
+    return _enqueueOperation(() async {
+      _lastKnownPositionMs = positionMs;
+      _dirty = true;
+      await _persistNow(FlushReason.stopped);
+    });
   }
 
   /// 应用进入后台时调用
   Future<void> flushNow(
-      {FlushReason reason = FlushReason.appBackground}) async {
-    if (_currentWorkId == null || _currentWork == null) return;
+      {FlushReason reason = FlushReason.appBackground}) {
+    return _enqueueOperation(() async {
+      if (_currentWorkId == null || _currentWork == null) return;
 
-    final playerService = AudioPlayerService.instance;
-    _lastKnownPositionMs = playerService.position.inMilliseconds;
-    _dirty = true;
-    await _persistNow(reason);
+      _lastKnownPositionMs =
+          AudioPlayerService.instance.position.inMilliseconds;
+      _dirty = true;
+      await _persistNow(reason);
+    });
   }
 
   // ==========================================================================
@@ -211,8 +252,20 @@ class PlaybackHistoryService {
     }
   }
 
+  Future<void> _enqueueOperation(Future<void> Function() operation) {
+    final result = _operationQueue.then((_) => operation());
+    _operationQueue = result.then<void>(
+      (_) {},
+      onError: (Object error, StackTrace stackTrace) {
+        logOutput('[PlaybackHistoryService] Queued operation failed: $error');
+      },
+    );
+    return result;
+  }
+
   /// 清理资源
   void detach() {
+    _attachmentGeneration++;
     _positionSubscription?.cancel();
     _positionSubscription = null;
     _trackSubscription?.cancel();
@@ -223,10 +276,11 @@ class PlaybackHistoryService {
 
   /// 销毁服务（含最终 flush）
   Future<void> dispose() async {
+    detach();
+    await _operationQueue;
     if (_dirty && _currentWork != null) {
       await _persistNow(FlushReason.dispose);
     }
-    detach();
     await _historyUpdatedController.close();
     _instance = null;
   }

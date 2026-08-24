@@ -112,6 +112,7 @@ final canSkipNextProvider = Provider<bool>((ref) {
 class AudioPlayerController extends StateNotifier<AudioPlayerState> {
   final AudioPlayerService _service;
   final Ref _ref;
+  Future<void> _pendingDismissal = Future.value();
 
   AudioPlayerController(this._service, this._ref)
       : super(const AudioPlayerState()) {
@@ -222,6 +223,7 @@ class AudioPlayerController extends StateNotifier<AudioPlayerState> {
   }
 
   Future<void> playTrack(AudioTrack track) async {
+    await _pendingDismissal;
     final shouldAppend = state.appendMode && queue.isNotEmpty;
 
     if (shouldAppend) {
@@ -234,6 +236,8 @@ class AudioPlayerController extends StateNotifier<AudioPlayerState> {
       await _service.updateQueue([track]);
       await _service.play();
     }
+    _ref.read(miniPlayerVisibilityProvider.notifier).show();
+
     // Ensure single-track plays are recorded to history.
     if (track.workId != null) {
       try {
@@ -252,6 +256,7 @@ class AudioPlayerController extends StateNotifier<AudioPlayerState> {
 
   Future<void> playTracks(List<AudioTrack> tracks,
       {int startIndex = 0, Work? work}) async {
+    await _pendingDismissal;
     _log.captureOutput(
         '[AudioController] playTracks调用: ${tracks.length}个轨道, startIndex=$startIndex');
     _log.captureOutput(
@@ -272,6 +277,7 @@ class AudioPlayerController extends StateNotifier<AudioPlayerState> {
       await _service.play();
       _log.captureOutput('[AudioController] play完成');
     }
+    _ref.read(miniPlayerVisibilityProvider.notifier).show();
 
     if (work != null) {
       _ref.read(historyProvider.notifier).addOrUpdate(work);
@@ -279,7 +285,9 @@ class AudioPlayerController extends StateNotifier<AudioPlayerState> {
   }
 
   Future<void> play() async {
+    await _pendingDismissal;
     await _service.play();
+    _ref.read(miniPlayerVisibilityProvider.notifier).show();
   }
 
   Future<void> pause() async {
@@ -292,6 +300,17 @@ class AudioPlayerController extends StateNotifier<AudioPlayerState> {
     await _service.stop();
     // 停止时立即落盘历史
     PlaybackHistoryService.instance.onStopped();
+  }
+
+  Future<void> dismissMiniPlayer() {
+    _ref.read(miniPlayerVisibilityProvider.notifier).hide();
+    final historyFlush = PlaybackHistoryService.instance.onStopped();
+    final clearing = _service.clearQueue();
+    final dismissal = Future.wait([historyFlush, clearing]).then<void>((_) {});
+    _pendingDismissal = dismissal.catchError((Object error) {
+      _log.captureOutput('[AudioController] Mini Player dismissal failed: $error');
+    });
+    return dismissal;
   }
 
   Future<void> seek(Duration position) async {

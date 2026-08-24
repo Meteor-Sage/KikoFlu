@@ -363,11 +363,21 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
         _log.captureOutput('播放音频: $title');
         _log.captureOutput('播放队列包含 ${queue.tracks.length} 个文件');
 
-        ref.read(audioPlayerControllerProvider.notifier).playTracks(
-              queue.tracks,
-              startIndex: queue.startIndex,
-              work: widget.work,
+        try {
+          await ref.read(audioPlayerControllerProvider.notifier).playTracks(
+                queue.tracks,
+                startIndex: queue.startIndex,
+                work: widget.work,
+              );
+        } catch (e) {
+          _log.captureOutput('播放音频失败: $e');
+          if (mounted) {
+            SnackBarUtil.showError(
+              context,
+              l10n.playbackFailed(e.toString()),
             );
+          }
+        }
     }
 
     // 注意：字幕会通过 lyricAutoLoaderProvider 自动加载

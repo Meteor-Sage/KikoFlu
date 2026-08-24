@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:kikoeru_flutter/src/models/history_record.dart';
@@ -41,6 +43,28 @@ class _FakePlaybackHistoryStore implements PlaybackHistoryStore {
 
   @override
   Future<void> addOrUpdate(HistoryRecord record) async {
+    records[record.work.id] = record;
+  }
+
+  @override
+  Future<HistoryRecord?> getByWorkId(int workId) async {
+    return records[workId];
+  }
+}
+
+class _ControlledPlaybackHistoryStore implements PlaybackHistoryStore {
+  final Map<int, HistoryRecord> records = {};
+  final Completer<void> firstWriteStarted = Completer<void>();
+  final Completer<void> releaseFirstWrite = Completer<void>();
+  int _writeCount = 0;
+
+  @override
+  Future<void> addOrUpdate(HistoryRecord record) async {
+    _writeCount++;
+    if (_writeCount == 1) {
+      firstWriteStarted.complete();
+      await releaseFirstWrite.future;
+    }
     records[record.work.id] = record;
   }
 
@@ -215,6 +239,36 @@ void main() {
         await service.onSeekCommitted(const Duration(milliseconds: 5000));
         expect(service.lastKnownPositionMs, 5000);
         expect(service.lastPersistedPositionMs, 5000);
+      });
+
+      test('concurrent writes preserve seek event order', () async {
+        final controlledStore = _ControlledPlaybackHistoryStore();
+        PlaybackHistoryService.resetForTest(store: controlledStore);
+        service = PlaybackHistoryService.instance;
+        final work = _makeWork(602);
+        final track = _makeTrack(602);
+
+        service.setSessionForTest(
+          workId: 602,
+          work: work,
+          track: track,
+        );
+
+        final first = service.onSeekCommitted(
+          const Duration(milliseconds: 5000),
+        );
+        await controlledStore.firstWriteStarted.future;
+        final second = service.onSeekCommitted(
+          const Duration(milliseconds: 10000),
+        );
+        controlledStore.releaseFirstWrite.complete();
+
+        await Future.wait([first, second]);
+
+        expect(controlledStore.records[602]?.lastPositionMs, 10000);
+        expect(service.lastKnownPositionMs, 10000);
+        expect(service.lastPersistedPositionMs, 10000);
+        expect(service.dirty, false);
       });
     });
 

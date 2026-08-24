@@ -351,12 +351,7 @@ class AudioPlayerService {
     int startIndex = 0,
   }) async {
     if (tracks.isEmpty) {
-      _queue.clear();
-      _currentIndex = 0;
-      _queueController.add(const []);
-      _currentTrackController.add(null);
-      await stop();
-      await _clearPlaybackSession();
+      await clearQueue();
       return;
     }
 
@@ -370,8 +365,25 @@ class AudioPlayerService {
 
     // Load the current track
     if (tracks.isNotEmpty && _currentIndex < tracks.length) {
-      await _loadTrack(tracks[_currentIndex]);
+      try {
+        await _loadTrack(tracks[_currentIndex]);
+      } catch (_) {
+        await clearQueue();
+        rethrow;
+      }
     }
+  }
+
+  Future<void> clearQueue() async {
+    _queue.clear();
+    _currentIndex = 0;
+    _queueController.add(const []);
+    _currentTrackController.add(null);
+    await stop();
+    if (_audioHandler case final _AudioPlayerHandler handler) {
+      handler.mediaItem.add(null);
+    }
+    await _clearPlaybackSession();
   }
 
   Future<void> _loadTrack(
@@ -387,11 +399,6 @@ class AudioPlayerService {
     _sessionCompleted = false;
     _lastSessionPositionMs = 0;
 
-    // Normal switches publish immediately. Session restore waits until seek has
-    // completed so history and UI never observe a transient zero position.
-    if (emitCurrentTrack) {
-      _currentTrackController.add(track);
-    }
     _trackLoadingController.add(true);
 
     // Set switching flag and update state to buffering immediately
@@ -403,18 +410,9 @@ class AudioPlayerService {
       _completionHandled = false;
     }
 
-    // 清理上一首歌创建的临时文件
-    await _cleanupTempPlaybackFile();
-
     try {
-      // Update media item immediately to show new track info
-      await _updateMediaItem(
-        track,
-        privacyEnabled: _privacyEnabled,
-        blurCover: _privacyBlurCover,
-        maskTitle: _privacyMaskTitle,
-        customTitle: _privacyCustomTitle,
-      );
+      // 清理上一首歌创建的临时文件
+      await _cleanupTempPlaybackFile();
       await _hapticsService.stop();
 
       String? audioFilePath;
@@ -482,14 +480,35 @@ class AudioPlayerService {
         unawaited(_hapticsService.prepareForTrack(track));
         _log.captureOutput('[Audio] 流式播放: ${track.url}');
       }
+
+      // Do not replace system Now Playing metadata until the source itself is
+      // known to be usable. Metadata failure must not invalidate playable audio.
+      try {
+        await _updateMediaItem(
+          track,
+          privacyEnabled: _privacyEnabled,
+          blurCover: _privacyBlurCover,
+          maskTitle: _privacyMaskTitle,
+          customTitle: _privacyCustomTitle,
+        );
+      } catch (error) {
+        _log.captureOutput('[Audio] Failed to update media item: $error');
+      }
     } catch (e) {
       _log.captureOutput('Error loading audio source: $e');
+      rethrow;
     } finally {
       _isSwitchingTrack = false;
       _trackLoadingController.add(false);
       _updatePlaybackState();
-      await persistPlaybackSession();
     }
+
+    // Publish and persist only after the source is ready. A failed URL or a
+    // missing local file must never become the app's current resumable track.
+    if (emitCurrentTrack) {
+      _currentTrackController.add(track);
+    }
+    await persistPlaybackSession();
   }
 
   // Update media item for system notification
@@ -575,20 +594,18 @@ class AudioPlayerService {
         unawaited(play());
       } else if (_currentIndex < _queue.length - 1) {
         // Has next track - play it
-        _currentIndex++;
-        await _loadTrack(_queue[_currentIndex]);
-        unawaited(play());
+        await _switchToIndexAndPlay(_currentIndex + 1);
       } else if (_appLoopMode == LoopMode.all && _queue.isNotEmpty) {
         // List repeat - go back to first track
-        _currentIndex = 0;
-        await _loadTrack(_queue.first);
-        unawaited(play());
+        await _switchToIndexAndPlay(0);
       } else {
         // A naturally completed non-looping queue must not reappear next launch.
         _sessionCompleted = true;
         await pause();
         await _clearPlaybackSession();
       }
+    } catch (e) {
+      _log.captureOutput('[Audio] Failed to advance playback queue: $e');
     } finally {
       _handlingTrackCompletion = false;
     }
@@ -721,7 +738,14 @@ class AudioPlayerService {
         }
       });
     }
-    await playback;
+    // just_audio completes this Future when playback is paused, stopped, or
+    // reaches the end. Keep observing errors without blocking callers for the
+    // lifetime of the track.
+    unawaited(
+      playback.catchError((Object error, StackTrace stackTrace) {
+        _log.captureOutput('[Audio] Playback failed: $error');
+      }),
+    );
   }
 
   Future<void> pause() async {
@@ -774,9 +798,7 @@ class AudioPlayerService {
 
   Future<void> skipToNext() async {
     if (_queue.isNotEmpty && _currentIndex < _queue.length - 1) {
-      _currentIndex++;
-      await _loadTrack(_queue[_currentIndex]);
-      await play();
+      await _switchToIndexAndPlay(_currentIndex + 1);
     } else {
       // No next track available
       throw Exception('没有下一首可播放');
@@ -785,9 +807,7 @@ class AudioPlayerService {
 
   Future<void> skipToPrevious() async {
     if (_queue.isNotEmpty && _currentIndex > 0) {
-      _currentIndex--;
-      await _loadTrack(_queue[_currentIndex]);
-      await play();
+      await _switchToIndexAndPlay(_currentIndex - 1);
     } else {
       // No previous track available
       throw Exception('没有上一首可播放');
@@ -796,9 +816,19 @@ class AudioPlayerService {
 
   Future<void> skipToIndex(int index) async {
     if (index >= 0 && index < _queue.length) {
-      _currentIndex = index;
+      await _switchToIndexAndPlay(index);
+    }
+  }
+
+  Future<void> _switchToIndexAndPlay(int index) async {
+    final previousIndex = _currentIndex;
+    _currentIndex = index;
+    try {
       await _loadTrack(_queue[_currentIndex]);
       await play();
+    } catch (_) {
+      _currentIndex = previousIndex;
+      rethrow;
     }
   }
 
@@ -1018,11 +1048,7 @@ class AudioPlayerService {
       );
     } catch (error) {
       _log.captureOutput('[AudioSession] Failed to restore session: $error');
-      _queue.clear();
-      _currentIndex = 0;
-      _queueController.add(const []);
-      _currentTrackController.add(null);
-      await _clearPlaybackSession();
+      await clearQueue();
     } finally {
       _isRestoringSession = false;
     }

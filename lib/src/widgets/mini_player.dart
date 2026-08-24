@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
@@ -52,18 +53,20 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
 
     final player = currentTrack.when(
       data: (track) {
-        // 当播放新音轨时（并且不是因为重建导致的检查），重新显示MiniPlayer
-        if (track != null && _lastTrackId != null && track.id != _lastTrackId) {
+        // A newly loaded track always re-opens a Mini Player that the user
+        // previously dismissed. Dismissal clears the queue asynchronously, so
+        // keeping the old id until the null event also avoids a re-show race.
+        if (track == null) {
+          _lastTrackId = null;
+        } else if (_lastTrackId != track.id) {
           _lastTrackId = track.id;
-          // 使用addPostFrameCallback确保在build完成后再更新状态
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              ref.read(miniPlayerVisibilityProvider.notifier).show();
-            }
-          });
-        } else if (track != null && _lastTrackId == null) {
-          // 首次加载或删除后，记录当前音轨但不改变可见性
-          _lastTrackId = track.id;
+          if (!isMiniPlayerVisible) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                ref.read(miniPlayerVisibilityProvider.notifier).show();
+              }
+            });
+          }
         }
 
         if (track == null || !isMiniPlayerVisible) {
@@ -109,11 +112,11 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
           direction: DismissDirection.down,
           background: Container(color: Colors.transparent),
           onDismissed: (direction) {
-            // Stop playback and hide the MiniPlayer
-            ref.read(audioPlayerControllerProvider.notifier).stop();
-            ref.read(miniPlayerVisibilityProvider.notifier).hide();
-            // Reset track ID to allow re-showing when a new track is played
-            _lastTrackId = null;
+            unawaited(
+              ref
+                  .read(audioPlayerControllerProvider.notifier)
+                  .dismissMiniPlayer(),
+            );
           },
           child: Consumer(
             builder: (context, ref, child) {

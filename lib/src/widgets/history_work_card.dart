@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../models/history_record.dart';
 import '../models/download_task.dart';
 import '../providers/auth_provider.dart';
+import '../providers/audio_provider.dart';
 import '../providers/history_provider.dart';
 import '../services/audio_player_service.dart';
 import '../services/download_service.dart';
@@ -314,6 +315,7 @@ class HistoryWorkCard extends ConsumerWidget {
           await AudioPlayerService.instance
               .seek(Duration(milliseconds: record.lastPositionMs));
           await AudioPlayerService.instance.play();
+          ref.read(miniPlayerVisibilityProvider.notifier).show();
           ref.read(historyProvider.notifier).addOrUpdate(work);
         } catch (e) {
           _log.captureOutput('Failed to resume playback: $e');
@@ -462,6 +464,7 @@ class HistoryWorkCard extends ConsumerWidget {
         await AudioPlayerService.instance
             .seek(Duration(milliseconds: record.lastPositionMs));
         await AudioPlayerService.instance.play();
+        ref.read(miniPlayerVisibilityProvider.notifier).show();
         ref.read(historyProvider.notifier).addOrUpdate(work);
       } catch (e) {
         _log.captureOutput('Failed to resume playback: $e');
