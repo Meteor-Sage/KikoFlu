@@ -3,18 +3,18 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('iOS floating lyrics render into AVPlayerLayer video frames', () {
+  test('iOS 15+ floating lyrics use immediate sample-buffer frames', () {
     final source = File('ios/Runner/AppDelegate.swift').readAsStringSync();
 
     expect(
       source,
-      contains('AVPictureInPictureController(playerLayer: layer)'),
-      reason: 'PiP should use the existing player-backed media pipeline.',
+      contains('if #available(iOS 15.0, *)'),
+      reason: 'Modern iOS should use the public custom-content PiP API.',
     );
     expect(
       source,
-      contains('applyingCIFiltersWithHandler'),
-      reason: 'Lyrics should be composited into every PiP video frame.',
+      contains('sampleBufferDisplayLayer: displayLayer'),
+      reason: 'Dynamic lyrics should bypass AVPlayer video pre-rendering.',
     );
     expect(
       source,
@@ -23,29 +23,33 @@ void main() {
     );
     expect(
       source,
-      contains('composition.renderSize = renderSize'),
-      reason: 'The video compositor should output the adaptive frame size.',
+      contains('CMSampleBufferGetSampleAttachmentsArray'),
+      reason: 'Sample attachments must use the Core Media sample array.',
     );
     expect(
       source,
-      contains('CGRect(origin: .zero, size: request.renderSize)'),
-      reason: 'Each lyric frame should render at the requested output size.',
+      contains('kCMSampleAttachmentKey_DisplayImmediately'),
+      reason: 'Each changed lyric should replace the displayed frame at once.',
     );
     expect(
       source,
-      contains('composition.frameDuration = CMTime'),
-      reason: 'Lyric updates should not be limited by the 1 fps source video.',
+      contains('displayLayer.opacity = 1'),
+      reason: 'The PiP source must not inherit the old near-transparent output.',
     );
     expect(
       source,
-      contains('outputFrameRate: Int32 = 30'),
-      reason: 'Active PiP rendering should not add visible subtitle latency.',
+      contains('width: 1, height: 1'),
+      reason: 'The source layer must not cover the Flutter surface.',
     );
     expect(
       source,
-      isNot(contains('AVSampleBufferDisplayLayer')),
-      reason:
-          'The unverified sample-buffer pipeline produced black PiP output.',
+      isNot(contains('CMSetAttachment(')),
+      reason: 'DisplayImmediately is a sample attachment, not a buffer one.',
+    );
+    expect(
+      source,
+      contains('AVPictureInPictureController(playerLayer: layer)'),
+      reason: 'iOS 13 and 14 still need the existing player-backed fallback.',
     );
     expect(
       source,
@@ -71,6 +75,8 @@ void main() {
     expect(nativeSource, contains('invokeMethod("onDiagnostic"'));
     expect(nativeSource, contains('pip_health_check'));
     expect(nativeSource, contains('video_compositor_first_frame'));
+    expect(nativeSource, contains('sample_buffer_frame_enqueued'));
+    expect(nativeSource, contains('sample_buffer_failed_to_decode'));
     expect(dartSource, contains("case 'onDiagnostic':"));
     expect(dartSource, contains("tag: 'FloatingLyric.iOS'"));
   });
