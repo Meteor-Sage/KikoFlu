@@ -18,6 +18,13 @@
       "tintColor": "6750A4",
       "versions": [
         {
+          "version": "3.8.1",
+          "date": "2026-08-24",
+          "size": 13312453,
+          "downloadURL": "https://github.com/pa-jesusf/KikoFlu/releases/download/v3.8.1/KikoFlu-ios-unsigned_381.ipa",
+          "localizedDescription": "**修复：**\r\n1. 修复字幕筛选会导致页面内容错位的问题\r\n2. 修复 Mini Player 重启恢复不自动读取状态问题\r\n3. 修复部分情况下 iOS 悬浮字幕开启失败问题\r\n\r\n**Fixes:**\r\n1. Fixed an issue where subtitle filtering caused page content to become misaligned.\r\n2. Fixed an issue where the Mini Player did not automatically restore its state upon restart/resume.\r\n3. Fixed an issue where floating subtitles failed to enable on iOS in certain cases."
+        },
+        {
           "version": "3.8.0",
           "date": "2026-08-23",
           "size": 13286950,
