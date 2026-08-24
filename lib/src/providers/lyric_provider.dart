@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' show Locale;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +8,9 @@ import 'package:path/path.dart' as path;
 import '../models/lyric.dart';
 import '../models/audio_track.dart';
 import '../services/cache_service.dart';
+import '../services/download_service.dart';
+import '../services/local_work_metadata_service.dart';
+import '../services/offline_local_file_scanner.dart';
 import '../services/subtitle_library_service.dart';
 import '../services/subtitle_database.dart';
 import '../services/log_service.dart';
@@ -1042,21 +1046,172 @@ class LyricController extends StateNotifier<LyricState> {
   }
 }
 
+typedef PlaybackLyricFileTreeLoader = Future<List<dynamic>> Function(
+  AudioTrack track,
+);
+
+final playbackLyricFileTreeLoaderProvider =
+    Provider<PlaybackLyricFileTreeLoader>((ref) {
+  final apiService = ref.watch(kikoeruApiServiceProvider);
+  // The player may restore before AuthNotifier finishes loading persisted
+  // credentials. Recreate the loader when the API session becomes ready so a
+  // transient startup race does not permanently skip online subtitles.
+  ref.watch(
+    authProvider.select(
+      (state) => (state.host, state.token, state.isLoggedIn),
+    ),
+  );
+  final inFlight = <String, Future<List<dynamic>>>{};
+
+  return (track) async {
+    final workId = track.workId;
+    if (workId == null) return const [];
+
+    final contextKey = track.subtitleWorkDirPath == null
+        ? 'online:$workId'
+        : 'offline:$workId:${path.normalize(track.subtitleWorkDirPath!)}';
+    final pending = inFlight[contextKey];
+    if (pending != null) return pending;
+
+    final load = () async {
+      final offlineWorkDirPath = track.subtitleWorkDirPath;
+      if (offlineWorkDirPath != null && offlineWorkDirPath.isNotEmpty) {
+        return _loadOfflineLyricFileTree(
+          workId: workId,
+          workDirPath: offlineWorkDirPath,
+        );
+      }
+
+      try {
+        return await apiService.getWorkTracks(workId);
+      } catch (error) {
+        // Sessions saved before subtitleWorkDirPath was introduced have no
+        // explicit source marker. Only fall back to disk when the restored
+        // audio path is actually inside this work's local directory.
+        final sourcePath = track.sourcePath;
+        if (sourcePath != null && sourcePath.isNotEmpty) {
+          final workDir = await DownloadService.instance.getWorkDirectory(
+            workId,
+          );
+          final normalizedWorkDir = path.normalize(workDir.path);
+          final normalizedSourcePath = path.normalize(sourcePath);
+          if (normalizedSourcePath == normalizedWorkDir ||
+              path.isWithin(normalizedWorkDir, normalizedSourcePath)) {
+            _log.captureOutput(
+              '[Lyric] 在线文件树恢复失败，尝试旧版离线会话目录: '
+              'workId=$workId, error=$error',
+            );
+            return _loadOfflineLyricFileTree(
+              workId: workId,
+              workDirPath: workDir.path,
+            );
+          }
+        }
+        rethrow;
+      }
+    }();
+
+    inFlight[contextKey] = load;
+    try {
+      return await load;
+    } finally {
+      if (identical(inFlight[contextKey], load)) {
+        inFlight.remove(contextKey);
+      }
+    }
+  };
+});
+
+Future<List<dynamic>> _loadOfflineLyricFileTree({
+  required int workId,
+  required String workDirPath,
+}) async {
+  final workDir = Directory(workDirPath);
+  if (!await workDir.exists()) return const [];
+
+  List<dynamic>? storedFileTree;
+  final metadataFile = File(
+    path.join(workDir.path, LocalWorkMetadataService.metadataFileName),
+  );
+  if (await metadataFile.exists()) {
+    try {
+      final decoded = jsonDecode(await metadataFile.readAsString());
+      if (decoded is Map && decoded['children'] is List) {
+        storedFileTree = List<dynamic>.from(decoded['children'] as List);
+      }
+    } catch (error) {
+      _log.captureOutput(
+        '[Lyric] 读取离线作品文件树失败，改为扫描目录: '
+        'workId=$workId, error=$error',
+      );
+    }
+  }
+
+  final fileTree = storedFileTree ??
+      await const LocalWorkMetadataService().buildFileTree(workDir);
+  final scanResult = await const OfflineLocalFileScanner().scan(
+    fileTree: fileTree,
+    workDirPath: workDir.path,
+  );
+  return scanResult.files;
+}
+
 // 存储当前工作的文件列表（用于查找字幕）
 class FileListState {
   final List<dynamic> files;
+  final int? workId;
+  final String? subtitleWorkDirPath;
 
-  FileListState({this.files = const []});
+  FileListState({
+    this.files = const [],
+    this.workId,
+    this.subtitleWorkDirPath,
+  });
+
+  bool matches(AudioTrack track) {
+    if (files.isEmpty || workId == null || workId != track.workId) {
+      return false;
+    }
+
+    final expectedPath = track.subtitleWorkDirPath;
+    if (expectedPath == null || expectedPath.isEmpty) {
+      final actualPath = subtitleWorkDirPath;
+      final sourcePath = track.sourcePath;
+      if (actualPath != null &&
+          actualPath.isNotEmpty &&
+          sourcePath != null &&
+          sourcePath.isNotEmpty) {
+        final normalizedActualPath = path.normalize(actualPath);
+        final normalizedSourcePath = path.normalize(sourcePath);
+        return normalizedSourcePath == normalizedActualPath ||
+            path.isWithin(normalizedActualPath, normalizedSourcePath);
+      }
+      return actualPath == null || actualPath.isEmpty;
+    }
+    final actualPath = subtitleWorkDirPath;
+    return actualPath != null &&
+        actualPath.isNotEmpty &&
+        path.normalize(actualPath) == path.normalize(expectedPath);
+  }
 }
 
 class FileListController extends StateNotifier<FileListState> {
   FileListController() : super(FileListState());
 
-  void updateFiles(List<dynamic> files) {
-    state = FileListState(files: files);
+  void updateFiles(
+    List<dynamic> files, {
+    required int workId,
+    String? subtitleWorkDirPath,
+  }) {
+    state = FileListState(
+      files: files,
+      workId: workId,
+      subtitleWorkDirPath: subtitleWorkDirPath,
+    );
   }
 
-  void clear() {
+  void clear({int? workId}) {
+    if (workId != null && state.workId != workId) return;
     state = FileListState();
   }
 }
@@ -1076,20 +1231,59 @@ final lyricControllerProvider =
 final lyricAutoLoaderProvider = Provider<void>((ref) {
   final currentTrack = ref.watch(currentTrackProvider);
   final fileListState = ref.watch(fileListControllerProvider);
+  final fileTreeLoader = ref.watch(playbackLyricFileTreeLoaderProvider);
 
   currentTrack.whenData((track) {
-    if (track != null && fileListState.files.isNotEmpty) {
-      // 延迟加载，避免同步问题
+    if (track == null) {
+      // 没有播放时清空字幕
+      ref.read(lyricControllerProvider.notifier).clearLyrics();
+      return;
+    }
+
+    if (fileListState.matches(track)) {
       Future.microtask(() {
+        if (ref.read(currentTrackProvider).value != track) return;
         ref.read(lyricControllerProvider.notifier).loadLyricForTrack(
               track,
               fileListState.files,
             );
       });
-    } else if (track == null) {
-      // 没有播放时清空字幕
-      ref.read(lyricControllerProvider.notifier).clearLyrics();
+      return;
     }
+
+    Future.microtask(() async {
+      try {
+        _log.captureOutput(
+          '[Lyric] 恢复播放字幕上下文: track="${track.title}", '
+          'workId=${track.workId}, '
+          'source=${track.subtitleWorkDirPath == null ? "online" : "offline"}',
+        );
+        final files = await fileTreeLoader(track);
+        if (ref.read(currentTrackProvider).value != track) return;
+
+        if (files.isNotEmpty && track.workId != null) {
+          ref.read(fileListControllerProvider.notifier).updateFiles(
+                files,
+                workId: track.workId!,
+                subtitleWorkDirPath: track.subtitleWorkDirPath,
+              );
+          return;
+        }
+
+        await ref
+            .read(lyricControllerProvider.notifier)
+            .loadLyricForTrack(track, const []);
+      } catch (error) {
+        if (ref.read(currentTrackProvider).value != track) return;
+        _log.captureOutput(
+          '[Lyric] 恢复播放字幕上下文失败，继续尝试字幕库: '
+          'workId=${track.workId}, error=$error',
+        );
+        await ref
+            .read(lyricControllerProvider.notifier)
+            .loadLyricForTrack(track, const []);
+      }
+    });
   });
 });
 

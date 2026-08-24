@@ -31,6 +31,7 @@ void main() {
         unknownTitle: 'Unknown',
         artist: 'Artist',
         artworkUrl: 'cover.jpg',
+        subtitleWorkDirPath: '/downloads/123456',
       );
 
       expect(result.tracks, hasLength(2));
@@ -45,6 +46,10 @@ void main() {
       expect(result.tracks.first.workId, 123456);
       expect(result.tracks.first.hash, 'h1');
       expect(result.tracks.first.sourcePath, 'track01.mp3');
+      expect(
+        result.tracks.first.subtitleWorkDirPath,
+        '/downloads/123456',
+      );
     });
 
     test('falls back to title as id when hash is optional', () async {

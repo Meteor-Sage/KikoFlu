@@ -313,7 +313,10 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
       final allFiles = await apiService.getWorkTracks(widget.work.id);
 
       // 只在播放音频时更新全局文件列表，这样字幕才能正确关联
-      ref.read(fileListControllerProvider.notifier).updateFiles(allFiles);
+      ref.read(fileListControllerProvider.notifier).updateFiles(
+            allFiles,
+            workId: widget.work.id,
+          );
     } catch (e) {
       _log.captureOutput('获取完整文件树失败 $e');
       // 即使获取失败也继续播放，只是可能没有字幕

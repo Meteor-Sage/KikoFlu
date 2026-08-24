@@ -86,6 +86,7 @@ void main() {
       work: _work,
       unknownTitle: 'Unknown',
       artworkUrl: 'cover.jpg',
+      subtitleWorkDirPath: '/downloads/123456',
     );
 
     expect(plan.status, AudioPlaybackPlanStatus.ready);
@@ -95,6 +96,10 @@ void main() {
     expect(plan.queue!.tracks.first.artist, 'Alice, Bob');
     expect(plan.queue!.tracks.first.album, 'Work Title');
     expect(plan.queue!.tracks.first.artworkUrl, 'cover.jpg');
+    expect(
+      plan.queue!.tracks.first.subtitleWorkDirPath,
+      '/downloads/123456',
+    );
   });
 
   test('honors requireHash for local playback queues', () async {

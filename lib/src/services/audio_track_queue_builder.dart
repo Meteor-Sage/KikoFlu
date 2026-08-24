@@ -28,6 +28,7 @@ class AudioTrackQueueBuilder {
     required String unknownTitle,
     String? artist,
     String? artworkUrl,
+    String? subtitleWorkDirPath,
     bool requireHash = false,
   }) async {
     final tracks = <AudioTrack>[];
@@ -55,6 +56,7 @@ class AudioTrackQueueBuilder {
         workId: workId,
         hash: hash,
         sourcePath: _sourcePathFromUrl(url),
+        subtitleWorkDirPath: subtitleWorkDirPath,
       ));
     }
 

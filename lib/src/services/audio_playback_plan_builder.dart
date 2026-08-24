@@ -60,6 +60,7 @@ class AudioPlaybackPlanBuilder {
     required Work work,
     required String unknownTitle,
     String? artworkUrl,
+    String? subtitleWorkDirPath,
     bool requireHash = false,
   }) async {
     final selectedTitle =
@@ -82,6 +83,7 @@ class AudioPlaybackPlanBuilder {
       unknownTitle: unknownTitle,
       artist: _artistInfo(work),
       artworkUrl: artworkUrl,
+      subtitleWorkDirPath: subtitleWorkDirPath,
       requireHash: requireHash,
     );
 

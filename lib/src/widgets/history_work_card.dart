@@ -272,7 +272,10 @@ class HistoryWorkCard extends ConsumerWidget {
     List<dynamic> allFiles = [];
     try {
       allFiles = await apiService.getWorkTracks(work.id);
-      ref.read(fileListControllerProvider.notifier).updateFiles(allFiles);
+      ref.read(fileListControllerProvider.notifier).updateFiles(
+            allFiles,
+            workId: work.id,
+          );
     } catch (e) {
       _log.captureOutput('Failed to update file list: $e');
 
@@ -292,7 +295,10 @@ class HistoryWorkCard extends ConsumerWidget {
 
           if (downloadedFiles.isNotEmpty) {
             allFiles = downloadedFiles;
-            ref.read(fileListControllerProvider.notifier).updateFiles(allFiles);
+            ref.read(fileListControllerProvider.notifier).updateFiles(
+                  allFiles,
+                  workId: work.id,
+                );
           }
         }
       } catch (e2) {

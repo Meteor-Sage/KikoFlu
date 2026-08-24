@@ -28,6 +28,7 @@ void main() {
         title: 'Track two',
         url: 'file:///tmp/two.mp3',
         sourcePath: '/tmp/two.mp3',
+        subtitleWorkDirPath: '/tmp',
       ),
     ];
     const snapshot = PlaybackSessionSnapshot(

@@ -117,7 +117,7 @@ class _OfflineFileExplorerWidgetState
     _translationController.dispose();
     // 离线页面关闭时清空文件列表，避免影响其他作品
     // 使用 Future.microtask 延迟执行，避免在 dispose 中直接修改 provider
-    Future.microtask(() => _fileListController.clear());
+    Future.microtask(() => _fileListController.clear(workId: widget.work.id));
     super.dispose();
   }
 
@@ -167,7 +167,11 @@ class _OfflineFileExplorerWidgetState
       _workDirPath = workDir.path;
       _localFiles = scanResult.files;
       // 更新全局文件列表供字幕自动加载使用
-      _fileListController.updateFiles(List<dynamic>.from(_localFiles));
+      _fileListController.updateFiles(
+        List<dynamic>.from(_localFiles),
+        workId: widget.work.id,
+        subtitleWorkDirPath: workDir.path,
+      );
 
       // 检查字幕库中的匹配项
       await _checkLibrarySubtitles(generation);
@@ -300,6 +304,7 @@ class _OfflineFileExplorerWidgetState
         work: widget.work,
         unknownTitle: l10n.unknown,
         artworkUrl: target.artworkUrl,
+        subtitleWorkDirPath: target.workDir,
       );
 
       if (!mounted) return;

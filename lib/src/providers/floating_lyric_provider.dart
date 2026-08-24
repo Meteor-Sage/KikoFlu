@@ -294,14 +294,16 @@ class FloatingLyricEnabledNotifier extends StateNotifier<bool> {
         // 触发字幕加载
         if (track != null) {
           final fileListState = ref.read(fileListControllerProvider);
-          if (fileListState.files.isNotEmpty) {
+          if (fileListState.matches(track)) {
             _log.captureOutput('[FloatingLyric] 主动触发字幕加载');
             ref.read(lyricControllerProvider.notifier).loadLyricForTrack(
                   track,
                   fileListState.files,
                 );
           } else {
-            _log.captureOutput('[FloatingLyric] 文件列表为空，无法加载字幕');
+            _log.captureOutput(
+              '[FloatingLyric] 当前字幕文件树不匹配，等待自动恢复',
+            );
           }
         }
       } else {
