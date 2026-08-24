@@ -456,7 +456,7 @@ jobs:
           path: release-assets
           merge-multiple: true
 
-      - name: Verify and publish release
+      - name: Verify and publish release atomically
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -476,15 +476,68 @@ jobs:
             "KikoFlu-windows_${{ needs.prepare.outputs.suffix }}.zip"
           )
 
+          assets=()
           for asset in "${expected[@]}"; do
-            if [ ! -f "release-assets/$asset" ]; then
-              echo "::error::Missing release asset: $asset"
+            path="release-assets/$asset"
+            if [ ! -s "$path" ]; then
+              echo "::error::Missing or empty release asset: $asset"
               exit 1
             fi
+            assets+=("$path")
           done
 
           printf '%s\n' "$RELEASE_NOTES" > release-notes.md
-          gh release create "$TAG" release-assets/* \
+
+          draft_created=false
+          cleanup_draft() {
+            status="$1"
+            trap - ERR INT TERM
+            if [ "$draft_created" = "true" ]; then
+              is_draft="$(gh release view "$TAG" --json isDraft --jq '.isDraft' 2>/dev/null || true)"
+              if [ "$is_draft" = "true" ]; then
+                echo "Cleaning up incomplete draft release $TAG"
+                gh release delete "$TAG" --cleanup-tag --yes || true
+              fi
+            fi
+            exit "$status"
+          }
+          trap 'cleanup_draft $?' ERR
+          trap 'cleanup_draft 130' INT
+          trap 'cleanup_draft 143' TERM
+
+          gh release create "$TAG" \
+            --draft \
             --target "$GITHUB_SHA" \
             --title "$TAG" \
             --notes-file release-notes.md
+          draft_created=true
+
+          gh release upload "$TAG" "${assets[@]}"
+
+          remote_assets="$(gh api "repos/${GH_REPO}/releases/tags/${TAG}" \
+            --jq '.assets[] | [.name, .size, .state] | @tsv')"
+          mapfile -t uploaded < <(
+            printf '%s\n' "$remote_assets" |
+              awk -F '\t' '$2 > 0 && $3 == "uploaded" { print $1 }' |
+              sort
+          )
+          mapfile -t expected_sorted < <(printf '%s\n' "${expected[@]}" | sort)
+
+          if [ "${#uploaded[@]}" -ne "${#expected_sorted[@]}" ]; then
+            echo "::error::Draft release contains an unexpected number of complete assets."
+            printf 'Expected: %s\n' "${expected_sorted[*]}"
+            printf 'Uploaded: %s\n' "${uploaded[*]}"
+            false
+          fi
+          for index in "${!expected_sorted[@]}"; do
+            if [ "${uploaded[$index]}" != "${expected_sorted[$index]}" ]; then
+              echo "::error::Draft release assets do not match the expected set."
+              printf 'Expected: %s\n' "${expected_sorted[*]}"
+              printf 'Uploaded: %s\n' "${uploaded[*]}"
+              false
+            fi
+          done
+
+          gh release edit "$TAG" --draft=false --latest
+          draft_created=false
+          trap - ERR INT TERM
