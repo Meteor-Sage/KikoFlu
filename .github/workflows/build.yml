@@ -164,7 +164,22 @@ jobs:
 
           if [ "$SIGNING_CONFIGURED" = "true" ]; then
             for apk in "$universal_apk" "$arm64_apk"; do
-              actual_cert="$("$apksigner" verify --print-certs "$apk" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')"
+              cert_output="$("$apksigner" verify --print-certs "$apk" 2>&1)"
+              actual_cert="$(
+                printf '%s\n' "$cert_output" |
+                  sed -nE '/certificate SHA-256 digest:/I {
+                    s/.*certificate SHA-256 digest:[[:space:]]*//I
+                    p
+                    q
+                  }' |
+                  tr -d '[:space:]:' |
+                  tr '[:upper:]' '[:lower:]'
+              )"
+              if [ -z "$actual_cert" ]; then
+                echo "::error::Unable to read the Android signing certificate for $apk."
+                printf '%s\n' "$cert_output" >&2
+                exit 1
+              fi
               if [ "$actual_cert" != "$EXPECTED_CERT_SHA256" ]; then
                 echo "::error::Unexpected Android signing certificate for $apk: $actual_cert"
                 exit 1
