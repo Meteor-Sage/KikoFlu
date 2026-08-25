@@ -1387,6 +1387,11 @@ class _AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
   }
 
   @override
+  Future<void> onTaskRemoved() async {
+    await stop();
+  }
+
+  @override
   Future<void> seek(Duration position) async {
     await _service.seek(position);
     // 系统通知栏/锁屏 seek 时立即落盘历史
