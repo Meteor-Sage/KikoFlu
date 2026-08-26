@@ -59,8 +59,35 @@ void main() {
     );
     expect(
       source,
-      contains('width: 1, height: 1'),
-      reason: 'The source layer must not cover the Flutter surface.',
+      contains(
+        'displayLayer.bounds = CGRect(origin: .zero, size: logicalFrameSize)',
+      ),
+      reason:
+          'The PiP source needs nondegenerate point bounds with the frame aspect ratio.',
+    );
+    expect(source, contains('displayLayer.contentsScale = renderScale'));
+    expect(
+      source,
+      contains('parentLayer.insertSublayer(displayLayer, below: view.layer)'),
+      reason:
+          'The full-size source must stay behind Flutter instead of covering it.',
+    );
+    expect(
+      source,
+      isNot(contains('displayLayer.frame = CGRect(x: 0, y: 0, width: 1')),
+      reason:
+          'A 1x1 source can produce a black PiP mirror on stricter iOS versions.',
+    );
+    expect(
+      source,
+      contains('kCVImageBufferCGColorSpaceKey'),
+      reason:
+          'Device rendering needs an explicit color space on the IOSurface.',
+    );
+    expect(
+      source,
+      contains('kCVImageBufferAlphaChannelIsOpaque'),
+      reason: 'The opaque lyric frame should publish matching alpha metadata.',
     );
     expect(
       source,
@@ -97,6 +124,7 @@ void main() {
     expect(nativeSource, contains('pip_health_check'));
     expect(nativeSource, contains('video_compositor_first_frame'));
     expect(nativeSource, contains('sample_buffer_frame_enqueued'));
+    expect(nativeSource, contains('sample_buffer_frame_content'));
     expect(nativeSource, contains('sample_buffer_failed_to_decode'));
     expect(nativeSource, contains('sample_buffer_cadence_stalled'));
     expect(nativeSource, contains('sampleBufferMaximumEnqueueGapMilliseconds'));

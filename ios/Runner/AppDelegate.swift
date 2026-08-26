@@ -1012,6 +1012,7 @@ class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
     private var sampleBufferCreationFailureCount = 0
     private var didLogSampleBufferCreationFailure = false
     private var didLogSampleBufferFlushAfterFailure = false
+    private var didLogSampleBufferFrameContent = false
     private var pictureInPictureStartUptime: TimeInterval?
     private var stopRequestedByApp = false
     private var setupFailure: String?
@@ -1066,6 +1067,8 @@ class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
         renderScale = scale
         renderSize = CGSize(width: outputWidth, height: outputHeight)
 
+        updateSampleBufferDisplayLayerGeometry()
+
         if let videoComposition {
             videoComposition.renderSize = renderSize
             videoComposition.frameDuration = CMTime(value: 1, timescale: outputFrameRate)
@@ -1093,12 +1096,12 @@ class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
     @available(iOS 15.0, *)
     private func setupSampleBufferPictureInPicture(in view: UIView) {
         let displayLayer = AVSampleBufferDisplayLayer()
-        displayLayer.frame = CGRect(x: 0, y: 0, width: 1, height: 1)
         displayLayer.opacity = 1
         displayLayer.backgroundColor = UIColor.black.cgColor
         displayLayer.videoGravity = .resizeAspect
-        view.layer.insertSublayer(displayLayer, at: 0)
         sampleBufferDisplayLayer = displayLayer
+        updateSampleBufferDisplayLayerGeometry()
+        attachSampleBufferDisplayLayer(below: view)
 
         let playbackDelegate = FloatingLyricSampleBufferPlaybackDelegate(manager: self)
         sampleBufferPlaybackDelegate = playbackDelegate
@@ -1122,6 +1125,32 @@ class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
         if pipController == nil {
             setupFailure = "sample_buffer_pip_controller_creation_failed"
         }
+    }
+
+    private func updateSampleBufferDisplayLayerGeometry() {
+        guard let displayLayer = sampleBufferDisplayLayer else { return }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        displayLayer.bounds = CGRect(origin: .zero, size: logicalFrameSize)
+        displayLayer.position = CGPoint(
+            x: logicalFrameSize.width / 2,
+            y: logicalFrameSize.height / 2
+        )
+        displayLayer.contentsScale = renderScale
+        CATransaction.commit()
+    }
+
+    private func attachSampleBufferDisplayLayer(below view: UIView) {
+        guard let displayLayer = sampleBufferDisplayLayer,
+              let parentLayer = view.layer.superlayer else {
+            return
+        }
+
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        displayLayer.removeFromSuperlayer()
+        parentLayer.insertSublayer(displayLayer, below: view.layer)
+        CATransaction.commit()
     }
 
     private func setupLegacyPictureInPicture(in view: UIView) {
@@ -1396,6 +1425,9 @@ class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
         let generation = startGeneration
         resetCompositionDiagnostics()
         if sampleBufferDisplayLayer != nil {
+            if let hostView {
+                attachSampleBufferDisplayLayer(below: hostView)
+            }
             enqueueCurrentSampleBuffer(reason: "show")
             emitDiagnostic("sample_buffer_show_requested", details: diagnosticSnapshot())
         } else {
@@ -1673,6 +1705,9 @@ class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
             "sampleBufferStatus": sampleBufferStatusDescription(displayLayer.status),
             "sampleBufferLayerWidth": Double(displayLayer.bounds.width),
             "sampleBufferLayerHeight": Double(displayLayer.bounds.height),
+            "sampleBufferLayerAttached": displayLayer.superlayer != nil,
+            "sampleBufferLayerMatchesLogicalFrameSize":
+                displayLayer.bounds.size == logicalFrameSize,
         ]
         if #available(iOS 17.4, *) {
             details["sampleBufferReadyForDisplay"] = displayLayer.isReadyForDisplay
@@ -2075,12 +2110,27 @@ class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
             guard status == kCVReturnSuccess,
                   let newPixelBuffer else { return nil }
 
+            let colorSpace = CGColorSpace(name: CGColorSpace.sRGB)
+                ?? CGColorSpaceCreateDeviceRGB()
+            CVBufferSetAttachment(
+                newPixelBuffer,
+                kCVImageBufferCGColorSpaceKey,
+                colorSpace,
+                .shouldPropagate
+            )
+            CVBufferSetAttachment(
+                newPixelBuffer,
+                kCVImageBufferAlphaChannelIsOpaque,
+                kCFBooleanTrue,
+                .shouldPropagate
+            )
             ciContext.render(
                 CIImage(cgImage: image),
                 to: newPixelBuffer,
                 bounds: CGRect(x: 0, y: 0, width: image.width, height: image.height),
-                colorSpace: CGColorSpaceCreateDeviceRGB()
+                colorSpace: colorSpace
             )
+            emitSampleBufferFrameContentDiagnosticIfNeeded(newPixelBuffer)
 
             var newFormatDescription: CMVideoFormatDescription?
             guard CMVideoFormatDescriptionCreateForImageBuffer(
@@ -2126,6 +2176,84 @@ class FloatingLyricManager: NSObject, AVPictureInPictureControllerDelegate {
             Unmanaged.passUnretained(kCFBooleanTrue).toOpaque()
         )
         return sampleBuffer
+    }
+
+    private func emitSampleBufferFrameContentDiagnosticIfNeeded(
+        _ pixelBuffer: CVPixelBuffer
+    ) {
+        guard !didLogSampleBufferFrameContent else { return }
+        didLogSampleBufferFrameContent = true
+
+        let lockStatus = CVPixelBufferLockBaseAddress(pixelBuffer, .readOnly)
+        guard lockStatus == kCVReturnSuccess else {
+            emitDiagnostic(
+                "sample_buffer_frame_content_unavailable",
+                level: "warning",
+                details: ["pixelBufferLockStatus": lockStatus]
+            )
+            return
+        }
+        defer { CVPixelBufferUnlockBaseAddress(pixelBuffer, .readOnly) }
+
+        guard let baseAddress = CVPixelBufferGetBaseAddress(pixelBuffer) else {
+            emitDiagnostic(
+                "sample_buffer_frame_content_unavailable",
+                level: "warning",
+                details: ["reason": "missing_base_address"]
+            )
+            return
+        }
+
+        let width = CVPixelBufferGetWidth(pixelBuffer)
+        let height = CVPixelBufferGetHeight(pixelBuffer)
+        let bytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer)
+        let bytes = baseAddress.assumingMemoryBound(to: UInt8.self)
+        var sampledPixelCount = 0
+        var nonBlackPixelCount = 0
+        var maximumRGB = 0
+        var minimumAlpha = 255
+
+        for yStep in 1...4 {
+            let y = min(height - 1, height * yStep / 5)
+            for xStep in 1...8 {
+                let x = min(width - 1, width * xStep / 9)
+                let offset = y * bytesPerRow + x * 4
+                let blue = Int(bytes[offset])
+                let green = Int(bytes[offset + 1])
+                let red = Int(bytes[offset + 2])
+                let alpha = Int(bytes[offset + 3])
+                let brightestComponent = max(red, green, blue)
+                sampledPixelCount += 1
+                maximumRGB = max(maximumRGB, brightestComponent)
+                minimumAlpha = min(minimumAlpha, alpha)
+                if brightestComponent > 8 {
+                    nonBlackPixelCount += 1
+                }
+            }
+        }
+
+        emitDiagnostic(
+            "sample_buffer_frame_content",
+            details: [
+                "pixelFormat": CVPixelBufferGetPixelFormatType(pixelBuffer),
+                "pixelWidth": width,
+                "pixelHeight": height,
+                "sampledPixelCount": sampledPixelCount,
+                "nonBlackPixelCount": nonBlackPixelCount,
+                "maximumRGB": maximumRGB,
+                "minimumAlpha": minimumAlpha,
+                "hasColorSpace": CVBufferGetAttachment(
+                    pixelBuffer,
+                    kCVImageBufferCGColorSpaceKey,
+                    nil
+                ) != nil,
+                "alphaMarkedOpaque": CVBufferGetAttachment(
+                    pixelBuffer,
+                    kCVImageBufferAlphaChannelIsOpaque,
+                    nil
+                ) != nil,
+            ]
+        )
     }
 
     // MARK: - AVPictureInPictureControllerDelegate
