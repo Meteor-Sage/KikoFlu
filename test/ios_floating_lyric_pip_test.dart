@@ -33,8 +33,29 @@ void main() {
     );
     expect(
       source,
+      contains('sampleBufferHeartbeatInterval: TimeInterval = 0.25'),
+      reason: 'Static lyrics still need a live sample-buffer cadence for PiP.',
+    );
+    expect(
+      source,
+      contains('startSampleBufferHeartbeat()'),
+      reason: 'The cadence must start with the PiP lifecycle.',
+    );
+    expect(
+      source,
+      contains('sampleBufferFrameGeneration == generation'),
+      reason: 'Heartbeat frames should reuse pixels until the lyric changes.',
+    );
+    expect(
+      source,
+      contains('stopSampleBufferHeartbeat()'),
+      reason: 'The cadence must stop when PiP closes.',
+    );
+    expect(
+      source,
       contains('displayLayer.opacity = 1'),
-      reason: 'The PiP source must not inherit the old near-transparent output.',
+      reason:
+          'The PiP source must not inherit the old near-transparent output.',
     );
     expect(
       source,
@@ -77,6 +98,9 @@ void main() {
     expect(nativeSource, contains('video_compositor_first_frame'));
     expect(nativeSource, contains('sample_buffer_frame_enqueued'));
     expect(nativeSource, contains('sample_buffer_failed_to_decode'));
+    expect(nativeSource, contains('sample_buffer_cadence_stalled'));
+    expect(nativeSource, contains('sampleBufferMaximumEnqueueGapMilliseconds'));
+    expect(nativeSource, contains('stopRequestedByApp'));
     expect(dartSource, contains("case 'onDiagnostic':"));
     expect(dartSource, contains("tag: 'FloatingLyric.iOS'"));
   });
