@@ -48,6 +48,22 @@ void main() {
     );
     expect(
       source,
+      contains('sampleBufferRenderer.enqueue(sampleBuffer)'),
+      reason:
+          'iOS 17+ must use the renderer API instead of the deprecated layer queue.',
+    );
+    expect(
+      source,
+      contains('CMSampleBufferCreateForImageBuffer'),
+      reason: 'Image-backed sample buffers should explicitly mark data ready.',
+    );
+    expect(
+      source,
+      contains('removingDisplayedImage: true'),
+      reason: 'Interrupted renderers must remove stale decoded images before resuming.',
+    );
+    expect(
+      source,
       contains('stopSampleBufferHeartbeat()'),
       reason: 'The cadence must stop when PiP closes.',
     );
@@ -125,6 +141,8 @@ void main() {
     expect(nativeSource, contains('video_compositor_first_frame'));
     expect(nativeSource, contains('sample_buffer_frame_enqueued'));
     expect(nativeSource, contains('sample_buffer_frame_content'));
+    expect(nativeSource, contains('sampleBufferLastCreationFailureStage'));
+    expect(nativeSource, contains('sampleBufferNonMonotonicTimestampCount'));
     expect(nativeSource, contains('sample_buffer_failed_to_decode'));
     expect(nativeSource, contains('sample_buffer_cadence_stalled'));
     expect(nativeSource, contains('sampleBufferMaximumEnqueueGapMilliseconds'));
