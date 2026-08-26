@@ -90,6 +90,25 @@ void main() {
       expect(lyrics[1].text, '中间的');
       expect(lyrics[2].text, '后面的');
     });
+
+    test('LRC 接受三位毫秒、无小数和逗号小数时间戳', () {
+      const lrc = '''[00:01.250]毫秒
+[1:02]无小数
+[01:03,5]逗号小数''';
+
+      final lyrics = LyricParser.parse(lrc);
+
+      expect(lyrics.length, 3);
+      expect(
+        lyrics[0].startTime,
+        const Duration(seconds: 1, milliseconds: 250),
+      );
+      expect(lyrics[1].startTime, const Duration(minutes: 1, seconds: 2));
+      expect(
+        lyrics[2].startTime,
+        const Duration(minutes: 1, seconds: 3, milliseconds: 500),
+      );
+    });
   });
 
   // ============================================================

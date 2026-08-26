@@ -4,10 +4,13 @@ import '../lyric_parser_support.dart';
 class LrcLyricParser {
   const LrcLyricParser._();
 
-  static final RegExp formatPattern = RegExp(r'\[\d{2}:\d{2}\.\d{2}\]');
+  // LRC timestamps commonly use centiseconds, milliseconds, or no fraction.
+  // Accept both dot and comma as the fractional separator.
+  static final RegExp formatPattern = RegExp(r'\[\d+:\d{1,2}(?:[.,]\d+)?\]');
   static final RegExp metadataPattern = RegExp(r'^\[[a-z]{2}:');
-  static final RegExp timestampPattern =
-      RegExp(r'\[(\d{2}):(\d{2})\.(\d{2})\]');
+  static final RegExp timestampPattern = RegExp(
+    r'\[(\d+):(\d{1,2})(?:[.,](\d+))?\]',
+  );
 
   static bool matches(String content) {
     return content.contains(formatPattern);
@@ -33,21 +36,23 @@ class LrcLyricParser {
       for (final match in timeMatches) {
         final minutes = int.parse(match.group(1)!);
         final seconds = int.parse(match.group(2)!);
-        final centiseconds = int.parse(match.group(3)!);
-        timestamps.add(Duration(
-          milliseconds:
-              minutes * 60 * 1000 + seconds * 1000 + centiseconds * 10,
-        ));
+        final fraction = match.group(3);
+        final milliseconds = fraction == null
+            ? 0
+            : int.parse(fraction.padRight(3, '0').substring(0, 3));
+        timestamps.add(
+          Duration(
+            milliseconds: minutes * 60 * 1000 + seconds * 1000 + milliseconds,
+          ),
+        );
       }
 
       final text = trimmedLine.replaceAll(timestampPattern, '').trim();
 
       for (final timestamp in timestamps) {
-        lyrics.add(LyricLine(
-          startTime: timestamp,
-          endTime: timestamp,
-          text: text,
-        ));
+        lyrics.add(
+          LyricLine(startTime: timestamp, endTime: timestamp, text: text),
+        );
       }
     }
 
