@@ -25,12 +25,17 @@ class FloatingLyricService {
 
   FloatingLyricService._() {
     _platform.setMethodCallHandler(_handleMethodCall);
+    if (Platform.isWindows) {
+      onWindowsChanged.listen((_) {
+        unawaited(_syncDesktopWindowState());
+      });
+    }
   }
 
   Future<dynamic> _handleMethodCall(MethodCall call) async {
     switch (call.method) {
       case 'onClose':
-        _onCloseController.add(null);
+        _emitClose();
         break;
       case 'onTouchEnabledChanged':
         final arguments = call.arguments;
@@ -40,6 +45,27 @@ class FloatingLyricService {
       case 'onDiagnostic':
         _recordNativeDiagnostic(call.arguments);
         break;
+    }
+  }
+
+  void _emitClose() {
+    _windowId = null;
+    _lastText = null;
+    _onCloseController.add(null);
+  }
+
+  Future<void> _syncDesktopWindowState() async {
+    final windowId = _windowId;
+    if (windowId == null) return;
+
+    try {
+      final windows = await WindowController.getAll();
+      if (_windowId == windowId &&
+          !windows.any((window) => window.windowId == windowId)) {
+        _emitClose();
+      }
+    } catch (e) {
+      _log.captureOutput('[FloatingLyric] 检查桌面悬浮窗状态失败: $e');
     }
   }
 
@@ -118,6 +144,7 @@ class FloatingLyricService {
           }
           // 如果更新失败，说明窗口可能已关闭，重置ID并重新创建
           _windowId = null;
+          _lastText = null;
         }
 
         final Map<String, dynamic> args = {'text': text};
@@ -172,6 +199,7 @@ class FloatingLyricService {
           _log.captureOutput('[FloatingLyric] Windows隐藏悬浮窗失败: $e');
         }
         _windowId = null;
+        _lastText = null;
         return true;
       }
       return false;
@@ -213,7 +241,7 @@ class FloatingLyricService {
           _log.captureOutput('[FloatingLyric] Windows更新文本失败: $e');
           // 如果是通道未注册（通常意味着窗口已关闭或未初始化），重置 ID
           if (e.toString().contains('CHANNEL_UNREGISTERED')) {
-            _windowId = null;
+            _emitClose();
           }
           return false;
         }
@@ -303,7 +331,7 @@ class FloatingLyricService {
         } catch (e) {
           _log.captureOutput('[FloatingLyric] Windows更新样式失败: $e');
           if (e.toString().contains('CHANNEL_UNREGISTERED')) {
-            _windowId = null;
+            _emitClose();
           }
           return false;
         }
@@ -321,9 +349,28 @@ class FloatingLyricService {
     }
   }
 
-  /// 设置悬浮窗触摸是否启用（仅 Android）
+  /// 设置悬浮窗触摸是否启用。
+  ///
+  /// 在桌面端禁用触摸时，悬浮窗会忽略鼠标事件，让事件传递给下面的窗口。
   Future<bool> setTouchEnabled(bool enabled) async {
-    if (!Platform.isAndroid) return true;
+    if (Platform.isWindows) {
+      if (_windowId == null) return false;
+      try {
+        final controller = WindowController.fromWindowId(_windowId!);
+        final result = await controller.invokeMethod('setTouchEnabled', {
+          'enabled': enabled,
+        });
+        return result == true;
+      } catch (e) {
+        _log.captureOutput('[FloatingLyric] Windows设置触摸模式失败: $e');
+        if (e.toString().contains('CHANNEL_UNREGISTERED')) {
+          _emitClose();
+        }
+        return false;
+      }
+    }
+
+    if (!Platform.isAndroid && !Platform.isMacOS) return true;
     try {
       final result = await _platform.invokeMethod('setTouchEnabled', {
         'enabled': enabled,

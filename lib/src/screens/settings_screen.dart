@@ -285,7 +285,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               );
             },
           ),
-          if (Platform.isAndroid) ...[
+          if (Platform.isAndroid || Platform.isWindows || Platform.isMacOS) ...[
             const SettingsDivider(),
             _buildFloatingLyricTouchTile(context),
           ],
@@ -300,7 +300,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  /// 悬浮字幕触摸开关（仅 Android）
+  /// 悬浮字幕触摸开关。桌面端关闭后会启用点击穿透。
   Widget _buildFloatingLyricTouchTile(BuildContext context) {
     final touchEnabled = ref.watch(floatingLyricTouchEnabledProvider);
     return SettingsSwitchTile(

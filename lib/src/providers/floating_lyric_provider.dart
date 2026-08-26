@@ -18,7 +18,8 @@ final floatingLyricEnabledProvider =
   return FloatingLyricEnabledNotifier(ref);
 });
 
-/// 悬浮字幕触摸开关（仅 Android，默认允许触摸）
+/// 悬浮字幕触摸开关（默认允许触摸）。
+/// 在桌面端关闭触摸后，悬浮字幕会进入点击穿透模式。
 final floatingLyricTouchEnabledProvider =
     StateNotifierProvider<FloatingLyricTouchEnabledNotifier, bool>((ref) {
   return FloatingLyricTouchEnabledNotifier(ref);
@@ -226,6 +227,7 @@ class FloatingLyricEnabledNotifier extends StateNotifier<bool> {
       'cornerRadius': style.cornerRadius,
       'paddingHorizontal': style.paddingHorizontal,
       'paddingVertical': style.paddingVertical,
+      'touchEnabled': ref.read(floatingLyricTouchEnabledProvider),
     };
 
     final shown = await FloatingLyricService.instance.show(
@@ -248,8 +250,8 @@ class FloatingLyricEnabledNotifier extends StateNotifier<bool> {
     // 2. 如果 Provider 在 show 执行期间加载完成并尝试 updateStyle 但失败了（因为窗口还没创建好），这里可以补救。
     ref.read(floatingLyricStyleProvider.notifier).applyStyle();
 
-    // 应用触摸设置（Android）
-    if (Platform.isAndroid) {
+    // 应用触摸设置（Android、Windows、macOS）
+    if (Platform.isAndroid || Platform.isWindows || Platform.isMacOS) {
       final touchEnabled = ref.read(floatingLyricTouchEnabledProvider);
       await FloatingLyricService.instance.setTouchEnabled(touchEnabled);
     }

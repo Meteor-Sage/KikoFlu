@@ -84,6 +84,9 @@ public class FloatingLyricPlugin: NSObject, FlutterPlugin {
             let args = call.arguments as? [String: Any]
             let text = args?["text"] as? String ?? "♪ - ♪"
             show(text: text)
+            if let touchEnabled = args?["touchEnabled"] as? Bool {
+                setTouchEnabled(touchEnabled)
+            }
             result(true)
         case "hide":
             hide()
@@ -97,6 +100,11 @@ public class FloatingLyricPlugin: NSObject, FlutterPlugin {
             if let args = call.arguments as? [String: Any] {
                 updateStyle(args: args)
             }
+            result(true)
+        case "setTouchEnabled":
+            let args = call.arguments as? [String: Any]
+            let enabled = args?["enabled"] as? Bool ?? true
+            setTouchEnabled(enabled)
             result(true)
         case "hasPermission":
             result(true)
@@ -127,6 +135,10 @@ public class FloatingLyricPlugin: NSObject, FlutterPlugin {
     private func updateStyle(args: [String: Any]) {
         lyricWindow?.updateStyle(args: args)
     }
+
+    private func setTouchEnabled(_ enabled: Bool) {
+        lyricWindow?.ignoresMouseEvents = !enabled
+    }
 }
 
 class FloatingLyricWindow: NSPanel {
@@ -154,6 +166,7 @@ class FloatingLyricWindow: NSPanel {
         self.isOpaque = false
         self.hasShadow = false
         self.isMovableByWindowBackground = true
+        self.ignoresMouseEvents = false
         
         setupUI()
         center()

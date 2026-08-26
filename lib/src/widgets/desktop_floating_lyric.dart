@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
@@ -29,20 +31,24 @@ class _DesktopFloatingLyricState extends State<DesktopFloatingLyric>
   double _cornerRadius = 8.0;
   double _paddingHorizontal = 16.0;
   double _paddingVertical = 8.0;
+  bool _touchEnabled = true;
 
   @override
   void initState() {
     super.initState();
     windowManager.addListener(this);
 
-    _initWindow();
-
     if (widget.arguments != null) {
       if (widget.arguments!.containsKey('text')) {
         _text = widget.arguments!['text'] as String;
       }
+      if (widget.arguments!['touchEnabled'] is bool) {
+        _touchEnabled = widget.arguments!['touchEnabled'] as bool;
+      }
       _updateStyleProperties(widget.arguments!);
     }
+
+    _initWindow();
   }
 
   void _updateStyleProperties(Map args) {
@@ -74,6 +80,7 @@ class _DesktopFloatingLyricState extends State<DesktopFloatingLyric>
       await windowManager.setHasShadow(false);
       // 设置一个合理的默认大小
       await windowManager.setSize(const Size(800, 200));
+      await _applyTouchMode();
 
       // Setup method handler
       final controller = await WindowController.fromCurrentEngine();
@@ -81,6 +88,11 @@ class _DesktopFloatingLyricState extends State<DesktopFloatingLyric>
     } catch (e) {
       logOutput('[DesktopFloatingLyric] Failed to init window: $e');
     }
+  }
+
+  Future<void> _applyTouchMode() async {
+    if (!Platform.isWindows && !Platform.isMacOS) return;
+    await windowManager.setIgnoreMouseEvents(!_touchEnabled);
   }
 
   @override
@@ -107,6 +119,11 @@ class _DesktopFloatingLyricState extends State<DesktopFloatingLyric>
         return true;
       case 'close':
         await windowManager.close();
+        return true;
+      case 'setTouchEnabled':
+        final arguments = call.arguments;
+        _touchEnabled = arguments is Map && arguments['enabled'] == true;
+        await _applyTouchMode();
         return true;
       default:
         return null;
