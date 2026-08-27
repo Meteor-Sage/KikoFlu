@@ -1210,6 +1210,12 @@
   "proxyAddressFormat": "格式：主機:連接埠，例如 127.0.0.1:7890",
   "applyProxyAddress": "套用代理位址",
   "invalidProxyAddress": "請輸入有效的 HTTP 代理位址和連接埠",
+  "proxyModeDirect": "直連",
+  "proxyModeSystem": "系統代理",
+  "proxyModeManual": "手動代理",
+  "proxyModeDirectDescription": "不使用代理直接連接",
+  "proxyModeSystemDescription": "使用作業系統的代理設定",
+  "proxyModeManualDescription": "使用下方設定的 HTTP 代理",
   "playlistDisplayFormat": "播放清單版面",
   "playlistDisplayFormatMasonry": "瀑布流",
   "playlistDisplayFormatList": "列表"

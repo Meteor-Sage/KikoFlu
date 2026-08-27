@@ -8,7 +8,32 @@ import '../providers/works_provider.dart';
 import '../providers/my_reviews_provider.dart';
 import '../providers/player_buttons_provider.dart';
 import '../providers/floating_lyric_style_provider.dart';
+import '../services/proxy_config.dart';
 import 'subtitle_filter.dart';
+
+// ============================================================
+// ProxyMode
+// ============================================================
+
+extension ProxyModeL10n on ProxyMode {
+  String localizedName(BuildContext context) {
+    final s = S.of(context);
+    return switch (this) {
+      ProxyMode.direct => s.proxyModeDirect,
+      ProxyMode.system => s.proxyModeSystem,
+      ProxyMode.manual => s.proxyModeManual,
+    };
+  }
+
+  String localizedDescription(BuildContext context) {
+    final s = S.of(context);
+    return switch (this) {
+      ProxyMode.direct => s.proxyModeDirectDescription,
+      ProxyMode.system => s.proxyModeSystemDescription,
+      ProxyMode.manual => s.proxyModeManualDescription,
+    };
+  }
+}
 
 // ============================================================
 // SearchType

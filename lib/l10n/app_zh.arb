@@ -1253,6 +1253,12 @@
   "proxyAddressFormat": "格式：主机:端口，例如 127.0.0.1:7890",
   "applyProxyAddress": "应用代理地址",
   "invalidProxyAddress": "请输入有效的 HTTP 代理地址和端口",
+  "proxyModeDirect": "直连",
+  "proxyModeSystem": "系统代理",
+  "proxyModeManual": "手动代理",
+  "proxyModeDirectDescription": "不使用代理直接连接",
+  "proxyModeSystemDescription": "使用操作系统的代理设置",
+  "proxyModeManualDescription": "使用下方配置的 HTTP 代理",
   "playlistDisplayFormat": "播放列表布局",
   "playlistDisplayFormatMasonry": "瀑布流",
   "playlistDisplayFormatList": "列表"

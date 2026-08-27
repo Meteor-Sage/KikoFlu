@@ -3603,6 +3603,24 @@ class SJa extends S {
   String get invalidProxyAddress => '有効な HTTP プロキシのアドレスとポートを入力してください';
 
   @override
+  String get proxyModeDirect => '直接接続';
+
+  @override
+  String get proxyModeSystem => 'システムプロキシ';
+
+  @override
+  String get proxyModeManual => '手動プロキシ';
+
+  @override
+  String get proxyModeDirectDescription => 'プロキシを使用せずに接続';
+
+  @override
+  String get proxyModeSystemDescription => 'オペレーティングシステムのプロキシ設定を使用';
+
+  @override
+  String get proxyModeManualDescription => '下で設定した HTTP プロキシを使用';
+
+  @override
   String get playlistDisplayFormat => 'プレイリストの表示形式';
 
   @override

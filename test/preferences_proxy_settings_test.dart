@@ -26,26 +26,25 @@ void main() {
     ProxyConfig.address = '127.0.0.1:7890';
   });
 
-  testWidgets('proxy address is only shown while proxy is enabled',
+  testWidgets('proxy address is only shown for manual proxy mode',
       (tester) async {
     await tester.pumpWidget(_testApp());
     await tester.pump();
 
     await tester.scrollUntilVisible(
-      find.text('Use proxy'),
+      find.text('Proxy'),
       300,
       scrollable: find.byType(Scrollable).first,
     );
     await tester.pumpAndSettle();
-    final proxySwitch = find.widgetWithText(SwitchListTile, 'Use proxy');
-    expect(proxySwitch, findsOneWidget);
+    expect(find.text('System proxy'), findsOneWidget);
     expect(find.text('Proxy address'), findsNothing);
 
-    await tester.tap(proxySwitch);
+    await tester.tap(find.text('Manual proxy'));
     await tester.pump();
     expect(find.text('Proxy address'), findsOneWidget);
 
-    await tester.tap(proxySwitch);
+    await tester.tap(find.text('Direct'));
     await tester.pump();
     expect(find.text('Proxy address'), findsNothing);
   });

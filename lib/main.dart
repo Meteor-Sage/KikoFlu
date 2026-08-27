@@ -119,6 +119,40 @@ Future<void> _configureMpv() async {
   try {
     final prefs = await SharedPreferences.getInstance();
     final passthrough = prefs.getBool('audio_passthrough_enabled') ?? false;
+    final httpProxyUrl = ProxyConfig.httpProxyUrl;
+    final httpsProxyUrl = ProxyConfig.httpsProxyUrl;
+    final hasProxy = httpProxyUrl != null || httpsProxyUrl != null;
+
+    // media_kit/mpv is a native network stack and does not inherit Dart's
+    // HttpOverrides. Export the configured HTTP proxy before libmpv is
+    // initialized so direct URL playback uses the same route as API/Dio.
+    if (hasProxy) {
+      if (httpProxyUrl != null) {
+        _setEnv('http_proxy', httpProxyUrl);
+        _setEnv('HTTP_PROXY', httpProxyUrl);
+      }
+      if (httpsProxyUrl != null) {
+        _setEnv('https_proxy', httpsProxyUrl);
+        _setEnv('HTTPS_PROXY', httpsProxyUrl);
+      }
+      // Keep loopback, private IPv4, and local IPv6 endpoints on the direct
+      // path, matching ProxyConfig.findProxyFor().
+      const noProxy =
+          'localhost,127.*,10.*,169.254.*,192.168.*,172.16.*,172.17.*,'
+          '172.18.*,172.19.*,172.20.*,172.21.*,172.22.*,172.23.*,'
+          '172.24.*,172.25.*,172.26.*,172.27.*,172.28.*,172.29.*,'
+          '172.30.*,172.31.*,::1,fc00::*,fd*,fe80::*';
+      _setEnv('no_proxy', noProxy);
+      _setEnv('NO_PROXY', noProxy);
+      LogService.instance.captureOutput(
+        '[Audio] Native proxy configured: http=$httpProxyUrl https=$httpsProxyUrl',
+      );
+    } else {
+      // A direct-mode session must also bypass proxy variables inherited from
+      // the shell or an older launcher environment.
+      _setEnv('no_proxy', '*');
+      _setEnv('NO_PROXY', '*');
+    }
 
     Directory configDir;
     if (Platform.isWindows) {

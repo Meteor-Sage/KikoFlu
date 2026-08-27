@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kikoeru_flutter/src/providers/proxy_provider.dart';
 import 'package:kikoeru_flutter/src/services/proxy_config.dart';
@@ -91,6 +92,24 @@ void main() {
     });
   });
 
+  group('ProxyConfig.httpProxyUrl', () {
+    test('returns an explicit HTTP URL for native backends', () {
+      ProxyConfig.enabled = true;
+      ProxyConfig.address = 'HTTP://proxy.example:8080';
+
+      expect(ProxyConfig.httpProxyUrl, 'http://proxy.example:8080');
+    });
+
+    test('returns null when disabled or malformed', () {
+      ProxyConfig.address = 'proxy.example:8080';
+      expect(ProxyConfig.httpProxyUrl, isNull);
+
+      ProxyConfig.enabled = true;
+      ProxyConfig.address = 'socks5://proxy.example:1080';
+      expect(ProxyConfig.httpProxyUrl, isNull);
+    });
+  });
+
   test('proxy settings reject invalid input without changing state', () async {
     final notifier = ProxySettingsNotifier();
     addTearDown(notifier.dispose);
@@ -103,5 +122,64 @@ void main() {
 
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getString('proxy_address'), 'proxy.example:8080');
+  });
+
+  group('ProxyConfig.init migration', () {
+    test('migrates an enabled legacy address to manual mode', () async {
+      SharedPreferences.setMockInitialValues({
+        'proxy_enabled': true,
+        'proxy_address': 'HTTP://proxy.example:8080',
+      });
+
+      await ProxyConfig.init();
+
+      expect(ProxyConfig.mode, ProxyMode.manual);
+      expect(ProxyConfig.address, 'proxy.example:8080');
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('proxy_mode'), 'manual');
+    });
+
+    test(
+      'defaults legacy settings without a usable proxy to system mode',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          'proxy_enabled': false,
+          'proxy_address': 'proxy.example:8080',
+        });
+
+        await ProxyConfig.init();
+
+        expect(ProxyConfig.mode, ProxyMode.system);
+        expect(ProxyConfig.address, isEmpty);
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.getString('proxy_mode'), 'system');
+        expect(prefs.getBool('proxy_enabled'), isFalse);
+      },
+    );
+  });
+
+  test('uses native system proxy entries by URI scheme', () async {
+    const channel = MethodChannel('com.meteor.kikoeruflutter/system_proxy');
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      expect(call.method, 'getSystemProxy');
+      return 'http=http-proxy.example:8080;https=https-proxy.example:8443';
+    });
+    addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+
+    await ProxyConfig.refreshSystemProxy();
+    ProxyConfig.mode = ProxyMode.system;
+
+    expect(
+      ProxyConfig.findProxyFor(Uri.parse('http://example.com/')),
+      'PROXY http-proxy.example:8080',
+    );
+    expect(
+      ProxyConfig.findProxyFor(Uri.parse('https://example.com/')),
+      'PROXY https-proxy.example:8443',
+    );
+    expect(ProxyConfig.httpProxyUrl, 'http://http-proxy.example:8080');
+    expect(ProxyConfig.httpsProxyUrl, 'http://https-proxy.example:8443');
   });
 }

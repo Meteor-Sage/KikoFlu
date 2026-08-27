@@ -1210,6 +1210,12 @@
   "proxyAddressFormat": "Формат: хост:порт, например 127.0.0.1:7890",
   "applyProxyAddress": "Применить адрес прокси",
   "invalidProxyAddress": "Введите корректный адрес и порт HTTP-прокси",
+  "proxyModeDirect": "Прямое подключение",
+  "proxyModeSystem": "Системный прокси",
+  "proxyModeManual": "Ручной прокси",
+  "proxyModeDirectDescription": "Подключаться без прокси",
+  "proxyModeSystemDescription": "Использовать настройки прокси операционной системы",
+  "proxyModeManualDescription": "Использовать настроенный ниже HTTP-прокси",
   "playlistDisplayFormat": "Вид плейлиста",
   "playlistDisplayFormatMasonry": "Мозаика",
   "playlistDisplayFormatList": "Список"

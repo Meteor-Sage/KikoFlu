@@ -2,6 +2,7 @@ import Flutter
 import UIKit
 import AVKit
 import CoreImage
+import CFNetwork
 import AudioToolbox
 import CoreHaptics
 
@@ -33,9 +34,72 @@ import CoreHaptics
         result(FlutterMethodNotImplemented)
       }
     }
+
+    let systemProxyChannel = FlutterMethodChannel(
+      name: "com.meteor.kikoeruflutter/system_proxy",
+      binaryMessenger: controller.binaryMessenger
+    )
+    systemProxyChannel.setMethodCallHandler { [weak self] call, result in
+      guard let self else {
+        result(FlutterError(code: "unavailable", message: nil, details: nil))
+        return
+      }
+      switch call.method {
+      case "getSystemProxy":
+        result(self.systemProxy())
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
     
     GeneratedPluginRegistrant.register(with: self)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  private func systemProxy() -> String? {
+    guard let settings = CFNetworkCopySystemProxySettings()?.takeUnretainedValue()
+      as NSDictionary? else {
+      return nil
+    }
+
+    var entries: [String] = []
+    appendProxy(
+      to: &entries,
+      settings: settings,
+      hostKey: kCFNetworkProxiesHTTPProxy,
+      portKey: kCFNetworkProxiesHTTPPort,
+      enabledKey: kCFNetworkProxiesHTTPEnable,
+      scheme: "http"
+    )
+    appendProxy(
+      to: &entries,
+      settings: settings,
+      hostKey: kCFNetworkProxiesHTTPSProxy,
+      portKey: kCFNetworkProxiesHTTPSPort,
+      enabledKey: kCFNetworkProxiesHTTPSEnable,
+      scheme: "https"
+    )
+    return entries.isEmpty ? nil : entries.joined(separator: ";")
+  }
+
+  private func appendProxy(
+    to entries: inout [String],
+    settings: NSDictionary,
+    hostKey: CFString,
+    portKey: CFString,
+    enabledKey: CFString,
+    scheme: String
+  ) {
+    if let enabled = settings[enabledKey] as? NSNumber, !enabled.boolValue {
+      return
+    }
+    guard let host = settings[hostKey] as? String,
+          let port = (settings[portKey] as? NSNumber)?.intValue,
+          !host.isEmpty,
+          port > 0 else {
+      return
+    }
+    entries.append("\(scheme)=\(host):\(port)")
   }
 }
 

@@ -3728,6 +3728,26 @@ class SRu extends S {
       'Введите корректный адрес и порт HTTP-прокси';
 
   @override
+  String get proxyModeDirect => 'Прямое подключение';
+
+  @override
+  String get proxyModeSystem => 'Системный прокси';
+
+  @override
+  String get proxyModeManual => 'Ручной прокси';
+
+  @override
+  String get proxyModeDirectDescription => 'Подключаться без прокси';
+
+  @override
+  String get proxyModeSystemDescription =>
+      'Использовать настройки прокси операционной системы';
+
+  @override
+  String get proxyModeManualDescription =>
+      'Использовать настроенный ниже HTTP-прокси';
+
+  @override
   String get playlistDisplayFormat => 'Вид плейлиста';
 
   @override

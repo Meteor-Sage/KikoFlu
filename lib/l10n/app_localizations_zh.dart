@@ -3583,6 +3583,24 @@ class SZh extends S {
   String get invalidProxyAddress => '请输入有效的 HTTP 代理地址和端口';
 
   @override
+  String get proxyModeDirect => '直连';
+
+  @override
+  String get proxyModeSystem => '系统代理';
+
+  @override
+  String get proxyModeManual => '手动代理';
+
+  @override
+  String get proxyModeDirectDescription => '不使用代理直接连接';
+
+  @override
+  String get proxyModeSystemDescription => '使用操作系统的代理设置';
+
+  @override
+  String get proxyModeManualDescription => '使用下方配置的 HTTP 代理';
+
+  @override
   String get playlistDisplayFormat => '播放列表布局';
 
   @override
@@ -7169,6 +7187,24 @@ class SZhHant extends SZh {
 
   @override
   String get invalidProxyAddress => '請輸入有效的 HTTP 代理位址和連接埠';
+
+  @override
+  String get proxyModeDirect => '直連';
+
+  @override
+  String get proxyModeSystem => '系統代理';
+
+  @override
+  String get proxyModeManual => '手動代理';
+
+  @override
+  String get proxyModeDirectDescription => '不使用代理直接連接';
+
+  @override
+  String get proxyModeSystemDescription => '使用作業系統的代理設定';
+
+  @override
+  String get proxyModeManualDescription => '使用下方設定的 HTTP 代理';
 
   @override
   String get playlistDisplayFormat => '播放清單版面';

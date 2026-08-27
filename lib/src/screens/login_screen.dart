@@ -7,8 +7,11 @@ import '../providers/proxy_provider.dart';
 import '../services/kikoeru_api_service.dart';
 import '../utils/server_utils.dart';
 import '../utils/snackbar_util.dart';
+import '../utils/l10n_extensions.dart';
 import '../../l10n/app_localizations.dart';
+import '../services/proxy_config.dart';
 import '../widgets/responsive_dialog.dart';
+import '../widgets/radio_option_group.dart';
 import '../widgets/scrollable_appbar.dart';
 import 'main_screen.dart';
 
@@ -287,7 +290,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _showAdvancedSettings() async {
-    var proxyEnabled = ref.read(proxySettingsProvider).enabled;
+    var proxyMode = ref.read(proxySettingsProvider).mode;
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -304,21 +307,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SwitchListTile(
+              RadioOptionGroup<ProxyMode>(
+                groupValue: proxyMode,
                 contentPadding: EdgeInsets.zero,
-                title: Text(S.of(context).useProxy),
-                value: proxyEnabled,
+                dense: true,
+                options: [
+                  for (final mode in ProxyMode.values)
+                    RadioOption(
+                      value: mode,
+                      title: Text(mode.localizedName(context)),
+                      subtitle: Text(mode.localizedDescription(context)),
+                    ),
+                ],
                 onChanged: (value) async {
-                  if (!value) await _saveProxyAddress();
+                  if (proxyMode == ProxyMode.manual) {
+                    await _saveProxyAddress();
+                  }
                   if (!mounted || !dialogContext.mounted) return;
-                  await ref
-                      .read(proxySettingsProvider.notifier)
-                      .setEnabled(value);
+                  await ref.read(proxySettingsProvider.notifier).setMode(value);
                   if (!dialogContext.mounted) return;
-                  setDialogState(() => proxyEnabled = value);
+                  setDialogState(() => proxyMode = value);
                 },
               ),
-              if (proxyEnabled) ...[
+              if (proxyMode == ProxyMode.manual) ...[
                 const SizedBox(height: 8),
                 TextField(
                   controller: _proxyController,
@@ -392,7 +403,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<bool> _saveProxyAddress() async {
-    if (!ref.read(proxySettingsProvider).enabled) return true;
+    if (ref.read(proxySettingsProvider).mode != ProxyMode.manual) return true;
     final accepted = await ref
         .read(proxySettingsProvider.notifier)
         .setAddress(_proxyController.text);

@@ -1210,6 +1210,12 @@
   "proxyAddressFormat": "形式: ホスト:ポート（例: 127.0.0.1:7890）",
   "applyProxyAddress": "プロキシアドレスを適用",
   "invalidProxyAddress": "有効な HTTP プロキシのアドレスとポートを入力してください",
+  "proxyModeDirect": "直接接続",
+  "proxyModeSystem": "システムプロキシ",
+  "proxyModeManual": "手動プロキシ",
+  "proxyModeDirectDescription": "プロキシを使用せずに接続",
+  "proxyModeSystemDescription": "オペレーティングシステムのプロキシ設定を使用",
+  "proxyModeManualDescription": "下で設定した HTTP プロキシを使用",
   "playlistDisplayFormat": "プレイリストの表示形式",
   "playlistDisplayFormatMasonry": "ウォーターフォール",
   "playlistDisplayFormatList": "リスト"

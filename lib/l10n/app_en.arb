@@ -1514,6 +1514,12 @@
   "proxyAddressFormat": "Format: host:port, for example 127.0.0.1:7890",
   "applyProxyAddress": "Apply proxy address",
   "invalidProxyAddress": "Enter a valid HTTP proxy address and port",
+  "proxyModeDirect": "Direct",
+  "proxyModeSystem": "System proxy",
+  "proxyModeManual": "Manual proxy",
+  "proxyModeDirectDescription": "Connect without a proxy",
+  "proxyModeSystemDescription": "Use the operating system proxy settings",
+  "proxyModeManualDescription": "Use the HTTP proxy configured below",
   "playlistDisplayFormat": "Playlist layout",
   "playlistDisplayFormatMasonry": "Masonry",
   "playlistDisplayFormatList": "List"

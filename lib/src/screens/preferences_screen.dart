@@ -10,6 +10,7 @@ import '../models/audio_gain_settings.dart';
 import '../models/sort_options.dart';
 import '../providers/proxy_provider.dart';
 import '../providers/settings_provider.dart';
+import '../services/proxy_config.dart';
 import '../utils/l10n_extensions.dart';
 import '../utils/snackbar_util.dart';
 import '../widgets/radio_option_group.dart';
@@ -660,23 +661,30 @@ class PreferencesScreen extends ConsumerWidget {
 
   Widget _buildProxySettings(BuildContext context, WidgetRef ref) {
     final proxySettings = ref.watch(proxySettingsProvider);
+    final notifier = ref.read(proxySettingsProvider.notifier);
     return Column(
       children: [
-        SettingsSwitchTile(
+        SettingsListTile(
           icon: Icons.vpn_lock_outlined,
-          title: S.of(context).useProxy,
-          subtitle: proxySettings.enabled
-              ? S.of(context).proxyEnabled(
-                    proxySettings.address.isEmpty
-                        ? S.of(context).proxyAddressNotSet
-                        : proxySettings.address,
-                  )
-              : S.of(context).proxyHttpDescription,
-          value: proxySettings.enabled,
-          onChanged: (value) =>
-              ref.read(proxySettingsProvider.notifier).setEnabled(value),
+          title: S.of(context).proxySettingsOptional,
+          subtitle: proxySettings.mode.localizedDescription(context),
+          trailing: Text(proxySettings.mode.localizedName(context)),
         ),
-        if (proxySettings.enabled) ...[
+        RadioOptionGroup<ProxyMode>(
+          groupValue: proxySettings.mode,
+          contentPadding: EdgeInsets.zero,
+          dense: true,
+          options: [
+            for (final mode in ProxyMode.values)
+              RadioOption(
+                value: mode,
+                title: Text(mode.localizedName(context)),
+                subtitle: Text(mode.localizedDescription(context)),
+              ),
+          ],
+          onChanged: notifier.setMode,
+        ),
+        if (proxySettings.mode == ProxyMode.manual) ...[
           const SettingsDivider(),
           SettingsListTile(
             leading: const SizedBox(width: 24),

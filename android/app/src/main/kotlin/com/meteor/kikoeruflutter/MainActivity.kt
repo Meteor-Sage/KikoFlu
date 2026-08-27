@@ -5,12 +5,17 @@ import android.view.WindowManager
 import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.net.InetSocketAddress
+import java.net.Proxy
+import java.net.ProxySelector
+import java.net.URI
 
 class MainActivity : AudioServiceActivity() {
     private var floatingLyricPlugin: FloatingLyricPlugin? = null
     private var audioHapticsBridge: AudioHapticsBridge? = null
     private var subtitleDirectoryPicker: SubtitleDirectoryPicker? = null
     private val screenAwakeChannelName = "com.meteor.kikoeruflutter/screen_awake"
+    private val systemProxyChannelName = "com.meteor.kikoeruflutter/system_proxy"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -34,6 +39,16 @@ class MainActivity : AudioServiceActivity() {
 
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
+            systemProxyChannelName
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getSystemProxy" -> result.success(getSystemProxy())
+                else -> result.notImplemented()
+            }
+        }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
             screenAwakeChannelName
         ).setMethodCallHandler { call, result ->
             when (call.method) {
@@ -50,6 +65,34 @@ class MainActivity : AudioServiceActivity() {
                 }
                 else -> result.notImplemented()
             }
+        }
+    }
+
+    private fun getSystemProxy(): String? {
+        val proxySelector = ProxySelector.getDefault() ?: return null
+        val urls = listOf(
+            URI("https://api.asmr-200.com/"),
+            URI("http://api.asmr-200.com/")
+        )
+
+        for (url in urls) {
+            try {
+                val proxy = proxySelector.select(url).firstOrNull {
+                    it.type() == Proxy.Type.HTTP
+                } ?: continue
+                val address = proxy.address() as? InetSocketAddress ?: continue
+                return "${address.hostString}:${address.port}"
+            } catch (_: Exception) {
+                // Try the next URL, then fall back to the legacy JVM properties.
+            }
+        }
+
+        val host = System.getProperty("http.proxyHost")
+        val port = System.getProperty("http.proxyPort")
+        return if (!host.isNullOrBlank() && !port.isNullOrBlank()) {
+            "$host:$port"
+        } else {
+            null
         }
     }
 

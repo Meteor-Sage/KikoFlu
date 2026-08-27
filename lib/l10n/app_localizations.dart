@@ -6606,6 +6606,42 @@ abstract class S {
   /// **'Enter a valid HTTP proxy address and port'**
   String get invalidProxyAddress;
 
+  /// No description provided for @proxyModeDirect.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct'**
+  String get proxyModeDirect;
+
+  /// No description provided for @proxyModeSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System proxy'**
+  String get proxyModeSystem;
+
+  /// No description provided for @proxyModeManual.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual proxy'**
+  String get proxyModeManual;
+
+  /// No description provided for @proxyModeDirectDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect without a proxy'**
+  String get proxyModeDirectDescription;
+
+  /// No description provided for @proxyModeSystemDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Use the operating system proxy settings'**
+  String get proxyModeSystemDescription;
+
+  /// No description provided for @proxyModeManualDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Use the HTTP proxy configured below'**
+  String get proxyModeManualDescription;
+
   /// No description provided for @playlistDisplayFormat.
   ///
   /// In en, this message translates to:

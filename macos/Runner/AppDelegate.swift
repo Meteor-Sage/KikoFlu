@@ -1,5 +1,6 @@
 import Cocoa
 import FlutterMacOS
+import CFNetwork
 
 @main
 class AppDelegate: FlutterAppDelegate {
@@ -13,8 +14,74 @@ class AppDelegate: FlutterAppDelegate {
   override func applicationDidFinishLaunching(_ notification: Notification) {
     let controller : FlutterViewController = mainFlutterWindow?.contentViewController as! FlutterViewController
     FloatingLyricPlugin.register(with: controller.registrar(forPlugin: "FloatingLyricPlugin"))
+    setupSystemProxyBridge(controller: controller)
     setupAppearanceBridge(controller: controller)
     super.applicationDidFinishLaunching(notification)
+  }
+
+  private func setupSystemProxyBridge(controller: FlutterViewController) {
+    let channel = FlutterMethodChannel(
+      name: "com.meteor.kikoeruflutter/system_proxy",
+      binaryMessenger: controller.engine.binaryMessenger
+    )
+    channel.setMethodCallHandler { [weak self] call, result in
+      guard let self else {
+        result(FlutterError(code: "unavailable", message: nil, details: nil))
+        return
+      }
+      switch call.method {
+      case "getSystemProxy":
+        result(self.systemProxy())
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+  }
+
+  private func systemProxy() -> String? {
+    guard let settings = CFNetworkCopySystemProxySettings()?.takeUnretainedValue()
+      as NSDictionary? else {
+      return nil
+    }
+
+    var entries: [String] = []
+    appendProxy(
+      to: &entries,
+      settings: settings,
+      hostKey: kCFNetworkProxiesHTTPProxy,
+      portKey: kCFNetworkProxiesHTTPPort,
+      enabledKey: kCFNetworkProxiesHTTPEnable,
+      scheme: "http"
+    )
+    appendProxy(
+      to: &entries,
+      settings: settings,
+      hostKey: kCFNetworkProxiesHTTPSProxy,
+      portKey: kCFNetworkProxiesHTTPSPort,
+      enabledKey: kCFNetworkProxiesHTTPSEnable,
+      scheme: "https"
+    )
+    return entries.isEmpty ? nil : entries.joined(separator: ";")
+  }
+
+  private func appendProxy(
+    to entries: inout [String],
+    settings: NSDictionary,
+    hostKey: CFString,
+    portKey: CFString,
+    enabledKey: CFString,
+    scheme: String
+  ) {
+    if let enabled = settings[enabledKey] as? NSNumber, !enabled.boolValue {
+      return
+    }
+    guard let host = settings[hostKey] as? String,
+          let port = (settings[portKey] as? NSNumber)?.intValue,
+          !host.isEmpty,
+          port > 0 else {
+      return
+    }
+    entries.append("\(scheme)=\(host):\(port)")
   }
 
   private func setupAppearanceBridge(controller: FlutterViewController) {

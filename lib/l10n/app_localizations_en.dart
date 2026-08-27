@@ -3706,6 +3706,26 @@ class SEn extends S {
   String get invalidProxyAddress => 'Enter a valid HTTP proxy address and port';
 
   @override
+  String get proxyModeDirect => 'Direct';
+
+  @override
+  String get proxyModeSystem => 'System proxy';
+
+  @override
+  String get proxyModeManual => 'Manual proxy';
+
+  @override
+  String get proxyModeDirectDescription => 'Connect without a proxy';
+
+  @override
+  String get proxyModeSystemDescription =>
+      'Use the operating system proxy settings';
+
+  @override
+  String get proxyModeManualDescription =>
+      'Use the HTTP proxy configured below';
+
+  @override
   String get playlistDisplayFormat => 'Playlist layout';
 
   @override

@@ -1,9 +1,55 @@
 #include "flutter_window.h"
 
 #include <optional>
+#include <string>
+#include <windows.h>
+#include <winhttp.h>
 
+#include <flutter/method_channel.h>
+#include <flutter/standard_method_codec.h>
 #include "flutter/generated_plugin_registrant.h"
 #include <desktop_multi_window/desktop_multi_window_plugin.h>
+
+namespace {
+
+std::string wide_to_utf8(const wchar_t* value) {
+  if (value == nullptr || *value == L'\0') {
+    return {};
+  }
+
+  const int size = WideCharToMultiByte(
+      CP_UTF8, 0, value, -1, nullptr, 0, nullptr, nullptr);
+  if (size <= 1) {
+    return {};
+  }
+
+  std::string result(static_cast<size_t>(size), '\0');
+  WideCharToMultiByte(
+      CP_UTF8, 0, value, -1, result.data(), size, nullptr, nullptr);
+  result.resize(static_cast<size_t>(size - 1));
+  return result;
+}
+
+std::string get_system_proxy() {
+  WINHTTP_CURRENT_USER_IE_PROXY_CONFIG config{};
+  if (!WinHttpGetIEProxyConfigForCurrentUser(&config)) {
+    return {};
+  }
+
+  const std::string proxy = wide_to_utf8(config.lpszProxy);
+  if (config.lpszAutoConfigUrl != nullptr) {
+    GlobalFree(config.lpszAutoConfigUrl);
+  }
+  if (config.lpszProxy != nullptr) {
+    GlobalFree(config.lpszProxy);
+  }
+  if (config.lpszProxyBypass != nullptr) {
+    GlobalFree(config.lpszProxyBypass);
+  }
+  return proxy;
+}
+
+}  // namespace
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
@@ -26,6 +72,21 @@ bool FlutterWindow::OnCreate() {
     return false;
   }
   RegisterPlugins(flutter_controller_->engine());
+
+  const flutter::MethodChannel<> system_proxy_channel(
+      flutter_controller_->engine()->messenger(),
+      "com.meteor.kikoeruflutter/system_proxy",
+      &flutter::StandardMethodCodec::GetInstance());
+  system_proxy_channel.SetMethodCallHandler(
+      [](const flutter::MethodCall<>& call,
+         const std::unique_ptr<flutter::MethodResult<>>& result) {
+        if (call.method_name() == "getSystemProxy") {
+          result->Success(flutter::EncodableValue(get_system_proxy()));
+          return;
+        }
+        result->NotImplemented();
+      });
+
   DesktopMultiWindowSetWindowCreatedCallback([](void *controller) {
     auto *flutter_view_controller =
         reinterpret_cast<flutter::FlutterViewController *>(controller);
