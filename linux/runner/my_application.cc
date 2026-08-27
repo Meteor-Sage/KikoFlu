@@ -97,7 +97,6 @@ static void my_application_activate(GApplication* application) {
   gtk_widget_realize(GTK_WIDGET(view));
 
   fl_register_plugins(FL_PLUGIN_REGISTRY(view));
-  floating_lyric_plugin_register_with_registry(FL_PLUGIN_REGISTRY(view));
 
   desktop_multi_window_plugin_set_window_created_callback(
       [](FlPluginRegistry* registry) {
@@ -107,8 +106,8 @@ static void my_application_activate(GApplication* application) {
           fl_view_set_background_color(FL_VIEW(registry), &transparent);
         }
 
-        fl_register_plugins(registry);
         floating_lyric_plugin_register_with_registry(registry);
+        fl_register_plugins(registry);
       });
 
   gtk_widget_grab_focus(GTK_WIDGET(view));

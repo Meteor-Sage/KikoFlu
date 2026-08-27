@@ -16,6 +16,7 @@
 struct _FloatingLyricPlugin {
   GObject parent_instance;
   FlPluginRegistrar* registrar;
+  gboolean is_closing;
 };
 
 G_DEFINE_TYPE(FloatingLyricPlugin,
@@ -97,6 +98,9 @@ static FlMethodResponse* configure_window(FloatingLyricPlugin* self) {
   GtkWidget* widget = GTK_WIDGET(window);
   gtk_widget_set_app_paintable(widget, TRUE);
   gtk_window_set_decorated(window, FALSE);
+  // Utility windows are treated as overlay-like by common X11 WMs and are
+  // more consistently kept above normal application windows.
+  gtk_window_set_type_hint(window, GDK_WINDOW_TYPE_HINT_UTILITY);
   gtk_window_set_keep_above(window, TRUE);
   gtk_window_set_skip_taskbar_hint(window, TRUE);
   gtk_window_set_skip_pager_hint(window, TRUE);
@@ -150,6 +154,30 @@ static gboolean destroy_window_idle(gpointer data) {
   return G_SOURCE_REMOVE;
 }
 
+static void schedule_window_destroy(FloatingLyricPlugin* self) {
+  if (self->is_closing) {
+    return;
+  }
+
+  GtkWindow* window = get_window(self);
+  if (window == nullptr) {
+    return;
+  }
+
+  self->is_closing = TRUE;
+  // Destroy only the secondary GTK window. Using gtk_window_close() here can
+  // re-enter Flutter's delete-event handler and terminate the main window.
+  g_idle_add(destroy_window_idle, g_object_ref(window));
+}
+
+static gboolean on_window_delete_event(GtkWidget*, GdkEvent*, gpointer data) {
+  auto* self = FLOATING_LYRIC_PLUGIN(data);
+  schedule_window_destroy(self);
+  // Consume the event so GTK does not continue into the Flutter engine's
+  // default close handler.
+  return TRUE;
+}
+
 static FlMethodResponse* destroy_window(FloatingLyricPlugin* self) {
   GtkWindow* window = get_window(self);
   if (window == nullptr) {
@@ -157,10 +185,7 @@ static FlMethodResponse* destroy_window(FloatingLyricPlugin* self) {
         "window_unavailable", "Unable to resolve the GTK window", nullptr));
   }
 
-  // gtk_window_close() emits the Flutter engine's delete-event handler. On
-  // Linux that handler can terminate the owning application as well as this
-  // secondary window, so destroy only this window after replying to Dart.
-  g_idle_add(destroy_window_idle, g_object_ref(window));
+  schedule_window_destroy(self);
   return FL_METHOD_RESPONSE(
       fl_method_success_response_new(fl_value_new_bool(TRUE)));
 }
@@ -220,6 +245,13 @@ void floating_lyric_plugin_register_with_registry(FlPluginRegistry* registry) {
   FloatingLyricPlugin* plugin = FLOATING_LYRIC_PLUGIN(
       g_object_new(floating_lyric_plugin_get_type(), nullptr));
   plugin->registrar = FL_PLUGIN_REGISTRAR(g_object_ref(registrar));
+  plugin->is_closing = FALSE;
+
+  GtkWindow* window = get_window(plugin);
+  if (window != nullptr) {
+    g_signal_connect(GTK_WIDGET(window), "delete-event",
+                     G_CALLBACK(on_window_delete_event), plugin);
+  }
 
   g_autoptr(FlStandardMethodCodec) codec = fl_standard_method_codec_new();
   g_autoptr(FlMethodChannel) channel = fl_method_channel_new(

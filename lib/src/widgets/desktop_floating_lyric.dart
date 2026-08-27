@@ -101,7 +101,14 @@ class _DesktopFloatingLyricState extends State<DesktopFloatingLyric>
         await windowManager.setPreventClose(true);
       }
       await windowManager.setBackgroundColor(Colors.transparent);
+      if (!Platform.isLinux) {
+        await windowManager.setHasShadow(false);
+      }
+      // 设置一个合理的默认大小
+      await windowManager.setSize(const Size(800, 200));
+
       if (Platform.isLinux) {
+        await windowManager.show();
         final capabilities = await _linuxWindowChannel
             .invokeMapMethod<String, dynamic>('configureWindow');
         logOutput(
@@ -112,25 +119,21 @@ class _DesktopFloatingLyricState extends State<DesktopFloatingLyric>
           'reliableAlwaysOnTop='
           '${capabilities?['reliableAlwaysOnTop'] ?? false}',
         );
-      } else {
-        await windowManager.setHasShadow(false);
-      }
-      // 设置一个合理的默认大小
-      await windowManager.setSize(const Size(800, 200));
-      await _applyTouchMode();
-
-      if (Platform.isLinux) {
-        await windowManager.show();
         // Reapply these hints after realization; some X11 window managers
         // ignore pre-show keep-above requests.
         await windowManager.setAlwaysOnTop(true);
-        await _linuxWindowChannel.invokeMethod<void>('configureWindow');
+        await _applyTouchMode();
+      } else {
+        await _applyTouchMode();
       }
     } catch (e) {
       logOutput('[DesktopFloatingLyric] Failed to init window: $e');
       if (Platform.isLinux) {
         try {
           await windowManager.show();
+          await windowManager.setAlwaysOnTop(true);
+          await _linuxWindowChannel.invokeMethod<void>('configureWindow');
+          await _applyTouchMode();
         } catch (showError) {
           logOutput(
             '[DesktopFloatingLyric] Failed to show Linux fallback window: '

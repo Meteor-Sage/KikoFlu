@@ -41,10 +41,16 @@ void main() {
     expect(runnerSource, contains('gdk_screen_get_rgba_visual'));
     expect(runnerSource, contains('gtk_widget_set_visual'));
     expect(runnerSource, contains('fl_view_set_background_color'));
+    expect(
+      runnerSource,
+      contains('floating_lyric_plugin_register_with_registry(registry)'),
+    );
     expect(pluginSource, contains('gdk_window_set_pass_through'));
     expect(pluginSource, contains('gtk_container_forall'));
     expect(pluginSource, contains('gdk_window_set_opaque_region'));
     expect(pluginSource, contains('gtk_window_set_keep_above'));
+    expect(pluginSource, contains('delete-event'));
+    expect(pluginSource, contains('gtk_widget_destroy'));
     expect(pluginSource, contains('destroyWindow'));
     expect(widgetSource, contains("'configureWindow'"));
     expect(widgetSource, contains("'setIgnoreMouseEvents'"));
