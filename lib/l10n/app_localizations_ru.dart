@@ -389,6 +389,18 @@ class SRu extends S {
       'Заблокировано — удерживайте субтитры для разблокировки';
 
   @override
+  String get floatingLyricClickThrough =>
+      'Сквозные клики для плавающих субтитров';
+
+  @override
+  String get floatingLyricClickThroughEnabled =>
+      'Включено — субтитры игнорируют действия мыши';
+
+  @override
+  String get floatingLyricClickThroughDisabled =>
+      'Выключено — субтитры можно перетаскивать';
+
+  @override
   String get floatingFPS => 'Показать FPS';
 
   @override

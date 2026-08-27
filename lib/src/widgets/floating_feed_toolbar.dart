@@ -159,17 +159,22 @@ class FloatingFeedToolbar extends StatelessWidget {
   }
 }
 
-class _ModeDropdown extends StatelessWidget {
+class _ModeDropdown extends ConsumerWidget {
   const _ModeDropdown({required this.actions, required this.maxWidth});
 
   final List<FloatingFeedModeAction> actions;
   final double maxWidth;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final selectedIndex = actions.indexWhere((action) => action.isSelected);
     final effectiveIndex = selectedIndex < 0 ? 0 : selectedIndex;
     final selected = actions[effectiveIndex];
+    final useLiquidGlass = ref.watch(liquidGlassNavigationProvider);
+    if (useLiquidGlass) {
+      return _buildLiquidGlassMenu(context, ref, selected);
+    }
+
     return SizedBox(
       key: const ValueKey('feed-mode-dropdown'),
       height: 40,
@@ -223,6 +228,102 @@ class _ModeDropdown extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildLiquidGlassMenu(
+    BuildContext context,
+    WidgetRef ref,
+    FloatingFeedModeAction selected,
+  ) {
+    final fallbackIntensity = ref.watch(fallbackGlassTransparencyProvider);
+    final controller = MenuController();
+    return SizedBox(
+      key: const ValueKey('feed-mode-dropdown'),
+      height: 40,
+      width: maxWidth,
+      child: MenuAnchor(
+        controller: controller,
+        consumeOutsideTap: true,
+        alignmentOffset: const Offset(0, 4),
+        style: MenuStyle(
+          backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
+          surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+          shadowColor: const WidgetStatePropertyAll(Colors.transparent),
+          elevation: const WidgetStatePropertyAll(0),
+          padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          ),
+        ),
+        menuChildren: [
+          LiquidGlassContainer(
+            shape: const LiquidGlassShape.roundedRectangle(18),
+            style: LiquidGlassStyle.regular,
+            fallbackIntensity: fallbackIntensity,
+            child: Material(
+              type: MaterialType.transparency,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: maxWidth),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final action in actions)
+                      MenuItemButton(
+                        onPressed: () {
+                          controller.close();
+                          action.onPressed();
+                        },
+                        style: const ButtonStyle(
+                          padding: WidgetStatePropertyAll(
+                            EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          ),
+                        ),
+                        leadingIcon: Icon(action.icon, size: 18),
+                        trailingIcon: action.isSelected
+                            ? Icon(
+                                Icons.check,
+                                size: 18,
+                                color: Theme.of(context).colorScheme.primary,
+                              )
+                            : null,
+                        child: Text(action.label),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+        builder: (context, controller, child) {
+          return InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: () =>
+                controller.isOpen ? controller.close() : controller.open(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                children: [
+                  Icon(selected.icon, size: 18),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      selected.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.arrow_drop_down, size: 20),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
 }
 
 /// Shared horizontal inset for all floating controls in feed-like screens.
@@ -256,8 +357,9 @@ class FloatingToolbarSurface extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final useLiquidGlass = ref.watch(liquidGlassNavigationProvider);
-    final fallbackGlassTransparency =
-        ref.watch(fallbackGlassTransparencyProvider);
+    final fallbackGlassTransparency = ref.watch(
+      fallbackGlassTransparencyProvider,
+    );
     final content = Material(
       type: MaterialType.transparency,
       child: Padding(padding: padding, child: child),
@@ -381,10 +483,7 @@ class _FloatingToolbarPositionFollowerState
             showWhenUnlinked: false,
             child: Align(
               alignment: Alignment.topLeft,
-              child: SizedBox(
-                width: constraints.maxWidth,
-                child: widget.child,
-              ),
+              child: SizedBox(width: constraints.maxWidth, child: widget.child),
             ),
           ),
           child: CompositedTransformTarget(

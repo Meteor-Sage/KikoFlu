@@ -828,6 +828,24 @@ abstract class S {
   /// **'Locked - Long press floating lyrics to unlock'**
   String get floatingLyricTouchDisabled;
 
+  /// No description provided for @floatingLyricClickThrough.
+  ///
+  /// In en, this message translates to:
+  /// **'Floating Lyric Click-Through'**
+  String get floatingLyricClickThrough;
+
+  /// No description provided for @floatingLyricClickThroughEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Enabled - Floating lyrics ignore mouse input'**
+  String get floatingLyricClickThroughEnabled;
+
+  /// No description provided for @floatingLyricClickThroughDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Disabled - Floating lyrics can be dragged'**
+  String get floatingLyricClickThroughDisabled;
+
   /// No description provided for @floatingFPS.
   ///
   /// In en, this message translates to:

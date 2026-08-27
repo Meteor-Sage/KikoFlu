@@ -388,6 +388,17 @@ class SEn extends S {
       'Locked - Long press floating lyrics to unlock';
 
   @override
+  String get floatingLyricClickThrough => 'Floating Lyric Click-Through';
+
+  @override
+  String get floatingLyricClickThroughEnabled =>
+      'Enabled - Floating lyrics ignore mouse input';
+
+  @override
+  String get floatingLyricClickThroughDisabled =>
+      'Disabled - Floating lyrics can be dragged';
+
+  @override
   String get floatingFPS => 'Show FPS';
 
   @override

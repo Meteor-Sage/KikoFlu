@@ -382,6 +382,15 @@ class SJa extends S {
   String get floatingLyricTouchDisabled => 'ロック中 - 長押しでロック解除';
 
   @override
+  String get floatingLyricClickThrough => 'フローティング字幕のクリック透過';
+
+  @override
+  String get floatingLyricClickThroughEnabled => '有効 - フローティング字幕がマウス操作を無視します';
+
+  @override
+  String get floatingLyricClickThroughDisabled => '無効 - フローティング字幕をドラッグできます';
+
+  @override
   String get floatingFPS => 'FPS表示';
 
   @override

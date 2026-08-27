@@ -381,6 +381,15 @@ class SZh extends S {
   String get floatingLyricTouchDisabled => '已锁定 - 长按悬浮字幕解锁';
 
   @override
+  String get floatingLyricClickThrough => '悬浮字幕点击穿透';
+
+  @override
+  String get floatingLyricClickThroughEnabled => '已启用 - 悬浮字幕将忽略鼠标操作';
+
+  @override
+  String get floatingLyricClickThroughDisabled => '未启用 - 可拖动悬浮字幕';
+
+  @override
   String get floatingFPS => '显示帧率';
 
   @override
@@ -3953,6 +3962,15 @@ class SZhHant extends SZh {
 
   @override
   String get floatingLyricTouchDisabled => '已鎖定 - 長按懸浮字幕解鎖';
+
+  @override
+  String get floatingLyricClickThrough => '懸浮字幕點擊穿透';
+
+  @override
+  String get floatingLyricClickThroughEnabled => '已啟用 - 懸浮字幕將忽略滑鼠操作';
+
+  @override
+  String get floatingLyricClickThroughDisabled => '未啟用 - 可拖動懸浮字幕';
 
   @override
   String get floatingFPS => '顯示幀率';
