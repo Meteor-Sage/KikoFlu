@@ -56,7 +56,7 @@ class FloatingFeedToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    final toolbar = SizedBox(
       height: 48,
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -139,6 +139,7 @@ class FloatingFeedToolbar extends StatelessWidget {
         },
       ),
     );
+    return FloatingToolbarGlassGroup(child: toolbar);
   }
 
   double _modeActionWidth(BuildContext context, String label) {
@@ -154,6 +155,42 @@ class FloatingFeedToolbar extends StatelessWidget {
       maxLines: 1,
     )..layout();
     return 24 + 18 + 6 + painter.width;
+  }
+}
+
+/// Shares one native sampling surface across nearby floating glass controls.
+class FloatingToolbarGlassGroup extends ConsumerWidget {
+  const FloatingToolbarGlassGroup({
+    super.key,
+    required this.child,
+    this.spacing = 7,
+  });
+
+  final Widget child;
+  final double spacing;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final useLiquidGlass = ref.watch(liquidGlassNavigationProvider);
+    if (!useLiquidGlass || !LiquidGlass.isNativePlatform) return child;
+    return LiquidGlassGroup(spacing: spacing, child: child);
+  }
+}
+
+/// Places separated toolbar capsules in one native glass sampling group.
+class FloatingToolbarGlassRow extends StatelessWidget {
+  const FloatingToolbarGlassRow({super.key, required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return FloatingToolbarGlassGroup(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: children,
+      ),
+    );
   }
 }
 
@@ -364,14 +401,21 @@ class FloatingToolbarSurface extends ConsumerWidget {
     );
 
     if (useLiquidGlass) {
+      final glass = LiquidGlassContainer(
+        shape: const LiquidGlassShape.capsule(),
+        style: LiquidGlassStyle.regular,
+        fallbackIntensity: fallbackGlassTransparency,
+        child: LiquidGlass.isNativePlatform
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(_radius),
+                child: content,
+              )
+            : content,
+      );
+      if (LiquidGlass.isNativePlatform) return glass;
       return ClipRRect(
         borderRadius: BorderRadius.circular(_radius),
-        child: LiquidGlassContainer(
-          shape: const LiquidGlassShape.capsule(),
-          style: LiquidGlassStyle.regular,
-          fallbackIntensity: fallbackGlassTransparency,
-          child: content,
-        ),
+        child: glass,
       );
     }
 

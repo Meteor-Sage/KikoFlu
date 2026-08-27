@@ -113,6 +113,75 @@ void main() {
     expect(material.type, MaterialType.transparency);
   });
 
+  testWidgets('groups native feed capsules into one platform view', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    await container
+        .read(liquidGlassNavigationProvider.notifier)
+        .setEnabled(true);
+
+    await tester.pumpWidget(
+      _testApp(
+        FloatingFeedToolbar(
+          modeActions: [
+            FloatingFeedModeAction(
+              icon: Icons.grid_view,
+              label: 'All',
+              isSelected: true,
+              onPressed: () {},
+            ),
+          ],
+          toolActions: [
+            FloatingFeedToolAction(
+              icon: Icons.sort,
+              tooltip: 'Sort',
+              onPressed: () {},
+            ),
+          ],
+        ),
+        container: container,
+      ),
+    );
+
+    expect(find.byType(LiquidGlassGroup), findsOneWidget);
+    expect(find.byType(LiquidGlassContainer), findsNWidgets(2));
+    expect(find.byType(UiKitView), findsOneWidget);
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets('does not clip the native platform view in Flutter', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    await container
+        .read(liquidGlassNavigationProvider.notifier)
+        .setEnabled(true);
+
+    await tester.pumpWidget(
+      _testApp(
+        const FloatingToolbarSurface(child: SizedBox(width: 80, height: 40)),
+        container: container,
+      ),
+    );
+
+    expect(find.byType(UiKitView), findsOneWidget);
+    expect(
+      find.ancestor(
+        of: find.byType(UiKitView),
+        matching: find.byType(ClipRRect),
+      ),
+      findsNothing,
+    );
+    debugDefaultTargetPlatformOverride = null;
+  });
+
   testWidgets('fallback liquid glass keeps page content visible', (
     tester,
   ) async {
