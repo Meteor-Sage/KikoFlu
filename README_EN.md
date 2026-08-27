@@ -22,8 +22,10 @@
 
 ### 🎵 Media Playback
 - Background playback with automatic caching
+- Persistent Mini Player item and playback position
 - Playback speed control
 - Loop (single / list) and shuffle modes
+- Global audio gain with attenuation and amplification
 - Audio haptics (Beta): mobile devices vibrate based on audio characteristics
 - Multi-format support: audio, video, text, images, PDF, etc.
 - Full or selective download with concurrent download management
@@ -33,6 +35,7 @@
 ### 📝 Subtitle System
 - Automatic subtitle loading
 - Subtitle import, editing, and timing adjustment
+- Supports `.vtt`, `.srt`, `.lrc`, `.txt`, `.ass`, `.ssa`, `.sub`, `.idx`, `.sbv`, `.dfxp`, and `.ttml`
 - Real-time subtitle / lyric translation during playback
 - Translate subtitles for the current playback directly in the player, with immediate display and saving when complete
 - Fullscreen lyrics / subtitle display
@@ -42,6 +45,7 @@
 ### 🎨 Interface
 - Full platform support (Android / iOS / Windows / macOS / Linux)
 - Material Design 3
+- Liquid Glass navigation and Mini Player, enabled by default on Apple 26+ platforms with a compatible fallback elsewhere
 - Landscape mode support
 - Light and dark theme
 - Title, file directory, and text file translation
@@ -65,12 +69,15 @@
 - Cache size limit and cleanup strategy
 - Theme and color scheme customization
 - Separate translation target language setting, with custom target languages in LLM mode
+- Playback settings for subtitle-library priority, preferred audio format, preloading, and audio gain
 - Extensive UI customization options
 - In-app log system (with export)
 - Update checker
 
-### 📱 Android Features
-- Floating lyrics (lock / unlock / touch passthrough)
+### 📝 Floating Lyrics
+- Available on Android, iOS, Windows, macOS, and Linux
+- Android supports lock / unlock and touch passthrough; desktop platforms support click-through mode
+- iOS uses system Picture in Picture for floating lyrics
 
 ---
 
@@ -78,7 +85,7 @@
 
 Go to [Releases](https://github.com/pa-jesusf/KikoFlu/releases/latest) for the latest version.
 
-Platforms: Android (universal / arm64 / armeabi-v7a / x86_64), iOS (unsigned IPA), Windows (installer / portable), macOS (DMG), Linux (x64 / arm64)
+Platforms: Android (universal / arm64-v8a), iOS (unsigned IPA), Windows (installer / portable), macOS (DMG), Linux (x64 / arm64)
 
 ### AltStore / SideStore
 
