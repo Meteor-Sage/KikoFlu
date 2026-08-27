@@ -75,6 +75,18 @@ class AudioPlayerService {
     '.ssa',
   ];
 
+  static const Set<String> _audioExtensions = {
+    '.mp3',
+    '.wav',
+    '.flac',
+    '.m4a',
+    '.aac',
+    '.ogg',
+    '.opus',
+    '.wma',
+    '.m4b',
+  };
+
   // macOS specific: Track completion state to prevent duplicate triggers
   bool _completionHandled = false;
   Timer?
@@ -416,6 +428,7 @@ class AudioPlayerService {
       await _hapticsService.stop();
 
       String? audioFilePath;
+      String? fallbackStreamUrl;
       bool loaded = false;
 
       // 优先检查是否是本地文件（file:// 协议）
@@ -429,16 +442,27 @@ class AudioPlayerService {
           _log.captureOutput(
             '[Audio] 本地文件存在: size=${fileStat.size} bytes, modified=${fileStat.modified}',
           );
-          final playbackPath =
-              await _prepareLocalPlaybackPath(localPath) ?? localPath;
-          await _player.setFilePath(playbackPath);
-          await _prepareHapticsForDownloadedFile(
-            track,
-            downloadPath: localPath,
-            analysisPath: playbackPath,
-          );
-          _log.captureOutput('[Audio] 使用本地文件播放: ${track.title}');
-          loaded = true;
+          final isCachedAudio =
+              track.hash != null &&
+              localPath.toLowerCase().endsWith('.audio') &&
+              await CacheService.isAudioCachePath(localPath, track.hash!);
+          if (isCachedAudio) {
+            loaded = await _tryPlayCachedAudio(localPath, track);
+            if (!loaded) {
+              fallbackStreamUrl = _remoteAudioUrlForHash(track.hash!);
+            }
+          } else {
+            final playbackPath =
+                await _prepareLocalPlaybackPath(localPath) ?? localPath;
+            await _player.setFilePath(playbackPath);
+            await _prepareHapticsForDownloadedFile(
+              track,
+              downloadPath: localPath,
+              analysisPath: playbackPath,
+            );
+            _log.captureOutput('[Audio] 使用本地文件播放: ${track.title}');
+            loaded = true;
+          }
         } else {
           _log.captureOutput('[Audio] 本地文件不存在: $localPath');
         }
@@ -446,23 +470,20 @@ class AudioPlayerService {
 
       // 如果不是本地文件，且有 hash，尝试使用缓存
       if (!loaded && track.hash != null && track.hash!.isNotEmpty) {
+        final streamUrl = fallbackStreamUrl ?? track.url;
         audioFilePath = await CacheService.settleAudioCacheDownload(
           track.hash!,
         );
 
         if (audioFilePath != null) {
-          await _player.setFilePath(audioFilePath);
-          await _prepareHapticsForDownloadedFile(
-            track,
-            downloadPath: audioFilePath,
-          );
-          _log.captureOutput('[Audio] 使用缓存文件播放: ${track.title}');
-          loaded = true;
-        } else {
+          loaded = await _tryPlayCachedAudio(audioFilePath, track);
+        }
+
+        if (!loaded) {
           try {
             await CacheService.resetAudioCachePartial(track.hash!);
             final source = CachingStreamAudioSource(
-              uri: Uri.parse(track.url),
+              uri: Uri.parse(streamUrl),
               hash: track.hash!,
             );
             await _player.setAudioSource(source);
@@ -476,9 +497,10 @@ class AudioPlayerService {
       }
 
       if (!loaded) {
-        await _player.setUrl(track.url);
+        final streamUrl = fallbackStreamUrl ?? track.url;
+        await _player.setUrl(streamUrl);
         unawaited(_hapticsService.prepareForTrack(track));
-        _log.captureOutput('[Audio] 流式播放: ${track.url}');
+        _log.captureOutput('[Audio] 流式播放: $streamUrl');
       }
 
       // Do not replace system Now Playing metadata until the source itself is
@@ -1348,6 +1370,98 @@ class AudioPlayerService {
     }
 
     return null;
+  }
+
+  /// AVFoundation may reject the historical hash-based `.audio` cache because
+  /// it has no media extension. Keep that cache format for compatibility, but
+  /// give Darwin a temporary copy with the track's real extension.
+  Future<String?> _prepareCachedPlaybackPath(
+    String originalPath,
+    AudioTrack track,
+  ) async {
+    if (!(Platform.isIOS || Platform.isMacOS) ||
+        !originalPath.toLowerCase().endsWith('.audio')) {
+      return null;
+    }
+
+    final file = File(originalPath);
+    if (!await file.exists()) return null;
+
+    final extension = _audioExtensionForTrack(track);
+    final tempDir = await _getTempAudioDirectory();
+    final hash = originalPath.hashCode.abs().toRadixString(16);
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final tempPath = p.join(
+      tempDir.path,
+      'cached_audio_${timestamp}_$hash$extension',
+    );
+
+    try {
+      await file.copy(tempPath);
+      _tempPlaybackFilePath = tempPath;
+      _log.captureOutput('[Audio] 使用带扩展名的缓存播放副本: $tempPath');
+      return tempPath;
+    } catch (error) {
+      _log.captureOutput('[Audio] 创建缓存播放副本失败: $error');
+      return null;
+    }
+  }
+
+  Future<bool> _tryPlayCachedAudio(String cachePath, AudioTrack track) async {
+    try {
+      final playbackPath = await _prepareCachedPlaybackPath(cachePath, track);
+      await _player.setFilePath(playbackPath ?? cachePath);
+      await _prepareHapticsForDownloadedFile(
+        track,
+        downloadPath: cachePath,
+        analysisPath: playbackPath,
+      );
+      _log.captureOutput('[Audio] 使用缓存文件播放: ${track.title}');
+      return true;
+    } catch (error) {
+      _log.captureOutput('[Audio] 缓存文件无法播放，清除后回退到远程流: $error');
+      try {
+        final hash = track.hash;
+        if (hash != null && hash.isNotEmpty) {
+          await CacheService.invalidateAudioCache(hash);
+        }
+      } catch (invalidateError) {
+        _log.captureOutput('[Audio] 清除失效音频缓存失败: $invalidateError');
+      }
+      await _cleanupTempPlaybackFile();
+      return false;
+    }
+  }
+
+  String _audioExtensionForTrack(AudioTrack track) {
+    final candidates = <String>[track.title];
+    final uri = Uri.tryParse(track.url);
+    if (uri != null && uri.path.isNotEmpty) {
+      candidates.add(uri.path);
+    }
+
+    for (final candidate in candidates) {
+      final extension = p.extension(candidate).toLowerCase();
+      if (_audioExtensions.contains(extension)) return extension;
+    }
+    return '.mp3';
+  }
+
+  String? _remoteAudioUrlForHash(String hash) {
+    final host = StorageService.getString('server_host')
+        ?.trim()
+        .replaceFirst(RegExp(r'/+$'), '');
+    if (host == null || host.isEmpty) return null;
+
+    final normalizedHost = host.startsWith('http://') ||
+            host.startsWith('https://')
+        ? host
+        : 'https://$host';
+    final token = StorageService.getString('auth_token');
+    final uri = Uri.parse('$normalizedHost/api/media/stream/$hash');
+    return token == null || token.isEmpty
+        ? uri.toString()
+        : uri.replace(queryParameters: {'token': token}).toString();
   }
 
   Future<Directory> _getTempAudioDirectory() async {

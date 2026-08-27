@@ -82,12 +82,10 @@ class CachingStreamAudioSource extends StreamAudioSource {
     }
 
     final raf = await tempFile.open(mode: FileMode.writeOnlyAppend);
-    int bytesWritten = 0;
 
     () async {
       try {
         await for (final chunk in response) {
-          bytesWritten += chunk.length;
           controller.add(chunk);
           await raf.writeFrom(chunk);
         }
@@ -96,18 +94,17 @@ class CachingStreamAudioSource extends StreamAudioSource {
         await controller.close();
 
         if (totalLength != null) {
-          await CacheService.finalizeAudioCacheFile(
+          final finalized = await CacheService.finalizeAudioCacheFile(
             hash,
             expectedSize: totalLength,
           );
-        } else if (resolvedStart == 0) {
-          await CacheService.finalizeAudioCacheFile(
-            hash,
-            expectedSize: existingLength + bytesWritten,
-          );
+          if (!finalized) {
+            await CacheService.resetAudioCachePartial(hash);
+          }
         }
       } catch (error, stackTrace) {
         await raf.close();
+        await CacheService.resetAudioCachePartial(hash);
         controller.addError(error, stackTrace);
         await controller.close();
       } finally {

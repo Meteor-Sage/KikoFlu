@@ -56,7 +56,7 @@ void main() {
       expect(url, 'file:///downloads/123/Disc 1/track01.mp3');
     });
 
-    test('online resolver uses cache before media stream', () async {
+    test('online resolver keeps the remote URL when a cache exists', () async {
       final resolver = AudioFileUrlResolver(
         resolveDownloadedPath: (_, __) async => null,
         downloadRootPath: () async => '/downloads',
@@ -73,7 +73,7 @@ void main() {
         fileRelativePaths: const {'hash': 'Disc 1/track01.mp3'},
       );
 
-      expect(url, 'file:///cache/track01.mp3');
+      expect(url, 'https://example.test/media/track01?token=token');
     });
 
     test('online resolver handles relative media stream URLs and tokens',

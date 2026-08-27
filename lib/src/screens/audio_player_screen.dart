@@ -236,6 +236,8 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
     final position = ref.watch(positionProvider);
     final duration = ref.watch(durationProvider);
     final audioState = ref.watch(audioPlayerControllerProvider);
+    final isTrackLoading =
+        ref.watch(isTrackLoadingProvider).valueOrNull ?? false;
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
 
@@ -263,6 +265,7 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
               position,
               duration,
               audioState,
+              isTrackLoading,
             )
           : _buildPortraitLayout(
               context,
@@ -271,6 +274,7 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
               position,
               duration,
               audioState,
+              isTrackLoading,
             ),
     );
   }
@@ -333,6 +337,7 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
     AsyncValue<Duration> position,
     AsyncValue<Duration?> duration,
     AudioPlayerState audioState,
+    bool isTrackLoading,
   ) {
     return Stack(
       children: [
@@ -472,6 +477,7 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
               child: Text(S.of(context).errorWithMessage(error.toString()))),
         ),
         if (_showLyricHint) _buildLyricHintBanner(),
+        if (isTrackLoading) _buildTrackLoadingOverlay(context),
       ],
     );
   }
@@ -483,8 +489,9 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
     AsyncValue<Duration> position,
     AsyncValue<Duration?> duration,
     AudioPlayerState audioState,
+    bool isTrackLoading,
   ) {
-    return currentTrack.when(
+    final content = currentTrack.when(
       data: (track) {
         if (track == null) {
           return Center(child: Text(S.of(context).noAudioPlaying));
@@ -692,8 +699,48 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) =>
-          Center(child: Text(S.of(context).errorWithMessage(error.toString()))),
+      error: (error, stack) => Center(
+          child: Text(S.of(context).errorWithMessage(error.toString()))),
+    );
+    return _buildTrackLoadingState(
+      context: context,
+      isLoading: isTrackLoading,
+      child: content,
+    );
+  }
+
+  Widget _buildTrackLoadingState({
+    required BuildContext context,
+    required Widget child,
+    required bool isLoading,
+  }) {
+    if (!isLoading) return child;
+    return Stack(
+      children: [
+        child,
+        _buildTrackLoadingOverlay(context),
+      ],
+    );
+  }
+
+  Widget _buildTrackLoadingOverlay(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Positioned.fill(
+      child: AbsorbPointer(
+        child: ColoredBox(
+          color: colorScheme.surface.withValues(alpha: 0.18),
+          child: Center(
+            child: SizedBox(
+              width: 36,
+              height: 36,
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                color: colorScheme.primary,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 

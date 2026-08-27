@@ -111,10 +111,9 @@ class AudioFileUrlResolver {
         return LocalFileUrl.fromPath(copiedPath);
       }
 
-      final cachedPath = await resolveCachedAudioPath(fileHash);
-      if (cachedPath != null) {
-        return LocalFileUrl.fromPath(cachedPath);
-      }
+      // Keep the remote URL in the track even when a cache exists. The audio
+      // player owns cache playback and needs the original URL as a fallback if
+      // iOS rejects a historical local cache file.
     }
 
     final mediaStreamUrl = FileTreeUtils.property(file, 'mediaStreamUrl');
