@@ -63,6 +63,8 @@ import CoreHaptics
     }
 
     var entries: [String] = []
+    // iOS exposes the HTTP proxy keys here; Dart uses this entry as the
+    // HTTPS fallback as well. The HTTPS-specific keys are macOS-only.
     appendProxy(
       to: &entries,
       settings: settings,
@@ -70,14 +72,6 @@ import CoreHaptics
       portKey: kCFNetworkProxiesHTTPPort,
       enabledKey: kCFNetworkProxiesHTTPEnable,
       scheme: "http"
-    )
-    appendProxy(
-      to: &entries,
-      settings: settings,
-      hostKey: kCFNetworkProxiesHTTPSProxy,
-      portKey: kCFNetworkProxiesHTTPSPort,
-      enabledKey: kCFNetworkProxiesHTTPSEnable,
-      scheme: "https"
     )
     return entries.isEmpty ? nil : entries.joined(separator: ";")
   }
