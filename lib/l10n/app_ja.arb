@@ -119,6 +119,7 @@
 
   "excludeMode": "除外",
   "includeMode": "含む",
+  "includeModeTapAgainHint": "含む：{searchType}（もう一度タップすると除外モードに切り替わります）",
 
   "noResults": "結果なし",
   "loadFailed": "読み込み失敗",
@@ -163,7 +164,7 @@
   "uiSettings": "UI設定",
   "uiSettingsSubtitle": "プレーヤー、詳細ページ、カードなど",
   "liquidGlassNavigation": "リキッドグラスナビゲーション",
-  "liquidGlassNavigationDesc": "ガラス素材のナビゲーションとミニプレーヤー。対応環境ではデフォルトで有効",
+  "liquidGlassNavigationDesc": "ガラス素材のナビゲーションとミニプレーヤー。Apple 系 OS 26 以降ではデフォルトで有効",
   "fallbackGlassTransparency": "リキッドグラスの透明度",
   "fallbackGlassTransparencyDesc": "アプリ描画のガラス透明度を調整",
   "preferenceSettings": "環境設定",

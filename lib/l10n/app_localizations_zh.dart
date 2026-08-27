@@ -319,6 +319,11 @@ class SZh extends S {
   String get includeMode => '包含';
 
   @override
+  String includeModeTapAgainHint(String searchType) {
+    return '包含：$searchType（再次点击进入排除模式）';
+  }
+
+  @override
   String get noResults => '没有结果';
 
   @override
@@ -449,7 +454,7 @@ class SZh extends S {
   String get liquidGlassNavigation => '液态玻璃导航';
 
   @override
-  String get liquidGlassNavigationDesc => '玻璃导航栏与迷你播放器；支持的平台默认开启';
+  String get liquidGlassNavigationDesc => '玻璃导航栏与迷你播放器；Apple系26+平台默认开启';
 
   @override
   String get fallbackGlassTransparency => '液态玻璃透明度';
@@ -3902,6 +3907,11 @@ class SZhHant extends SZh {
   String get includeMode => '包含';
 
   @override
+  String includeModeTapAgainHint(String searchType) {
+    return '包含：$searchType（再次點擊進入排除模式）';
+  }
+
+  @override
   String get noResults => '沒有結果';
 
   @override
@@ -4032,7 +4042,7 @@ class SZhHant extends SZh {
   String get liquidGlassNavigation => '液態玻璃導覽';
 
   @override
-  String get liquidGlassNavigationDesc => '玻璃導覽列與迷你播放器；支援的平台預設開啟';
+  String get liquidGlassNavigationDesc => '玻璃導覽列與迷你播放器；Apple 系 26+ 平台預設開啟';
 
   @override
   String get fallbackGlassTransparency => '液態玻璃透明度';

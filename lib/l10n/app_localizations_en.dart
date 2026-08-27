@@ -322,6 +322,11 @@ class SEn extends S {
   String get includeMode => 'Include';
 
   @override
+  String includeModeTapAgainHint(String searchType) {
+    return 'Include: $searchType (tap again to switch to exclude mode)';
+  }
+
+  @override
   String get noResults => 'No results';
 
   @override
@@ -463,7 +468,7 @@ class SEn extends S {
 
   @override
   String get liquidGlassNavigationDesc =>
-      'Glass navigation and mini player; enabled by default where supported.';
+      'Glass navigation and mini player; enabled by default on Apple OS 26+.';
 
   @override
   String get fallbackGlassTransparency => 'Liquid Glass Transparency';

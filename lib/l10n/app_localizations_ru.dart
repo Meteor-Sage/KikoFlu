@@ -323,6 +323,11 @@ class SRu extends S {
   String get includeMode => 'Включить';
 
   @override
+  String includeModeTapAgainHint(String searchType) {
+    return 'Включить: $searchType (нажмите ещё раз для режима исключения)';
+  }
+
+  @override
   String get noResults => 'Нет результатов';
 
   @override
@@ -465,7 +470,7 @@ class SRu extends S {
 
   @override
   String get liquidGlassNavigationDesc =>
-      'Стеклянная навигация и мини-плеер; включено по умолчанию при поддержке.';
+      'Стеклянная навигация и мини-плеер; включено по умолчанию на платформах Apple с ОС 26+.';
 
   @override
   String get fallbackGlassTransparency => 'Прозрачность Liquid Glass';

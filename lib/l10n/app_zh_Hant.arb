@@ -119,6 +119,7 @@
 
   "excludeMode": "排除",
   "includeMode": "包含",
+  "includeModeTapAgainHint": "包含：{searchType}（再次點擊進入排除模式）",
 
   "noResults": "沒有結果",
   "loadFailed": "載入失敗",
@@ -163,7 +164,7 @@
   "uiSettings": "介面設定",
   "uiSettingsSubtitle": "播放器、詳情頁、卡片等",
   "liquidGlassNavigation": "液態玻璃導覽",
-  "liquidGlassNavigationDesc": "玻璃導覽列與迷你播放器；支援的平台預設開啟",
+  "liquidGlassNavigationDesc": "玻璃導覽列與迷你播放器；Apple 系 26+ 平台預設開啟",
   "fallbackGlassTransparency": "液態玻璃透明度",
   "fallbackGlassTransparencyDesc": "調整應用程式繪製玻璃的透明度",
   "preferenceSettings": "偏好設定",

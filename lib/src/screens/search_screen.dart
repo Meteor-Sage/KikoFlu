@@ -542,42 +542,18 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                 child: Text(
                   _isExcludeMode
                       ? '${S.of(context).excludeMode}: ${_currentSearchType.localizedLabel(context)}'
-                      : '${S.of(context).includeMode}: ${_currentSearchType.localizedLabel(context)}',
-                  maxLines: 1,
+                      : S
+                            .of(context)
+                            .includeModeTapAgainHint(
+                              _currentSearchType.localizedLabel(context),
+                            ),
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 12,
                     color: _isExcludeMode
                         ? theme.colorScheme.error
                         : theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-              Tooltip(
-                message: S.of(context).switchAction,
-                child: TextButton.icon(
-                  onPressed: () =>
-                      setState(() => _isExcludeMode = !_isExcludeMode),
-                  icon: Icon(
-                    _isExcludeMode
-                        ? Icons.add_circle_outline
-                        : Icons.remove_circle_outline,
-                    size: 16,
-                  ),
-                  label: Text(
-                    _isExcludeMode
-                        ? S.of(context).includeMode
-                        : S.of(context).excludeMode,
-                  ),
-                  style: TextButton.styleFrom(
-                    foregroundColor: _isExcludeMode
-                        ? theme.colorScheme.primary
-                        : theme.colorScheme.error,
-                    textStyle: theme.textTheme.labelSmall,
-                    visualDensity: VisualDensity.compact,
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                 ),
               ),

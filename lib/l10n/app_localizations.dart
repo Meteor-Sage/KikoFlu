@@ -708,6 +708,12 @@ abstract class S {
   /// **'Include'**
   String get includeMode;
 
+  /// No description provided for @includeModeTapAgainHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Include: {searchType} (tap again to switch to exclude mode)'**
+  String includeModeTapAgainHint(String searchType);
+
   /// No description provided for @noResults.
   ///
   /// In en, this message translates to:
@@ -963,7 +969,7 @@ abstract class S {
   /// No description provided for @liquidGlassNavigationDesc.
   ///
   /// In en, this message translates to:
-  /// **'Glass navigation and mini player; enabled by default where supported.'**
+  /// **'Glass navigation and mini player; enabled by default on Apple OS 26+.'**
   String get liquidGlassNavigationDesc;
 
   /// No description provided for @fallbackGlassTransparency.

@@ -134,6 +134,12 @@
 
   "excludeMode": "Exclude",
   "includeMode": "Include",
+  "includeModeTapAgainHint": "Include: {searchType} (tap again to switch to exclude mode)",
+  "@includeModeTapAgainHint": {
+    "placeholders": {
+      "searchType": { "type": "String" }
+    }
+  },
 
   "noResults": "No results",
   "loadFailed": "Load failed",
@@ -188,7 +194,7 @@
   "uiSettings": "UI Settings",
   "uiSettingsSubtitle": "Player, detail page, cards, etc.",
   "liquidGlassNavigation": "Liquid Glass Navigation",
-  "liquidGlassNavigationDesc": "Glass navigation and mini player; enabled by default where supported.",
+  "liquidGlassNavigationDesc": "Glass navigation and mini player; enabled by default on Apple OS 26+.",
   "fallbackGlassTransparency": "Liquid Glass Transparency",
   "fallbackGlassTransparencyDesc": "Adjust app-rendered glass transparency.",
   "preferenceSettings": "Preference Settings",

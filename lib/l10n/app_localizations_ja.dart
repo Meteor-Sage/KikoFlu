@@ -320,6 +320,11 @@ class SJa extends S {
   String get includeMode => '含む';
 
   @override
+  String includeModeTapAgainHint(String searchType) {
+    return '含む：$searchType（もう一度タップすると除外モードに切り替わります）';
+  }
+
+  @override
   String get noResults => '結果なし';
 
   @override
@@ -451,7 +456,7 @@ class SJa extends S {
 
   @override
   String get liquidGlassNavigationDesc =>
-      'ガラス素材のナビゲーションとミニプレーヤー。対応環境ではデフォルトで有効';
+      'ガラス素材のナビゲーションとミニプレーヤー。Apple 系 OS 26 以降ではデフォルトで有効';
 
   @override
   String get fallbackGlassTransparency => 'リキッドグラスの透明度';
