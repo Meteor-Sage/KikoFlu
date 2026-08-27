@@ -16,6 +16,42 @@ struct _MyApplication {
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 
+// Flutter already bundles the shared icon under flutter_assets. Resolve it
+// from the running executable so the icon works for both debug bundles and
+// relocatable release archives.
+static gchar* application_icon_path() {
+  g_autofree gchar* executable_path =
+      g_file_read_link("/proc/self/exe", nullptr);
+  if (executable_path == nullptr) {
+    return nullptr;
+  }
+
+  g_autofree gchar* executable_directory =
+      g_path_get_dirname(executable_path);
+  return g_build_filename(executable_directory, "data", "flutter_assets",
+                          "assets", "icons", "app_icon_opaque.png", nullptr);
+}
+
+static void apply_application_icon(GtkWindow* window) {
+  g_autofree gchar* icon_path = application_icon_path();
+  if (icon_path == nullptr ||
+      !g_file_test(icon_path, G_FILE_TEST_IS_REGULAR)) {
+    g_warning("KikoFlu application icon is not available in the bundle");
+    return;
+  }
+
+  g_autoptr(GError) error = nullptr;
+  if (!gtk_window_set_icon_from_file(window, icon_path, &error)) {
+    g_warning("Unable to set KikoFlu application icon: %s",
+              error == nullptr ? "unknown error" : error->message);
+    return;
+  }
+
+  // Secondary windows are created by desktop_multi_window after the main
+  // window. Set the GTK default as well so they use the same application icon.
+  gtk_window_set_default_icon_from_file(icon_path, nullptr);
+}
+
 // Called when first Flutter frame received.
 static void first_frame_cb(MyApplication* self, FlView* view) {
   gtk_widget_show(gtk_widget_get_toplevel(GTK_WIDGET(view)));
@@ -27,6 +63,7 @@ static void first_frame_cb(MyApplication* self, FlView* view) {
 static void secondary_window_added(GtkApplication*,
                                    GtkWindow* window,
                                    gpointer) {
+  apply_application_icon(window);
   GtkWidget* widget = GTK_WIDGET(window);
   if (gtk_widget_get_realized(widget)) {
     return;
@@ -45,6 +82,7 @@ static void my_application_activate(GApplication* application) {
   MyApplication* self = MY_APPLICATION(application);
   GtkWindow* window =
       GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
+  apply_application_icon(window);
   g_signal_connect(application, "window-added",
                    G_CALLBACK(secondary_window_added), nullptr);
 

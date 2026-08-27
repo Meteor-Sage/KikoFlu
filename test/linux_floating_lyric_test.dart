@@ -62,4 +62,16 @@ void main() {
     expect(widgetSource, contains('setPreventClose(true)'));
     expect(widgetSource, contains('fontFamilyFallback'));
   });
+
+  test('Linux GTK windows use the bundled application icon', () {
+    final runnerSource = File(
+      'linux/runner/my_application.cc',
+    ).readAsStringSync();
+
+    expect(runnerSource, contains('gtk_window_set_icon_from_file'));
+    expect(runnerSource, contains('gtk_window_set_default_icon_from_file'));
+    expect(runnerSource, contains('/proc/self/exe'));
+    expect(runnerSource, contains('app_icon_opaque.png'));
+    expect(runnerSource, contains('flutter_assets'));
+  });
 }
