@@ -284,7 +284,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               );
             },
           ),
-          if (Platform.isAndroid || Platform.isWindows || Platform.isMacOS) ...[
+          if (Platform.isAndroid ||
+              Platform.isWindows ||
+              Platform.isLinux ||
+              Platform.isMacOS) ...[
             const SettingsDivider(),
             _buildFloatingLyricTouchTile(context),
           ],
@@ -303,7 +306,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget _buildFloatingLyricTouchTile(BuildContext context) {
     final touchEnabled = ref.watch(floatingLyricTouchEnabledProvider);
     final l10n = S.of(context);
-    final isDesktop = Platform.isWindows || Platform.isMacOS;
+    final isDesktop =
+        Platform.isWindows || Platform.isLinux || Platform.isMacOS;
     return SettingsSwitchTile(
       secondary: const SizedBox(width: 24),
       title: isDesktop

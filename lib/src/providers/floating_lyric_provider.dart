@@ -250,8 +250,11 @@ class FloatingLyricEnabledNotifier extends StateNotifier<bool> {
     // 2. 如果 Provider 在 show 执行期间加载完成并尝试 updateStyle 但失败了（因为窗口还没创建好），这里可以补救。
     ref.read(floatingLyricStyleProvider.notifier).applyStyle();
 
-    // 应用触摸设置（Android、Windows、macOS）
-    if (Platform.isAndroid || Platform.isWindows || Platform.isMacOS) {
+    // 应用触摸设置（Android、Windows、Linux、macOS）
+    if (Platform.isAndroid ||
+        Platform.isWindows ||
+        Platform.isLinux ||
+        Platform.isMacOS) {
       final touchEnabled = ref.read(floatingLyricTouchEnabledProvider);
       await FloatingLyricService.instance.setTouchEnabled(touchEnabled);
     }

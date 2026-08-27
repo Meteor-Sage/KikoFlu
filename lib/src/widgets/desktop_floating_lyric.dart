@@ -22,6 +22,10 @@ class DesktopFloatingLyric extends StatefulWidget {
 
 class _DesktopFloatingLyricState extends State<DesktopFloatingLyric>
     with WindowListener {
+  static const _linuxWindowChannel = MethodChannel(
+    'com.kikoeru.flutter/floating_lyric_linux',
+  );
+
   String _text = '♪ - ♪';
 
   // Style properties
@@ -74,25 +78,60 @@ class _DesktopFloatingLyricState extends State<DesktopFloatingLyric>
 
   Future<void> _initWindow() async {
     try {
+      // Register window messaging before platform setup so the main engine can
+      // still close or update this window if a best-effort window hint fails.
+      final controller = await WindowController.fromCurrentEngine();
+      await controller.setWindowMethodHandler(_handleMethodCall);
+
       await windowManager.setAsFrameless();
       await windowManager.setAlwaysOnTop(true);
       await windowManager.setBackgroundColor(Colors.transparent);
-      await windowManager.setHasShadow(false);
+      if (Platform.isLinux) {
+        final capabilities = await _linuxWindowChannel
+            .invokeMapMethod<String, dynamic>('configureWindow');
+        logOutput(
+          '[DesktopFloatingLyric] Linux window backend: '
+          '${capabilities?['backend'] ?? 'unknown'}, '
+          'transparent=${capabilities?['supportsTransparency'] ?? false}, '
+          'clickThrough=${capabilities?['supportsClickThrough'] ?? false}, '
+          'reliableAlwaysOnTop='
+          '${capabilities?['reliableAlwaysOnTop'] ?? false}',
+        );
+      } else {
+        await windowManager.setHasShadow(false);
+      }
       // 设置一个合理的默认大小
       await windowManager.setSize(const Size(800, 200));
       await _applyTouchMode();
 
-      // Setup method handler
-      final controller = await WindowController.fromCurrentEngine();
-      controller.setWindowMethodHandler(_handleMethodCall);
+      if (Platform.isLinux) {
+        await windowManager.show();
+      }
     } catch (e) {
       logOutput('[DesktopFloatingLyric] Failed to init window: $e');
+      if (Platform.isLinux) {
+        try {
+          await windowManager.show();
+        } catch (showError) {
+          logOutput(
+            '[DesktopFloatingLyric] Failed to show Linux fallback window: '
+            '$showError',
+          );
+        }
+      }
     }
   }
 
   Future<void> _applyTouchMode() async {
-    if (!Platform.isWindows && !Platform.isMacOS) return;
-    await windowManager.setIgnoreMouseEvents(!_touchEnabled);
+    if (Platform.isLinux) {
+      await _linuxWindowChannel.invokeMethod<void>('setIgnoreMouseEvents', {
+        'ignore': !_touchEnabled,
+      });
+      return;
+    }
+    if (Platform.isWindows || Platform.isMacOS) {
+      await windowManager.setIgnoreMouseEvents(!_touchEnabled);
+    }
   }
 
   @override

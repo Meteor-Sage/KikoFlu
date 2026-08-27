@@ -5,7 +5,9 @@
 #include <gdk/gdkx.h>
 #endif
 
+#include "desktop_multi_window/desktop_multi_window_plugin.h"
 #include "flutter/generated_plugin_registrant.h"
+#include "floating_lyric_plugin.h"
 
 struct _MyApplication {
   GtkApplication parent_instance;
@@ -19,11 +21,32 @@ static void first_frame_cb(MyApplication* self, FlView* view) {
   gtk_widget_show(gtk_widget_get_toplevel(GTK_WIDGET(view)));
 }
 
+// desktop_multi_window creates its GtkWindow before its Flutter view. Select
+// an RGBA visual at that point so transparent Flutter pixels remain transparent
+// on composited X11 desktops as well as Wayland.
+static void secondary_window_added(GtkApplication*,
+                                   GtkWindow* window,
+                                   gpointer) {
+  GtkWidget* widget = GTK_WIDGET(window);
+  if (gtk_widget_get_realized(widget)) {
+    return;
+  }
+
+  GdkScreen* screen = gtk_window_get_screen(window);
+  GdkVisual* rgba_visual = gdk_screen_get_rgba_visual(screen);
+  if (rgba_visual != nullptr) {
+    gtk_widget_set_visual(widget, rgba_visual);
+  }
+  gtk_widget_set_app_paintable(widget, TRUE);
+}
+
 // Implements GApplication::activate.
 static void my_application_activate(GApplication* application) {
   MyApplication* self = MY_APPLICATION(application);
   GtkWindow* window =
       GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
+  g_signal_connect(application, "window-added",
+                   G_CALLBACK(secondary_window_added), nullptr);
 
   // Use a header bar when running in GNOME as this is the common style used
   // by applications and is the setup most users will be using (e.g. Ubuntu
@@ -74,6 +97,19 @@ static void my_application_activate(GApplication* application) {
   gtk_widget_realize(GTK_WIDGET(view));
 
   fl_register_plugins(FL_PLUGIN_REGISTRY(view));
+  floating_lyric_plugin_register_with_registry(FL_PLUGIN_REGISTRY(view));
+
+  desktop_multi_window_plugin_set_window_created_callback(
+      [](FlPluginRegistry* registry) {
+        if (FL_IS_VIEW(registry)) {
+          GdkRGBA transparent;
+          gdk_rgba_parse(&transparent, "#00000000");
+          fl_view_set_background_color(FL_VIEW(registry), &transparent);
+        }
+
+        fl_register_plugins(registry);
+        floating_lyric_plugin_register_with_registry(registry);
+      });
 
   gtk_widget_grab_focus(GTK_WIDGET(view));
 }
