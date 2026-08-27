@@ -213,9 +213,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             );
           },
         ),
-        // 显示悬浮字幕 (Android & Windows & macOS & iOS)
+        // 显示悬浮字幕 (Android & Windows & Linux & macOS & iOS)
         if (Platform.isAndroid ||
             Platform.isWindows ||
+            Platform.isLinux ||
             Platform.isMacOS ||
             Platform.isIOS)
           _buildFloatingLyricTile(context),
