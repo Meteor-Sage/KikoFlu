@@ -154,29 +154,31 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
   });
 
-  testWidgets('progressive top treatment uses one bounded blur pass', (
+  testWidgets('progressive top treatment avoids dynamic backdrop filters', (
     tester,
   ) async {
     await tester.pumpWidget(
       _testApp(
         const MediaQuery(
           data: MediaQueryData(padding: EdgeInsets.only(top: 44)),
-          child: ProgressiveTopBlur(height: 96),
+          child: ProgressiveTopScrim(height: 96),
         ),
       ),
     );
 
-    expect(find.byType(BackdropFilter), findsOneWidget);
-    expect(find.byType(ShaderMask), findsOneWidget);
-    expect(tester.getSize(find.byType(ProgressiveTopBlur)).height, 96);
+    expect(find.byType(BackdropFilter), findsNothing);
+    expect(find.byType(ShaderMask), findsNothing);
+    expect(find.byType(DecoratedBox), findsOneWidget);
+    expect(tester.getSize(find.byType(ProgressiveTopScrim)).height, 96);
   });
 
   testWidgets('top treatment is omitted without a status bar inset', (
     tester,
   ) async {
-    await tester.pumpWidget(_testApp(const ProgressiveTopBlur(height: 96)));
+    await tester.pumpWidget(_testApp(const ProgressiveTopScrim(height: 96)));
 
     expect(find.byType(BackdropFilter), findsNothing);
+    expect(find.byType(DecoratedBox), findsNothing);
   });
 
   testWidgets('secondary toolbar follows the primary toolbar position', (

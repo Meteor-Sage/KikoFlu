@@ -242,7 +242,7 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
               top: 0,
               left: 0,
               right: 0,
-              child: ProgressiveTopBlur(height: topPadding + 72),
+              child: ProgressiveTopScrim(height: topPadding + 72),
             ),
             Positioned(
               top: toolbarTop,

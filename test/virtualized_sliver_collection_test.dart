@@ -203,6 +203,37 @@ void main() {
     expect(allPrefetched.toSet().length, allPrefetched.length);
   });
 
+  testWidgets('prefetch-only scrolling avoids per-frame item scans',
+      (tester) async {
+    var itemIdReads = 0;
+
+    await tester.pumpWidget(_app(
+      VirtualizedSliverCollection<int>(
+        items: List.generate(100, (index) => index),
+        itemId: (item) {
+          itemIdReads++;
+          return item;
+        },
+        cacheExtent: 360,
+        prefetchItemCount: 1,
+        showEndIndicator: false,
+        onPrefetch: (_) {},
+        itemBuilder: (context, item, index) => _IdentityTile(item: item),
+      ),
+    ));
+    await tester.pump();
+    await tester.pump();
+    itemIdReads = 0;
+
+    await tester.drag(
+      find.byType(CustomScrollView),
+      const Offset(0, -20),
+    );
+    await tester.pumpAndSettle();
+
+    expect(itemIdReads, lessThanOrEqualTo(4));
+  });
+
   testWidgets('page storage restores position after leaving and returning',
       (tester) async {
     final bucket = PageStorageBucket();

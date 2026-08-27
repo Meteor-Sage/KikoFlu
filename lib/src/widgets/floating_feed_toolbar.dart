@@ -1,5 +1,3 @@
-import 'dart:ui' as ui;
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -36,8 +34,8 @@ class FloatingFeedToolAction {
 }
 
 /// Two floating capsules used by feed surfaces: modes on the left and tools
-/// on the right. The surface remains translucent without applying extra blur
-/// filters, so a page only needs one shared top backdrop filter.
+/// on the right. The surface remains translucent while the page-level top
+/// treatment stays a lightweight gradient scrim.
 class FloatingFeedToolbar extends StatelessWidget {
   const FloatingFeedToolbar({
     super.key,
@@ -610,13 +608,14 @@ class FloatingToolbarIconButton extends StatelessWidget {
   }
 }
 
-/// A shallow, single-pass backdrop blur whose opacity fades into the content.
-/// Keeping the filtered area bounded avoids applying blur to the whole feed.
-class ProgressiveTopBlur extends StatelessWidget {
-  const ProgressiveTopBlur({super.key, required this.height, this.sigma = 14});
+/// A lightweight top scrim whose opacity fades into the scrolling content.
+///
+/// This intentionally avoids a backdrop blur: sampling a moving feed behind a
+/// blur every frame is expensive on high-refresh-rate displays.
+class ProgressiveTopScrim extends StatelessWidget {
+  const ProgressiveTopScrim({super.key, required this.height});
 
   final double height;
-  final double sigma;
 
   @override
   Widget build(BuildContext context) {
@@ -628,36 +627,17 @@ class ProgressiveTopBlur extends StatelessWidget {
       child: SizedBox(
         height: height,
         width: double.infinity,
-        child: ClipRect(
-          child: ShaderMask(
-            blendMode: BlendMode.dstIn,
-            shaderCallback: (bounds) => const LinearGradient(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [Colors.white, Colors.white, Colors.transparent],
-              stops: [0, 0.58, 1],
-            ).createShader(bounds),
-            child: BackdropFilter(
-              filter: ui.ImageFilter.blur(
-                sigmaX: sigma,
-                sigmaY: sigma,
-                tileMode: TileMode.decal,
-              ),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      surface.withValues(alpha: 0.72),
-                      surface.withValues(alpha: 0.34),
-                      surface.withValues(alpha: 0),
-                    ],
-                    stops: const [0, 0.58, 1],
-                  ),
-                ),
-                child: const SizedBox.expand(),
-              ),
+              colors: [
+                surface.withValues(alpha: 0.78),
+                surface.withValues(alpha: 0.42),
+                surface.withValues(alpha: 0),
+              ],
+              stops: const [0, 0.58, 1],
             ),
           ),
         ),

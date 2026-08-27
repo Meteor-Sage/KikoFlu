@@ -168,7 +168,7 @@ class _SearchResultContentState extends ConsumerState<_SearchResultContent> {
                 top: 0,
                 left: 0,
                 right: 0,
-                child: ProgressiveTopBlur(height: topPadding + 72),
+                child: ProgressiveTopScrim(height: topPadding + 72),
               ),
               Positioned(
                 top: topPadding + 8,

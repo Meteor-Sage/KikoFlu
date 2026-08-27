@@ -336,7 +336,7 @@ class _MyScreenState extends ConsumerState<MyScreen>
                 top: 0,
                 left: 0,
                 right: 0,
-                child: ProgressiveTopBlur(height: topPadding + 12),
+                child: ProgressiveTopScrim(height: topPadding + 12),
               ),
               Positioned(
                 top: tabSwitcherTop,
