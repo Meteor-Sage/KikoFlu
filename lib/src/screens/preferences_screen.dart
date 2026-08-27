@@ -670,19 +670,22 @@ class PreferencesScreen extends ConsumerWidget {
           subtitle: proxySettings.mode.localizedDescription(context),
           trailing: Text(proxySettings.mode.localizedName(context)),
         ),
-        RadioOptionGroup<ProxyMode>(
-          groupValue: proxySettings.mode,
-          contentPadding: EdgeInsets.zero,
-          dense: true,
-          options: [
-            for (final mode in ProxyMode.values)
-              RadioOption(
-                value: mode,
-                title: Text(mode.localizedName(context)),
-                subtitle: Text(mode.localizedDescription(context)),
-              ),
-          ],
-          onChanged: notifier.setMode,
+        Padding(
+          padding: const EdgeInsets.only(left: 52),
+          child: RadioOptionGroup<ProxyMode>(
+            groupValue: proxySettings.mode,
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            options: [
+              for (final mode in ProxyMode.values)
+                RadioOption(
+                  value: mode,
+                  title: Text(mode.localizedName(context)),
+                  subtitle: Text(mode.localizedDescription(context)),
+                ),
+            ],
+            onChanged: notifier.setMode,
+          ),
         ),
         if (proxySettings.mode == ProxyMode.manual) ...[
           const SettingsDivider(),
