@@ -130,8 +130,15 @@ class FloatingLyricService {
     if (_usesDesktopMultiWindow) {
       try {
         if (_windowId != null) {
+          final existingWindowId = _windowId!;
           final result = await updateText(text);
           if (result) {
+            // Linux hides rather than destroys the secondary engine. Show it
+            // again when the feature is re-enabled so the same engine/window
+            // can be reused without accumulating hidden windows.
+            if (Platform.isLinux) {
+              await WindowController.fromWindowId(existingWindowId).show();
+            }
             // 如果更新成功，且有样式参数，也更新样式
             if (style != null) {
               await updateStyle(
@@ -202,10 +209,19 @@ class FloatingLyricService {
         try {
           final controller = WindowController.fromWindowId(_windowId!);
           await controller.invokeMethod('close');
+          _log.info(
+            '桌面悬浮窗已请求隐藏: windowId=$_windowId',
+            tag: 'FloatingLyric.${Platform.operatingSystem}',
+          );
         } catch (e) {
           _log.captureOutput('[FloatingLyric] Desktop隐藏悬浮窗失败: $e');
         }
-        _windowId = null;
+        // Linux close is a hide operation; keep the controller so a later
+        // enable can show the same secondary engine. Windows still destroys
+        // the secondary window and must clear its id.
+        if (Platform.isWindows) {
+          _windowId = null;
+        }
         _lastText = null;
         return true;
       }

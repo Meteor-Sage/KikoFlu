@@ -1,5 +1,9 @@
 #include "floating_lyric_plugin.h"
 
+#include <stdio.h>
+#include <time.h>
+#include <unistd.h>
+
 #include <gtk/gtk.h>
 
 #ifdef GDK_WINDOWING_WAYLAND
@@ -16,7 +20,6 @@
 struct _FloatingLyricPlugin {
   GObject parent_instance;
   FlPluginRegistrar* registrar;
-  gboolean is_closing;
 };
 
 G_DEFINE_TYPE(FloatingLyricPlugin,
@@ -31,6 +34,44 @@ static GtkWindow* get_window(FloatingLyricPlugin* self) {
 
   GtkWidget* window = gtk_widget_get_toplevel(GTK_WIDGET(view));
   return GTK_IS_WINDOW(window) ? GTK_WINDOW(window) : nullptr;
+}
+
+// Keep lifecycle diagnostics outside Flutter's in-memory log screen. These
+// events are intentionally limited to window operations, so this file is not
+// touched by the lyric update loop.
+static gchar* diagnostic_log_path() {
+  return g_build_filename(g_get_user_data_dir(), "KikoFlu", "logs",
+                          "floating_lyric_linux.log", nullptr);
+}
+
+static void write_diagnostic(const gchar* event,
+                             const gchar* details = nullptr) {
+  g_autofree gchar* path = diagnostic_log_path();
+  g_autofree gchar* directory = g_path_get_dirname(path);
+  if (g_mkdir_with_parents(directory, 0700) != 0) {
+    return;
+  }
+
+  FILE* file = fopen(path, "a");
+  if (file == nullptr) {
+    return;
+  }
+
+  time_t now = time(nullptr);
+  struct tm local_time;
+  localtime_r(&now, &local_time);
+  char timestamp[32];
+  strftime(timestamp, sizeof(timestamp), "%Y-%m-%d %H:%M:%S", &local_time);
+  if (details == nullptr || details[0] == '\0') {
+    fprintf(file, "%s pid=%d event=%s\n", timestamp,
+            static_cast<int>(getpid()), event);
+  } else {
+    fprintf(file, "%s pid=%d event=%s %s\n", timestamp,
+            static_cast<int>(getpid()), event, details);
+  }
+  fflush(file);
+  fsync(fileno(file));
+  fclose(file);
 }
 
 static const gchar* get_backend_name(GdkDisplay* display) {
@@ -85,12 +126,16 @@ static FlValue* build_capabilities(GtkWindow* window) {
   fl_value_set_string_take(
       result, "reliableAlwaysOnTop",
       fl_value_new_bool(g_strcmp0(backend, "x11") == 0));
+  g_autofree gchar* log_path = diagnostic_log_path();
+  fl_value_set_string_take(result, "diagnosticLogPath",
+                           fl_value_new_string(log_path));
   return fl_value_ref(result);
 }
 
 static FlMethodResponse* configure_window(FloatingLyricPlugin* self) {
   GtkWindow* window = get_window(self);
   if (window == nullptr) {
+    write_diagnostic("configure_window_failed", "reason=window_unavailable");
     return FL_METHOD_RESPONSE(fl_method_error_response_new(
         "window_unavailable", "Unable to resolve the GTK window", nullptr));
   }
@@ -111,6 +156,12 @@ static FlMethodResponse* configure_window(FloatingLyricPlugin* self) {
     gdk_window_set_opaque_region(gdk_window, nullptr);
   }
 
+  GdkScreen* screen = gtk_window_get_screen(window);
+  const gchar* backend = get_backend_name(gdk_screen_get_display(screen));
+  g_autofree gchar* details =
+      g_strdup_printf("backend=%s window=%p", backend, window);
+  write_diagnostic("configure_window", details);
+
   return FL_METHOD_RESPONSE(
       fl_method_success_response_new(build_capabilities(window)));
 }
@@ -119,6 +170,8 @@ static FlMethodResponse* set_ignore_mouse_events(FloatingLyricPlugin* self,
                                                   FlValue* args) {
   GtkWindow* window = get_window(self);
   if (window == nullptr) {
+    write_diagnostic("set_ignore_mouse_events_failed",
+                     "reason=window_unavailable");
     return FL_METHOD_RESPONSE(fl_method_error_response_new(
         "window_unavailable", "Unable to resolve the GTK window", nullptr));
   }
@@ -134,58 +187,44 @@ static FlMethodResponse* set_ignore_mouse_events(FloatingLyricPlugin* self,
   const gboolean ignore = fl_value_get_bool(ignore_value);
   GdkWindow* gdk_window = gtk_widget_get_window(GTK_WIDGET(window));
   if (gdk_window == nullptr) {
+    write_diagnostic("set_ignore_mouse_events_failed",
+                     "reason=window_unrealized");
     return FL_METHOD_RESPONSE(fl_method_error_response_new(
         "window_unrealized", "The GTK window is not realized", nullptr));
   }
 
   set_widget_pass_through(GTK_WIDGET(window), ignore);
   gtk_window_set_accept_focus(window, !ignore);
+  g_autofree gchar* details =
+      g_strdup_printf("ignore=%s window=%p", ignore ? "true" : "false",
+                      window);
+  write_diagnostic("set_ignore_mouse_events", details);
 
   return FL_METHOD_RESPONSE(
       fl_method_success_response_new(fl_value_new_bool(TRUE)));
 }
 
-static gboolean destroy_window_idle(gpointer data) {
-  GtkWidget* widget = GTK_WIDGET(data);
-  if (GTK_IS_WIDGET(widget)) {
-    gtk_widget_destroy(widget);
-  }
-  g_object_unref(widget);
-  return G_SOURCE_REMOVE;
-}
-
-static void schedule_window_destroy(FloatingLyricPlugin* self) {
-  if (self->is_closing) {
-    return;
-  }
-
-  GtkWindow* window = get_window(self);
-  if (window == nullptr) {
-    return;
-  }
-
-  self->is_closing = TRUE;
-  // Destroy only the secondary GTK window. Using gtk_window_close() here can
-  // re-enter Flutter's delete-event handler and terminate the main window.
-  g_idle_add(destroy_window_idle, g_object_ref(window));
-}
-
 static gboolean on_window_delete_event(GtkWidget*, GdkEvent*, gpointer data) {
-  auto* self = FLOATING_LYRIC_PLUGIN(data);
-  schedule_window_destroy(self);
-  // Consume the event so GTK does not continue into the Flutter engine's
-  // default close handler.
-  return TRUE;
+  static_cast<void>(data);
+  write_diagnostic("delete_event", "action=forward_to_window_manager");
+  // Let window_manager's prevent-close handler receive the event. Its Dart
+  // listener hides the window instead of destroying the secondary engine.
+  return FALSE;
 }
 
-static FlMethodResponse* destroy_window(FloatingLyricPlugin* self) {
+static FlMethodResponse* hide_window(FloatingLyricPlugin* self) {
   GtkWindow* window = get_window(self);
   if (window == nullptr) {
+    write_diagnostic("hide_window_failed", "reason=window_unavailable");
     return FL_METHOD_RESPONSE(fl_method_error_response_new(
         "window_unavailable", "Unable to resolve the GTK window", nullptr));
   }
 
-  schedule_window_destroy(self);
+  // Closing a secondary engine through gtk_window_close()/destroy can trigger
+  // the Flutter engine removal race reported by desktop_multi_window users.
+  // Hiding keeps the engine alive and is sufficient for the floating lyric UI.
+  gtk_widget_hide(GTK_WIDGET(window));
+  write_diagnostic("hide_window", "result=hidden");
   return FL_METHOD_RESPONSE(
       fl_method_success_response_new(fl_value_new_bool(TRUE)));
 }
@@ -199,8 +238,11 @@ static void floating_lyric_plugin_handle_method_call(
 
   if (g_strcmp0(method, "configureWindow") == 0) {
     response = configure_window(self);
-  } else if (g_strcmp0(method, "destroyWindow") == 0) {
-    response = destroy_window(self);
+  } else if (g_strcmp0(method, "destroyWindow") == 0 ||
+             g_strcmp0(method, "hideWindow") == 0) {
+    // Keep destroyWindow as a compatibility alias for older Dart code. It is
+    // intentionally implemented as hide on Linux.
+    response = hide_window(self);
   } else if (g_strcmp0(method, "getCapabilities") == 0) {
     GtkWindow* window = get_window(self);
     if (window == nullptr) {
@@ -245,12 +287,15 @@ void floating_lyric_plugin_register_with_registry(FlPluginRegistry* registry) {
   FloatingLyricPlugin* plugin = FLOATING_LYRIC_PLUGIN(
       g_object_new(floating_lyric_plugin_get_type(), nullptr));
   plugin->registrar = FL_PLUGIN_REGISTRAR(g_object_ref(registrar));
-  plugin->is_closing = FALSE;
-
   GtkWindow* window = get_window(plugin);
   if (window != nullptr) {
     g_signal_connect(GTK_WIDGET(window), "delete-event",
                      G_CALLBACK(on_window_delete_event), plugin);
+    g_autofree gchar* details = g_strdup_printf("window=%p", window);
+    write_diagnostic("plugin_registered", details);
+  } else {
+    write_diagnostic("delete_handler_registration_failed",
+                     "reason=window_unavailable");
   }
 
   g_autoptr(FlStandardMethodCodec) codec = fl_standard_method_codec_new();

@@ -50,11 +50,15 @@ void main() {
     expect(pluginSource, contains('gdk_window_set_opaque_region'));
     expect(pluginSource, contains('gtk_window_set_keep_above'));
     expect(pluginSource, contains('delete-event'));
-    expect(pluginSource, contains('gtk_widget_destroy'));
+    expect(pluginSource, contains('gtk_widget_hide'));
+    expect(pluginSource, isNot(contains('gtk_widget_destroy(')));
     expect(pluginSource, contains('destroyWindow'));
+    expect(pluginSource, contains('hideWindow'));
+    expect(pluginSource, contains('floating_lyric_linux.log'));
+    expect(pluginSource, contains('fsync'));
     expect(widgetSource, contains("'configureWindow'"));
     expect(widgetSource, contains("'setIgnoreMouseEvents'"));
-    expect(widgetSource, contains("'destroyWindow'"));
+    expect(widgetSource, contains("'hideWindow'"));
     expect(widgetSource, contains('setPreventClose(true)'));
     expect(widgetSource, contains('fontFamilyFallback'));
   });

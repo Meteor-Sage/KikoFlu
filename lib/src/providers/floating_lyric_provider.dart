@@ -206,8 +206,26 @@ class FloatingLyricEnabledNotifier extends StateNotifier<bool> {
     } else {
       // 停止后台更新
       _stopBackgroundUpdate();
+      // Persist the disabled state before crossing into the secondary engine.
+      // If that engine crashes during a Linux close, the next app launch must
+      // not restore a stale "enabled" preference and reopen the window.
+      state = false;
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool(_key, false);
+      } catch (e) {
+        // Still attempt to hide the window if persistence is temporarily
+        // unavailable; the next launch can recover from the failed write.
+        _log.error('保存悬浮字幕关闭状态失败: $e',
+            tag: 'FloatingLyric.${Platform.operatingSystem}');
+      }
+      _log.info(
+        '悬浮字幕已持久化为关闭，开始隐藏窗口',
+        tag: 'FloatingLyric.${Platform.operatingSystem}',
+      );
       // 隐藏悬浮窗
       await FloatingLyricService.instance.hide();
+      return;
     }
 
     // 保存状态

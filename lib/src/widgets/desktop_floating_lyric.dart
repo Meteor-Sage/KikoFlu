@@ -117,7 +117,8 @@ class _DesktopFloatingLyricState extends State<DesktopFloatingLyric>
           'transparent=${capabilities?['supportsTransparency'] ?? false}, '
           'clickThrough=${capabilities?['supportsClickThrough'] ?? false}, '
           'reliableAlwaysOnTop='
-          '${capabilities?['reliableAlwaysOnTop'] ?? false}',
+          '${capabilities?['reliableAlwaysOnTop'] ?? false}, '
+          'diagnosticLogPath=${capabilities?['diagnosticLogPath'] ?? 'unknown'}',
         );
         // Reapply these hints after realization; some X11 window managers
         // ignore pre-show keep-above requests.
@@ -180,7 +181,9 @@ class _DesktopFloatingLyricState extends State<DesktopFloatingLyric>
         return true;
       case 'close':
         if (Platform.isLinux) {
-          await _destroyLinuxWindow();
+          // Keep the secondary engine alive. Destroying a Linux secondary
+          // window can race Flutter's view removal and terminate the app.
+          await _linuxWindowChannel.invokeMethod<void>('hideWindow');
         } else {
           await windowManager.close();
         }
@@ -195,11 +198,13 @@ class _DesktopFloatingLyricState extends State<DesktopFloatingLyric>
     }
   }
 
-  Future<void> _destroyLinuxWindow() async {
+  Future<void> _hideLinuxWindow() async {
     if (_isClosing) return;
     _isClosing = true;
     try {
-      await _linuxWindowChannel.invokeMethod<void>('destroyWindow');
+      await _linuxWindowChannel.invokeMethod<void>('hideWindow');
+    } catch (e) {
+      logOutput('[DesktopFloatingLyric] Failed to hide Linux window: $e');
     } finally {
       _isClosing = false;
     }
@@ -208,7 +213,9 @@ class _DesktopFloatingLyricState extends State<DesktopFloatingLyric>
   @override
   void onWindowClose() {
     if (Platform.isLinux) {
-      _destroyLinuxWindow();
+      // window_manager emits this callback for the native close button while
+      // prevent-close is enabled. Hide instead of destroying the engine.
+      _hideLinuxWindow();
     }
   }
 
