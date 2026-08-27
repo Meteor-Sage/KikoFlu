@@ -141,6 +141,30 @@ static FlMethodResponse* set_ignore_mouse_events(FloatingLyricPlugin* self,
       fl_method_success_response_new(fl_value_new_bool(TRUE)));
 }
 
+static gboolean destroy_window_idle(gpointer data) {
+  GtkWidget* widget = GTK_WIDGET(data);
+  if (GTK_IS_WIDGET(widget)) {
+    gtk_widget_destroy(widget);
+  }
+  g_object_unref(widget);
+  return G_SOURCE_REMOVE;
+}
+
+static FlMethodResponse* destroy_window(FloatingLyricPlugin* self) {
+  GtkWindow* window = get_window(self);
+  if (window == nullptr) {
+    return FL_METHOD_RESPONSE(fl_method_error_response_new(
+        "window_unavailable", "Unable to resolve the GTK window", nullptr));
+  }
+
+  // gtk_window_close() emits the Flutter engine's delete-event handler. On
+  // Linux that handler can terminate the owning application as well as this
+  // secondary window, so destroy only this window after replying to Dart.
+  g_idle_add(destroy_window_idle, g_object_ref(window));
+  return FL_METHOD_RESPONSE(
+      fl_method_success_response_new(fl_value_new_bool(TRUE)));
+}
+
 static void floating_lyric_plugin_handle_method_call(
     FloatingLyricPlugin* self,
     FlMethodCall* method_call) {
@@ -150,6 +174,8 @@ static void floating_lyric_plugin_handle_method_call(
 
   if (g_strcmp0(method, "configureWindow") == 0) {
     response = configure_window(self);
+  } else if (g_strcmp0(method, "destroyWindow") == 0) {
+    response = destroy_window(self);
   } else if (g_strcmp0(method, "getCapabilities") == 0) {
     GtkWindow* window = get_window(self);
     if (window == nullptr) {

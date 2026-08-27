@@ -36,6 +36,16 @@ class _DesktopFloatingLyricState extends State<DesktopFloatingLyric>
   double _paddingHorizontal = 16.0;
   double _paddingVertical = 8.0;
   bool _touchEnabled = true;
+  bool _isClosing = false;
+
+  static const _linuxFontFallback = [
+    'Noto Sans CJK SC',
+    'Noto Sans CJK TC',
+    'Noto Sans CJK JP',
+    'Source Han Sans SC',
+    'WenQuanYi Micro Hei',
+    'Droid Sans Fallback',
+  ];
 
   @override
   void initState() {
@@ -85,6 +95,11 @@ class _DesktopFloatingLyricState extends State<DesktopFloatingLyric>
 
       await windowManager.setAsFrameless();
       await windowManager.setAlwaysOnTop(true);
+      if (Platform.isLinux) {
+        // The close button must not route through GTK's default delete-event
+        // handler, which can close the owning Flutter application.
+        await windowManager.setPreventClose(true);
+      }
       await windowManager.setBackgroundColor(Colors.transparent);
       if (Platform.isLinux) {
         final capabilities = await _linuxWindowChannel
@@ -106,6 +121,10 @@ class _DesktopFloatingLyricState extends State<DesktopFloatingLyric>
 
       if (Platform.isLinux) {
         await windowManager.show();
+        // Reapply these hints after realization; some X11 window managers
+        // ignore pre-show keep-above requests.
+        await windowManager.setAlwaysOnTop(true);
+        await _linuxWindowChannel.invokeMethod<void>('configureWindow');
       }
     } catch (e) {
       logOutput('[DesktopFloatingLyric] Failed to init window: $e');
@@ -157,7 +176,11 @@ class _DesktopFloatingLyricState extends State<DesktopFloatingLyric>
         }
         return true;
       case 'close':
-        await windowManager.close();
+        if (Platform.isLinux) {
+          await _destroyLinuxWindow();
+        } else {
+          await windowManager.close();
+        }
         return true;
       case 'setTouchEnabled':
         final arguments = call.arguments;
@@ -166,6 +189,23 @@ class _DesktopFloatingLyricState extends State<DesktopFloatingLyric>
         return true;
       default:
         return null;
+    }
+  }
+
+  Future<void> _destroyLinuxWindow() async {
+    if (_isClosing) return;
+    _isClosing = true;
+    try {
+      await _linuxWindowChannel.invokeMethod<void>('destroyWindow');
+    } finally {
+      _isClosing = false;
+    }
+  }
+
+  @override
+  void onWindowClose() {
+    if (Platform.isLinux) {
+      _destroyLinuxWindow();
     }
   }
 
@@ -199,6 +239,9 @@ class _DesktopFloatingLyricState extends State<DesktopFloatingLyric>
                     fontSize: _fontSize,
                     fontWeight: FontWeight.bold,
                     color: _textColor,
+                    fontFamilyFallback: Platform.isLinux
+                        ? _linuxFontFallback
+                        : null,
                     shadows: [
                       Shadow(
                         offset: const Offset(1.0, 1.0),
