@@ -37,6 +37,13 @@ class WorkCoverFrame extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         child: Hero(
           tag: heroTag,
+          // The default shuttle uses the destination child. When a work is
+          // opened before the detail image has loaded, that child is the
+          // loading placeholder and briefly puts a spinner in the flight.
+          // Reuse the already visible source cover for both directions so
+          // the Hero remains stable until the destination is ready.
+          flightShuttleBuilder: (_, __, ___, fromHeroContext, _____) =>
+              (fromHeroContext.widget as Hero).child,
           child: Material(
             color: Colors.transparent,
             borderRadius: BorderRadius.circular(12),

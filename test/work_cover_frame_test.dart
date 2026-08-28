@@ -34,6 +34,30 @@ void main() {
     expect(find.text('Subtitle'), findsNothing);
   });
 
+  testWidgets('uses the source cover for the Hero flight', (tester) async {
+    await tester.pumpWidget(
+      _testApp(
+        const WorkCoverFrame(
+          heroTag: 'cover-flight',
+          isLandscape: false,
+          layers: [Center(child: Text('Cover Layer'))],
+        ),
+      ),
+    );
+
+    final hero = tester.widget<Hero>(find.byType(Hero));
+    final heroContext = tester.element(find.byType(Hero));
+    final shuttle = hero.flightShuttleBuilder!(
+      heroContext,
+      const AlwaysStoppedAnimation<double>(0),
+      HeroFlightDirection.push,
+      heroContext,
+      heroContext,
+    );
+
+    expect(identical(shuttle, hero.child), isTrue);
+  });
+
   testWidgets('shows subtitle and age badges and handles tap', (tester) async {
     var tapCount = 0;
 
