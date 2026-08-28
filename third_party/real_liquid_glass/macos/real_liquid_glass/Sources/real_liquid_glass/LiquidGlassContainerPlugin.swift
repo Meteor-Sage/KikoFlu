@@ -1,4 +1,5 @@
 import Cocoa
+import CoreGraphics
 import FlutterMacOS
 
 public class LiquidGlassContainerPlugin: NSObject, FlutterPlugin {
@@ -79,6 +80,12 @@ final class GlassHostView: NSView {
   private var capsule = false
   private var cornerRadius: CGFloat = 0
   private var shadowExtent: CGFloat = 0
+  private var shadowFadeMask: CALayer?
+  private var shadowFadeMaskBounds = CGRect.zero
+  private var shadowFadeMaskGlassFrame = CGRect.zero
+  private var shadowFadeMaskInset: CGFloat = -1
+  private var shadowFadeMaskRadius: CGFloat = -1
+  private var shadowFadeMaskScale: CGFloat = -1
   var retainedChannel: FlutterMethodChannel?
 
   init(args: [String: Any]) {
@@ -134,27 +141,125 @@ final class GlassHostView: NSView {
     updateCorners()
   }
 
+  private func currentShadowInset() -> CGFloat {
+    guard bounds.width > 0, bounds.height > 0 else { return 0 }
+    return min(shadowExtent, min(bounds.width, bounds.height) / 2)
+  }
+
   private func updateGlassFrame(of view: NSView) {
-    let inset = min(shadowExtent, min(bounds.width, bounds.height) / 2)
-    view.frame = bounds.insetBy(dx: inset, dy: inset)
+    view.frame = bounds.insetBy(dx: currentShadowInset(), dy: currentShadowInset())
   }
 
   private func updateCorners() {
     guard let glassView else { return }
+    let inset = currentShadowInset()
     let radius = capsule
       ? min(glassView.bounds.width, glassView.bounds.height) / 2
       : cornerRadius
-    // Flutter's AppKit platform-view host already supplies the rectangular
-    // clip boundary. Keep this host unclipped and let the inset glass view
-    // render its own rounded material and shadow into the surrounding buffer.
-    layer?.cornerRadius = 0
-    layer?.masksToBounds = false
+    // The platform-view host is expanded to hold the native shadow. Round
+    // that buffer too, otherwise its rectangular edge clips the shadow.
+    layer?.cornerRadius = radius + inset
+    if #available(macOS 10.15, *) {
+      layer?.cornerCurve = .continuous
+    }
+    layer?.masksToBounds = true
+    updateShadowFadeMask(inset: inset, radius: radius, glassFrame: glassView.frame)
     if #available(macOS 26.0, *), let glass = glassView as? NSGlassEffectView {
       glass.cornerRadius = radius
     } else if let layer = glassView.layer {
       layer.cornerRadius = radius
+      if #available(macOS 10.15, *) {
+        layer.cornerCurve = .continuous
+      }
       layer.masksToBounds = true
     }
+  }
+
+  private func updateShadowFadeMask(
+    inset: CGFloat,
+    radius: CGFloat,
+    glassFrame: CGRect
+  ) {
+    guard let hostLayer = layer, inset > 0 else {
+      layer?.mask = nil
+      shadowFadeMask = nil
+      return
+    }
+
+    let scale = max(
+      window?.backingScaleFactor ?? NSScreen.main?.backingScaleFactor ?? 2,
+      1)
+    if shadowFadeMask != nil,
+      shadowFadeMaskBounds == bounds,
+      shadowFadeMaskGlassFrame == glassFrame,
+      shadowFadeMaskInset == inset,
+      shadowFadeMaskRadius == radius,
+      shadowFadeMaskScale == scale {
+      return
+    }
+
+    let pixelWidth = max(1, Int(ceil(bounds.width * scale)))
+    let pixelHeight = max(1, Int(ceil(bounds.height * scale)))
+    guard let context = CGContext(
+      data: nil,
+      width: pixelWidth,
+      height: pixelHeight,
+      bitsPerComponent: 8,
+      bytesPerRow: pixelWidth * 4,
+      space: CGColorSpaceCreateDeviceRGB(),
+      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue),
+      let image = makeShadowFadeMaskImage(
+        context: context,
+        scale: scale,
+        glassFrame: glassFrame,
+        radius: radius,
+        inset: inset)
+    else { return }
+
+    let mask = CALayer()
+    mask.frame = bounds
+    mask.contents = image
+    mask.contentsScale = scale
+    mask.contentsGravity = .resize
+    hostLayer.mask = mask
+    shadowFadeMask = mask
+    shadowFadeMaskBounds = bounds
+    shadowFadeMaskGlassFrame = glassFrame
+    shadowFadeMaskInset = inset
+    shadowFadeMaskRadius = radius
+    shadowFadeMaskScale = scale
+  }
+
+  private func makeShadowFadeMaskImage(
+    context: CGContext,
+    scale: CGFloat,
+    glassFrame: CGRect,
+    radius: CGFloat,
+    inset: CGFloat
+  ) -> CGImage? {
+    context.clear(
+      CGRect(
+        x: 0,
+        y: 0,
+        width: bounds.width * scale,
+        height: bounds.height * scale))
+    context.scaleBy(x: scale, y: scale)
+    context.setFillColor(NSColor.white.cgColor)
+    // Draw the mask's own rounded shadow into an alpha image. This makes the
+    // buffer fade continuously instead of relying on a hard layer boundary.
+    context.setShadow(
+      offset: .zero,
+      blur: max(0.5, inset / 3),
+      color: NSColor.white.cgColor)
+    let localFrame = glassFrame.offsetBy(dx: -bounds.minX, dy: -bounds.minY)
+    let path = CGPath(
+      roundedRect: localFrame,
+      cornerWidth: radius,
+      cornerHeight: radius,
+      transform: nil)
+    context.addPath(path)
+    context.fillPath()
+    return context.makeImage()
   }
 }
 

@@ -33,6 +33,7 @@ void main() {
     final hero = tester.widget<Hero>(find.byType(Hero));
     expect(hero.flightShuttleBuilder, isNotNull);
     expect(hero.placeholderBuilder, isNotNull);
+    expect(find.byType(AspectRatio), findsNothing);
     expect(find.text('Cover Layer'), findsOneWidget);
     expect(find.text('Subtitle'), findsNothing);
   });
