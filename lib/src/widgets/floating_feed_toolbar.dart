@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:real_liquid_glass/real_liquid_glass.dart';
 
-import '../utils/design_tokens.dart';
-
 import '../providers/settings_provider.dart';
 
 class FloatingFeedModeAction {
@@ -371,20 +369,20 @@ class FloatingToolbarLayout {
 
   static double horizontalPadding(BuildContext context) {
     return MediaQuery.of(context).orientation == Orientation.landscape
-        ? AppSpacing.lg
-        : AppSpacing.xs;
+        ? 24.0
+        : 8.0;
   }
 }
 
 /// Shared translucent capsule surface for toolbars that need custom content.
 class FloatingToolbarSurface extends ConsumerWidget {
   static const double backgroundOpacity = 0.94;
-  static const double _radius = AppRadius.capsule;
+  static const double _radius = 24;
 
   const FloatingToolbarSurface({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(AppSpacing.xxs),
+    this.padding = const EdgeInsets.all(4),
   });
 
   final Widget child;

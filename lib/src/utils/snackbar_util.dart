@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'design_tokens.dart';
-
 /// SnackBar 工具类，提供统一的提示风格
 class SnackBarUtil {
   SnackBarUtil._();
@@ -74,9 +72,9 @@ class SnackBarUtil {
             Icon(
               Icons.check_circle_outline,
               color: Theme.of(context).colorScheme.onPrimary,
-              size: AppIconSize.standard,
+              size: 20,
             ),
-            const SizedBox(width: AppSpacing.sm),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 message,
@@ -107,13 +105,15 @@ class SnackBarUtil {
             Icon(
               Icons.error_outline,
               color: Theme.of(context).colorScheme.onError,
-              size: AppIconSize.standard,
+              size: 20,
             ),
-            const SizedBox(width: AppSpacing.sm),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 message,
-                style: TextStyle(color: Theme.of(context).colorScheme.onError),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onError,
+                ),
               ),
             ),
           ],
@@ -143,11 +143,16 @@ class SnackBarUtil {
             Icon(
               Icons.warning_amber_rounded,
               color: onWarningColor,
-              size: AppIconSize.standard,
+              size: 20,
             ),
-            const SizedBox(width: AppSpacing.sm),
+            const SizedBox(width: 12),
             Expanded(
-              child: Text(message, style: TextStyle(color: onWarningColor)),
+              child: Text(
+                message,
+                style: TextStyle(
+                  color: onWarningColor,
+                ),
+              ),
             ),
           ],
         ),
@@ -171,9 +176,9 @@ class SnackBarUtil {
             Icon(
               Icons.info_outline,
               color: Theme.of(context).colorScheme.onSecondaryContainer,
-              size: AppIconSize.standard,
+              size: 20,
             ),
-            const SizedBox(width: AppSpacing.sm),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 message,
@@ -202,8 +207,8 @@ class SnackBarUtil {
         content: Row(
           children: [
             SizedBox(
-              width: AppIconSize.small,
-              height: AppIconSize.small,
+              width: 16,
+              height: 16,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
                 valueColor: AlwaysStoppedAnimation<Color>(
@@ -211,7 +216,7 @@ class SnackBarUtil {
                 ),
               ),
             ),
-            const SizedBox(width: AppSpacing.sm),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 message,

@@ -56,15 +56,11 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       if (mounted) {
         if (status.isGranted) {
           SnackBarUtil.showSuccess(
-            context,
-            S.of(context).notificationPermissionGranted,
-          );
+              context, S.of(context).notificationPermissionGranted);
           await _checkPermissions();
         } else if (status.isDenied) {
           SnackBarUtil.showWarning(
-            context,
-            S.of(context).notificationPermissionDenied,
-          );
+              context, S.of(context).notificationPermissionDenied);
         } else if (status.isPermanentlyDenied) {
           _showOpenSettingsDialog(S.of(context).notificationPermission);
         }
@@ -72,9 +68,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     } catch (e) {
       if (mounted) {
         SnackBarUtil.showError(
-          context,
-          S.of(context).requestNotificationFailed(e.toString()),
-        );
+            context, S.of(context).requestNotificationFailed(e.toString()));
       }
     }
   }
@@ -86,15 +80,11 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       if (mounted) {
         if (status.isGranted) {
           SnackBarUtil.showSuccess(
-            context,
-            S.of(context).backgroundPermissionGranted,
-          );
+              context, S.of(context).backgroundPermissionGranted);
           await _checkPermissions();
         } else if (status.isDenied) {
           SnackBarUtil.showWarning(
-            context,
-            S.of(context).backgroundPermissionDenied,
-          );
+              context, S.of(context).backgroundPermissionDenied);
         } else if (status.isPermanentlyDenied) {
           _showOpenSettingsDialog(S.of(context).backgroundRunningPermission);
         }
@@ -102,9 +92,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     } catch (e) {
       if (mounted) {
         SnackBarUtil.showError(
-          context,
-          S.of(context).requestBackgroundFailed(e.toString()),
-        );
+            context, S.of(context).requestBackgroundFailed(e.toString()));
       }
     }
   }
@@ -114,9 +102,8 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(S.of(context).permissionRequired(permissionName)),
-        content: Text(
-          S.of(context).permissionPermanentlyDenied(permissionName),
-        ),
+        content:
+            Text(S.of(context).permissionPermanentlyDenied(permissionName)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -143,7 +130,10 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     // 非安卓平台显示提示信息
     if (!Platform.isAndroid) {
       return Scaffold(
-        appBar: AppBar(title: Text(S.of(context).permissionManagement)),
+        appBar: AppBar(
+          title: Text(S.of(context).permissionManagement,
+              style: const TextStyle(fontSize: 18)),
+        ),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -162,8 +152,8 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
               Text(
                 S.of(context).permissionsNotNeeded,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
               ),
             ],
           ),
@@ -173,7 +163,8 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(S.of(context).permissionManagement),
+        title: Text(S.of(context).permissionManagement,
+            style: const TextStyle(fontSize: 18)),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -279,15 +270,15 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
             children: [
               Text(
                 title,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
               ),
               Text(
                 description,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
               ),
             ],
           ),

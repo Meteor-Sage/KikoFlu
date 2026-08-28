@@ -65,26 +65,22 @@ class _AccountManagementScreenState
       await AccountDatabase.instance.setActiveAccount(account.id!);
 
       // Login with the account
-      final success = await ref
-          .read(authProvider.notifier)
-          .login(
-            account.username,
-            account.password,
-            account.host,
-            account.serverCookie,
-          );
+      final success = await ref.read(authProvider.notifier).login(
+          account.username,
+          account.password,
+          account.host,
+          account.serverCookie);
 
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(S.of(context).switchedToAccount(account.username)),
-          ),
+              content: Text(S.of(context).switchedToAccount(account.username))),
         );
         await _loadAccounts();
       } else if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(S.of(context).switchFailed)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(S.of(context).switchFailed)),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -130,7 +126,9 @@ class _AccountManagementScreenState
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
             child: Text(S.of(context).delete),
           ),
         ],
@@ -142,9 +140,9 @@ class _AccountManagementScreenState
     try {
       await AccountDatabase.instance.deleteAccount(account.id!);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(S.of(context).accountDeleted)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(S.of(context).accountDeleted)),
+        );
       }
       await _loadAccounts();
     } catch (e) {
@@ -159,129 +157,133 @@ class _AccountManagementScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: ScrollableAppBar(title: Text(S.of(context).accountManagement)),
+      appBar: ScrollableAppBar(
+        title: Text(S.of(context).accountManagement,
+            style: const TextStyle(fontSize: 18)),
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _accounts.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.account_circle_outlined,
-                    size: 64,
-                    color: Theme.of(context).colorScheme.outline,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    S.of(context).noAccounts,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    S.of(context).tapToAddAccount,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.outline,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          : ListView.builder(
-              itemCount: _accounts.length,
-              itemBuilder: (context, index) {
-                final account = _accounts[index];
-                return SettingsSectionCard(
-                  margin: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: account.isActive
-                          ? Theme.of(context).colorScheme.primary
-                          : Theme.of(
-                              context,
-                            ).colorScheme.surfaceContainerHighest,
-                      child: Icon(
-                        account.isActive
-                            ? Icons.check_circle
-                            : Icons.account_circle,
-                        color: account.isActive
-                            ? Theme.of(context).colorScheme.onPrimary
-                            : Theme.of(context).colorScheme.onSurfaceVariant,
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.account_circle_outlined,
+                        size: 64,
+                        color: Theme.of(context).colorScheme.outline,
                       ),
-                    ),
-                    title: Text(
-                      account.username,
-                      style: TextStyle(
-                        fontWeight: account.isActive
-                            ? FontWeight.bold
-                            : FontWeight.normal,
+                      const SizedBox(height: 16),
+                      Text(
+                        S.of(context).noAccounts,
+                        style: Theme.of(context).textTheme.titleMedium,
                       ),
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(account.host),
-                        if (account.isActive)
-                          Text(
-                            S.of(context).currentAccount,
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.primary,
-                              fontSize: 12,
+                      const SizedBox(height: 8),
+                      Text(
+                        S.of(context).tapToAddAccount,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Theme.of(context).colorScheme.outline,
                             ),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  itemCount: _accounts.length,
+                  itemBuilder: (context, index) {
+                    final account = _accounts[index];
+                    return SettingsSectionCard(
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: account.isActive
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest,
+                          child: Icon(
+                            account.isActive
+                                ? Icons.check_circle
+                                : Icons.account_circle,
+                            color: account.isActive
+                                ? Theme.of(context).colorScheme.onPrimary
+                                : Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
                           ),
-                      ],
-                    ),
-                    trailing: PopupMenuButton(
-                      itemBuilder: (context) => [
-                        if (!account.isActive)
-                          PopupMenuItem(
-                            value: 'switch',
-                            child: Row(
-                              children: [
-                                const Icon(Icons.swap_horiz),
-                                const SizedBox(width: 8),
-                                Text(S.of(context).switchAction),
-                              ],
-                            ),
+                        ),
+                        title: Text(
+                          account.username,
+                          style: TextStyle(
+                            fontWeight: account.isActive
+                                ? FontWeight.bold
+                                : FontWeight.normal,
                           ),
-                        if (!account.isActive)
-                          PopupMenuItem(
-                            value: 'delete',
-                            child: Row(
-                              children: [
-                                const Icon(Icons.delete, color: Colors.red),
-                                const SizedBox(width: 8),
-                                Text(
-                                  S.of(context).delete,
-                                  style: const TextStyle(color: Colors.red),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(account.host),
+                            if (account.isActive)
+                              Text(
+                                S.of(context).currentAccount,
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontSize: 12,
                                 ),
-                              ],
-                            ),
-                          ),
-                      ],
-                      onSelected: (value) {
-                        switch (value) {
-                          case 'switch':
+                              ),
+                          ],
+                        ),
+                        trailing: PopupMenuButton(
+                          itemBuilder: (context) => [
+                            if (!account.isActive)
+                              PopupMenuItem(
+                                value: 'switch',
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.swap_horiz),
+                                    const SizedBox(width: 8),
+                                    Text(S.of(context).switchAction),
+                                  ],
+                                ),
+                              ),
+                            if (!account.isActive)
+                              PopupMenuItem(
+                                value: 'delete',
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.delete, color: Colors.red),
+                                    const SizedBox(width: 8),
+                                    Text(S.of(context).delete,
+                                        style:
+                                            const TextStyle(color: Colors.red)),
+                                  ],
+                                ),
+                              ),
+                          ],
+                          onSelected: (value) {
+                            switch (value) {
+                              case 'switch':
+                                _switchAccount(account);
+                                break;
+                              case 'delete':
+                                _deleteAccount(account);
+                                break;
+                            }
+                          },
+                        ),
+                        onTap: () {
+                          if (!account.isActive) {
                             _switchAccount(account);
-                            break;
-                          case 'delete':
-                            _deleteAccount(account);
-                            break;
-                        }
-                      },
-                    ),
-                    onTap: () {
-                      if (!account.isActive) {
-                        _switchAccount(account);
-                      }
-                    },
-                  ),
-                );
-              },
-            ),
+                          }
+                        },
+                      ),
+                    );
+                  },
+                ),
       floatingActionButton: FloatingActionButton(
         onPressed: _addAccount,
         child: const Icon(Icons.add),

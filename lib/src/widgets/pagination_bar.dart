@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../l10n/app_localizations.dart';
-import '../utils/design_tokens.dart';
 import '../utils/snackbar_util.dart';
 
 /// 通用分页控制栏组件
@@ -69,27 +68,25 @@ class _PaginationBarState extends State<PaginationBar> {
   /// 构建到底提示
   Widget _buildEndMessage() {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.sm),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(AppRadius.listItem),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
             Icons.check_circle_outline,
-            size: AppIconSize.small,
+            size: 16,
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
-          const SizedBox(width: AppSpacing.xs),
-          Flexible(
-            child: Text(
-              widget.endMessage ?? S.of(context).reachedEnd,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+          const SizedBox(width: 8),
+          Text(
+            widget.endMessage ?? S.of(context).reachedEnd,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 14,
             ),
           ),
         ],
@@ -107,22 +104,25 @@ class _PaginationBarState extends State<PaginationBar> {
   }) {
     final iconWidget = Icon(
       icon,
-      size: AppIconSize.compact,
+      size: 18,
       color: enabled
           ? Theme.of(context).colorScheme.onPrimaryContainer
-          : Theme.of(
-              context,
-            ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+          : Theme.of(context)
+              .colorScheme
+              .onSurfaceVariant
+              .withValues(alpha: 0.5),
     );
 
     final textWidget = Text(
       label,
-      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+      style: TextStyle(
+        fontSize: 13,
         color: enabled
             ? Theme.of(context).colorScheme.onPrimaryContainer
-            : Theme.of(
-                context,
-              ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+            : Theme.of(context)
+                .colorScheme
+                .onSurfaceVariant
+                .withValues(alpha: 0.5),
       ),
     );
 
@@ -130,28 +130,17 @@ class _PaginationBarState extends State<PaginationBar> {
       color: enabled
           ? Theme.of(context).colorScheme.primaryContainer
           : Theme.of(context).colorScheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(AppRadius.control),
+      borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: enabled ? onPressed : null,
-        borderRadius: BorderRadius.circular(AppRadius.control),
+        borderRadius: BorderRadius.circular(8),
         child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm,
-            vertical: AppSpacing.xs,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: iconOnRight
-                ? [
-                    textWidget,
-                    const SizedBox(width: AppSpacing.xxs),
-                    iconWidget,
-                  ]
-                : [
-                    iconWidget,
-                    const SizedBox(width: AppSpacing.xxs),
-                    textWidget,
-                  ],
+                ? [textWidget, const SizedBox(width: 4), iconWidget]
+                : [iconWidget, const SizedBox(width: 4), textWidget],
           ),
         ),
       ),
@@ -162,27 +151,25 @@ class _PaginationBarState extends State<PaginationBar> {
   Widget _buildPageJumpButton() {
     return Material(
       color: Theme.of(context).colorScheme.secondaryContainer,
-      borderRadius: BorderRadius.circular(AppRadius.control),
+      borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: () => _showPageJumpDialog(),
-        borderRadius: BorderRadius.circular(AppRadius.control),
+        borderRadius: BorderRadius.circular(8),
         child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm,
-            vertical: AppSpacing.xs,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 Icons.edit_location_alt,
-                size: AppIconSize.compact,
+                size: 18,
                 color: Theme.of(context).colorScheme.onSecondaryContainer,
               ),
-              const SizedBox(width: AppSpacing.xxs),
+              const SizedBox(width: 4),
               Text(
                 S.of(context).jumpTo,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                style: TextStyle(
+                  fontSize: 13,
                   color: Theme.of(context).colorScheme.onSecondaryContainer,
                 ),
               ),
@@ -207,6 +194,7 @@ class _PaginationBarState extends State<PaginationBar> {
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           decoration: InputDecoration(
             labelText: S.of(context).pageNumberRange(_maxPage),
+            border: const OutlineInputBorder(),
             hintText: S.of(context).enterPageNumber,
           ),
           autofocus: true,
@@ -217,7 +205,7 @@ class _PaginationBarState extends State<PaginationBar> {
             onPressed: () => Navigator.pop(context),
             child: Text(S.of(context).cancel),
           ),
-          FilledButton(
+          ElevatedButton(
             onPressed: () => _handleJump(context),
             child: Text(S.of(context).jumpTo),
           ),
@@ -237,9 +225,7 @@ class _PaginationBarState extends State<PaginationBar> {
     final targetPage = int.tryParse(pageStr);
     if (targetPage == null || targetPage < 1 || targetPage > _maxPage) {
       SnackBarUtil.showWarning(
-        context,
-        S.of(context).enterValidPageNumber(_maxPage),
-      );
+          context, S.of(context).enterValidPageNumber(_maxPage));
       return;
     }
 
@@ -261,44 +247,44 @@ class _PaginationBarState extends State<PaginationBar> {
     }
 
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.sm),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(AppRadius.listItem),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           // 页码和总数信息
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: AppSpacing.xs,
-            runSpacing: AppSpacing.xs,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
                 S.of(context).pageNOfTotal(widget.currentPage, _maxPage),
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurface,
+                  fontSize: 13,
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              const SizedBox(width: AppSpacing.xs),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(AppRadius.tag),
+                  borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
                   S.of(context).totalNItems(widget.totalCount),
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 11,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: 12),
 
           // 按钮组
           Row(
@@ -311,8 +297,12 @@ class _PaginationBarState extends State<PaginationBar> {
                 enabled: widget.currentPage > 1 && !widget.isLoading,
                 onPressed: widget.onPreviousPage,
               ),
+              const SizedBox(width: 8),
+
               // 跳转输入
               _buildPageJumpButton(),
+              const SizedBox(width: 8),
+
               // 下一页
               _buildPageButton(
                 label: S.of(context).nextPage,

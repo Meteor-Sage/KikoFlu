@@ -7,8 +7,6 @@ import '../../providers/settings_provider.dart';
 import '../../../l10n/app_localizations.dart';
 import '../responsive_dialog.dart';
 import '../../utils/tag_localizer.dart';
-import '../../utils/snackbar_util.dart';
-import '../../utils/design_tokens.dart';
 
 /// 标签投票对话框组件
 class TagVoteDialog extends ConsumerStatefulWidget {
@@ -94,14 +92,18 @@ class _TagVoteDialogState extends ConsumerState<TagVoteDialog> {
         widget.onVoteChanged(_currentTag);
 
         // 显示提示
-        SnackBarUtil.showInfo(
-          context,
-          newStatus == 0
-              ? S.of(context).voteRemoved
-              : newStatus == 1
-              ? S.of(context).votedUp
-              : S.of(context).votedDown,
-          duration: const Duration(seconds: 1),
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              newStatus == 0
+                  ? S.of(context).voteRemoved
+                  : newStatus == 1
+                      ? S.of(context).votedUp
+                      : S.of(context).votedDown,
+            ),
+            duration: const Duration(seconds: 1),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     } catch (e) {
@@ -110,10 +112,13 @@ class _TagVoteDialogState extends ConsumerState<TagVoteDialog> {
           _isVoting = false;
         });
 
-        SnackBarUtil.showError(
-          context,
-          S.of(context).voteFailedWithError(e.toString()),
-          duration: const Duration(seconds: 2),
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(S.of(context).voteFailedWithError(e.toString())),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     }
@@ -124,11 +129,8 @@ class _TagVoteDialogState extends ConsumerState<TagVoteDialog> {
     return ResponsiveAlertDialog(
       title: Text(
         TagLocalizer.localize(
-          _currentTag.id,
-          _currentTag.name,
-          Localizations.localeOf(context),
-        ),
-        style: Theme.of(context).textTheme.titleMedium,
+            _currentTag.id, _currentTag.name, Localizations.localeOf(context)),
+        style: const TextStyle(fontSize: 16),
       ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -140,18 +142,18 @@ class _TagVoteDialogState extends ConsumerState<TagVoteDialog> {
             icon: Icons.thumb_up,
             label: S.of(context).voteFor,
             count: _currentTag.upvote ?? 0,
-            activeColor: Theme.of(context).colorScheme.primary,
+            activeColor: Colors.green,
           ),
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: 12),
           // 投票反对按钮
           _buildVoteButton(
             targetStatus: 2,
             icon: Icons.thumb_down,
             label: S.of(context).voteAgainst,
             count: _currentTag.downvote ?? 0,
-            activeColor: Theme.of(context).colorScheme.error,
+            activeColor: Colors.red,
           ),
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: 12),
           // 屏蔽标签按钮
           _buildBlockTagButton(),
         ],
@@ -161,12 +163,12 @@ class _TagVoteDialogState extends ConsumerState<TagVoteDialog> {
           onPressed: () => Navigator.pop(context),
           child: Text(S.of(context).close),
         ),
-        FilledButton.icon(
+        ElevatedButton.icon(
           onPressed: () {
             Navigator.pop(context);
             widget.onCopyTag();
           },
-          icon: const Icon(Icons.copy, size: AppIconSize.compact),
+          icon: const Icon(Icons.copy, size: 18),
           label: Text(S.of(context).copyTag),
         ),
       ],
@@ -181,23 +183,19 @@ class _TagVoteDialogState extends ConsumerState<TagVoteDialog> {
     required Color activeColor,
   }) {
     final isActive = _currentTag.myVote == targetStatus;
-    final colorScheme = Theme.of(context).colorScheme;
 
     return InkWell(
       onTap: _isVoting ? null : () => _handleVote(targetStatus),
-      borderRadius: BorderRadius.circular(AppRadius.control),
+      borderRadius: BorderRadius.circular(8),
       child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: AppSpacing.xs,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: isActive
               ? activeColor.withValues(alpha: 0.1)
-              : colorScheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(AppRadius.control),
+              : Colors.grey.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isActive ? activeColor : colorScheme.outlineVariant,
+            color: isActive ? activeColor : Colors.grey.withValues(alpha: 0.3),
             width: isActive ? 2 : 1,
           ),
         ),
@@ -205,14 +203,15 @@ class _TagVoteDialogState extends ConsumerState<TagVoteDialog> {
           children: [
             Icon(
               icon,
-              color: isActive ? activeColor : colorScheme.onSurfaceVariant,
-              size: AppIconSize.large,
+              color: isActive ? activeColor : Colors.grey,
+              size: 22,
             ),
-            const SizedBox(width: AppSpacing.sm),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 '$label：$count',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                style: TextStyle(
+                  fontSize: 15,
                   fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
                   color: isActive ? activeColor : null,
                 ),
@@ -223,11 +222,12 @@ class _TagVoteDialogState extends ConsumerState<TagVoteDialog> {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: activeColor.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(AppRadius.tag),
+                  borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
                   S.of(context).voted,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  style: TextStyle(
+                    fontSize: 11,
                     color: activeColor,
                     fontWeight: FontWeight.bold,
                   ),
@@ -235,8 +235,8 @@ class _TagVoteDialogState extends ConsumerState<TagVoteDialog> {
               ),
             if (_isVoting && !isActive)
               const SizedBox(
-                width: AppIconSize.small,
-                height: AppIconSize.small,
+                width: 16,
+                height: 16,
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
           ],
@@ -246,8 +246,6 @@ class _TagVoteDialogState extends ConsumerState<TagVoteDialog> {
   }
 
   Widget _buildBlockTagButton() {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return InkWell(
       onTap: () {
         // 获取 notifier 和 messenger，避免在 dispose 后使用 ref 和 context
@@ -283,31 +281,31 @@ class _TagVoteDialogState extends ConsumerState<TagVoteDialog> {
           } catch (_) {}
         });
       },
-      borderRadius: BorderRadius.circular(AppRadius.control),
+      borderRadius: BorderRadius.circular(8),
       child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: AppSpacing.xs,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: colorScheme.errorContainer.withValues(alpha: 0.28),
-          borderRadius: BorderRadius.circular(AppRadius.control),
-          border: Border.all(color: colorScheme.error.withValues(alpha: 0.4)),
+          color: Colors.grey.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: Colors.grey.withValues(alpha: 0.3),
+          ),
         ),
         child: Row(
           children: [
-            Icon(
+            const Icon(
               Icons.block,
-              color: colorScheme.error,
-              size: AppIconSize.large,
+              color: Colors.red,
+              size: 22,
             ),
-            const SizedBox(width: AppSpacing.sm),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 S.of(context).blockThisTag,
-                style: Theme.of(
-                  context,
-                ).textTheme.labelLarge?.copyWith(color: colorScheme.error),
+                style: const TextStyle(
+                  fontSize: 15,
+                  color: Colors.red,
+                ),
               ),
             ),
           ],

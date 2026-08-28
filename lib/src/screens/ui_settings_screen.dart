@@ -8,8 +8,6 @@ import 'work_card_display_settings_screen.dart';
 import 'my_tabs_display_settings_screen.dart';
 import '../widgets/settings_section.dart';
 import '../providers/settings_provider.dart';
-import '../providers/text_scale_provider.dart';
-import '../utils/l10n_extensions.dart';
 
 class UiSettingsScreen extends ConsumerWidget {
   const UiSettingsScreen({super.key});
@@ -17,7 +15,6 @@ class UiSettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final pageSize = ref.watch(pageSizeProvider);
-    final textScale = ref.watch(appTextScaleProvider);
 
     return SettingsSubpageScaffold(
       title: S.of(context).uiSettings,
@@ -49,29 +46,6 @@ class UiSettingsScreen extends ConsumerWidget {
                     ),
                   );
                 },
-              ),
-              SettingsListTile(
-                icon: Icons.format_size,
-                title: S.of(context).fontSize,
-                subtitle: textScale.localizedName(context),
-                trailing: DropdownButtonHideUnderline(
-                  child: DropdownButton<AppTextScale>(
-                    value: textScale,
-                    items: AppTextScale.values
-                        .map(
-                          (scale) => DropdownMenuItem<AppTextScale>(
-                            value: scale,
-                            child: Text(scale.localizedName(context)),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        ref.read(appTextScaleProvider.notifier).setScale(value);
-                      }
-                    },
-                  ),
-                ),
               ),
             ],
           ),

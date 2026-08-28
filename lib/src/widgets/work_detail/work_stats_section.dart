@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../models/work.dart';
 import '../../utils/string_utils.dart';
-import '../../utils/design_tokens.dart';
 
 class WorkStatsSection extends StatelessWidget {
   const WorkStatsSection({
@@ -33,8 +32,8 @@ class WorkStatsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Wrap(
-      spacing: AppSpacing.xs,
-      runSpacing: AppSpacing.xs,
+      spacing: 8,
+      runSpacing: 8,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         if (showRating) _buildRating(context),
@@ -49,9 +48,6 @@ class WorkStatsSection extends StatelessWidget {
   }
 
   Widget _buildRating(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
     return MouseRegion(
       cursor: _hasRatingDetails
           ? SystemMouseCursors.click
@@ -64,44 +60,44 @@ class WorkStatsSection extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.star,
-                color: colorScheme.tertiary,
-                size: AppIconSize.standard,
-              ),
-              const SizedBox(width: AppSpacing.xxs),
+              const Icon(Icons.star, color: Colors.amber, size: 20),
+              const SizedBox(width: 4),
               Text(
                 _ratingText,
-                style: theme.textTheme.labelMedium?.copyWith(
+                style: const TextStyle(
                   fontWeight: FontWeight.bold,
+                  fontSize: 12,
                 ),
               ),
-              const SizedBox(width: AppSpacing.xs),
+              const SizedBox(width: 8),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     '(',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 12,
                     ),
                   ),
                   Text(
                     '${work.rateCount ?? 0}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 12,
                     ),
                   ),
                   if (_hasRatingDetails)
                     Icon(
                       Icons.info_outline,
-                      size: AppIconSize.small,
-                      color: colorScheme.onSurfaceVariant,
+                      size: 14,
+                      color: Colors.grey[600],
                     ),
                   Text(
                     ')',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 12,
                     ),
                   ),
                 ],
@@ -118,15 +114,15 @@ class WorkStatsSection extends StatelessWidget {
 
     return InkWell(
       onTap: onShowProgress,
-      borderRadius: BorderRadius.circular(AppRadius.listItem),
+      borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.xs,
-          vertical: AppSpacing.xxs,
+          horizontal: 8,
+          vertical: 4,
         ),
         decoration: BoxDecoration(
           color: colorScheme.primaryContainer,
-          borderRadius: BorderRadius.circular(AppRadius.listItem),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -134,19 +130,20 @@ class WorkStatsSection extends StatelessWidget {
             Icon(
               Icons.person,
               color: colorScheme.onPrimaryContainer,
-              size: AppIconSize.small,
+              size: 14,
             ),
-            const SizedBox(width: AppSpacing.xxs),
-            Icon(
+            const SizedBox(width: 4),
+            const Icon(
               Icons.star,
-              color: colorScheme.tertiary,
-              size: AppIconSize.small,
+              color: Colors.amber,
+              size: 14,
             ),
             const SizedBox(width: 2),
             Text(
               '$currentRating',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              style: TextStyle(
                 color: colorScheme.onPrimaryContainer,
+                fontSize: 11,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -159,10 +156,11 @@ class WorkStatsSection extends StatelessWidget {
   Widget _buildPrice(BuildContext context) {
     return Text(
       S.of(context).priceInYen(work.price!),
-      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-        color: Theme.of(context).colorScheme.primary,
-        fontWeight: FontWeight.w600,
-      ),
+      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Colors.red[700],
+            fontWeight: FontWeight.w600,
+            fontSize: 12,
+          ),
     );
   }
 
@@ -170,18 +168,18 @@ class WorkStatsSection extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(
-          Icons.access_time,
-          color: Theme.of(context).colorScheme.secondary,
-          size: AppIconSize.small,
-        ),
-        const SizedBox(width: AppSpacing.xxs),
+        const Icon(Icons.access_time, color: Colors.blue, size: 16),
+        const SizedBox(width: 4),
         Text(
-          formatDurationSeconds(work.duration, padHours: false),
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).colorScheme.secondary,
-            fontWeight: FontWeight.w500,
+          formatDurationSeconds(
+            work.duration,
+            padHours: false,
           ),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Colors.blue[700],
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
         ),
       ],
     );
@@ -190,9 +188,10 @@ class WorkStatsSection extends StatelessWidget {
   Widget _buildSales(BuildContext context) {
     return Text(
       S.of(context).soldCount(_formatNumber(context, work.dlCount!)),
-      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
-      ),
+      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Colors.grey[600],
+            fontSize: 12,
+          ),
     );
   }
 

@@ -120,7 +120,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     return Scaffold(
       floatingActionButton: const DownloadFab(),
-      appBar: ScrollableAppBar(title: Text(S.of(context).settingsTitle)),
+      appBar: ScrollableAppBar(
+        title: Text(
+          S.of(context).settingsTitle,
+          style: const TextStyle(fontSize: 18),
+        ),
+      ),
       body: isLandscape
           ? _buildLandscapeLayout(cards, dockExtent: dockExtent)
           : ListView.separated(
@@ -729,7 +734,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 Expanded(
                   child: Text(
                     S.of(context).cacheManagement,
-                    style: Theme.of(context).textTheme.titleLarge,
+                    style: const TextStyle(fontSize: 18),
                   ),
                 ),
                 if (isLandscape)

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../services/subtitle_library_service.dart';
-import '../utils/design_tokens.dart';
 
 class SubtitleLibraryTopBar extends StatelessWidget {
   const SubtitleLibraryTopBar({
@@ -60,7 +59,7 @@ class SubtitleLibraryTopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
-    final horizontalPadding = isLandscape ? AppSpacing.lg : AppSpacing.xs;
+    final horizontalPadding = isLandscape ? 24.0 : 8.0;
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -103,20 +102,22 @@ class SubtitleLibraryTopBar extends StatelessWidget {
               padding: EdgeInsets.only(
                 left: horizontalPadding,
                 right: horizontalPadding,
-                top: AppSpacing.xs,
+                top: 8,
               ),
               child: Row(
                 children: [
                   Icon(
                     Icons.folder_open,
-                    size: AppIconSize.small,
+                    size: 16,
                     color: Theme.of(context).colorScheme.primary,
                   ),
-                  const SizedBox(width: AppSpacing.xs),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
-                      child: Row(children: buildBreadcrumbs(context)),
+                      child: Row(
+                        children: buildBreadcrumbs(context),
+                      ),
                     ),
                   ),
                 ],
@@ -132,15 +133,13 @@ class SubtitleLibraryTopBar extends StatelessWidget {
     final breadcrumbs = <Widget>[
       InkWell(
         onTap: root == null ? null : () => onNavigateTo(root),
-        borderRadius: BorderRadius.circular(AppRadius.tag),
+        borderRadius: BorderRadius.circular(4),
         child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.xxs,
-            vertical: 2,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
           child: Text(
             S.of(context).subtitleLibrary,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            style: TextStyle(
+              fontSize: 13,
               color: Theme.of(context).colorScheme.primary,
               fontWeight: FontWeight.w500,
             ),
@@ -173,7 +172,8 @@ class SubtitleLibraryTopBar extends StatelessWidget {
       breadcrumbs.add(
         Text(
           ' > ',
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+          style: TextStyle(
+            fontSize: 13,
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
@@ -182,13 +182,11 @@ class SubtitleLibraryTopBar extends StatelessWidget {
       if (i == parts.length - 1) {
         breadcrumbs.add(
           Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.xxs,
-              vertical: 2,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
             child: Text(
               part,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              style: TextStyle(
+                fontSize: 13,
                 color: Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.bold,
               ),
@@ -199,15 +197,13 @@ class SubtitleLibraryTopBar extends StatelessWidget {
         breadcrumbs.add(
           InkWell(
             onTap: () => onNavigateTo(targetPath),
-            borderRadius: BorderRadius.circular(AppRadius.tag),
+            borderRadius: BorderRadius.circular(4),
             child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.xxs,
-                vertical: 2,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
               child: Text(
                 part,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                style: TextStyle(
+                  fontSize: 13,
                   color: Theme.of(context).colorScheme.primary,
                   fontWeight: FontWeight.w500,
                 ),
@@ -325,7 +321,10 @@ class _SearchToolbar extends StatelessWidget {
           ),
         ),
         if (searchQuery.isNotEmpty)
-          IconButton(icon: const Icon(Icons.clear), onPressed: onClearSearch),
+          IconButton(
+            icon: const Icon(Icons.clear),
+            onPressed: onClearSearch,
+          ),
         SizedBox(width: horizontalPadding - 8),
       ],
     );
@@ -408,9 +407,10 @@ class _DefaultToolbar extends StatelessWidget {
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
-                S
-                    .of(context)
-                    .nFilesWithSize(stats!.totalFiles, stats!.sizeFormatted),
+                S.of(context).nFilesWithSize(
+                      stats!.totalFiles,
+                      stats!.sizeFormatted,
+                    ),
                 style: TextStyle(
                   fontSize: 12,
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -425,9 +425,8 @@ class _DefaultToolbar extends StatelessWidget {
   ButtonStyle _toolbarButtonStyle(BuildContext context) {
     return TextButton.styleFrom(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      backgroundColor: Theme.of(
-        context,
-      ).colorScheme.primaryContainer.withValues(alpha: 0.5),
+      backgroundColor:
+          Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5),
     );
   }
 }

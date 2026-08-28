@@ -101,7 +101,10 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
         scrolledUnderElevation: 0,
         title: _isSelectionMode
             ? Text(S.of(context).selectedCount(_selectedTaskIds.length))
-            : Text(S.of(context).downloadTasks),
+            : Text(
+                S.of(context).downloadTasks,
+                style: const TextStyle(fontSize: 18),
+              ),
         leading: _isSelectionMode
             ? IconButton(
                 icon: const Icon(Icons.close),

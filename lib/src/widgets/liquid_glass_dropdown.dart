@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:real_liquid_glass/real_liquid_glass.dart';
 
 import '../providers/settings_provider.dart';
-import '../utils/design_tokens.dart';
 
 /// A dropdown field that keeps Material's form-field behavior while using a
 /// glass-backed menu when the app's liquid-glass navigation is enabled.
@@ -52,18 +51,20 @@ class LiquidGlassDropdownButtonFormField<T> extends ConsumerWidget {
         return MenuAnchor(
           controller: controller,
           consumeOutsideTap: true,
-          alignmentOffset: const Offset(0, AppSpacing.xxs),
+          alignmentOffset: const Offset(0, 4),
           style: MenuStyle(
             backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
             surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
             shadowColor: const WidgetStatePropertyAll(Colors.transparent),
             elevation: const WidgetStatePropertyAll(0),
             padding: const WidgetStatePropertyAll(EdgeInsets.zero),
-            shape: WidgetStatePropertyAll(roundedBorder(AppRadius.card)),
+            shape: WidgetStatePropertyAll(
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            ),
           ),
           menuChildren: [
             LiquidGlassContainer(
-              shape: const LiquidGlassShape.roundedRectangle(AppRadius.card),
+              shape: const LiquidGlassShape.roundedRectangle(18),
               style: LiquidGlassStyle.regular,
               fallbackIntensity: fallbackIntensity,
               child: Material(
@@ -93,8 +94,8 @@ class LiquidGlassDropdownButtonFormField<T> extends ConsumerWidget {
                             style: const ButtonStyle(
                               padding: WidgetStatePropertyAll(
                                 EdgeInsets.symmetric(
-                                  horizontal: AppSpacing.md,
-                                  vertical: AppSpacing.xxs,
+                                  horizontal: 16,
+                                  vertical: 4,
                                 ),
                               ),
                             ),
@@ -102,10 +103,10 @@ class LiquidGlassDropdownButtonFormField<T> extends ConsumerWidget {
                               children: [
                                 Expanded(child: item.child),
                                 if (item.value == initialValue) ...[
-                                  const SizedBox(width: AppSpacing.sm),
+                                  const SizedBox(width: 12),
                                   Icon(
                                     Icons.check,
-                                    size: AppIconSize.compact,
+                                    size: 18,
                                     color: Theme.of(
                                       context,
                                     ).colorScheme.primary,
@@ -123,7 +124,7 @@ class LiquidGlassDropdownButtonFormField<T> extends ConsumerWidget {
           ],
           builder: (context, controller, child) {
             return InkWell(
-              borderRadius: BorderRadius.circular(AppRadius.card),
+              borderRadius: BorderRadius.circular(18),
               onTap: () =>
                   controller.isOpen ? controller.close() : controller.open(),
               child: InputDecorator(
@@ -176,16 +177,16 @@ class LiquidGlassPopupSurface extends ConsumerWidget {
     if (!useLiquidGlass) {
       return Material(
         elevation: 4,
-        borderRadius: BorderRadius.circular(AppRadius.tag),
+        borderRadius: BorderRadius.circular(4),
         clipBehavior: Clip.antiAlias,
         child: content,
       );
     }
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(AppRadius.card),
+      borderRadius: BorderRadius.circular(18),
       child: LiquidGlassContainer(
-        shape: const LiquidGlassShape.roundedRectangle(AppRadius.card),
+        shape: const LiquidGlassShape.roundedRectangle(18),
         style: LiquidGlassStyle.regular,
         fallbackIntensity: fallbackIntensity,
         child: Material(type: MaterialType.transparency, child: content),

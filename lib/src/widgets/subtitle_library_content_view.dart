@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
-import '../utils/design_tokens.dart';
 
 class SubtitleLibraryContentView extends StatelessWidget {
   const SubtitleLibraryContentView({
@@ -31,21 +30,12 @@ class SubtitleLibraryContentView extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: AppControlSize.standard,
-              color: Theme.of(context).colorScheme.error,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              errorMessage,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.error,
-              ),
-            ),
+            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            const SizedBox(height: 16),
+            Text(errorMessage),
             if (onRetry != null) ...[
-              const SizedBox(height: AppSpacing.md),
-              FilledButton(
+              const SizedBox(height: 16),
+              ElevatedButton(
                 onPressed: onRetry,
                 child: Text(S.of(context).retry),
               ),
@@ -65,17 +55,19 @@ class SubtitleLibraryContentView extends StatelessWidget {
               size: 64,
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
-            const SizedBox(height: AppSpacing.md),
+            const SizedBox(height: 16),
             Text(
               S.of(context).subtitleLibraryEmpty,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              style: TextStyle(
+                fontSize: 18,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
-            const SizedBox(height: AppSpacing.xs),
+            const SizedBox(height: 8),
             Text(
               S.of(context).tapToImportSubtitle,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              style: TextStyle(
+                fontSize: 14,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
