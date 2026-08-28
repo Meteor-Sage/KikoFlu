@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../utils/ui_tokens.dart';
+import 'async_state_view.dart';
 
 class FileExplorerStatusView extends StatelessWidget {
   const FileExplorerStatusView({
@@ -23,48 +25,39 @@ class FileExplorerStatusView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
+      return const AsyncStateView(
+        icon: CircularProgressIndicator(),
+        padding: EdgeInsets.zero,
       );
     }
 
     if (errorMessage != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error, size: 64, color: Colors.red),
-            const SizedBox(height: 16),
-            Text(
-              errorMessage!,
-              style: const TextStyle(color: Colors.red),
-              textAlign: TextAlign.center,
-            ),
-            if (onRetry != null) ...[
-              const SizedBox(height: 16),
-              ElevatedButton(
+      return AsyncStateView(
+        icon: const Icon(Icons.error, size: 64, color: Colors.red),
+        message: Text(
+          errorMessage!,
+          style: const TextStyle(color: Colors.red),
+          textAlign: TextAlign.center,
+        ),
+        action: onRetry == null
+            ? null
+            : ElevatedButton(
                 onPressed: onRetry,
                 child: Text(S.of(context).retry),
               ),
-            ],
-          ],
-        ),
+        iconToTitleSpacing: UiSpacing.large,
+        messageToActionSpacing: UiSpacing.large,
       );
     }
 
     if (empty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.folder_open, size: 64, color: Colors.grey),
-            const SizedBox(height: 16),
-            Text(
-              emptyMessage,
-              style: const TextStyle(color: Colors.grey),
-            ),
-          ],
+      return AsyncStateView(
+        icon: const Icon(Icons.folder_open, size: 64, color: Colors.grey),
+        message: Text(
+          emptyMessage,
+          style: const TextStyle(color: Colors.grey),
         ),
+        iconToTitleSpacing: UiSpacing.large,
       );
     }
 

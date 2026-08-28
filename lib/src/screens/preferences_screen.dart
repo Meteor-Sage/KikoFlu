@@ -13,6 +13,7 @@ import '../providers/settings_provider.dart';
 import '../services/proxy_config.dart';
 import '../utils/l10n_extensions.dart';
 import '../utils/snackbar_util.dart';
+import '../utils/ui_tokens.dart';
 import '../widgets/radio_option_group.dart';
 import '../widgets/settings_section.dart';
 import '../widgets/sort_dialog.dart';
@@ -30,7 +31,7 @@ class PreferencesScreen extends ConsumerWidget {
       builder: (dialogContext) => AlertDialog(
         title: Text(
           S.of(dialogContext).subtitleLibraryPriority,
-          style: const TextStyle(fontSize: 18),
+          style: UiTextStyles.pageTitle,
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -120,7 +121,7 @@ class PreferencesScreen extends ConsumerWidget {
       builder: (dialogContext) => AlertDialog(
         title: Text(
           S.of(dialogContext).translationSourceSettings,
-          style: const TextStyle(fontSize: 18),
+          style: UiTextStyles.pageTitle,
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -240,7 +241,7 @@ class PreferencesScreen extends ConsumerWidget {
       builder: (dialogContext) => AlertDialog(
         title: Text(
           S.of(dialogContext).translationTargetLanguage,
-          style: const TextStyle(fontSize: 18),
+          style: UiTextStyles.pageTitle,
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -408,7 +409,7 @@ class PreferencesScreen extends ConsumerWidget {
       builder: (dialogContext) => AlertDialog(
         title: Text(
           S.of(dialogContext).preloadNextTitle,
-          style: const TextStyle(fontSize: 18),
+          style: UiTextStyles.pageTitle,
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,

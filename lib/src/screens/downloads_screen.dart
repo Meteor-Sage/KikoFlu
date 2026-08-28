@@ -5,6 +5,7 @@ import '../../l10n/app_localizations.dart';
 import '../models/download_task.dart';
 import '../services/download_service.dart';
 import '../utils/string_utils.dart';
+import '../utils/ui_tokens.dart';
 import '../widgets/virtualized_sliver_collection.dart';
 
 class DownloadsScreen extends ConsumerStatefulWidget {
@@ -103,7 +104,7 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
             ? Text(S.of(context).selectedCount(_selectedTaskIds.length))
             : Text(
                 S.of(context).downloadTasks,
-                style: const TextStyle(fontSize: 18),
+                style: UiTextStyles.pageTitle,
               ),
         leading: _isSelectionMode
             ? IconButton(

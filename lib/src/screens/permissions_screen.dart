@@ -4,6 +4,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../utils/snackbar_util.dart';
+import '../utils/ui_tokens.dart';
 import '../widgets/settings_section.dart';
 
 /// 权限管理页面（仅安卓平台）
@@ -132,7 +133,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       return Scaffold(
         appBar: AppBar(
           title: Text(S.of(context).permissionManagement,
-              style: const TextStyle(fontSize: 18)),
+              style: UiTextStyles.pageTitle),
         ),
         body: Center(
           child: Column(
@@ -164,7 +165,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(S.of(context).permissionManagement,
-            style: const TextStyle(fontSize: 18)),
+            style: UiTextStyles.pageTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

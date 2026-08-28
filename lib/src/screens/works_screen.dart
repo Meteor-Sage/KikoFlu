@@ -14,6 +14,8 @@ import '../models/sort_options.dart';
 import '../utils/subtitle_filter.dart';
 import '../utils/l10n_extensions.dart';
 import '../utils/system_ui_style.dart';
+import '../utils/ui_tokens.dart';
+import '../widgets/async_state_view.dart';
 
 class WorksScreen extends ConsumerStatefulWidget {
   const WorksScreen({super.key});
@@ -374,69 +376,49 @@ class _WorksScreenState extends ConsumerState<WorksScreen>
           : null,
       showEndMessage:
           worksState.displayMode != DisplayMode.all && worksState.isLastPage,
-      loadingBuilder: (context) => Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 16),
-            Text(S.of(context).loading),
-          ],
+      loadingBuilder: (context) => AsyncStateView(
+        icon: const CircularProgressIndicator(),
+        message: Text(S.of(context).loading),
+        iconToTitleSpacing: UiSpacing.large,
+      ),
+      errorBuilder: (context, error, retry) => AsyncStateView(
+        icon: Icon(
+          Icons.error_outline,
+          size: 64,
+          color: Theme.of(context).colorScheme.error,
+        ),
+        title: Text(
+          S.of(context).loadFailed,
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        message: Text(
+          error.toString(),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+          textAlign: TextAlign.center,
+        ),
+        action: ElevatedButton.icon(
+          onPressed: retry,
+          icon: const Icon(Icons.refresh),
+          label: Text(S.of(context).retry),
         ),
       ),
-      errorBuilder: (context, error, retry) => Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Theme.of(context).colorScheme.error,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              S.of(context).loadFailed,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              error.toString(),
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: retry,
-              icon: const Icon(Icons.refresh),
-              label: Text(S.of(context).retry),
-            ),
-          ],
+      emptyBuilder: (context) => AsyncStateView(
+        icon: Icon(
+          Icons.audiotrack,
+          size: 64,
+          color: Theme.of(context).colorScheme.outline,
         ),
-      ),
-      emptyBuilder: (context) => Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.audiotrack,
-              size: 64,
-              color: Theme.of(context).colorScheme.outline,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              S.of(context).noWorks,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              S.of(context).checkNetworkOrRetry,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
-          ],
+        title: Text(
+          S.of(context).noWorks,
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        message: Text(
+          S.of(context).checkNetworkOrRetry,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
         ),
       ),
       endBuilder: (context) => Padding(

@@ -14,8 +14,11 @@ import '../widgets/global_audio_player_wrapper.dart';
 import '../widgets/download_fab.dart';
 import '../utils/l10n_extensions.dart';
 import '../utils/subtitle_filter.dart';
+import '../utils/ui_tokens.dart';
 import '../widgets/floating_feed_toolbar.dart';
 import '../utils/system_ui_style.dart';
+import '../widgets/search_condition_chip.dart';
+import '../widgets/async_state_view.dart';
 
 class SearchResultScreen extends StatelessWidget {
   final String keyword;
@@ -248,62 +251,39 @@ class _SearchResultContentState extends ConsumerState<_SearchResultContent> {
             final isRjNumber = RegExp(r'^\d+$').hasMatch(value);
             final displayValue = isRjNumber ? 'RJ$value' : value;
 
-            return Chip(
+            return SearchConditionChip(
               avatar: Icon(
                 isExclude
                     ? Icons.remove_circle_outline
                     : _getConditionIcon(type),
-                size: 16,
+                size: UiIconSize.small,
               ),
-              label: Text(
-                '$type: $displayValue',
-                style: const TextStyle(fontSize: 13),
-              ),
+              label: '$type: $displayValue',
               backgroundColor: isExclude
                   ? Theme.of(context).colorScheme.errorContainer
                   : Theme.of(context).colorScheme.secondaryContainer,
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              visualDensity: VisualDensity.compact,
-              side: BorderSide.none,
             );
           }),
 
           // 高级筛选条件芯片
           if (minRate != null && minRate > 0)
-            Chip(
+            SearchConditionChip(
               avatar: const Icon(Icons.star, size: 16),
-              label: Text(
-                '${S.of(context).ratingLabel} ≥ ${minRate.toStringAsFixed(2)}',
-                style: const TextStyle(fontSize: 13),
-              ),
+              label:
+                  '${S.of(context).ratingLabel} ≥ ${minRate.toStringAsFixed(2)}',
               backgroundColor: Theme.of(context).colorScheme.tertiaryContainer,
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              visualDensity: VisualDensity.compact,
-              side: BorderSide.none,
             ),
           if (ageRating != null)
-            Chip(
+            SearchConditionChip(
               avatar: const Icon(Icons.shield, size: 16),
-              label: Text(
-                ageRating,
-                style: const TextStyle(fontSize: 13),
-              ),
+              label: ageRating,
               backgroundColor: Theme.of(context).colorScheme.tertiaryContainer,
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              visualDensity: VisualDensity.compact,
-              side: BorderSide.none,
             ),
           if (salesRange != null)
-            Chip(
+            SearchConditionChip(
               avatar: const Icon(Icons.trending_up, size: 16),
-              label: Text(
-                salesRange,
-                style: const TextStyle(fontSize: 13),
-              ),
+              label: salesRange,
               backgroundColor: Theme.of(context).colorScheme.tertiaryContainer,
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              visualDensity: VisualDensity.compact,
-              side: BorderSide.none,
             ),
 
           // 结果统计
@@ -392,65 +372,45 @@ class _SearchResultContentState extends ConsumerState<_SearchResultContent> {
 
   Widget _buildBody(SearchResultState searchState) {
     if (searchState.error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Theme.of(context).colorScheme.error,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              S.of(context).loadFailed,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              searchState.error!,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () =>
-                  ref.read(searchResultProvider.notifier).refresh(),
-              icon: const Icon(Icons.refresh),
-              label: Text(S.of(context).retry),
-            ),
-          ],
+      return AsyncStateView(
+        icon: Icon(
+          Icons.error_outline,
+          size: 64,
+          color: Theme.of(context).colorScheme.error,
+        ),
+        title: Text(
+          S.of(context).loadFailed,
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        message: Text(
+          searchState.error!,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+          textAlign: TextAlign.center,
+        ),
+        action: ElevatedButton.icon(
+          onPressed: () => ref.read(searchResultProvider.notifier).refresh(),
+          icon: const Icon(Icons.refresh),
+          label: Text(S.of(context).retry),
         ),
       );
     }
 
     if (searchState.works.isEmpty && searchState.isLoading) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('...'),
-          ],
-        ),
+      return const AsyncStateView(
+        icon: CircularProgressIndicator(),
+        message: Text('...'),
+        iconToTitleSpacing: UiSpacing.large,
       );
     }
 
     if (searchState.works.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              S.of(context).noResults,
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-          ],
+      return AsyncStateView(
+        icon: Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
+        title: Text(
+          S.of(context).noResults,
+          style: Theme.of(context).textTheme.headlineSmall,
         ),
       );
     }

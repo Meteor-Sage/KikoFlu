@@ -20,6 +20,7 @@ import '../providers/floating_lyric_provider.dart';
 import '../services/cache_service.dart';
 import '../services/translation_service.dart';
 import '../utils/snackbar_util.dart';
+import '../utils/ui_tokens.dart';
 import '../widgets/scrollable_appbar.dart';
 import '../widgets/download_fab.dart';
 import '../widgets/radio_option_group.dart';
@@ -123,7 +124,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       appBar: ScrollableAppBar(
         title: Text(
           S.of(context).settingsTitle,
-          style: const TextStyle(fontSize: 18),
+          style: UiTextStyles.pageTitle,
         ),
       ),
       body: isLandscape
@@ -734,7 +735,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 Expanded(
                   child: Text(
                     S.of(context).cacheManagement,
-                    style: const TextStyle(fontSize: 18),
+                    style: UiTextStyles.pageTitle,
                   ),
                 ),
                 if (isLandscape)

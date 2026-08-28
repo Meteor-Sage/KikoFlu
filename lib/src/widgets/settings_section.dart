@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../utils/snackbar_util.dart';
+import '../utils/ui_tokens.dart';
 import 'scrollable_appbar.dart';
 
 class SettingsSubpageScaffold extends StatelessWidget {
@@ -35,7 +36,7 @@ class SettingsSubpageScaffold extends StatelessWidget {
 
     return Scaffold(
       appBar: ScrollableAppBar(
-        title: Text(title, style: const TextStyle(fontSize: 18)),
+        title: Text(title, style: UiTextStyles.pageTitle),
         actions: appBarActions.isEmpty ? null : appBarActions,
       ),
       body: body,
@@ -135,7 +136,7 @@ class SettingsReorderablePage<T> extends StatelessWidget {
             margin: const EdgeInsets.all(16),
             child: Text(
               infoDescription,
-              style: const TextStyle(fontSize: 12, height: 1.5),
+              style: UiTextStyles.supporting,
             ),
           ),
           Expanded(
@@ -262,12 +263,12 @@ class SettingsInfoCard extends StatelessWidget {
       color: color,
       margin: margin,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(UiSpacing.large),
         child: title == null
             ? Row(
                 children: [
                   Icon(icon, color: resolvedIconColor),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: UiSpacing.medium),
                   Expanded(child: child),
                 ],
               )
@@ -276,8 +277,12 @@ class SettingsInfoCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(icon, size: 20, color: resolvedIconColor),
-                      const SizedBox(width: 8),
+                      Icon(
+                        icon,
+                        size: UiIconSize.standard,
+                        color: resolvedIconColor,
+                      ),
+                      const SizedBox(width: UiSpacing.small),
                       Text(
                         title!,
                         style: theme.textTheme.titleSmall?.copyWith(
@@ -286,7 +291,7 @@ class SettingsInfoCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: UiSpacing.medium),
                   child,
                 ],
               ),
@@ -329,6 +334,7 @@ class SettingsListTile extends StatelessWidget {
 
     return ListTile(
       enabled: enabled,
+      contentPadding: const EdgeInsets.symmetric(horizontal: UiSpacing.large),
       leading: leading ?? Icon(icon, color: resolvedIconColor, size: iconSize),
       title: Text(title),
       subtitle: subtitle == null
@@ -409,6 +415,7 @@ class SettingsSwitchTile extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return SwitchListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: UiSpacing.large),
       secondary:
           secondary ?? Icon(icon, color: iconColor ?? colorScheme.primary),
       title: Text(title),
@@ -422,7 +429,7 @@ class SettingsSwitchTile extends StatelessWidget {
 class SettingsDivider extends StatelessWidget {
   const SettingsDivider({
     super.key,
-    this.indent = 52,
+    this.indent = UiControlSize.settingsLeading,
     this.endIndent = 0,
   });
 

@@ -4,6 +4,7 @@ import '../../l10n/app_localizations.dart';
 import '../models/account.dart';
 import '../services/account_database.dart';
 import '../providers/auth_provider.dart';
+import '../utils/ui_tokens.dart';
 import '../widgets/scrollable_appbar.dart';
 import '../widgets/settings_section.dart';
 import 'login_screen.dart';
@@ -159,7 +160,7 @@ class _AccountManagementScreenState
     return Scaffold(
       appBar: ScrollableAppBar(
         title: Text(S.of(context).accountManagement,
-            style: const TextStyle(fontSize: 18)),
+            style: UiTextStyles.pageTitle),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

@@ -5,6 +5,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../providers/update_provider.dart';
+import '../utils/ui_tokens.dart';
 import '../widgets/scrollable_appbar.dart';
 import '../widgets/settings_section.dart';
 import '../../l10n/app_localizations.dart';
@@ -67,8 +68,7 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: ScrollableAppBar(
-        title: Text(S.of(context).aboutTitle,
-            style: const TextStyle(fontSize: 18)),
+        title: Text(S.of(context).aboutTitle, style: UiTextStyles.pageTitle),
       ),
       body: FutureBuilder<_AboutData>(
         future: _aboutFuture,

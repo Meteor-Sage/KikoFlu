@@ -6,9 +6,11 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../utils/scroll_optimization.dart';
+import '../utils/ui_tokens.dart';
 import 'liquid_glass_layout.dart';
 import 'overscroll_next_page_detector.dart';
 import 'pagination_bar.dart';
+import 'async_state_view.dart';
 
 enum VirtualizedCollectionLayout { list, grid, masonry }
 
@@ -534,7 +536,10 @@ class _VirtualizedSliverCollectionState<T>
   Widget _buildInitialStatus() {
     if (widget.isInitialLoading) {
       return widget.loadingBuilder?.call(context) ??
-          const Center(child: CircularProgressIndicator());
+          const AsyncStateView(
+            icon: CircularProgressIndicator(),
+            padding: EdgeInsets.zero,
+          );
     }
     if (widget.error != null) {
       return (widget.errorBuilder ?? _defaultErrorBuilder)(
@@ -551,25 +556,20 @@ class _VirtualizedSliverCollectionState<T>
     Object error,
     VoidCallback retry,
   ) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.error_outline,
-                color: Theme.of(context).colorScheme.error),
-            const SizedBox(height: 12),
-            Text(error.toString(), textAlign: TextAlign.center),
-            const SizedBox(height: 12),
-            FilledButton.tonalIcon(
-              onPressed: retry,
-              icon: const Icon(Icons.refresh),
-              label: Text(S.of(context).retry),
-            ),
-          ],
-        ),
+    return AsyncStateView(
+      padding: const EdgeInsets.all(UiSpacing.xLarge),
+      icon: Icon(
+        Icons.error_outline,
+        color: Theme.of(context).colorScheme.error,
       ),
+      message: Text(error.toString(), textAlign: TextAlign.center),
+      action: FilledButton.tonalIcon(
+        onPressed: retry,
+        icon: const Icon(Icons.refresh),
+        label: Text(S.of(context).retry),
+      ),
+      iconToTitleSpacing: UiSpacing.medium,
+      messageToActionSpacing: UiSpacing.medium,
     );
   }
 

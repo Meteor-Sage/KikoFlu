@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../utils/ui_tokens.dart';
+import 'async_state_view.dart';
 
 class SubtitleLibraryContentView extends StatelessWidget {
   const SubtitleLibraryContentView({
@@ -21,58 +23,41 @@ class SubtitleLibraryContentView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const AsyncStateView(
+        icon: CircularProgressIndicator(),
+        padding: EdgeInsets.zero,
+      );
     }
 
     final errorMessage = this.errorMessage;
     if (errorMessage != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.red),
-            const SizedBox(height: 16),
-            Text(errorMessage),
-            if (onRetry != null) ...[
-              const SizedBox(height: 16),
-              ElevatedButton(
+      return AsyncStateView(
+        icon: const Icon(Icons.error_outline, size: 48, color: Colors.red),
+        message: Text(errorMessage),
+        action: onRetry == null
+            ? null
+            : ElevatedButton(
                 onPressed: onRetry,
                 child: Text(S.of(context).retry),
               ),
-            ],
-          ],
-        ),
+        iconToTitleSpacing: UiSpacing.large,
+        messageToActionSpacing: UiSpacing.large,
       );
     }
 
     if (empty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.library_books_outlined,
-              size: 64,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              S.of(context).subtitleLibraryEmpty,
-              style: TextStyle(
-                fontSize: 18,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              S.of(context).tapToImportSubtitle,
-              style: TextStyle(
-                fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
+      final color = Theme.of(context).colorScheme.onSurfaceVariant;
+      return AsyncStateView(
+        icon: Icon(Icons.library_books_outlined, size: 64, color: color),
+        title: Text(
+          S.of(context).subtitleLibraryEmpty,
+          style: TextStyle(fontSize: 18, color: color),
         ),
+        message: Text(
+          S.of(context).tapToImportSubtitle,
+          style: TextStyle(fontSize: 14, color: color),
+        ),
+        iconToTitleSpacing: UiSpacing.large,
       );
     }
 

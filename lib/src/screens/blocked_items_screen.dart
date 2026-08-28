@@ -4,6 +4,7 @@ import '../../l10n/app_localizations.dart';
 import '../providers/settings_provider.dart';
 import '../utils/snackbar_util.dart';
 import '../utils/tag_localizer.dart';
+import '../utils/ui_tokens.dart';
 import '../providers/auth_provider.dart';
 
 class BlockedItemsScreen extends ConsumerWidget {
@@ -15,7 +16,8 @@ class BlockedItemsScreen extends ConsumerWidget {
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          title: Text(S.of(context).blockedItems, style: const TextStyle(fontSize: 18)),
+          title: Text(S.of(context).blockedItems,
+              style: UiTextStyles.pageTitle),
           bottom: TabBar(
             tabs: [
               Tab(text: S.of(context).searchTypeTag),

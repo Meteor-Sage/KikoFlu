@@ -10,12 +10,14 @@ import '../utils/l10n_extensions.dart';
 import '../utils/server_utils.dart';
 import '../utils/snackbar_util.dart';
 import '../utils/tag_localizer.dart';
+import '../utils/ui_tokens.dart';
 import '../services/log_service.dart';
 import '../widgets/scrollable_appbar.dart';
 import '../widgets/download_fab.dart';
 import '../widgets/floating_feed_toolbar.dart';
 import '../widgets/liquid_glass_dropdown.dart';
 import '../widgets/liquid_glass_layout.dart';
+import '../widgets/search_condition_chip.dart';
 import 'search_result_screen.dart';
 
 // 搜索条件项
@@ -319,7 +321,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
         appBar: ScrollableAppBar(
           title: Text(
             S.of(context).search,
-            style: const TextStyle(fontSize: 18),
+            style: UiTextStyles.pageTitle,
           ),
           clipBehavior: Clip.none,
           actions: [
@@ -475,30 +477,19 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                 padding: EdgeInsets.only(
                   right: index == _searchConditions.length - 1 ? 0 : 6,
                 ),
-                child: Chip(
+                child: SearchConditionChip(
                   avatar: Icon(
                     condition.isExclude
                         ? Icons.remove_circle_outline
                         : _getSearchTypeIcon(condition.type),
-                    size: 16,
+                    size: UiIconSize.small,
                   ),
-                  label: Text(
-                    '${condition.type.localizedLabel(context)}: $displayValue',
-                    style: const TextStyle(fontSize: 12),
-                  ),
+                  label:
+                      '${condition.type.localizedLabel(context)}: $displayValue',
                   backgroundColor: condition.isExclude
                       ? theme.colorScheme.errorContainer
                       : theme.colorScheme.secondaryContainer,
                   onDeleted: () => _removeSearchCondition(condition.id),
-                  deleteIcon: const Icon(Icons.close, size: 16),
-                  side: BorderSide.none,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  visualDensity: VisualDensity.compact,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  labelPadding: const EdgeInsets.only(left: 4, right: 2),
                 ),
               );
             },
@@ -893,7 +884,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(UiRadii.capsule),
             onTap: () {
               setState(() {
                 if (isCurrentType && supportsExclude) {
@@ -912,15 +903,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
               curve: Curves.easeOut,
-              height: 40,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              height: UiControlSize.compact,
+              padding: const EdgeInsets.symmetric(horizontal: UiSpacing.medium),
               decoration: BoxDecoration(
                 color: isCurrentType
                     ? (isExcluded
                           ? colors.errorContainer
                           : colors.primaryContainer)
                     : Colors.transparent,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(UiRadii.capsule),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -928,12 +919,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                   if (isCurrentType) ...[
                     Icon(
                       isExcluded ? Icons.remove_circle_outline : Icons.check,
-                      size: 18,
+                      size: UiIconSize.standard,
                       color: isExcluded
                           ? colors.onErrorContainer
                           : colors.primary,
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: UiSpacing.small),
                   ],
                   Text(
                     type.localizedLabel(context),
