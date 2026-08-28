@@ -11,10 +11,15 @@ class GlobalAudioPlayerWrapper extends ConsumerStatefulWidget {
   final Widget child;
   final bool showMiniPlayer;
 
+  /// Keeps the dock's geometry but omits its native glass while a modal is
+  /// covering it, preventing the platform-view shadow from crossing routes.
+  final bool suppressLiquidGlassMiniPlayer;
+
   const GlobalAudioPlayerWrapper({
     super.key,
     required this.child,
     this.showMiniPlayer = true,
+    this.suppressLiquidGlassMiniPlayer = false,
   });
 
   @override
@@ -39,7 +44,11 @@ class _GlobalAudioPlayerWrapperState
 
     final miniPlayer = currentTrack.when(
       data: (track) => track != null
-          ? const MiniPlayer(enableArtworkHero: false)
+          ? MiniPlayer(
+              enableArtworkHero: false,
+              suppressLiquidGlassSurface:
+                  widget.suppressLiquidGlassMiniPlayer,
+            )
           : const SizedBox.shrink(),
       loading: () => const SizedBox.shrink(),
       error: (_, __) => const SizedBox.shrink(),

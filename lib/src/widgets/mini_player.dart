@@ -21,7 +21,15 @@ import 'liquid_glass_layout.dart';
 class MiniPlayer extends ConsumerStatefulWidget {
   final bool enableArtworkHero;
 
-  const MiniPlayer({super.key, this.enableArtworkHero = true});
+  /// Replaces only the liquid-glass surface with an equal-height placeholder.
+  /// Playback and the Mini Player state remain active behind the modal route.
+  final bool suppressLiquidGlassSurface;
+
+  const MiniPlayer({
+    super.key,
+    this.enableArtworkHero = true,
+    this.suppressLiquidGlassSurface = false,
+  });
 
   @override
   ConsumerState<MiniPlayer> createState() => _MiniPlayerState();
@@ -125,9 +133,10 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
               final hasLyrics = lyricState.lyrics.isNotEmpty;
               final shouldShowLyric =
                   isPlaying && hasLyrics && currentLyric != null;
+              final playerHeight = shouldShowLyric ? 88.0 : 72.0;
 
               final playerContent = Container(
-                height: shouldShowLyric ? 88 : 72,
+                height: playerHeight,
                 decoration: BoxDecoration(
                   color: useLiquidGlass
                       ? Colors.transparent
@@ -482,6 +491,11 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
               );
 
               if (!useLiquidGlass) return playerContent;
+              if (widget.suppressLiquidGlassSurface) {
+                return SizedBox(
+                  height: playerHeight + LiquidGlassLayout.verticalPadding * 2,
+                );
+              }
 
               return Padding(
                 padding: const EdgeInsets.symmetric(

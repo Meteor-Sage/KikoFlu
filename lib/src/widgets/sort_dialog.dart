@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../models/sort_options.dart';
 import '../utils/l10n_extensions.dart';
-import 'radio_option_group.dart';
 import 'responsive_dialog.dart';
 
 /// 通用排序对话框
@@ -18,7 +17,7 @@ class CommonSortDialog extends StatefulWidget {
   final SortOrder currentOption;
   final SortDirection currentDirection;
   final Function(SortOrder, SortDirection) onSort;
-  final String title;
+  final String? title;
   final bool autoClose;
   final List<SortOrder>? availableOptions;
 
@@ -27,7 +26,7 @@ class CommonSortDialog extends StatefulWidget {
     required this.currentOption,
     required this.currentDirection,
     required this.onSort,
-    this.title = 'Sort',
+    this.title,
     this.autoClose = true,
     this.availableOptions,
   });
@@ -63,172 +62,174 @@ class _CommonSortDialogState extends State<CommonSortDialog> {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
     final options = widget.availableOptions ?? SortOrder.values;
+    final orderSection = _SortSection<SortOrder>(
+      key: const ValueKey('sort-field-section'),
+      title: S.of(context).sortField,
+      value: _currentOption,
+      options: options,
+      labelBuilder: (option) => option.localizedLabel(context),
+      onChanged: (value) => _handleSort(value, _currentDirection),
+    );
+    final directionSection = _SortSection<SortDirection>(
+      key: const ValueKey('sort-direction-section'),
+      title: S.of(context).sortDirection,
+      value: _currentDirection,
+      options: SortDirection.values,
+      labelBuilder: (direction) => direction.localizedLabel(context),
+      onChanged: (value) => _handleSort(_currentOption, value),
+    );
 
-    // 横屏时使用两列布局
-    if (isLandscape) {
-      return ResponsiveAlertDialog(
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(widget.title),
+    return ResponsiveDialog(
+      maxWidth: isLandscape ? 640 : 420,
+      titlePadding: const EdgeInsets.fromLTRB(20, 14, 8, 0),
+      contentPadding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+      title: Row(
+        children: [
+          Icon(
+            Icons.sort,
+            size: 22,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              widget.title ?? S.of(context).sortOptions,
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
             ),
-            IconButton(
-              icon: const Icon(Icons.close),
-              onPressed: () => Navigator.of(context).pop(),
-              tooltip: S.of(context).close,
+          ),
+          IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.of(context).pop(),
+            tooltip: S.of(context).close,
+          ),
+        ],
+      ),
+      content: SizedBox(
+        width: isLandscape ? 600 : 360,
+        child: isLandscape
+            ? IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(child: orderSection),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      child: VerticalDivider(width: 1),
+                    ),
+                    Expanded(child: directionSection),
+                  ],
+                ),
+              )
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  orderSection,
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 10),
+                    child: Divider(height: 1),
+                  ),
+                  directionSection,
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+class _SortSection<T> extends StatelessWidget {
+  const _SortSection({
+    super.key,
+    required this.title,
+    required this.value,
+    required this.options,
+    required this.labelBuilder,
+    required this.onChanged,
+  });
+
+  final String title;
+  final T value;
+  final List<T> options;
+  final String Function(T value) labelBuilder;
+  final ValueChanged<T> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 8, bottom: 4),
+          child: Text(
+            title,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
             ),
-          ],
+          ),
         ),
-        content: SizedBox(
-          width: MediaQuery.of(context).size.width * 0.5,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        RadioGroup<T>(
+          groupValue: value,
+          onChanged: (nextValue) {
+            if (nextValue != null) onChanged(nextValue);
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // 左列：排序字段
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8, bottom: 8),
-                      child: Text(
-                        S.of(context).sortField,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                    Flexible(
-                      child: SingleChildScrollView(
-                        child: RadioOptionGroup<SortOrder>(
-                          groupValue: _currentOption,
-                          dense: true,
-                          contentPadding:
-                              const EdgeInsets.symmetric(horizontal: 8),
-                          options: [
-                            for (final option in options)
-                              RadioOption(
-                                value: option,
-                                title: Text(option.localizedLabel(context)),
-                              ),
-                          ],
-                          onChanged: (value) =>
-                              _handleSort(value, _currentDirection),
-                        ),
-                      ),
-                    ),
-                  ],
+              for (final option in options)
+                _SortOptionTile<T>(
+                  value: option,
+                  label: labelBuilder(option),
+                  selected: option == value,
                 ),
-              ),
-              const VerticalDivider(width: 1),
-              // 右列：排序方向
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8, bottom: 8),
-                      child: Text(
-                        S.of(context).sortDirection,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                    Flexible(
-                      child: SingleChildScrollView(
-                        child: RadioOptionGroup<SortDirection>(
-                          groupValue: _currentDirection,
-                          dense: true,
-                          contentPadding:
-                              const EdgeInsets.symmetric(horizontal: 8),
-                          options: [
-                            for (final direction in SortDirection.values)
-                              RadioOption(
-                                value: direction,
-                                title: Text(direction.localizedLabel(context)),
-                              ),
-                          ],
-                          onChanged: (value) =>
-                              _handleSort(_currentOption, value),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             ],
           ),
         ),
-        actions: widget.autoClose
-            ? null
-            : [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text(S.of(context).close),
-                ),
-              ],
-      );
-    }
+      ],
+    );
+  }
+}
 
-    // 竖屏时使用单列布局
-    return ResponsiveAlertDialog(
-      title: Text(widget.title),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // 排序字段选择
-            Text(
-              S.of(context).sortField,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            RadioOptionGroup<SortOrder>(
-              groupValue: _currentOption,
-              dense: true,
-              options: [
-                for (final option in options)
-                  RadioOption(
-                    value: option,
-                    title: Text(option.localizedLabel(context)),
-                  ),
-              ],
-              onChanged: (value) => _handleSort(value, _currentDirection),
-            ),
-            const Divider(),
-            // 排序方向选择
-            Text(
-              S.of(context).sortDirection,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            RadioOptionGroup<SortDirection>(
-              groupValue: _currentDirection,
-              dense: true,
-              options: [
-                for (final direction in SortDirection.values)
-                  RadioOption(
-                    value: direction,
-                    title: Text(direction.localizedLabel(context)),
-                  ),
-              ],
-              onChanged: (value) => _handleSort(_currentOption, value),
-            ),
-          ],
+class _SortOptionTile<T> extends StatelessWidget {
+  const _SortOptionTile({
+    required this.value,
+    required this.label,
+    required this.selected,
+  });
+
+  final T value;
+  final String label;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return RadioListTile<T>(
+      value: value,
+      selected: selected,
+      dense: true,
+      controlAffinity: ListTileControlAffinity.leading,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+      horizontalTitleGap: 4,
+      minLeadingWidth: 32,
+      minVerticalPadding: 0,
+      minTileHeight: 44,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      visualDensity: const VisualDensity(horizontal: -2, vertical: -2),
+      radioScaleFactor: 0.9,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+      selectedTileColor: colorScheme.primaryContainer.withValues(alpha: 0.42),
+      title: Text(
+        label,
+        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+          color: colorScheme.onSurface,
+          fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(
-              widget.autoClose ? S.of(context).cancel : S.of(context).close),
-        ),
-      ],
     );
   }
 }

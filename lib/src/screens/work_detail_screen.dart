@@ -68,6 +68,17 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
   bool _showTranslation = false; // 是否显示翻译
   bool _isTranslating = false; // 是否正在翻译
 
+  Future<void> _restoreMiniPlayerAfterModalExit(VoidCallback clearFlag) async {
+    // A pushed route's Future completes when pop starts, before its reverse
+    // transition leaves the overlay. Keep native glass suppressed until then.
+    await Future<void>.delayed(kThemeAnimationDuration);
+    if (mounted) {
+      setState(clearFlag);
+    } else {
+      clearFlag();
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -251,7 +262,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
   Future<void> _showFileSelectionDialog() async {
     // 防抖: 避免 iOS 上快速双击导致同一路由被重复创建又立即被关闭
     if (_isOpeningFileSelection) return;
-    _isOpeningFileSelection = true;
+    setState(() => _isOpeningFileSelection = true);
 
     final preparedWorkFuture = _prepareWorkForFileSelection();
 
@@ -305,7 +316,9 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
         },
       );
     } finally {
-      _isOpeningFileSelection = false;
+      await _restoreMiniPlayerAfterModalExit(
+        () => _isOpeningFileSelection = false,
+      );
     }
   }
 
@@ -397,28 +410,32 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
   // 显示收藏状态选择对话框
   Future<void> _showProgressDialog() async {
     if (_isOpeningProgressDialog) return; // 防抖避免 iOS 双击导致立即关闭
-    _isOpeningProgressDialog = true;
+    setState(() => _isOpeningProgressDialog = true);
 
     final manager = WorkBookmarkManager(ref: ref, context: context);
 
-    await manager.showMarkDialog(
-      workId: widget.work.id,
-      currentProgress: _currentProgress,
-      currentRating: _currentRating,
-      workTitle: widget.work.title,
-      onChanged: (newProgress, newRating) {
-        // 更新本地状态
-        if (mounted) {
-          setState(() {
-            _currentProgress = newProgress;
-            _currentRating = newRating;
-            _isUpdatingProgress = false;
-          });
-        }
-      },
-    );
-
-    _isOpeningProgressDialog = false;
+    try {
+      await manager.showMarkDialog(
+        workId: widget.work.id,
+        currentProgress: _currentProgress,
+        currentRating: _currentRating,
+        workTitle: widget.work.title,
+        onChanged: (newProgress, newRating) {
+          // 更新本地状态
+          if (mounted) {
+            setState(() {
+              _currentProgress = newProgress;
+              _currentRating = newRating;
+              _isUpdatingProgress = false;
+            });
+          }
+        },
+      );
+    } finally {
+      await _restoreMiniPlayerAfterModalExit(
+        () => _isOpeningProgressDialog = false,
+      );
+    }
   }
 
   // 显示评分详情弹窗
@@ -446,6 +463,8 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
     final systemOverlayStyle = transparentSystemBarsForBrightness(brightness);
 
     return GlobalAudioPlayerWrapper(
+      suppressLiquidGlassMiniPlayer:
+          _isOpeningFileSelection || _isOpeningProgressDialog,
       child: Scaffold(
         floatingActionButton: const DownloadFab(),
         appBar: ScrollableAppBar(
