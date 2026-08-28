@@ -13,7 +13,7 @@ class SubtitleLibraryGuideDialog extends StatelessWidget {
     return ResponsiveAlertDialog(
       title: Text(
         l10n.subtitleLibraryGuide,
-        style: const TextStyle(fontSize: 18),
+        style: Theme.of(context).textTheme.titleLarge,
       ),
       content: SingleChildScrollView(
         child: Column(
@@ -193,9 +193,9 @@ class _GuideStep extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
               ),
               if (description != null) ...[
                 const SizedBox(height: 4),
@@ -260,10 +260,7 @@ class _GuideBullet extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '\u2022 ',
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
+        Text('\u2022 ', style: Theme.of(context).textTheme.bodyMedium),
         Expanded(child: child),
       ],
     );

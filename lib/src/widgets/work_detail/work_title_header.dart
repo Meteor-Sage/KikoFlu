@@ -33,11 +33,11 @@ class WorkTitleHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final titleStyle = style ??
-        Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            );
+    final titleStyle =
+        style ??
+        Theme.of(
+          context,
+        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold);
 
     return GestureDetector(
       onLongPress: onCopy == null ? null : () => onCopy!(displayTitle),

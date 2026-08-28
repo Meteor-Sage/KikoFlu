@@ -6,6 +6,7 @@ import '../../providers/auth_provider.dart';
 import '../../../l10n/app_localizations.dart';
 import '../responsive_dialog.dart';
 import '../../utils/tag_localizer.dart';
+import '../../utils/snackbar_util.dart';
 
 /// 添加标签对话框组件
 class AddTagDialog extends ConsumerStatefulWidget {
@@ -64,11 +65,9 @@ class _AddTagDialogState extends ConsumerState<AddTagDialog> {
         setState(() {
           _isLoading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(S.of(context).loadTagsFailed(e.toString())),
-            backgroundColor: Colors.red,
-          ),
+        SnackBarUtil.showError(
+          context,
+          S.of(context).loadTagsFailed(e.toString()),
         );
       }
     }
@@ -96,12 +95,7 @@ class _AddTagDialogState extends ConsumerState<AddTagDialog> {
 
   Future<void> _submitTags() async {
     if (_selectedTagIds.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(S.of(context).selectAtLeastOneTag),
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      SnackBarUtil.showWarning(context, S.of(context).selectAtLeastOneTag);
       return;
     }
 
@@ -120,13 +114,7 @@ class _AddTagDialogState extends ConsumerState<AddTagDialog> {
         Navigator.pop(context);
         widget.onTagsAdded();
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(S.of(context).tagSubmitSuccess),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
-          ),
-        );
+        SnackBarUtil.showSuccess(context, S.of(context).tagSubmitSuccess);
       }
     } catch (e) {
       if (mounted) {
@@ -142,12 +130,10 @@ class _AddTagDialogState extends ConsumerState<AddTagDialog> {
           errorMessage = S.of(context).bindEmailFirst;
         }
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
+        SnackBarUtil.showError(
+          context,
+          errorMessage,
+          duration: const Duration(seconds: 3),
         );
       }
     }
@@ -203,7 +189,10 @@ class _AddTagDialogState extends ConsumerState<AddTagDialog> {
                   return Chip(
                     label: Text(
                       TagLocalizer.localize(
-                          tagId, tag['name'], Localizations.localeOf(context)),
+                        tagId,
+                        tag['name'],
+                        Localizations.localeOf(context),
+                      ),
                       style: const TextStyle(fontSize: 11),
                     ),
                     deleteIcon: const Icon(Icons.close, size: 16),
@@ -248,7 +237,10 @@ class _AddTagDialogState extends ConsumerState<AddTagDialog> {
                           final tagId = tag['id'] as int;
                           final tagName = tag['name'] as String;
                           final localizedTagName = TagLocalizer.localize(
-                              tagId, tagName, Localizations.localeOf(context));
+                            tagId,
+                            tagName,
+                            Localizations.localeOf(context),
+                          );
                           final count = tag['count'] ?? 0;
                           final isExisting = existingTagIds.contains(tagId);
                           final isSelected = _selectedTagIds.contains(tagId);

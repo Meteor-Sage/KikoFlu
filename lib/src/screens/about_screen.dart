@@ -17,8 +17,9 @@ class AboutScreen extends ConsumerStatefulWidget {
 }
 
 class _AboutScreenState extends ConsumerState<AboutScreen> {
-  static final Uri _repoUri =
-      Uri.parse('https://github.com/Meteor-Sage/Kikoeru-Flutter');
+  static final Uri _repoUri = Uri.parse(
+    'https://github.com/Meteor-Sage/Kikoeru-Flutter',
+  );
   late final Future<_AboutData> _aboutFuture;
 
   @override
@@ -66,10 +67,7 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: ScrollableAppBar(
-        title: Text(S.of(context).aboutTitle,
-            style: const TextStyle(fontSize: 18)),
-      ),
+      appBar: ScrollableAppBar(title: Text(S.of(context).aboutTitle)),
       body: FutureBuilder<_AboutData>(
         future: _aboutFuture,
         builder: (context, snapshot) {
@@ -126,17 +124,23 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
                     title: Text(
                       S.of(context).newVersionFound,
                       style: TextStyle(
-                        color:
-                            Theme.of(context).colorScheme.onSecondaryContainer,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSecondaryContainer,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     subtitle: Text(
-                      S.of(context).newVersionAvailable(
-                          updateInfo.latestVersion, updateInfo.currentVersion),
+                      S
+                          .of(context)
+                          .newVersionAvailable(
+                            updateInfo.latestVersion,
+                            updateInfo.currentVersion,
+                          ),
                       style: TextStyle(
-                        color:
-                            Theme.of(context).colorScheme.onSecondaryContainer,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSecondaryContainer,
                       ),
                     ),
                     trailing: Icon(
@@ -217,9 +221,9 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
         mode: LaunchMode.externalApplication,
       );
       if (!launched && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(S.of(context).cannotOpenLink)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(S.of(context).cannotOpenLink)));
       }
     } catch (error) {
       if (!mounted) return;
@@ -244,8 +248,9 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
         ref.read(updateInfoProvider.notifier).state = updateInfo;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content:
-                Text(S.of(context).foundNewVersion(updateInfo.latestVersion)),
+            content: Text(
+              S.of(context).foundNewVersion(updateInfo.latestVersion),
+            ),
             action: SnackBarAction(
               label: S.of(context).view,
               onPressed: () => _openUrl(updateInfo.releaseUrl),
@@ -259,9 +264,9 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
       }
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(S.of(context).checkUpdateFailed)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(S.of(context).checkUpdateFailed)));
     } finally {
       if (mounted) {
         ref.read(isCheckingUpdateProvider.notifier).state = false;
@@ -277,9 +282,7 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
           title: Text(S.of(context).openSourceLicense),
           content: SizedBox(
             width: double.maxFinite,
-            child: SingleChildScrollView(
-              child: SelectableText(license),
-            ),
+            child: SingleChildScrollView(child: SelectableText(license)),
           ),
           actions: [
             TextButton(

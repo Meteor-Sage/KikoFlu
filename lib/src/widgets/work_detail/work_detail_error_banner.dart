@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../utils/design_tokens.dart';
 
 class WorkDetailErrorBanner extends StatelessWidget {
-  const WorkDetailErrorBanner({
-    super.key,
-    this.message,
-    this.onRetry,
-  });
+  const WorkDetailErrorBanner({super.key, this.message, this.onRetry});
 
   final String? message;
   final VoidCallback? onRetry;
@@ -21,32 +18,25 @@ class WorkDetailErrorBanner extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Row(
         children: [
           Icon(
             Icons.error_outline,
-            size: 16,
+            size: AppIconSize.small,
             color: colorScheme.error,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.xs),
           Expanded(
             child: Text(
               message!,
-              style: TextStyle(
-                color: colorScheme.error,
-                fontSize: 12,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colorScheme.error),
             ),
           ),
           if (onRetry != null)
-            TextButton(
-              onPressed: onRetry,
-              child: Text(
-                S.of(context).retry,
-                style: const TextStyle(fontSize: 12),
-              ),
-            ),
+            TextButton(onPressed: onRetry, child: Text(S.of(context).retry)),
         ],
       ),
     );

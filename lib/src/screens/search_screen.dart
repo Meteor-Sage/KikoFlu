@@ -317,10 +317,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
       child: Scaffold(
         floatingActionButton: const DownloadFab(),
         appBar: ScrollableAppBar(
-          title: Text(
-            S.of(context).search,
-            style: const TextStyle(fontSize: 18),
-          ),
+          title: Text(S.of(context).search),
           clipBehavior: Clip.none,
           actions: [
             // 筛选按钮移到右上角
@@ -484,7 +481,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                   ),
                   label: Text(
                     '${condition.type.localizedLabel(context)}: $displayValue',
-                    style: const TextStyle(fontSize: 12),
+                    style: theme.textTheme.labelMedium,
                   ),
                   backgroundColor: condition.isExclude
                       ? theme.colorScheme.errorContainer
@@ -967,7 +964,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
       prefixText: _currentSearchType == SearchType.rjNumber ? 'RJ' : null,
       prefixStyle: TextStyle(
         color: theme.colorScheme.onSurface,
-        fontSize: 16,
+        fontSize: theme.textTheme.bodyLarge?.fontSize,
         fontWeight: FontWeight.normal,
       ),
       suffixIcon: suffixIcon,
@@ -993,7 +990,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
       filled: false,
       isDense: true,
       contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-      labelStyle: theme.textTheme.labelMedium,
+      labelStyle: theme.textTheme.labelLarge?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant,
+        fontWeight: FontWeight.w500,
+      ),
     );
   }
 

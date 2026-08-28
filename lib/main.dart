@@ -38,6 +38,7 @@ import 'src/providers/audio_provider.dart';
 import 'src/providers/auth_provider.dart';
 import 'src/providers/locale_provider.dart';
 import 'src/providers/theme_provider.dart';
+import 'src/providers/text_scale_provider.dart';
 import 'src/providers/update_provider.dart';
 import 'src/utils/desktop_window_options.dart';
 import 'src/utils/global_keys.dart';
@@ -51,9 +52,9 @@ void _setEnv(String key, String value) {
     try {
       final setEnvironmentVariable = ffi.DynamicLibrary.open('kernel32.dll')
           .lookupFunction<
-              ffi.Int32 Function(ffi.Pointer<Utf16>, ffi.Pointer<Utf16>),
-              int Function(ffi.Pointer<Utf16>,
-                  ffi.Pointer<Utf16>)>('SetEnvironmentVariableW');
+            ffi.Int32 Function(ffi.Pointer<Utf16>, ffi.Pointer<Utf16>),
+            int Function(ffi.Pointer<Utf16>, ffi.Pointer<Utf16>)
+          >('SetEnvironmentVariableW');
       setEnvironmentVariable(keyNative, valueNative);
     } finally {
       calloc.free(keyNative);
@@ -63,9 +64,11 @@ void _setEnv(String key, String value) {
     final keyNative = key.toNativeUtf8();
     final valueNative = value.toNativeUtf8();
     try {
-      final setenv = ffi.DynamicLibrary.process().lookupFunction<
-          ffi.Int32 Function(ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Int32),
-          int Function(ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, int)>('setenv');
+      final setenv = ffi.DynamicLibrary.process()
+          .lookupFunction<
+            ffi.Int32 Function(ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Int32),
+            int Function(ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, int)
+          >('setenv');
       setenv(keyNative, valueNative, 1);
     } finally {
       calloc.free(keyNative);
@@ -190,7 +193,8 @@ video=no
 sub-auto=no
 ''';
       } else if (Platform.isLinux) {
-        configContent = '''
+        configContent =
+            '''
 audio-spdif=ac3,dts,eac3
 volume-max=400
 log-file=${p.join(configDir.path, 'mpv_debug.log')}
@@ -199,7 +203,8 @@ video=no
 sub-auto=no
 ''';
       } else {
-        configContent = '''
+        configContent =
+            '''
 ao=coreaudio
 audio-exclusive=yes
 audio-spdif=ac3,dts,eac3
@@ -227,7 +232,8 @@ video=no
 sub-auto=no
 ''';
       } else {
-        configContent = '''
+        configContent =
+            '''
 volume-max=400
 log-file=${p.join(configDir.path, 'mpv_debug.log')}
 msg-level=all=v
@@ -236,8 +242,9 @@ sub-auto=no
 ''';
       }
       await configFile.writeAsString(configContent);
-      LogService.instance
-          .captureOutput('[Audio] Updated mpv.conf: Video Disabled');
+      LogService.instance.captureOutput(
+        '[Audio] Updated mpv.conf: Video Disabled',
+      );
     }
   } catch (e) {
     LogService.instance.captureOutput('[Audio] Error configuring mpv: $e');
@@ -275,10 +282,7 @@ void main(List<String> args) async {
     // Initialize window manager for the new window
     await windowManager.ensureInitialized();
 
-    runApp(DesktopFloatingLyric(
-      windowId: windowId,
-      arguments: argument,
-    ));
+    runApp(DesktopFloatingLyric(windowId: windowId, arguments: argument));
     return;
   }
 
@@ -445,8 +449,9 @@ class _KikoeruAppState extends ConsumerState<KikoeruApp>
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.detached) {
-      PlaybackHistoryService.instance
-          .flushNow(reason: FlushReason.appBackground);
+      PlaybackHistoryService.instance.flushNow(
+        reason: FlushReason.appBackground,
+      );
       AudioPlayerService.instance.persistPlaybackPosition();
     }
   }
@@ -500,6 +505,7 @@ class _KikoeruAppState extends ConsumerState<KikoeruApp>
       );
     }
     final locale = ref.watch(localeProvider);
+    final appTextScale = ref.watch(appTextScaleProvider);
     final effectiveLocale =
         locale ?? WidgetsBinding.instance.platformDispatcher.locale;
 
@@ -508,12 +514,12 @@ class _KikoeruAppState extends ConsumerState<KikoeruApp>
         // 根据用户设置决定是否使用动态颜�?
         final ColorScheme? lightScheme =
             themeSettings.colorSchemeType == ColorSchemeType.dynamic
-                ? lightDynamic
-                : null;
+            ? lightDynamic
+            : null;
         final ColorScheme? darkScheme =
             themeSettings.colorSchemeType == ColorSchemeType.dynamic
-                ? darkDynamic
-                : null;
+            ? darkDynamic
+            : null;
 
         // 根据用户设置决定主题模式
         final requestedMode = switch (themeSettings.themeMode) {
@@ -539,11 +545,13 @@ class _KikoeruAppState extends ConsumerState<KikoeruApp>
             lightScheme,
             themeSettings.colorSchemeType,
             effectiveLocale,
+            appTextScale,
           ),
           darkTheme: AppTheme.darkTheme(
             darkScheme,
             themeSettings.colorSchemeType,
             effectiveLocale,
+            appTextScale,
           ),
           themeMode: mode,
           home: ScreenAwakeObserver(child: _buildHomeScreen()),

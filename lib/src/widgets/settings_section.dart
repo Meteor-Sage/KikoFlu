@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../utils/snackbar_util.dart';
+import '../utils/design_tokens.dart';
 import 'scrollable_appbar.dart';
 
 class SettingsSubpageScaffold extends StatelessWidget {
@@ -35,7 +36,7 @@ class SettingsSubpageScaffold extends StatelessWidget {
 
     return Scaffold(
       appBar: ScrollableAppBar(
-        title: Text(title, style: const TextStyle(fontSize: 18)),
+        title: Text(title),
         actions: appBarActions.isEmpty ? null : appBarActions,
       ),
       body: body,
@@ -94,11 +95,8 @@ Future<bool> confirmAndRestoreSettingsDefaults({
   return true;
 }
 
-typedef SettingsReorderItemBuilder<T> = Widget Function(
-  BuildContext context,
-  T item,
-  int index,
-);
+typedef SettingsReorderItemBuilder<T> =
+    Widget Function(BuildContext context, T item, int index);
 
 class SettingsReorderablePage<T> extends StatelessWidget {
   const SettingsReorderablePage({
@@ -135,7 +133,9 @@ class SettingsReorderablePage<T> extends StatelessWidget {
             margin: const EdgeInsets.all(16),
             child: Text(
               infoDescription,
-              style: const TextStyle(fontSize: 12, height: 1.5),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(height: 1.5),
             ),
           ),
           Expanded(
@@ -195,7 +195,7 @@ class SettingsSectionCard extends StatelessWidget {
       shape: shape is RoundedRectangleBorder
           ? shape.copyWith(side: side)
           : RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppRadius.card),
               side: side,
             ),
       child: child,
@@ -262,7 +262,7 @@ class SettingsInfoCard extends StatelessWidget {
       color: color,
       margin: margin,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: title == null
             ? Row(
                 children: [
@@ -324,7 +324,8 @@ class SettingsListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final resolvedIconColor = iconColor ??
+    final resolvedIconColor =
+        iconColor ??
         (enabled ? colorScheme.primary : colorScheme.onSurfaceVariant);
 
     return ListTile(
@@ -335,7 +336,8 @@ class SettingsListTile extends StatelessWidget {
           ? null
           : Text(
               subtitle!,
-              style: subtitleStyle ??
+              style:
+                  subtitleStyle ??
                   (enabled
                       ? null
                       : TextStyle(color: colorScheme.onSurfaceVariant)),
@@ -370,11 +372,8 @@ class SettingsNavigationTile extends StatelessWidget {
       icon: icon,
       title: title,
       subtitle: subtitle,
-      trailing: trailing ??
-          Icon(
-            Icons.arrow_forward_ios,
-            size: trailingIconSize,
-          ),
+      trailing:
+          trailing ?? Icon(Icons.arrow_forward_ios, size: trailingIconSize),
       onTap: onTap,
     );
   }
@@ -422,7 +421,7 @@ class SettingsSwitchTile extends StatelessWidget {
 class SettingsDivider extends StatelessWidget {
   const SettingsDivider({
     super.key,
-    this.indent = 52,
+    this.indent = AppSettingsLayout.contentIndent,
     this.endIndent = 0,
   });
 
@@ -436,8 +435,9 @@ class SettingsDivider extends StatelessWidget {
       thickness: 0.6,
       indent: indent,
       endIndent: endIndent,
-      color:
-          Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.45),
+      color: Theme.of(
+        context,
+      ).colorScheme.outlineVariant.withValues(alpha: 0.45),
     );
   }
 }

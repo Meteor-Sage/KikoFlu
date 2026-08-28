@@ -81,8 +81,10 @@ class _OfflineWorkDetailScreenState
 
     try {
       final translationService = TranslationService();
-      final translated =
-          await translationService.translate(work.title, sourceLang: 'ja');
+      final translated = await translationService.translate(
+        work.title,
+        sourceLang: 'ja',
+      );
 
       if (mounted) {
         setState(() {
@@ -98,7 +100,9 @@ class _OfflineWorkDetailScreenState
         });
 
         SnackBarUtil.showError(
-            context, S.of(context).translationFailed(e.toString()));
+          context,
+          S.of(context).translationFailed(e.toString()),
+        );
       }
     }
   }
@@ -255,11 +259,7 @@ class _OfflineWorkDetailScreenState
 
       if (entity is File) {
         final bytes = await entity.readAsBytes();
-        final file = ArchiveFile(
-          relativePath,
-          bytes.length,
-          bytes,
-        );
+        final file = ArchiveFile(relativePath, bytes.length, bytes);
         archive.addFile(file);
       } else if (entity is Directory) {
         await _addDirectoryToArchive(archive, entity, basePath);
@@ -275,9 +275,7 @@ class _OfflineWorkDetailScreenState
       fit: BoxFit.contain,
       placeholder: (context, url) => Container(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        child: const Center(
-          child: CircularProgressIndicator(),
-        ),
+        child: const Center(child: CircularProgressIndicator()),
       ),
       errorWidget: (context, url, error) => Container(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -307,22 +305,25 @@ class _OfflineWorkDetailScreenState
             ],
             title: GestureDetector(
               onLongPress: () => _copyToClipboard(
-                  widget.work.displayId, S.of(context).workIdLabel),
+                widget.work.displayId,
+                S.of(context).workIdLabel,
+              ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     widget.work.displayId,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                        ),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   if (widget.isOffline) ...[
                     const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.orange.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(4),
@@ -331,8 +332,11 @@ class _OfflineWorkDetailScreenState
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.offline_bolt,
-                              size: 12, color: Colors.orange),
+                          const Icon(
+                            Icons.offline_bolt,
+                            size: 12,
+                            color: Colors.orange,
+                          ),
                           const SizedBox(width: 2),
                           Text(
                             S.of(context).offlineBadge,
@@ -369,7 +373,8 @@ class _OfflineWorkDetailScreenState
     final coverUrl = widget.localCoverPath != null
         ? 'file://${widget.localCoverPath}'
         : '$host/api/cover/${work.id}';
-    final hasLocalCover = widget.localCoverPath != null &&
+    final hasLocalCover =
+        widget.localCoverPath != null &&
         File(widget.localCoverPath!).existsSync();
     final displaySettings = ref.watch(workDetailDisplayProvider);
 
@@ -386,17 +391,12 @@ class _OfflineWorkDetailScreenState
             showTranslation: _showTranslation,
             isTranslating: _isTranslating,
             onTranslate: _translateTitle,
-            onCopy: (title) => _copyToClipboard(
-              title,
-              S.of(context).titleLabel,
-            ),
+            onCopy: (title) =>
+                _copyToClipboard(title, S.of(context).titleLabel),
           ),
           const SizedBox(height: 16),
 
-          WorkCreatorChipsSection(
-            work: work,
-            onCopy: _copyToClipboard,
-          ),
+          WorkCreatorChipsSection(work: work, onCopy: _copyToClipboard),
 
           WorkTagChipsSection(
             tags: work.tags,
@@ -411,7 +411,8 @@ class _OfflineWorkDetailScreenState
             work: work,
             localWorkDirPath: widget.localWorkDirPath,
             localCoverRelativePath: widget.localCoverRelativePath,
-            fileTree: widget.fileTree ??
+            fileTree:
+                widget.fileTree ??
                 work.children?.map((e) {
                   if (e is Map<String, dynamic>) {
                     return e;
@@ -436,11 +437,7 @@ class _OfflineWorkDetailScreenState
               MaterialPageRoute(
                 builder: (context) => ImageGalleryScreen(
                   images: [
-                    {
-                      'url': coverUrl,
-                      'title': work.title,
-                      'hash': '',
-                    },
+                    {'url': coverUrl, 'title': work.title, 'hash': ''},
                   ],
                   initialIndex: 0,
                 ),

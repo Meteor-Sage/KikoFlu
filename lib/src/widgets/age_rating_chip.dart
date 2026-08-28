@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../utils/age_rating.dart';
+import '../utils/design_tokens.dart';
 
 class AgeRatingChip extends StatelessWidget {
   const AgeRatingChip({
@@ -22,6 +23,7 @@ class AgeRatingChip extends StatelessWidget {
     if (label == null) return const SizedBox.shrink();
 
     final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final level = AgeRatingFormatter.level(age);
     final (backgroundColor, foregroundColor) = switch (level) {
       AgeRatingLevel.r18 => (
@@ -47,19 +49,25 @@ class AgeRatingChip extends StatelessWidget {
           padding ??
           (compact
               ? const EdgeInsets.symmetric(horizontal: 6, vertical: 2)
-              : const EdgeInsets.symmetric(horizontal: 8, vertical: 4)),
+              : const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xs,
+                  vertical: AppSpacing.xxs,
+                )),
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: BorderRadius.circular(compact ? 4 : 6),
+        borderRadius: BorderRadius.circular(
+          compact ? AppRadius.tag : AppRadius.control,
+        ),
       ),
       child: Text(
         label,
-        style: TextStyle(
-          color: foregroundColor,
-          fontSize: fontSize ?? (compact ? 10 : 12),
-          fontWeight: FontWeight.w600,
-          height: 1.1,
-        ),
+        style: (compact ? textTheme.labelSmall : textTheme.labelMedium)
+            ?.copyWith(
+              color: foregroundColor,
+              fontSize: fontSize ?? (compact ? 10 : 12),
+              fontWeight: FontWeight.w600,
+              height: 1.1,
+            ),
       ),
     );
   }

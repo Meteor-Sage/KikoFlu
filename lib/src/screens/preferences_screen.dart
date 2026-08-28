@@ -13,6 +13,7 @@ import '../providers/settings_provider.dart';
 import '../services/proxy_config.dart';
 import '../utils/l10n_extensions.dart';
 import '../utils/snackbar_util.dart';
+import '../utils/design_tokens.dart';
 import '../widgets/radio_option_group.dart';
 import '../widgets/settings_section.dart';
 import '../widgets/sort_dialog.dart';
@@ -22,7 +23,9 @@ class PreferencesScreen extends ConsumerWidget {
   const PreferencesScreen({super.key});
 
   void _showSubtitleLibraryPriorityDialog(
-      BuildContext pageContext, WidgetRef ref) {
+    BuildContext pageContext,
+    WidgetRef ref,
+  ) {
     final currentPriority = ref.read(subtitleLibraryPriorityProvider);
 
     showDialog(
@@ -30,7 +33,7 @@ class PreferencesScreen extends ConsumerWidget {
       builder: (dialogContext) => AlertDialog(
         title: Text(
           S.of(dialogContext).subtitleLibraryPriority,
-          style: const TextStyle(fontSize: 18),
+          style: Theme.of(dialogContext).textTheme.titleLarge,
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -38,7 +41,7 @@ class PreferencesScreen extends ConsumerWidget {
           children: [
             Text(
               S.of(dialogContext).selectSubtitlePriority,
-              style: const TextStyle(fontSize: 14),
+              style: Theme.of(dialogContext).textTheme.bodyMedium,
             ),
             const SizedBox(height: 16),
             RadioOptionGroup<SubtitleLibraryPriority>(
@@ -53,10 +56,9 @@ class PreferencesScreen extends ConsumerWidget {
                           ? S.of(dialogContext).subtitlePriorityHighestDesc
                           : S.of(dialogContext).subtitlePriorityLowestDesc,
                       style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(dialogContext)
-                            .colorScheme
-                            .onSurfaceVariant,
+                        color: Theme.of(
+                          dialogContext,
+                        ).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ),
@@ -102,10 +104,7 @@ class PreferencesScreen extends ConsumerWidget {
           ref
               .read(defaultSortProvider.notifier)
               .updateDefaultSort(option, direction);
-          SnackBarUtil.showSuccess(
-            context,
-            S.of(context).defaultSortUpdated,
-          );
+          SnackBarUtil.showSuccess(context, S.of(context).defaultSortUpdated);
         },
         autoClose: false,
       ),
@@ -120,7 +119,7 @@ class PreferencesScreen extends ConsumerWidget {
       builder: (dialogContext) => AlertDialog(
         title: Text(
           S.of(dialogContext).translationSourceSettings,
-          style: const TextStyle(fontSize: 18),
+          style: Theme.of(dialogContext).textTheme.titleLarge,
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -128,7 +127,7 @@ class PreferencesScreen extends ConsumerWidget {
           children: [
             Text(
               S.of(dialogContext).selectTranslationProvider,
-              style: const TextStyle(fontSize: 14),
+              style: Theme.of(dialogContext).textTheme.bodyMedium,
             ),
             const SizedBox(height: 16),
             RadioOptionGroup<TranslationSource>(
@@ -141,10 +140,9 @@ class PreferencesScreen extends ConsumerWidget {
                     subtitle: Text(
                       _getTranslationSourceDescription(dialogContext, source),
                       style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(dialogContext)
-                            .colorScheme
-                            .onSurfaceVariant,
+                        color: Theme.of(
+                          dialogContext,
+                        ).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ),
@@ -157,8 +155,9 @@ class PreferencesScreen extends ConsumerWidget {
                       context: dialogContext,
                       builder: (configContext) => AlertDialog(
                         title: Text(S.of(configContext).needsConfiguration),
-                        content:
-                            Text(S.of(configContext).llmConfigRequiredMessage),
+                        content: Text(
+                          S.of(configContext).llmConfigRequiredMessage,
+                        ),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(configContext),
@@ -224,12 +223,15 @@ class PreferencesScreen extends ConsumerWidget {
   }
 
   void _showTranslationTargetLanguageDialog(
-      BuildContext pageContext, WidgetRef ref) {
+    BuildContext pageContext,
+    WidgetRef ref,
+  ) {
     final translationSource = ref.read(translationSourceProvider);
     final preferences = ref.read(translationLanguagePreferencesProvider);
     final customLanguageEnabled = translationSource == TranslationSource.llm;
     final currentLanguage = preferences.targetLanguage;
-    final groupValue = currentLanguage == TranslationTargetLanguage.custom &&
+    final groupValue =
+        currentLanguage == TranslationTargetLanguage.custom &&
             !customLanguageEnabled
         ? TranslationTargetLanguage.followApp
         : currentLanguage;
@@ -240,7 +242,7 @@ class PreferencesScreen extends ConsumerWidget {
       builder: (dialogContext) => AlertDialog(
         title: Text(
           S.of(dialogContext).translationTargetLanguage,
-          style: const TextStyle(fontSize: 18),
+          style: Theme.of(dialogContext).textTheme.titleLarge,
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -248,7 +250,7 @@ class PreferencesScreen extends ConsumerWidget {
           children: [
             Text(
               S.of(dialogContext).selectTranslationTargetLanguage,
-              style: const TextStyle(fontSize: 14),
+              style: Theme.of(dialogContext).textTheme.bodyMedium,
             ),
             const SizedBox(height: 16),
             RadioOptionGroup<TranslationTargetLanguage>(
@@ -257,25 +259,29 @@ class PreferencesScreen extends ConsumerWidget {
                 for (final language in options)
                   RadioOption(
                     value: language,
-                    enabled: customLanguageEnabled ||
+                    enabled:
+                        customLanguageEnabled ||
                         language != TranslationTargetLanguage.custom,
-                    title: Text(_languageOptionLabel(
-                      dialogContext,
-                      language.localizedName(dialogContext),
-                      language == TranslationTargetLanguage.custom
-                          ? preferences.customTargetLanguage
-                          : null,
-                    )),
-                    subtitle: language == TranslationTargetLanguage.custom &&
+                    title: Text(
+                      _languageOptionLabel(
+                        dialogContext,
+                        language.localizedName(dialogContext),
+                        language == TranslationTargetLanguage.custom
+                            ? preferences.customTargetLanguage
+                            : null,
+                      ),
+                    ),
+                    subtitle:
+                        language == TranslationTargetLanguage.custom &&
                             !customLanguageEnabled
                         ? Text(
                             S
                                 .of(dialogContext)
                                 .translationCustomTargetRequiresLlm,
                             style: TextStyle(
-                              color: Theme.of(dialogContext)
-                                  .colorScheme
-                                  .onSurfaceVariant,
+                              color: Theme.of(
+                                dialogContext,
+                              ).colorScheme.onSurfaceVariant,
                             ),
                           )
                         : null,
@@ -408,7 +414,7 @@ class PreferencesScreen extends ConsumerWidget {
       builder: (dialogContext) => AlertDialog(
         title: Text(
           S.of(dialogContext).preloadNextTitle,
-          style: const TextStyle(fontSize: 18),
+          style: Theme.of(dialogContext).textTheme.titleLarge,
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -416,7 +422,7 @@ class PreferencesScreen extends ConsumerWidget {
           children: [
             Text(
               S.of(dialogContext).selectPreloadThreshold,
-              style: const TextStyle(fontSize: 14),
+              style: Theme.of(dialogContext).textTheme.bodyMedium,
             ),
             const SizedBox(height: 16),
             RadioOptionGroup<PreloadThresholdMode>(
@@ -425,36 +431,44 @@ class PreferencesScreen extends ConsumerWidget {
                 RadioOption(
                   value: PreloadThresholdMode.off,
                   title: Text(
-                      PreloadThresholdMode.off.localizedName(dialogContext)),
+                    PreloadThresholdMode.off.localizedName(dialogContext),
+                  ),
                 ),
                 RadioOption(
                   value: PreloadThresholdMode.seconds10,
-                  title: Text(PreloadThresholdMode.seconds10
-                      .localizedName(dialogContext)),
+                  title: Text(
+                    PreloadThresholdMode.seconds10.localizedName(dialogContext),
+                  ),
                 ),
                 RadioOption(
                   value: PreloadThresholdMode.seconds20,
-                  title: Text(PreloadThresholdMode.seconds20
-                      .localizedName(dialogContext)),
+                  title: Text(
+                    PreloadThresholdMode.seconds20.localizedName(dialogContext),
+                  ),
                 ),
                 RadioOption(
                   value: PreloadThresholdMode.seconds30,
-                  title: Text(PreloadThresholdMode.seconds30
-                      .localizedName(dialogContext)),
+                  title: Text(
+                    PreloadThresholdMode.seconds30.localizedName(dialogContext),
+                  ),
                 ),
                 RadioOption(
                   value: PreloadThresholdMode.custom,
                   title: Text(
-                      PreloadThresholdMode.custom.localizedName(dialogContext)),
+                    PreloadThresholdMode.custom.localizedName(dialogContext),
+                  ),
                   subtitle: currentSettings.mode == PreloadThresholdMode.custom
                       ? Text(
-                          S.of(dialogContext).preloadCustomValueLabel(
-                              currentSettings.customSeconds),
+                          S
+                              .of(dialogContext)
+                              .preloadCustomValueLabel(
+                                currentSettings.customSeconds,
+                              ),
                           style: TextStyle(
                             fontSize: 12,
-                            color: Theme.of(dialogContext)
-                                .colorScheme
-                                .onSurfaceVariant,
+                            color: Theme.of(
+                              dialogContext,
+                            ).colorScheme.onSurfaceVariant,
                           ),
                         )
                       : null,
@@ -484,9 +498,9 @@ class PreferencesScreen extends ConsumerWidget {
                 final updated = ref.read(preloadNextSettingsProvider);
                 SnackBarUtil.showSuccess(
                   pageContext,
-                  S.of(pageContext).setToValue(
-                        _preloadValueLabel(pageContext, updated),
-                      ),
+                  S
+                      .of(pageContext)
+                      .setToValue(_preloadValueLabel(pageContext, updated)),
                 );
               },
             ),
@@ -601,7 +615,9 @@ class PreferencesScreen extends ConsumerWidget {
   }
 
   String _getTranslationSourceDescription(
-      BuildContext context, TranslationSource source) {
+    BuildContext context,
+    TranslationSource source,
+  ) {
     final s = S.of(context);
     switch (source) {
       case TranslationSource.google:
@@ -652,8 +668,9 @@ class PreferencesScreen extends ConsumerWidget {
     }
 
     if (result == null) return;
-    final accepted =
-        await ref.read(proxySettingsProvider.notifier).setAddress(result);
+    final accepted = await ref
+        .read(proxySettingsProvider.notifier)
+        .setAddress(result);
     if (!accepted && context.mounted) {
       SnackBarUtil.showError(context, S.of(context).invalidProxyAddress);
     }
@@ -671,7 +688,7 @@ class PreferencesScreen extends ConsumerWidget {
           trailing: Text(proxySettings.mode.localizedName(context)),
         ),
         Padding(
-          padding: const EdgeInsets.only(left: 52),
+          padding: const EdgeInsets.only(left: AppSettingsLayout.contentIndent),
           child: RadioOptionGroup<ProxyMode>(
             groupValue: proxySettings.mode,
             contentPadding: EdgeInsets.zero,
@@ -696,11 +713,8 @@ class PreferencesScreen extends ConsumerWidget {
                 ? S.of(context).proxyAddressNotSet
                 : proxySettings.address,
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () => _showProxyAddressDialog(
-              context,
-              ref,
-              proxySettings.address,
-            ),
+            onTap: () =>
+                _showProxyAddressDialog(context, ref, proxySettings.address),
           ),
         ],
       ],
@@ -712,10 +726,12 @@ class PreferencesScreen extends ConsumerWidget {
     final priority = ref.watch(subtitleLibraryPriorityProvider);
     final defaultSort = ref.watch(defaultSortProvider);
     final translationSource = ref.watch(translationSourceProvider);
-    final translationLanguagePreferences =
-        ref.watch(translationLanguagePreferencesProvider);
-    final autoSaveTranslatedLyrics =
-        ref.watch(autoSaveTranslatedLyricsProvider);
+    final translationLanguagePreferences = ref.watch(
+      translationLanguagePreferencesProvider,
+    );
+    final autoSaveTranslatedLyrics = ref.watch(
+      autoSaveTranslatedLyricsProvider,
+    );
     final preloadSettings = ref.watch(preloadNextSettingsProvider);
 
     return SettingsSubpageScaffold(
@@ -728,7 +744,9 @@ class PreferencesScreen extends ConsumerWidget {
               SettingsNavigationTile(
                 icon: Icons.translate,
                 title: S.of(context).translationSource,
-                subtitle: S.of(context).currentSettingLabel(
+                subtitle: S
+                    .of(context)
+                    .currentSettingLabel(
                       translationSource.localizedName(context),
                     ),
                 onTap: () => _showTranslationSourceDialog(context, ref),
@@ -736,7 +754,9 @@ class PreferencesScreen extends ConsumerWidget {
               SettingsNavigationTile(
                 icon: Icons.language,
                 title: S.of(context).translationTargetLanguage,
-                subtitle: S.of(context).currentSettingLabel(
+                subtitle: S
+                    .of(context)
+                    .currentSettingLabel(
                       _targetLanguageLabel(
                         context,
                         translationLanguagePreferences,
@@ -819,7 +839,9 @@ class PreferencesScreen extends ConsumerWidget {
               SettingsNavigationTile(
                 icon: Icons.fast_forward,
                 title: S.of(context).preloadNextTitle,
-                subtitle: S.of(context).currentSettingLabel(
+                subtitle: S
+                    .of(context)
+                    .currentSettingLabel(
                       _preloadValueLabel(context, preloadSettings),
                     ),
                 onTap: () => _showPreloadThresholdDialog(context, ref),
@@ -845,12 +867,11 @@ class PreferencesScreen extends ConsumerWidget {
                 SettingsSwitchTile(
                   icon: Icons.surround_sound,
                   title: S.of(context).audioPassthrough,
-                  subtitle: Theme.of(context).platform ==
-                          TargetPlatform.windows
+                  subtitle: Theme.of(context).platform == TargetPlatform.windows
                       ? S.of(context).audioPassthroughDescWindows
                       : Theme.of(context).platform == TargetPlatform.macOS
-                          ? S.of(context).audioPassthroughDescMac
-                          : S.of(context).audioPassthroughDescAndroid,
+                      ? S.of(context).audioPassthroughDescMac
+                      : S.of(context).audioPassthroughDescAndroid,
                   subtitleStyle: const TextStyle(fontSize: 12),
                   value: ref.watch(audioPassthroughProvider),
                   onChanged: (value) async {
@@ -882,11 +903,11 @@ class PreferencesScreen extends ConsumerWidget {
                         context,
                         value
                             ? ((Theme.of(context).platform ==
-                                        TargetPlatform.windows ||
-                                    Theme.of(context).platform ==
-                                        TargetPlatform.macOS)
-                                ? S.of(context).exclusiveModeEnabled
-                                : S.of(context).audioPassthroughEnabled)
+                                          TargetPlatform.windows ||
+                                      Theme.of(context).platform ==
+                                          TargetPlatform.macOS)
+                                  ? S.of(context).exclusiveModeEnabled
+                                  : S.of(context).audioPassthroughEnabled)
                             : S.of(context).audioPassthroughDisabled,
                       );
                     }
@@ -946,8 +967,8 @@ class _AudioGainSettingsTile extends StatelessWidget {
             passthroughEnabled
                 ? S.of(context).audioGainPassthroughDesc
                 : supportsPositiveGain
-                    ? S.of(context).audioGainDesc
-                    : S.of(context).audioGainAttenuationDesc,
+                ? S.of(context).audioGainDesc
+                : S.of(context).audioGainAttenuationDesc,
           ),
         ),
         Padding(
@@ -959,9 +980,10 @@ class _AudioGainSettingsTile extends StatelessWidget {
                   value: displayedDecibels,
                   min: AudioGainSettings.minDecibels,
                   max: maxDecibels,
-                  divisions: ((maxDecibels - AudioGainSettings.minDecibels) /
-                          AudioGainSettings.stepDecibels)
-                      .round(),
+                  divisions:
+                      ((maxDecibels - AudioGainSettings.minDecibels) /
+                              AudioGainSettings.stepDecibels)
+                          .round(),
                   label: _valueLabel(displayedDecibels),
                   onChanged: passthroughEnabled ? null : notifier.setDecibels,
                 ),

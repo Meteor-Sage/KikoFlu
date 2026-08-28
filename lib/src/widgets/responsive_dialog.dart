@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../utils/design_tokens.dart';
+
 /// 响应式对话框封装
 /// 横屏时限制最大宽度，避免过宽
 class ResponsiveDialog extends StatelessWidget {
@@ -30,9 +32,11 @@ class ResponsiveDialog extends StatelessWidget {
 
     // 横屏时限制对话框最大宽度
     // 使用 ConstrainedBox 而不是直接设置 AlertDialog 的宽度，避免布局问题
-    final dialogMaxWidth = maxWidth ??
+    final dialogMaxWidth =
+        maxWidth ??
         (isLandscape
-            ? screenWidth * 0.6 // 横屏时最多占60%宽度
+            ? screenWidth *
+                  0.6 // 横屏时最多占60%宽度
             : screenWidth * 0.85); // 竖屏时最多占85%宽度
 
     return Dialog(
@@ -47,8 +51,14 @@ class ResponsiveDialog extends StatelessWidget {
           children: [
             if (title != null)
               Padding(
-                padding: titlePadding ??
-                    const EdgeInsets.fromLTRB(24.0, 24.0, 24.0, 0.0),
+                padding:
+                    titlePadding ??
+                    const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.lg,
+                      AppSpacing.lg,
+                      0,
+                    ),
                 child: DefaultTextStyle(
                   style: Theme.of(context).textTheme.titleLarge!,
                   child: title!,
@@ -57,8 +67,14 @@ class ResponsiveDialog extends StatelessWidget {
             if (content != null)
               Flexible(
                 child: SingleChildScrollView(
-                  padding: contentPadding ??
-                      const EdgeInsets.fromLTRB(24.0, 20.0, 24.0, 24.0),
+                  padding:
+                      contentPadding ??
+                      const EdgeInsets.fromLTRB(
+                        AppSpacing.lg,
+                        AppSpacing.md,
+                        AppSpacing.lg,
+                        AppSpacing.lg,
+                      ),
                   child: DefaultTextStyle(
                     style: Theme.of(context).textTheme.bodyMedium!,
                     child: content!,
@@ -67,11 +83,16 @@ class ResponsiveDialog extends StatelessWidget {
               ),
             if (actions != null && actions!.isNotEmpty)
               Padding(
-                padding: actionsPadding ??
-                    const EdgeInsets.only(left: 8.0, right: 8.0, bottom: 8.0),
+                padding:
+                    actionsPadding ??
+                    const EdgeInsets.only(
+                      left: AppSpacing.xs,
+                      right: AppSpacing.xs,
+                      bottom: AppSpacing.xs,
+                    ),
                 child: OverflowBar(
                   alignment: MainAxisAlignment.end,
-                  spacing: 8.0,
+                  spacing: AppSpacing.xs,
                   children: actions!,
                 ),
               ),
@@ -111,9 +132,11 @@ class ResponsiveAlertDialog extends StatelessWidget {
     final screenWidth = MediaQuery.of(context).size.width;
 
     // 横屏时限制对话框最大宽度
-    final dialogMaxWidth = maxWidth ??
+    final dialogMaxWidth =
+        maxWidth ??
         (isLandscape
-            ? screenWidth * 0.6 // 横屏时最多占60%宽度
+            ? screenWidth *
+                  0.6 // 横屏时最多占60%宽度
             : screenWidth * 0.85); // 竖屏时最多占85%宽度
 
     return AlertDialog(
@@ -161,14 +184,14 @@ class ResponsiveBottomSheet extends StatelessWidget {
       return Center(
         child: Material(
           elevation: 4,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppRadius.card),
           child: ConstrainedBox(
             constraints: BoxConstraints(
               maxWidth: maxWidth ?? screenWidth * 0.6,
               maxHeight: maxHeight ?? screenHeight * 0.8,
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppRadius.card),
               child: child,
             ),
           ),
@@ -208,7 +231,12 @@ class BottomSheetHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 8, 12),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.md,
+        AppSpacing.xs,
+        AppSpacing.sm,
+      ),
       child: Row(
         children: [
           if (leading != null) ...[
@@ -216,7 +244,7 @@ class BottomSheetHeader extends StatelessWidget {
               data: IconThemeData(color: Theme.of(context).colorScheme.primary),
               child: leading!,
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppSpacing.sm),
           ],
           Expanded(
             child: Column(
@@ -227,9 +255,9 @@ class BottomSheetHeader extends StatelessWidget {
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 if (subtitle != null) ...[
                   const SizedBox(height: 2),
@@ -238,8 +266,8 @@ class BottomSheetHeader extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ],

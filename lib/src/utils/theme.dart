@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../providers/theme_provider.dart';
+import '../providers/text_scale_provider.dart';
+import 'design_tokens.dart';
 
 class AppTheme {
   // iOS 使用 Cupertino 转场以支持侧滑返回
@@ -13,7 +15,8 @@ class AppTheme {
   @visibleForTesting
   static List<String> iosFontFamilyFallback(Locale locale) {
     if (locale.languageCode == 'zh') {
-      final isTraditional = locale.scriptCode == 'Hant' ||
+      final isTraditional =
+          locale.scriptCode == 'Hant' ||
           locale.countryCode == 'TW' ||
           locale.countryCode == 'HK' ||
           locale.countryCode == 'MO';
@@ -34,36 +37,66 @@ class AppTheme {
       // 使用 Microsoft YaHei 作为主字体，确保中文显示一致
       const fontFamily = 'Microsoft YaHei';
       return const TextTheme(
-        displayLarge:
-            TextStyle(fontFamily: fontFamily, fontWeight: FontWeight.w400),
-        displayMedium:
-            TextStyle(fontFamily: fontFamily, fontWeight: FontWeight.w400),
-        displaySmall:
-            TextStyle(fontFamily: fontFamily, fontWeight: FontWeight.w400),
-        headlineLarge:
-            TextStyle(fontFamily: fontFamily, fontWeight: FontWeight.w400),
-        headlineMedium:
-            TextStyle(fontFamily: fontFamily, fontWeight: FontWeight.w400),
-        headlineSmall:
-            TextStyle(fontFamily: fontFamily, fontWeight: FontWeight.w400),
-        titleLarge:
-            TextStyle(fontFamily: fontFamily, fontWeight: FontWeight.w500),
-        titleMedium:
-            TextStyle(fontFamily: fontFamily, fontWeight: FontWeight.w500),
-        titleSmall:
-            TextStyle(fontFamily: fontFamily, fontWeight: FontWeight.w500),
-        bodyLarge:
-            TextStyle(fontFamily: fontFamily, fontWeight: FontWeight.w400),
-        bodyMedium:
-            TextStyle(fontFamily: fontFamily, fontWeight: FontWeight.w400),
-        bodySmall:
-            TextStyle(fontFamily: fontFamily, fontWeight: FontWeight.w400),
-        labelLarge:
-            TextStyle(fontFamily: fontFamily, fontWeight: FontWeight.w500),
-        labelMedium:
-            TextStyle(fontFamily: fontFamily, fontWeight: FontWeight.w500),
-        labelSmall:
-            TextStyle(fontFamily: fontFamily, fontWeight: FontWeight.w500),
+        displayLarge: TextStyle(
+          fontFamily: fontFamily,
+          fontWeight: FontWeight.w400,
+        ),
+        displayMedium: TextStyle(
+          fontFamily: fontFamily,
+          fontWeight: FontWeight.w400,
+        ),
+        displaySmall: TextStyle(
+          fontFamily: fontFamily,
+          fontWeight: FontWeight.w400,
+        ),
+        headlineLarge: TextStyle(
+          fontFamily: fontFamily,
+          fontWeight: FontWeight.w400,
+        ),
+        headlineMedium: TextStyle(
+          fontFamily: fontFamily,
+          fontWeight: FontWeight.w400,
+        ),
+        headlineSmall: TextStyle(
+          fontFamily: fontFamily,
+          fontWeight: FontWeight.w400,
+        ),
+        titleLarge: TextStyle(
+          fontFamily: fontFamily,
+          fontWeight: FontWeight.w500,
+        ),
+        titleMedium: TextStyle(
+          fontFamily: fontFamily,
+          fontWeight: FontWeight.w500,
+        ),
+        titleSmall: TextStyle(
+          fontFamily: fontFamily,
+          fontWeight: FontWeight.w500,
+        ),
+        bodyLarge: TextStyle(
+          fontFamily: fontFamily,
+          fontWeight: FontWeight.w400,
+        ),
+        bodyMedium: TextStyle(
+          fontFamily: fontFamily,
+          fontWeight: FontWeight.w400,
+        ),
+        bodySmall: TextStyle(
+          fontFamily: fontFamily,
+          fontWeight: FontWeight.w400,
+        ),
+        labelLarge: TextStyle(
+          fontFamily: fontFamily,
+          fontWeight: FontWeight.w500,
+        ),
+        labelMedium: TextStyle(
+          fontFamily: fontFamily,
+          fontWeight: FontWeight.w500,
+        ),
+        labelSmall: TextStyle(
+          fontFamily: fontFamily,
+          fontWeight: FontWeight.w500,
+        ),
       );
     }
     if (Platform.isLinux) {
@@ -79,54 +112,92 @@ class AppTheme {
       ];
       return const TextTheme(
         displayLarge: TextStyle(
-            fontFamilyFallback: fallback, fontWeight: FontWeight.w400),
+          fontFamilyFallback: fallback,
+          fontWeight: FontWeight.w400,
+        ),
         displayMedium: TextStyle(
-            fontFamilyFallback: fallback, fontWeight: FontWeight.w400),
+          fontFamilyFallback: fallback,
+          fontWeight: FontWeight.w400,
+        ),
         displaySmall: TextStyle(
-            fontFamilyFallback: fallback, fontWeight: FontWeight.w400),
+          fontFamilyFallback: fallback,
+          fontWeight: FontWeight.w400,
+        ),
         headlineLarge: TextStyle(
-            fontFamilyFallback: fallback, fontWeight: FontWeight.w400),
+          fontFamilyFallback: fallback,
+          fontWeight: FontWeight.w400,
+        ),
         headlineMedium: TextStyle(
-            fontFamilyFallback: fallback, fontWeight: FontWeight.w400),
+          fontFamilyFallback: fallback,
+          fontWeight: FontWeight.w400,
+        ),
         headlineSmall: TextStyle(
-            fontFamilyFallback: fallback, fontWeight: FontWeight.w400),
+          fontFamilyFallback: fallback,
+          fontWeight: FontWeight.w400,
+        ),
         titleLarge: TextStyle(
-            fontFamilyFallback: fallback, fontWeight: FontWeight.w500),
+          fontFamilyFallback: fallback,
+          fontWeight: FontWeight.w500,
+        ),
         titleMedium: TextStyle(
-            fontFamilyFallback: fallback, fontWeight: FontWeight.w500),
+          fontFamilyFallback: fallback,
+          fontWeight: FontWeight.w500,
+        ),
         titleSmall: TextStyle(
-            fontFamilyFallback: fallback, fontWeight: FontWeight.w500),
+          fontFamilyFallback: fallback,
+          fontWeight: FontWeight.w500,
+        ),
         bodyLarge: TextStyle(
-            fontFamilyFallback: fallback, fontWeight: FontWeight.w400),
+          fontFamilyFallback: fallback,
+          fontWeight: FontWeight.w400,
+        ),
         bodyMedium: TextStyle(
-            fontFamilyFallback: fallback, fontWeight: FontWeight.w400),
+          fontFamilyFallback: fallback,
+          fontWeight: FontWeight.w400,
+        ),
         bodySmall: TextStyle(
-            fontFamilyFallback: fallback, fontWeight: FontWeight.w400),
+          fontFamilyFallback: fallback,
+          fontWeight: FontWeight.w400,
+        ),
         labelLarge: TextStyle(
-            fontFamilyFallback: fallback, fontWeight: FontWeight.w500),
+          fontFamilyFallback: fallback,
+          fontWeight: FontWeight.w500,
+        ),
         labelMedium: TextStyle(
-            fontFamilyFallback: fallback, fontWeight: FontWeight.w500),
+          fontFamilyFallback: fallback,
+          fontWeight: FontWeight.w500,
+        ),
         labelSmall: TextStyle(
-            fontFamilyFallback: fallback, fontWeight: FontWeight.w500),
+          fontFamilyFallback: fallback,
+          fontWeight: FontWeight.w500,
+        ),
       );
     }
     return null;
   }
 
-  static ThemeData lightTheme(ColorScheme? lightDynamic,
-      [ColorSchemeType? themeType, Locale? locale]) {
+  static ThemeData lightTheme(
+    ColorScheme? lightDynamic, [
+    ColorSchemeType? themeType,
+    Locale? locale,
+    AppTextScale textScale = AppTextScale.normal,
+  ]) {
     final ColorScheme colorScheme;
     if (lightDynamic != null) {
       colorScheme = lightDynamic;
     } else {
-      colorScheme =
-          _getColorScheme(themeType ?? ColorSchemeType.oceanBlue, false);
+      colorScheme = _getColorScheme(
+        themeType ?? ColorSchemeType.oceanBlue,
+        false,
+      );
     }
+
+    final textTheme = _scaledTextTheme(Brightness.light, textScale);
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
-      textTheme: _getTextTheme(),
+      textTheme: textTheme,
       fontFamilyFallback: _platformFontFamilyFallback(
         locale ?? WidgetsBinding.instance.platformDispatcher.locale,
       ),
@@ -137,6 +208,7 @@ class AppTheme {
         scrolledUnderElevation: 1,
         backgroundColor: colorScheme.surface,
         foregroundColor: colorScheme.onSurface,
+        titleTextStyle: textTheme.titleLarge,
       ),
       cardTheme: const CardThemeData(
         elevation: 2,
@@ -149,7 +221,7 @@ class AppTheme {
         indicatorColor: colorScheme.primaryContainer,
         labelTextStyle: WidgetStateProperty.all(
           TextStyle(
-            fontSize: 12,
+            fontSize: textTheme.labelMedium?.fontSize,
             fontWeight: FontWeight.w500,
             color: colorScheme.onSurface,
           ),
@@ -157,29 +229,65 @@ class AppTheme {
       ),
       bottomSheetTheme: const BottomSheetThemeData(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppRadius.card),
+          ),
         ),
       ),
       listTileTheme: ListTileThemeData(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: roundedBorder(AppRadius.listItem),
+        contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+        horizontalTitleGap: AppSpacing.sm,
+        minVerticalPadding: AppSpacing.xs,
+      ),
+      buttonTheme: ButtonThemeData(
+        height: AppControlSize.standard,
+        shape: roundedBorder(AppRadius.control),
+      ),
+      inputDecorationTheme: _inputDecorationTheme(colorScheme),
+      filledButtonTheme: _filledButtonTheme(),
+      outlinedButtonTheme: _outlinedButtonTheme(),
+      textButtonTheme: _textButtonTheme(),
+      chipTheme: _chipTheme(textTheme),
+      dialogTheme: _dialogTheme(colorScheme, textTheme),
+      popupMenuTheme: _popupMenuTheme(textTheme),
+      snackBarTheme: _snackBarTheme(colorScheme, textTheme),
+      sliderTheme: _sliderTheme(colorScheme),
+      radioTheme: RadioThemeData(fillColor: _controlColor(colorScheme.primary)),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: _controlColor(colorScheme.primary),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: _controlColor(colorScheme.primary),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        shape: roundedBorder(AppRadius.control),
       ),
     );
   }
 
-  static ThemeData darkTheme(ColorScheme? darkDynamic,
-      [ColorSchemeType? themeType, Locale? locale]) {
+  static ThemeData darkTheme(
+    ColorScheme? darkDynamic, [
+    ColorSchemeType? themeType,
+    Locale? locale,
+    AppTextScale textScale = AppTextScale.normal,
+  ]) {
     final ColorScheme colorScheme;
     if (darkDynamic != null) {
       colorScheme = darkDynamic;
     } else {
-      colorScheme =
-          _getColorScheme(themeType ?? ColorSchemeType.oceanBlue, true);
+      colorScheme = _getColorScheme(
+        themeType ?? ColorSchemeType.oceanBlue,
+        true,
+      );
     }
+
+    final textTheme = _scaledTextTheme(Brightness.dark, textScale);
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
-      textTheme: _getTextTheme(),
+      textTheme: textTheme,
       fontFamilyFallback: _platformFontFamilyFallback(
         locale ?? WidgetsBinding.instance.platformDispatcher.locale,
       ),
@@ -190,6 +298,7 @@ class AppTheme {
         scrolledUnderElevation: 1,
         backgroundColor: colorScheme.surface,
         foregroundColor: colorScheme.onSurface,
+        titleTextStyle: textTheme.titleLarge,
       ),
       cardTheme: const CardThemeData(
         elevation: 2,
@@ -202,7 +311,7 @@ class AppTheme {
         indicatorColor: colorScheme.primaryContainer,
         labelTextStyle: WidgetStateProperty.all(
           TextStyle(
-            fontSize: 12,
+            fontSize: textTheme.labelMedium?.fontSize,
             fontWeight: FontWeight.w500,
             color: colorScheme.onSurface,
           ),
@@ -210,13 +319,229 @@ class AppTheme {
       ),
       bottomSheetTheme: const BottomSheetThemeData(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppRadius.card),
+          ),
         ),
       ),
       listTileTheme: ListTileThemeData(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: roundedBorder(AppRadius.listItem),
+        contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+        horizontalTitleGap: AppSpacing.sm,
+        minVerticalPadding: AppSpacing.xs,
+      ),
+      buttonTheme: ButtonThemeData(
+        height: AppControlSize.standard,
+        shape: roundedBorder(AppRadius.control),
+      ),
+      inputDecorationTheme: _inputDecorationTheme(colorScheme),
+      filledButtonTheme: _filledButtonTheme(),
+      outlinedButtonTheme: _outlinedButtonTheme(),
+      textButtonTheme: _textButtonTheme(),
+      chipTheme: _chipTheme(textTheme),
+      dialogTheme: _dialogTheme(colorScheme, textTheme),
+      popupMenuTheme: _popupMenuTheme(textTheme),
+      snackBarTheme: _snackBarTheme(colorScheme, textTheme),
+      sliderTheme: _sliderTheme(colorScheme),
+      radioTheme: RadioThemeData(fillColor: _controlColor(colorScheme.primary)),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: _controlColor(colorScheme.primary),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: _controlColor(colorScheme.primary),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        shape: roundedBorder(AppRadius.control),
       ),
     );
+  }
+
+  static TextTheme _scaledTextTheme(
+    Brightness brightness,
+    AppTextScale textScale,
+  ) {
+    final platformTheme = _getTextTheme();
+    final fallback = ThemeData(
+      useMaterial3: true,
+      brightness: brightness,
+    ).textTheme;
+    final semanticTheme = _ensureSemanticFontSizes(
+      fallback.merge(platformTheme),
+    );
+    return _scaleTextTheme(semanticTheme, textScale.multiplier);
+  }
+
+  static TextTheme _ensureSemanticFontSizes(TextTheme theme) {
+    TextStyle ensure(TextStyle? style, double fontSize) {
+      return (style ?? const TextStyle()).copyWith(
+        fontSize: style?.fontSize ?? fontSize,
+      );
+    }
+
+    return theme.copyWith(
+      displayLarge: ensure(theme.displayLarge, 57),
+      displayMedium: ensure(theme.displayMedium, 45),
+      displaySmall: ensure(theme.displaySmall, 36),
+      headlineLarge: ensure(theme.headlineLarge, 32),
+      headlineMedium: ensure(theme.headlineMedium, 28),
+      headlineSmall: ensure(theme.headlineSmall, 24),
+      titleLarge: ensure(theme.titleLarge, 18),
+      titleMedium: ensure(theme.titleMedium, 16),
+      titleSmall: ensure(theme.titleSmall, 14),
+      bodyLarge: ensure(theme.bodyLarge, 16),
+      bodyMedium: ensure(theme.bodyMedium, 14),
+      bodySmall: ensure(theme.bodySmall, 12),
+      labelLarge: ensure(theme.labelLarge, 14),
+      labelMedium: ensure(theme.labelMedium, 12),
+      labelSmall: ensure(theme.labelSmall, 11),
+    );
+  }
+
+  static TextTheme _scaleTextTheme(TextTheme theme, double multiplier) {
+    TextStyle? scale(TextStyle? style) {
+      final fontSize = style?.fontSize;
+      return fontSize == null
+          ? style
+          : style!.copyWith(fontSize: fontSize * multiplier);
+    }
+
+    return theme.copyWith(
+      displayLarge: scale(theme.displayLarge),
+      displayMedium: scale(theme.displayMedium),
+      displaySmall: scale(theme.displaySmall),
+      headlineLarge: scale(theme.headlineLarge),
+      headlineMedium: scale(theme.headlineMedium),
+      headlineSmall: scale(theme.headlineSmall),
+      titleLarge: scale(theme.titleLarge),
+      titleMedium: scale(theme.titleMedium),
+      titleSmall: scale(theme.titleSmall),
+      bodyLarge: scale(theme.bodyLarge),
+      bodyMedium: scale(theme.bodyMedium),
+      bodySmall: scale(theme.bodySmall),
+      labelLarge: scale(theme.labelLarge),
+      labelMedium: scale(theme.labelMedium),
+      labelSmall: scale(theme.labelSmall),
+    );
+  }
+
+  static InputDecorationTheme _inputDecorationTheme(ColorScheme colors) {
+    return InputDecorationTheme(
+      isDense: true,
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.sm,
+      ),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.control),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.control),
+        borderSide: BorderSide(color: colors.outline),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.control),
+        borderSide: BorderSide(color: colors.primary, width: 2),
+      ),
+    );
+  }
+
+  static FilledButtonThemeData _filledButtonTheme() {
+    return FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        minimumSize: const Size(0, AppControlSize.standard),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+        shape: roundedBorder(AppRadius.control),
+      ),
+    );
+  }
+
+  static OutlinedButtonThemeData _outlinedButtonTheme() {
+    return OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(0, AppControlSize.standard),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+        shape: roundedBorder(AppRadius.control),
+      ),
+    );
+  }
+
+  static TextButtonThemeData _textButtonTheme() {
+    return TextButtonThemeData(
+      style: TextButton.styleFrom(
+        minimumSize: const Size(0, AppControlSize.compact),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+        shape: roundedBorder(AppRadius.control),
+      ),
+    );
+  }
+
+  static ChipThemeData _chipTheme(TextTheme textTheme) {
+    return ChipThemeData(
+      labelStyle: textTheme.labelMedium,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xxs,
+      ),
+      shape: roundedBorder(AppRadius.control),
+      side: BorderSide.none,
+    );
+  }
+
+  static DialogThemeData _dialogTheme(ColorScheme colors, TextTheme textTheme) {
+    return DialogThemeData(
+      shape: roundedBorder(AppRadius.card),
+      titleTextStyle: textTheme.titleLarge?.copyWith(
+        color: colors.onSurface,
+        fontWeight: FontWeight.w600,
+      ),
+      contentTextStyle: textTheme.bodyMedium?.copyWith(
+        color: colors.onSurfaceVariant,
+      ),
+      actionsPadding: const EdgeInsets.fromLTRB(
+        AppSpacing.sm,
+        0,
+        AppSpacing.sm,
+        AppSpacing.xs,
+      ),
+    );
+  }
+
+  static PopupMenuThemeData _popupMenuTheme(TextTheme textTheme) {
+    return PopupMenuThemeData(
+      shape: roundedBorder(AppRadius.control),
+      menuPadding: const EdgeInsets.symmetric(vertical: AppSpacing.xxs),
+      labelTextStyle: WidgetStatePropertyAll(textTheme.bodyMedium),
+    );
+  }
+
+  static SnackBarThemeData _snackBarTheme(
+    ColorScheme colors,
+    TextTheme textTheme,
+  ) {
+    return SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      shape: roundedBorder(AppRadius.control),
+      contentTextStyle: textTheme.bodyMedium?.copyWith(
+        color: colors.onInverseSurface,
+      ),
+    );
+  }
+
+  static SliderThemeData _sliderTheme(ColorScheme colors) {
+    return SliderThemeData(
+      activeTrackColor: colors.primary,
+      thumbColor: colors.primary,
+      overlayColor: colors.primary.withValues(alpha: 0.12),
+    );
+  }
+
+  static WidgetStateProperty<Color?> _controlColor(Color color) {
+    return WidgetStateProperty.resolveWith((states) {
+      if (states.contains(WidgetState.disabled)) {
+        return color.withValues(alpha: 0.38);
+      }
+      return color;
+    });
   }
 
   // 根据主题类型获取对应的颜色方案

@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../screens/search_result_screen.dart';
+import '../utils/design_tokens.dart';
 
-enum MetadataChipTone {
-  primary,
-  secondary,
-  tertiary,
-}
+enum MetadataChipTone { primary, secondary, tertiary }
 
 class MetadataSearchChip extends StatelessWidget {
   final String label;
@@ -74,15 +71,19 @@ class MetadataSearchChip extends StatelessWidget {
               padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
           decoration: BoxDecoration(
             color: _containerColor(colors.container),
-            borderRadius: BorderRadius.circular(borderRadius ?? 12),
+            borderRadius: BorderRadius.circular(
+              borderRadius ?? AppRadius.listItem,
+            ),
           ),
           child: Text(
             label,
-            style: TextStyle(
-              fontSize: fontSize ?? 11,
-              color: _labelColor(colors.onContainer),
-              fontWeight: fontWeight ?? FontWeight.w500,
-            ),
+            style:
+                (Theme.of(context).textTheme.labelMedium ?? const TextStyle())
+                    .copyWith(
+                      fontSize: fontSize ?? 11,
+                      color: _labelColor(colors.onContainer),
+                      fontWeight: fontWeight ?? FontWeight.w500,
+                    ),
           ),
         ),
       );
@@ -94,14 +95,17 @@ class MetadataSearchChip extends StatelessWidget {
             color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
           )
         : null;
-    final labelStyle = TextStyle(
-      fontSize: compact ? compactFontSize : null,
-      color: _labelColor(colors.onContainer),
-    );
-    final effectivePadding =
-        compact ? const EdgeInsets.symmetric(horizontal: 4, vertical: 0) : null;
-    final tapTargetSize =
-        shrinkWrapTapTarget ? MaterialTapTargetSize.shrinkWrap : null;
+    final labelStyle =
+        (Theme.of(context).textTheme.labelMedium ?? const TextStyle()).copyWith(
+          fontSize: compact ? compactFontSize : null,
+          color: _labelColor(colors.onContainer),
+        );
+    final effectivePadding = compact
+        ? const EdgeInsets.symmetric(horizontal: 4, vertical: 0)
+        : null;
+    final tapTargetSize = shrinkWrapTapTarget
+        ? MaterialTapTargetSize.shrinkWrap
+        : null;
 
     if (onDeleted != null) {
       return InputChip(
@@ -131,24 +135,21 @@ class MetadataSearchChip extends StatelessWidget {
     );
   }
 
-  _MetadataChipColors _colorsFor(
-    BuildContext context,
-    MetadataChipTone tone,
-  ) {
+  _MetadataChipColors _colorsFor(BuildContext context, MetadataChipTone tone) {
     final colorScheme = Theme.of(context).colorScheme;
     return switch (tone) {
       MetadataChipTone.primary => _MetadataChipColors(
-          colorScheme.primaryContainer,
-          colorScheme.onPrimaryContainer,
-        ),
+        colorScheme.primaryContainer,
+        colorScheme.onPrimaryContainer,
+      ),
       MetadataChipTone.secondary => _MetadataChipColors(
-          colorScheme.secondaryContainer,
-          colorScheme.onSecondaryContainer,
-        ),
+        colorScheme.secondaryContainer,
+        colorScheme.onSecondaryContainer,
+      ),
       MetadataChipTone.tertiary => _MetadataChipColors(
-          colorScheme.tertiaryContainer,
-          colorScheme.onTertiaryContainer,
-        ),
+        colorScheme.tertiaryContainer,
+        colorScheme.onTertiaryContainer,
+      ),
     };
   }
 
