@@ -143,12 +143,14 @@ class LiquidGlassContainer extends StatelessWidget {
   }
 }
 
-/// Uses Flutter composition while the current route is transitioning.
+/// Uses Flutter composition while the current route is entering.
 ///
 /// Apple platform views are composited outside Flutter's Hero overlay and can
 /// temporarily cover a flying Hero when both routes contain glass surfaces.
 /// This scope keeps the same glass geometry and content, but substitutes the
-/// Flutter fallback only for the duration of the route transition.
+/// Flutter fallback while a route is entering or being covered by a pushed
+/// route. During dismissal the native surface remains mounted, avoiding a
+/// material swap underneath a returning Hero.
 class LiquidGlassRouteTransitionFallback extends StatelessWidget {
   const LiquidGlassRouteTransitionFallback({super.key, required this.child});
 
@@ -165,11 +167,12 @@ class LiquidGlassRouteTransitionFallback extends StatelessWidget {
       animation: Listenable.merge([primary, secondary]),
       child: child,
       builder: (context, child) {
-        final isTransitioning =
-            primary.status != AnimationStatus.completed ||
-            secondary.status != AnimationStatus.dismissed;
+        final isEntering =
+            primary.status == AnimationStatus.forward ||
+            (primary.status == AnimationStatus.completed &&
+                secondary.status == AnimationStatus.forward);
         return _LiquidGlassCompositionScope(
-          forceFallback: isTransitioning,
+          forceFallback: isEntering,
           child: child!,
         );
       },

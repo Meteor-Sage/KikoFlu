@@ -36,6 +36,13 @@ void main() {
 
       await tester.pumpAndSettle();
       expect(find.byType(UiKitView), findsOneWidget);
+
+      // Dismissing the route must keep the native surface mounted while the
+      // Hero returns to the page underneath. Swapping to the Flutter fallback
+      // here causes a visible flash in the Mini Player.
+      navigatorKey.currentState!.pop();
+      await tester.pump();
+      expect(find.byType(UiKitView), findsWidgets);
       debugDefaultTargetPlatformOverride = null;
     },
   );
