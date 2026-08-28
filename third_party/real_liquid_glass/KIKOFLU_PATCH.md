@@ -6,9 +6,8 @@ This directory mirrors `real_liquid_glass` 0.3.0 from pub.dev
 KikoFlu includes these local adjustments:
 
 - macOS native glass platform views reserve a small transparent perimeter for
-  the native shadow. The visible effect view is inset, and the expanded host
-  uses a matching outer rounded mask plus a soft alpha fade so the shadow is
-  transparent before reaching the AppKitView boundary. Grouped regions use
+  the native shadow. The host remains unclipped while the visible effect view
+  is inset, avoiding the square AppKitView clip boundary. Grouped regions use
   the same inset coordinate space.
 - Calibrate the non-Apple Flutter fallback with a wider transparency range,
   clearer fill, and restrained blur. Native iOS materials remain unchanged;

@@ -14,6 +14,7 @@ class WorkCoverFrame extends StatelessWidget {
     required this.isLandscape,
     required this.layers,
     this.overlayLayers = const <Widget>[],
+    this.aspectRatio,
     this.showSubtitleBadge = false,
     this.showAgeRating = false,
     this.age,
@@ -27,6 +28,7 @@ class WorkCoverFrame extends StatelessWidget {
   /// Additional visual layers kept inside the Hero subtree. Callers should
   /// pass a stable wrapper when a layer is loaded asynchronously.
   final List<Widget> overlayLayers;
+  final double? aspectRatio;
   final bool showSubtitleBadge;
   final bool showAgeRating;
   final String? age;
@@ -76,17 +78,34 @@ class WorkCoverFrame extends StatelessWidget {
       ),
     );
 
-    final cover = Hero(
+    Widget cover = Hero(
       tag: heroTag,
-      // Keep the source subtree for both directions so the transition uses
-      // the exact image already visible in the card or detail page.
-      flightShuttleBuilder: (_, __, ___, fromHeroContext, ____) {
-        return (fromHeroContext.widget as Hero).child;
+      // Use the detail's stable target image on push, and the current detail
+      // image on pop. The destination placeholder keeps the route's own
+      // loading subtree out of the visible transition.
+      // This avoids showing the destination's loading subtree during a
+      // Cupertino route transition.
+      flightShuttleBuilder: (
+        _,
+        __,
+        direction,
+        fromHeroContext,
+        toHeroContext,
+      ) {
+        final hero = (direction == HeroFlightDirection.push
+                ? toHeroContext.widget
+                : fromHeroContext.widget)
+            as Hero;
+        return hero.child;
       },
       placeholderBuilder: (context, size, child) =>
           SizedBox.fromSize(size: size),
       child: heroChild,
     );
+
+    if (aspectRatio != null) {
+      cover = AspectRatio(aspectRatio: aspectRatio!, child: cover);
+    }
 
     return GestureDetector(
       onTap: onTap,

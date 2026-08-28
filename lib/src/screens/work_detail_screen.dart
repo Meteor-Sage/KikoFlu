@@ -75,10 +75,8 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
     _currentProgress = widget.work.progress;
     _currentRating = widget.work.userRating;
     _loadWorkDetail();
-    // Start loading the full-resolution image as soon as the route has a
-    // mounted context. It may replace the card-sized image during the Hero
-    // flight instead of waiting for the transition to finish.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    // Hero 动画结束后开始预加载高清图
+    Future.delayed(const Duration(milliseconds: 400), () {
       if (mounted) {
         _preloadHDImage();
       }
@@ -94,17 +92,12 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
     if (host.isEmpty) return;
 
     final imageUrl = widget.work.getCoverImageUrl(host, token: token);
-    final imageProvider = CachedNetworkImageProvider(
-      imageUrl,
-      headers: StorageService.serverCookieHeaders,
-      cacheKey: 'work_cover_${widget.work.id}',
-    );
+    final imageProvider = NetworkImage(imageUrl);
 
     try {
       // 预加载图片到内存
       await precacheImage(imageProvider, context);
-      // Replace the card-sized image as soon as the full-resolution provider
-      // is ready. The overlay has no fade, so this is an immediate swap.
+      // 图片完全加载后才切换显示
       if (mounted) {
         setState(() {
           _hdImageProvider = imageProvider;
@@ -632,6 +625,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
         return WorkCoverFrame(
           heroTag: effectiveHeroTag,
           isLandscape: isLandscape,
+          aspectRatio: 1,
           showSubtitleBadge: showSubtitleBadge,
           showAgeRating: displaySettings.showAgeRating,
           age: work.age,
@@ -708,7 +702,6 @@ class _StableCoverOverlay extends StatelessWidget {
     return Image(
       image: imageProvider,
       fit: BoxFit.contain,
-      filterQuality: FilterQuality.high,
       errorBuilder: (context, error, stackTrace) => const SizedBox.expand(),
     );
   }
