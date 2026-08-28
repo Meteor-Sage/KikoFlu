@@ -10,7 +10,9 @@ import '../models/work.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/scrollable_appbar.dart';
 import '../services/work_track_file_builder.dart';
+import '../services/storage_service.dart';
 import '../utils/system_ui_style.dart';
+import '../utils/work_cover_prefetch.dart';
 import '../widgets/file_explorer_widget.dart';
 import '../widgets/file_selection_dialog.dart';
 import '../widgets/global_audio_player_wrapper.dart';
@@ -492,6 +494,22 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
     // 封面图片组件
     final effectiveHeroTag = widget.heroTag ?? 'work_cover_${widget.work.id}';
     final coverUrl = work.getCoverImageUrl(host, token: token);
+    final coverCacheKey = 'work_cover_${widget.work.id}';
+    final coverHeaders = StorageService.serverCookieHeaders;
+    final thumbnailWidth = resolveWorkCoverCacheWidth(
+      context,
+      crossAxisCount: 1,
+      isListCard: true,
+    );
+    final thumbnailProvider = ResizeImage.resizeIfNeeded(
+      thumbnailWidth,
+      null,
+      CachedNetworkImageProvider(
+        coverUrl,
+        headers: coverHeaders,
+        cacheKey: coverCacheKey,
+      ),
+    );
     final displaySettings = ref.watch(workDetailDisplayProvider);
     final showSubtitleBadge =
         displaySettings.showSubtitleTag && work.hasSubtitle == true;
@@ -607,6 +625,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
         return WorkCoverFrame(
           heroTag: effectiveHeroTag,
           isLandscape: isLandscape,
+          aspectRatio: 1,
           showSubtitleBadge: showSubtitleBadge,
           showAgeRating: displaySettings.showAgeRating,
           age: work.age,
@@ -629,17 +648,24 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
           layers: [
             CachedNetworkImage(
               imageUrl: coverUrl,
-              cacheKey: 'work_cover_${widget.work.id}',
+              httpHeaders: coverHeaders,
+              cacheKey: coverCacheKey,
+              memCacheWidth: thumbnailWidth,
               fit: BoxFit.contain,
-              placeholder: (context, url) => Container(
-                height: 300,
-                color: Colors.grey[300],
-                child: const Center(
-                  child: CircularProgressIndicator(),
+              placeholder: (context, url) => Image(
+                image: thumbnailProvider,
+                fit: BoxFit.contain,
+                gaplessPlayback: true,
+                errorBuilder: (context, error, stackTrace) => const Icon(
+                  Icons.image_not_supported,
+                  size: 64,
+                  color: Colors.grey,
                 ),
               ),
+              fadeInDuration: Duration.zero,
+              fadeOutDuration: Duration.zero,
+              placeholderFadeInDuration: Duration.zero,
               errorWidget: (context, url, error) => Container(
-                height: 300,
                 color: Colors.grey[300],
                 child: const Icon(
                   Icons.image_not_supported,
@@ -648,18 +674,35 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                 ),
               ),
             ),
-            if (_showHDImage && _hdImageProvider != null)
-              Image(
-                image: _hdImageProvider!,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) {
-                  return const SizedBox.shrink();
-                },
-              ),
+          ],
+          overlayLayers: [
+            _StableCoverOverlay(
+              provider: _showHDImage ? _hdImageProvider : null,
+            ),
           ],
         );
       },
       info: infoWidget,
+    );
+  }
+}
+
+/// Keeps the Hero child tree stable while the full-resolution cover is
+/// prefetched. An empty box preserves the same layout until the provider is
+/// ready, then the image replaces it without a second Hero.
+class _StableCoverOverlay extends StatelessWidget {
+  const _StableCoverOverlay({required this.provider});
+
+  final ImageProvider? provider;
+
+  @override
+  Widget build(BuildContext context) {
+    final imageProvider = provider;
+    if (imageProvider == null) return const SizedBox.expand();
+    return Image(
+      image: imageProvider,
+      fit: BoxFit.contain,
+      errorBuilder: (context, error, stackTrace) => const SizedBox.expand(),
     );
   }
 }

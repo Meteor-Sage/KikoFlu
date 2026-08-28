@@ -5,11 +5,13 @@ This directory mirrors `real_liquid_glass` 0.3.0 from pub.dev
 
 KikoFlu includes these local adjustments:
 
-- `GlassHostView` clips its composited AppKit layer to the same rounded boundary
-  as the native glass view, so native shadows cannot leak into rectangular
-  corners.
+- macOS native glass platform views reserve a small transparent perimeter for
+  the native shadow. The host remains unclipped while the visible effect view
+  is inset, avoiding the square AppKitView clip boundary. Grouped regions use
+  the same inset coordinate space.
 - Calibrate the non-Apple Flutter fallback with a wider transparency range,
-  clearer fill, and restrained blur. Native iOS/macOS materials are unchanged.
+  clearer fill, and restrained blur. Native iOS materials remain unchanged;
+  macOS uses the platform-view shadow buffer described above.
 
 The local mirror can be removed after an upstream release includes equivalent
 behavior.
