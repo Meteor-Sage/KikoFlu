@@ -10,9 +10,7 @@ import '../models/work.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/scrollable_appbar.dart';
 import '../services/work_track_file_builder.dart';
-import '../services/storage_service.dart';
 import '../utils/system_ui_style.dart';
-import '../utils/work_cover_prefetch.dart';
 import '../widgets/file_explorer_widget.dart';
 import '../widgets/file_selection_dialog.dart';
 import '../widgets/global_audio_player_wrapper.dart';
@@ -92,11 +90,7 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
     if (host.isEmpty) return;
 
     final imageUrl = widget.work.getCoverImageUrl(host, token: token);
-    final imageProvider = CachedNetworkImageProvider(
-      imageUrl,
-      headers: StorageService.serverCookieHeaders,
-      cacheKey: 'work_cover_${widget.work.id}',
-    );
+    final imageProvider = NetworkImage(imageUrl);
 
     try {
       // 预加载图片到内存
@@ -498,24 +492,6 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
     // 封面图片组件
     final effectiveHeroTag = widget.heroTag ?? 'work_cover_${widget.work.id}';
     final coverUrl = work.getCoverImageUrl(host, token: token);
-    final coverCacheKey = 'work_cover_${widget.work.id}';
-    final coverHeaders = StorageService.serverCookieHeaders;
-    // Keep the card-sized decode visible while the full detail image is
-    // prefetched, so the Hero never shows a loading spinner during its flight.
-    final thumbnailWidth = resolveWorkCoverCacheWidth(
-      context,
-      crossAxisCount: 1,
-      isListCard: true,
-    );
-    final thumbnailProvider = ResizeImage.resizeIfNeeded(
-      thumbnailWidth,
-      null,
-      CachedNetworkImageProvider(
-        coverUrl,
-        headers: coverHeaders,
-        cacheKey: coverCacheKey,
-      ),
-    );
     final displaySettings = ref.watch(workDetailDisplayProvider);
     final showSubtitleBadge =
         displaySettings.showSubtitleTag && work.hasSubtitle == true;
@@ -653,27 +629,15 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
           layers: [
             CachedNetworkImage(
               imageUrl: coverUrl,
-              httpHeaders: coverHeaders,
-              cacheKey: coverCacheKey,
-              memCacheWidth: thumbnailWidth,
+              cacheKey: 'work_cover_${widget.work.id}',
               fit: BoxFit.contain,
               placeholder: (context, url) => Container(
                 height: 300,
                 color: Colors.grey[300],
-                child: Image(
-                  image: thumbnailProvider,
-                  fit: BoxFit.contain,
-                  gaplessPlayback: true,
-                  errorBuilder: (context, error, stackTrace) => const Icon(
-                    Icons.image_not_supported,
-                    size: 64,
-                    color: Colors.grey,
-                  ),
+                child: const Center(
+                  child: CircularProgressIndicator(),
                 ),
               ),
-              fadeInDuration: Duration.zero,
-              fadeOutDuration: Duration.zero,
-              placeholderFadeInDuration: Duration.zero,
               errorWidget: (context, url, error) => Container(
                 height: 300,
                 color: Colors.grey[300],

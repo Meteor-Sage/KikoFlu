@@ -5,9 +5,9 @@ This directory mirrors `real_liquid_glass` 0.3.0 from pub.dev
 
 KikoFlu includes these local adjustments:
 
-- `GlassHostView` applies rounded clipping to the legacy AppKit blur fallback.
-  On macOS 26+, clipping stays on `NSGlassEffectView` so its outer shadow can
-  extend beyond the Flutter host without being cut off.
+- `GlassHostView` clips its composited AppKit layer to the same rounded boundary
+  as the native glass view, so native shadows cannot leak into rectangular
+  corners.
 - Calibrate the non-Apple Flutter fallback with a wider transparency range,
   clearer fill, and restrained blur. Native iOS/macOS materials are unchanged.
 

@@ -36,15 +36,6 @@ void main() {
 
       await tester.pumpAndSettle();
       expect(find.byType(UiKitView), findsOneWidget);
-
-      navigatorKey.currentState!.pop();
-      await tester.pump();
-      // Keep native glass during dismissal so the returning Hero does not
-      // flash as the dock swaps materials underneath it.
-      expect(find.byType(UiKitView), findsWidgets);
-
-      await tester.pumpAndSettle();
-      expect(find.byType(UiKitView), findsOneWidget);
       debugDefaultTargetPlatformOverride = null;
     },
   );
