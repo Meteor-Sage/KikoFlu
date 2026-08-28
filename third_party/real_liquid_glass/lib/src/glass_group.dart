@@ -6,8 +6,6 @@ import 'package:flutter/services.dart';
 import 'capabilities.dart';
 import 'glass_style.dart';
 
-const double _macosGlassShadowExtent = 12;
-
 /// Lets nearby glass shapes merge fluidly, like droplets.
 ///
 /// Wrap a subtree in a group and every [LiquidGlassContainer] inside it is
@@ -77,7 +75,6 @@ class LiquidGlassGroupState extends State<LiquidGlassGroup> {
     if (channel == null || !mounted) return;
     channel.invokeMethod<void>('setRegions', {
       'spacing': widget.spacing,
-      'shadowExtent': _macosGlassShadowExtent,
       'dark': CupertinoTheme.brightnessOf(context) == Brightness.dark,
       'regions': [
         for (final r in _regions.values)
@@ -116,7 +113,6 @@ class LiquidGlassGroupState extends State<LiquidGlassGroup> {
     final view = defaultTargetPlatform == TargetPlatform.macOS
         ? AppKitView(
             viewType: 'real_liquid_glass/glass_group',
-            creationParams: const {'shadowExtent': _macosGlassShadowExtent},
             creationParamsCodec: const StandardMessageCodec(),
             hitTestBehavior: PlatformViewHitTestBehavior.transparent,
             onPlatformViewCreated: _onViewCreated,
@@ -127,43 +123,14 @@ class LiquidGlassGroupState extends State<LiquidGlassGroup> {
             hitTestBehavior: PlatformViewHitTestBehavior.transparent,
             onPlatformViewCreated: _onViewCreated,
           );
-    final platformView = defaultTargetPlatform == TargetPlatform.macOS
-        ? _withMacosShadowBuffer(view)
-        : view;
     return GlassGroupScope(
       state: this,
       child: Stack(
-        clipBehavior: defaultTargetPlatform == TargetPlatform.macOS
-            ? Clip.none
-            : Clip.hardEdge,
         children: [
-          Positioned.fill(child: IgnorePointer(child: platformView)),
+          Positioned.fill(child: IgnorePointer(child: view)),
           widget.child,
         ],
       ),
-    );
-  }
-
-  Widget _withMacosShadowBuffer(Widget view) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final width = constraints.maxWidth;
-        final height = constraints.maxHeight;
-        if (!width.isFinite || !height.isFinite || width <= 0 || height <= 0) {
-          return view;
-        }
-        const extent = _macosGlassShadowExtent;
-        final expandedWidth = width + extent * 2;
-        final expandedHeight = height + extent * 2;
-        return OverflowBox(
-          alignment: Alignment.center,
-          minWidth: expandedWidth,
-          maxWidth: expandedWidth,
-          minHeight: expandedHeight,
-          maxHeight: expandedHeight,
-          child: view,
-        );
-      },
     );
   }
 

@@ -78,7 +78,6 @@ final class GlassHostView: NSView {
   private var glassView: NSView?
   private var capsule = false
   private var cornerRadius: CGFloat = 0
-  private var shadowExtent: CGFloat = 0
   var retainedChannel: FlutterMethodChannel?
 
   init(args: [String: Any]) {
@@ -96,9 +95,6 @@ final class GlassHostView: NSView {
     }
     capsule = args["capsule"] as? Bool ?? false
     cornerRadius = CGFloat((args["cornerRadius"] as? NSNumber)?.doubleValue ?? 0)
-    shadowExtent = max(
-      0,
-      CGFloat((args["shadowExtent"] as? NSNumber)?.doubleValue ?? 0))
     let tint = (args["tint"] as? NSNumber)
       .map { LiquidGlassContainerPlugin.color(argb: $0.int64Value) }
 
@@ -121,8 +117,8 @@ final class GlassHostView: NSView {
       glassView = blur
     }
     if let glassView {
-      updateGlassFrame(of: glassView)
-      glassView.autoresizingMask = []
+      glassView.frame = bounds
+      glassView.autoresizingMask = [.width, .height]
       addSubview(glassView)
     }
     updateCorners()
@@ -130,28 +126,19 @@ final class GlassHostView: NSView {
 
   override func layout() {
     super.layout()
-    if let glassView { updateGlassFrame(of: glassView) }
     updateCorners()
   }
 
-  private func updateGlassFrame(of view: NSView) {
-    let inset = min(shadowExtent, min(bounds.width, bounds.height) / 2)
-    view.frame = bounds.insetBy(dx: inset, dy: inset)
-  }
-
   private func updateCorners() {
-    guard let glassView else { return }
-    let radius = capsule
-      ? min(glassView.bounds.width, glassView.bounds.height) / 2
-      : cornerRadius
-    // Flutter's AppKit platform-view host already supplies the rectangular
-    // clip boundary. Keep this host unclipped and let the inset glass view
-    // render its own rounded material and shadow into the surrounding buffer.
-    layer?.cornerRadius = 0
-    layer?.masksToBounds = false
+    let radius = capsule ? min(bounds.width, bounds.height) / 2 : cornerRadius
+    // AppKit platform views are composited as rectangular layers, so the
+    // native glass shadow otherwise leaks into the corners even when the
+    // NSGlassEffectView itself has a corner radius.
+    layer?.cornerRadius = radius
+    layer?.masksToBounds = true
     if #available(macOS 26.0, *), let glass = glassView as? NSGlassEffectView {
       glass.cornerRadius = radius
-    } else if let layer = glassView.layer {
+    } else if let layer = glassView?.layer {
       layer.cornerRadius = radius
       layer.masksToBounds = true
     }
@@ -171,10 +158,7 @@ final class GlassGroupViewFactory: NSObject, FlutterPlatformViewFactory {
   }
 
   func create(withViewIdentifier viewId: Int64, arguments args: Any?) -> NSView {
-    GlassGroupHostView(
-      viewId: viewId,
-      messenger: messenger,
-      args: args as? [String: Any] ?? [:])
+    GlassGroupHostView(viewId: viewId, messenger: messenger)
   }
 }
 
@@ -192,15 +176,11 @@ final class GlassGroupHostView: NSView {
   private var shapes: [Int: NSView] = [:]
   private var materials: [Int: ShapeMaterial] = [:]
   private var spacing: CGFloat = -1
-  private var shadowExtent: CGFloat = 0
   private var channel: FlutterMethodChannel?
 
-  init(viewId: Int64, messenger: FlutterBinaryMessenger, args: [String: Any]) {
+  init(viewId: Int64, messenger: FlutterBinaryMessenger) {
     super.init(frame: .zero)
     wantsLayer = true
-    shadowExtent = max(
-      0,
-      CGFloat((args["shadowExtent"] as? NSNumber)?.doubleValue ?? 0))
     let channel = FlutterMethodChannel(
       name: "real_liquid_glass/glass_group_\(viewId)",
       binaryMessenger: messenger)
@@ -252,9 +232,6 @@ final class GlassGroupHostView: NSView {
       appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
     }
     let container = hostContainer()
-    if let extent = args["shadowExtent"] as? NSNumber {
-      shadowExtent = max(0, CGFloat(extent.doubleValue))
-    }
     let newSpacing = CGFloat((args["spacing"] as? NSNumber)?.doubleValue ?? 24)
     if #available(macOS 26.0, *), newSpacing != spacing,
       let group = container as? NSGlassEffectContainerView {
@@ -282,7 +259,6 @@ final class GlassGroupHostView: NSView {
       y: (region["y"] as? NSNumber)?.doubleValue ?? 0,
       width: (region["width"] as? NSNumber)?.doubleValue ?? 0,
       height: (region["height"] as? NSNumber)?.doubleValue ?? 0)
-      .offsetBy(dx: shadowExtent, dy: shadowExtent)
     let material = ShapeMaterial(
       style: region["style"] as? String ?? "regular",
       tint: (region["tint"] as? NSNumber)?.int64Value,

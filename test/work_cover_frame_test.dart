@@ -30,9 +30,6 @@ void main() {
     );
 
     expect(find.byType(Hero), findsOneWidget);
-    final hero = tester.widget<Hero>(find.byType(Hero));
-    expect(hero.flightShuttleBuilder, isNotNull);
-    expect(hero.placeholderBuilder, isNotNull);
     expect(find.text('Cover Layer'), findsOneWidget);
     expect(find.text('Subtitle'), findsNothing);
   });

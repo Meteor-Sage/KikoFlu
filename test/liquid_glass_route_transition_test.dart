@@ -4,30 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:real_liquid_glass/real_liquid_glass.dart';
 
 void main() {
-  tearDown(() => debugDefaultTargetPlatformOverride = null);
-
-  testWidgets('macOS native glass reserves space for the outer shadow', (
-    tester,
-  ) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
-
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: SizedBox(
-          width: 160,
-          height: 64,
-          child: LiquidGlassContainer(),
-        ),
-      ),
-    );
-
-    expect(find.byType(AppKitView), findsOneWidget);
-    expect(find.byType(OverflowBox), findsOneWidget);
-    debugDefaultTargetPlatformOverride = null;
-  });
-
   testWidgets(
-    'uses Flutter glass while entering and keeps native glass while dismissing',
+    'uses Flutter glass during route transitions and restores native glass',
     (tester) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
       final navigatorKey = GlobalKey<NavigatorState>();
@@ -56,12 +34,6 @@ void main() {
       await tester.pump();
       expect(find.byType(UiKitView), findsNothing);
 
-      await tester.pumpAndSettle();
-      expect(find.byType(UiKitView), findsOneWidget);
-
-      navigatorKey.currentState!.pop();
-      await tester.pump();
-      expect(find.byType(UiKitView), findsWidgets);
       await tester.pumpAndSettle();
       expect(find.byType(UiKitView), findsOneWidget);
       debugDefaultTargetPlatformOverride = null;

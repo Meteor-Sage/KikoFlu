@@ -5,8 +5,6 @@ import 'package:flutter/services.dart';
 
 import 'glass_style.dart';
 
-const double _macosGlassShadowExtent = 12;
-
 /// Embeds the native effect view that carries the glass material.
 ///
 /// On iOS 26+ / macOS 26+ this is real UIGlassEffect /
@@ -43,8 +41,6 @@ class _NativeGlassViewState extends State<NativeGlassView> {
     'capsule': widget.shape.capsule,
     'cornerRadius': widget.shape.cornerRadius,
     'dark': CupertinoTheme.brightnessOf(context) == Brightness.dark,
-    if (defaultTargetPlatform == TargetPlatform.macOS)
-      'shadowExtent': _macosGlassShadowExtent,
   };
 
   @override
@@ -69,7 +65,7 @@ class _NativeGlassViewState extends State<NativeGlassView> {
     final hitTestBehavior = widget.interactive
         ? PlatformViewHitTestBehavior.opaque
         : PlatformViewHitTestBehavior.transparent;
-    final platformView = defaultTargetPlatform == TargetPlatform.macOS
+    final Widget view = defaultTargetPlatform == TargetPlatform.macOS
         ? AppKitView(
             viewType: 'real_liquid_glass/glass_view',
             creationParams: _params,
@@ -84,36 +80,7 @@ class _NativeGlassViewState extends State<NativeGlassView> {
             hitTestBehavior: hitTestBehavior,
             onPlatformViewCreated: _onViewCreated,
           );
-    final Widget view = defaultTargetPlatform == TargetPlatform.macOS
-        ? _withMacosShadowBuffer(platformView)
-        : platformView;
     return IgnorePointer(ignoring: !widget.interactive, child: view);
-  }
-
-  Widget _withMacosShadowBuffer(Widget view) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final width = constraints.maxWidth;
-        final height = constraints.maxHeight;
-        if (!width.isFinite || !height.isFinite || width <= 0 || height <= 0) {
-          return view;
-        }
-        const extent = _macosGlassShadowExtent;
-        final expandedWidth = width + extent * 2;
-        final expandedHeight = height + extent * 2;
-        // Flutter's AppKitView host clips to its widget bounds. Give the
-        // native view a transparent border so the macOS glass shadow has room
-        // to render outside the visible shape.
-        return OverflowBox(
-          alignment: Alignment.center,
-          minWidth: expandedWidth,
-          maxWidth: expandedWidth,
-          minHeight: expandedHeight,
-          maxHeight: expandedHeight,
-          child: view,
-        );
-      },
-    );
   }
 
   void _onViewCreated(int id) {
