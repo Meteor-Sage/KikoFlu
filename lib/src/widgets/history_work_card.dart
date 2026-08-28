@@ -15,6 +15,7 @@ import '../services/audio_track_queue_builder.dart';
 import '../screens/work_detail_screen.dart';
 import '../services/storage_service.dart';
 import '../utils/string_utils.dart';
+import '../utils/work_cover_prefetch.dart';
 import '../providers/lyric_provider.dart';
 import '../providers/work_card_display_provider.dart';
 import '../utils/age_rating.dart';
@@ -43,6 +44,13 @@ class HistoryWorkCard extends ConsumerWidget {
     final showAgeRating = ref.watch(workCardDisplayProvider).showAgeRating;
 
     final httpHeaders = StorageService.serverCookieHeaders;
+    final initialCoverImageProvider = host.isEmpty
+        ? null
+        : createWorkCoverImageProvider(
+            work: work,
+            host: host,
+            token: token,
+          );
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -55,7 +63,10 @@ class HistoryWorkCard extends ConsumerWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => WorkDetailScreen(work: work),
+              builder: (context) => WorkDetailScreen(
+                work: work,
+                initialCoverImageProvider: initialCoverImageProvider,
+              ),
             ),
           );
         },

@@ -7,6 +7,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/recommendation_provider.dart';
 import '../../providers/work_detail_display_provider.dart';
 import '../../screens/work_detail_screen.dart';
+import '../../utils/work_cover_prefetch.dart';
 import '../../widgets/privacy_blur_cover.dart';
 import '../../../l10n/app_localizations.dart';
 
@@ -169,6 +170,16 @@ class _RecommendationCard extends ConsumerWidget {
     final authState = ref.watch(authProvider);
     final host = authState.host ?? '';
     final token = authState.token ?? '';
+    final coverCacheWidth =
+        (120 * MediaQuery.of(context).devicePixelRatio).round();
+    final initialCoverImageProvider = host.isEmpty
+        ? null
+        : createWorkCoverImageProvider(
+            work: work,
+            host: host,
+            token: token,
+            cacheWidth: coverCacheWidth,
+          );
 
     return SizedBox(
       width: 120,
@@ -179,6 +190,7 @@ class _RecommendationCard extends ConsumerWidget {
               builder: (context) => WorkDetailScreen(
                 work: work,
                 heroTag: 'rec_work_cover_${work.id}',
+                initialCoverImageProvider: initialCoverImageProvider,
               ),
             ),
           );

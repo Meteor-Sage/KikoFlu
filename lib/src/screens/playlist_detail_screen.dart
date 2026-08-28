@@ -572,12 +572,22 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
     final colorScheme = theme.colorScheme;
 
     final httpHeaders = StorageService.serverCookieHeaders;
+    final initialCoverImageProvider = host.isEmpty
+        ? null
+        : createWorkCoverImageProvider(
+            work: work,
+            host: host,
+            token: token,
+          );
 
     return InkWell(
       onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (context) => WorkDetailScreen(work: work),
+            builder: (context) => WorkDetailScreen(
+              work: work,
+              initialCoverImageProvider: initialCoverImageProvider,
+            ),
           ),
         );
       },

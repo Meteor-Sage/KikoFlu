@@ -85,8 +85,7 @@ class LiquidGlassContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Widget surface;
-    if (!LiquidGlass.isNativePlatform ||
-        _LiquidGlassCompositionScope.forceFallbackOf(context)) {
+    if (!LiquidGlass.isNativePlatform) {
       surface = FallbackGlass(
         style: style,
         shape: shape,
@@ -141,60 +140,4 @@ class LiquidGlassContainer extends StatelessWidget {
     }
     return result;
   }
-}
-
-/// Uses Flutter composition while the current route is entering.
-///
-/// Apple platform views are composited outside Flutter's Hero overlay and can
-/// temporarily cover a flying Hero when both routes contain glass surfaces.
-/// This scope keeps the same glass geometry and content, but substitutes the
-/// Flutter fallback while a route is entering or being covered by a pushed
-/// route. During dismissal the native surface remains mounted, avoiding a
-/// material swap underneath a returning Hero.
-class LiquidGlassRouteTransitionFallback extends StatelessWidget {
-  const LiquidGlassRouteTransitionFallback({super.key, required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final route = ModalRoute.of(context);
-    final primary = route?.animation;
-    final secondary = route?.secondaryAnimation;
-    if (primary == null || secondary == null) return child;
-
-    return AnimatedBuilder(
-      animation: Listenable.merge([primary, secondary]),
-      child: child,
-      builder: (context, child) {
-        final isEntering =
-            primary.status == AnimationStatus.forward ||
-            (primary.status == AnimationStatus.completed &&
-                secondary.status == AnimationStatus.forward);
-        return _LiquidGlassCompositionScope(
-          forceFallback: isEntering,
-          child: child!,
-        );
-      },
-    );
-  }
-}
-
-class _LiquidGlassCompositionScope extends InheritedWidget {
-  const _LiquidGlassCompositionScope({
-    required this.forceFallback,
-    required super.child,
-  });
-
-  final bool forceFallback;
-
-  static bool forceFallbackOf(BuildContext context) =>
-      context
-          .dependOnInheritedWidgetOfExactType<_LiquidGlassCompositionScope>()
-          ?.forceFallback ??
-      false;
-
-  @override
-  bool updateShouldNotify(_LiquidGlassCompositionScope oldWidget) =>
-      forceFallback != oldWidget.forceFallback;
 }

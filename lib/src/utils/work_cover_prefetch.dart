@@ -51,6 +51,21 @@ int resolveWorkCoverCacheWidth(
   );
 }
 
+ImageProvider<Object> createWorkCoverImageProvider({
+  required Work work,
+  required String host,
+  required String token,
+  int? cacheWidth,
+  Map<String, String>? headers,
+}) {
+  final provider = CachedNetworkImageProvider(
+    work.getCoverImageUrl(host, token: token),
+    headers: headers ?? StorageService.serverCookieHeaders,
+    cacheKey: 'work_cover_${work.id}',
+  );
+  return ResizeImage.resizeIfNeeded(cacheWidth, null, provider);
+}
+
 void prefetchWorkCovers(
   BuildContext context,
   Iterable<Work> works, {
@@ -66,16 +81,14 @@ void prefetchWorkCovers(
     crossAxisCount: crossAxisCount,
     isListCard: isListCard,
   );
-  final headers = StorageService.serverCookieHeaders;
-
   for (final work in works) {
-    final provider = CachedNetworkImageProvider(
-      work.getCoverImageUrl(host, token: token),
-      headers: headers,
-      cacheKey: 'work_cover_${work.id}',
+    final provider = createWorkCoverImageProvider(
+      work: work,
+      host: host,
+      token: token,
+      cacheWidth: targetWidth,
     );
-    final resized = ResizeImage.resizeIfNeeded(targetWidth, null, provider);
-    _enqueueCoverPrefetch(context, resized);
+    _enqueueCoverPrefetch(context, provider);
   }
 }
 

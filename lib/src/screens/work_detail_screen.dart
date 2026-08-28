@@ -37,11 +37,13 @@ import '../widgets/image_gallery_screen.dart';
 class WorkDetailScreen extends ConsumerStatefulWidget {
   final Work work;
   final String? heroTag;
+  final ImageProvider<Object>? initialCoverImageProvider;
 
   const WorkDetailScreen({
     super.key,
     required this.work,
     this.heroTag,
+    this.initialCoverImageProvider,
   });
 
   @override
@@ -631,22 +633,11 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
               imageUrl: coverUrl,
               cacheKey: 'work_cover_${widget.work.id}',
               fit: BoxFit.contain,
-              placeholder: (context, url) => Container(
-                height: 300,
-                color: Colors.grey[300],
-                child: const Center(
-                  child: CircularProgressIndicator(),
-                ),
-              ),
-              errorWidget: (context, url, error) => Container(
-                height: 300,
-                color: Colors.grey[300],
-                child: const Icon(
-                  Icons.image_not_supported,
-                  size: 64,
-                  color: Colors.grey,
-                ),
-              ),
+              placeholder: (context, url) => _buildCoverPlaceholder(),
+              errorWidget: (context, url, error) => _buildCoverPlaceholder(),
+              fadeInDuration: Duration.zero,
+              fadeOutDuration: Duration.zero,
+              placeholderFadeInDuration: Duration.zero,
             ),
             if (_showHDImage && _hdImageProvider != null)
               Image(
@@ -660,6 +651,33 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
         );
       },
       info: infoWidget,
+    );
+  }
+
+  Widget _buildCoverPlaceholder() {
+    final initialCover = widget.initialCoverImageProvider;
+    if (initialCover != null) {
+      return Image(
+        image: initialCover,
+        fit: BoxFit.contain,
+        gaplessPlayback: true,
+        errorBuilder: (context, error, stackTrace) =>
+            _buildMissingCoverPlaceholder(),
+      );
+    }
+    return _buildMissingCoverPlaceholder();
+  }
+
+  Widget _buildMissingCoverPlaceholder() {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      height: 300,
+      color: colorScheme.surfaceContainerHighest,
+      child: Icon(
+        Icons.image_not_supported,
+        size: 64,
+        color: colorScheme.onSurfaceVariant,
+      ),
     );
   }
 }

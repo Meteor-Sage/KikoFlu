@@ -111,12 +111,28 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
     final hasLocalSubtitle = ref.watch(
       subtitleLibraryProvider.select((ids) => ids.contains(widget.work.id)),
     );
+    final coverCacheWidth = resolveWorkCoverCacheWidth(
+      context,
+      crossAxisCount: widget.crossAxisCount,
+      isListCard: _isListLayout,
+    );
+    final initialCoverImageProvider = auth.host.isEmpty
+        ? null
+        : createWorkCoverImageProvider(
+            work: widget.work,
+            host: auth.host,
+            token: auth.token,
+            cacheWidth: coverCacheWidth,
+          );
 
     final cardOnTap = widget.onTap ??
         () {
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (context) => WorkDetailScreen(work: widget.work),
+              builder: (context) => WorkDetailScreen(
+                work: widget.work,
+                initialCoverImageProvider: initialCoverImageProvider,
+              ),
             ),
           );
         };

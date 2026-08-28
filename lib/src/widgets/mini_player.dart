@@ -515,8 +515,7 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
       error: (error, stack) => const SizedBox.shrink(),
     );
 
-    if (!useLiquidGlass) return player;
-    return LiquidGlassRouteTransitionFallback(child: player);
+    return player;
   }
 
   Widget _buildArtwork(
