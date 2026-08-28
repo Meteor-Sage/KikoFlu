@@ -250,7 +250,7 @@ void main() {
     expect(find.byType(DecoratedBox), findsNothing);
   });
 
-  testWidgets('secondary toolbar follows the primary toolbar position', (
+  testWidgets('secondary toolbar stays in the page while following primary', (
     tester,
   ) async {
     final primaryVisible = ValueNotifier(true);
@@ -282,8 +282,8 @@ void main() {
     final visibleTop = tester
         .getTopLeft(find.byKey(const ValueKey('secondary-toolbar')))
         .dy;
-    expect(find.byType(OverlayPortal), findsOneWidget);
-    expect(find.byType(CompositedTransformFollower), findsOneWidget);
+    expect(find.byType(OverlayPortal), findsNothing);
+    expect(find.byType(CompositedTransformFollower), findsNothing);
     expect(
       tester.getSize(find.byKey(const ValueKey('secondary-toolbar'))).width,
       390,
