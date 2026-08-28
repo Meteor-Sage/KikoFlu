@@ -131,16 +131,20 @@ final class GlassHostView: NSView {
 
   private func updateCorners() {
     let radius = capsule ? min(bounds.width, bounds.height) / 2 : cornerRadius
-    // AppKit platform views are composited as rectangular layers, so the
-    // native glass shadow otherwise leaks into the corners even when the
-    // NSGlassEffectView itself has a corner radius.
     layer?.cornerRadius = radius
-    layer?.masksToBounds = true
     if #available(macOS 26.0, *), let glass = glassView as? NSGlassEffectView {
+      // NSGlassEffectView owns the rounded clipping on macOS 26+. Masking the
+      // Flutter host layer here also clips the material's outer shadow.
+      layer?.masksToBounds = false
       glass.cornerRadius = radius
-    } else if let layer = glassView?.layer {
-      layer.cornerRadius = radius
-      layer.masksToBounds = true
+    } else {
+      // Keep the legacy blur contained because it has no native corner
+      // configuration of its own.
+      layer?.masksToBounds = true
+      if let layer = glassView?.layer {
+        layer.cornerRadius = radius
+        layer.masksToBounds = true
+      }
     }
   }
 }
