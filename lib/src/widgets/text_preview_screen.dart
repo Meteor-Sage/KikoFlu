@@ -42,6 +42,11 @@ class TextPreviewScreen extends StatefulWidget {
 }
 
 class _TextPreviewScreenState extends State<TextPreviewScreen> {
+  static const TextStyle _contentTextStyle = TextStyle(
+    fontFamily: 'monospace',
+    fontSize: 14,
+  );
+
   bool _isLoading = true;
   String? _content;
   String? _translatedContent;
@@ -53,6 +58,12 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
   bool _isTranslating = false;
   String _translationProgress = '';
   bool _isEditMode = false;
+  bool _isSearchMode = false;
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  List<_TextSearchMatch> _searchMatches = const [];
+  int _currentSearchMatchIndex = -1;
+  bool _hasLoadedContent = false;
   late TextEditingController _textController;
   late TextEditingController _translatedTextController;
   String _detectedEncoding = 'UTF-8'; // 记录检测到的原始编码
@@ -62,8 +73,16 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
     super.initState();
     _textController = TextEditingController();
     _translatedTextController = TextEditingController();
-    _loadTextContent();
     _scrollController.addListener(_updateScrollProgress);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_hasLoadedContent) return;
+
+    _hasLoadedContent = true;
+    _loadTextContent();
   }
 
   @override
@@ -73,6 +92,8 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
     _scrollThrottler.dispose();
     _textController.dispose();
     _translatedTextController.dispose();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -291,6 +312,225 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
     }
   }
 
+  void _openSearch() {
+    setState(() {
+      _isSearchMode = true;
+    });
+    _updateSearchResults(_searchController.text);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _searchFocusNode.requestFocus();
+      }
+    });
+  }
+
+  void _closeSearch() {
+    _searchController.clear();
+    setState(() {
+      _isSearchMode = false;
+      _searchMatches = const [];
+      _currentSearchMatchIndex = -1;
+    });
+  }
+
+  void _toggleSearch() {
+    if (_isSearchMode) {
+      _closeSearch();
+    } else {
+      _openSearch();
+    }
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    _updateSearchResults('');
+    _searchFocusNode.requestFocus();
+  }
+
+  void _refreshSearchResults() {
+    if (!_isSearchMode) return;
+    _updateSearchResults(_searchController.text);
+  }
+
+  void _updateSearchResults(String query) {
+    final content = _getCurrentContent() ?? '';
+    final matches = _findTextMatches(content, query);
+
+    setState(() {
+      _searchMatches = matches;
+      _currentSearchMatchIndex = matches.isEmpty ? -1 : 0;
+    });
+
+    if (matches.isNotEmpty) {
+      _scheduleScrollToCurrentMatch();
+    }
+  }
+
+  void _moveToSearchMatch(int offset) {
+    if (_searchMatches.isEmpty) return;
+
+    final nextIndex =
+        (_currentSearchMatchIndex + offset) % _searchMatches.length;
+    setState(() {
+      _currentSearchMatchIndex = nextIndex;
+    });
+    _scheduleScrollToCurrentMatch();
+  }
+
+  void _scheduleScrollToCurrentMatch() {
+    final scheduledIndex = _currentSearchMatchIndex;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || scheduledIndex != _currentSearchMatchIndex) return;
+      _scrollToCurrentMatch();
+    });
+  }
+
+  void _scrollToCurrentMatch() {
+    if (!_scrollController.hasClients ||
+        _currentSearchMatchIndex < 0 ||
+        _currentSearchMatchIndex >= _searchMatches.length) {
+      return;
+    }
+
+    final content = _getCurrentContent() ?? '';
+    if (content.isEmpty) return;
+
+    final match = _searchMatches[_currentSearchMatchIndex];
+    final position = _scrollController.position;
+    final matchProgress = match.start / content.length;
+    final centeredOffset =
+        position.maxScrollExtent * matchProgress -
+        position.viewportDimension * 0.25;
+    final targetOffset = centeredOffset
+        .clamp(0.0, position.maxScrollExtent)
+        .toDouble();
+
+    _scrollController.animateTo(
+      targetOffset,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  Widget _buildSearchBar() {
+    final l10n = S.of(context);
+    final hasMatches = _searchMatches.isNotEmpty;
+    final resultLabel = hasMatches
+        ? '${_currentSearchMatchIndex + 1}/${_searchMatches.length}'
+        : '0/0';
+
+    return Material(
+      color: Theme.of(context).colorScheme.surface,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                key: const ValueKey('text-preview-search-field'),
+                controller: _searchController,
+                focusNode: _searchFocusNode,
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  hintText: l10n.searchSubtitles,
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _searchController.text.isEmpty
+                      ? null
+                      : IconButton(
+                          key: const ValueKey('text-preview-search-clear'),
+                          icon: const Icon(Icons.clear),
+                          onPressed: _clearSearch,
+                          tooltip: l10n.clear,
+                        ),
+                  isDense: true,
+                  border: const OutlineInputBorder(),
+                ),
+                onChanged: _updateSearchResults,
+                onSubmitted: (_) => _moveToSearchMatch(1),
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 48,
+              child: Text(
+                resultLabel,
+                key: const ValueKey('text-preview-search-count'),
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.labelMedium,
+              ),
+            ),
+            IconButton(
+              key: const ValueKey('text-preview-search-previous'),
+              icon: const Icon(Icons.keyboard_arrow_up),
+              onPressed: hasMatches ? () => _moveToSearchMatch(-1) : null,
+              tooltip: l10n.previousPage,
+            ),
+            IconButton(
+              key: const ValueKey('text-preview-search-next'),
+              icon: const Icon(Icons.keyboard_arrow_down),
+              onPressed: hasMatches ? () => _moveToSearchMatch(1) : null,
+              tooltip: l10n.nextPage,
+            ),
+            IconButton(
+              key: const ValueKey('text-preview-search-close'),
+              icon: const Icon(Icons.close),
+              onPressed: _closeSearch,
+              tooltip: l10n.close,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPreviewContent(String content) {
+    final validMatches = _searchMatches
+        .where((match) => match.start >= 0 && match.end <= content.length)
+        .toList(growable: false);
+    if (!_isSearchMode || validMatches.isEmpty) {
+      return SelectableText(
+        content,
+        key: const ValueKey('text-preview-content'),
+        style: _contentTextStyle,
+      );
+    }
+
+    final colorScheme = Theme.of(context).colorScheme;
+    final spans = <InlineSpan>[];
+    var cursor = 0;
+    for (var index = 0; index < validMatches.length; index++) {
+      final match = validMatches[index];
+      if (match.start > cursor) {
+        spans.add(TextSpan(text: content.substring(cursor, match.start)));
+      }
+
+      final isCurrent = index == _currentSearchMatchIndex;
+      spans.add(
+        TextSpan(
+          text: content.substring(match.start, match.end),
+          style: TextStyle(
+            backgroundColor: isCurrent
+                ? colorScheme.primaryContainer
+                : colorScheme.tertiaryContainer.withValues(alpha: 0.7),
+            color: isCurrent ? colorScheme.onPrimaryContainer : null,
+            fontWeight: isCurrent ? FontWeight.w700 : null,
+          ),
+        ),
+      );
+      cursor = match.end;
+    }
+
+    if (cursor < content.length) {
+      spans.add(TextSpan(text: content.substring(cursor)));
+    }
+
+    return SelectableText.rich(
+      TextSpan(children: spans),
+      key: const ValueKey('text-preview-content'),
+      style: _contentTextStyle,
+    );
+  }
+
   Future<void> _loadTextContent() async {
     final l10n = S.of(context);
     setState(() {
@@ -417,6 +657,7 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
         _isTranslating = false;
         _translationProgress = '';
       });
+      _refreshSearchResults();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -432,7 +673,25 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
     return Scaffold(
       appBar: ScrollableAppBar(
         title: Text(widget.title),
+        bottom: _isSearchMode
+            ? PreferredSize(
+                preferredSize: const Size.fromHeight(60),
+                child: _buildSearchBar(),
+              )
+            : null,
         actions: [
+          if (_content != null && _content!.isNotEmpty)
+            IconButton(
+              key: const ValueKey('text-preview-search-action'),
+              icon: Icon(
+                Icons.search,
+                color: _isSearchMode
+                    ? Theme.of(context).colorScheme.primary
+                    : null,
+              ),
+              onPressed: _toggleSearch,
+              tooltip: S.of(context).search,
+            ),
           if (_content != null && _content!.isNotEmpty)
             IconButton(
               icon: Icon(
@@ -444,6 +703,7 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
                 setState(() {
                   _isEditMode = !_isEditMode;
                 });
+                _refreshSearchResults();
               },
               tooltip: _isEditMode
                   ? S.of(context).previewMode
@@ -460,6 +720,7 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
                         setState(() {
                           _showTranslation = !_showTranslation;
                         });
+                        _refreshSearchResults();
                       } else {
                         _translateContent();
                       }
@@ -546,23 +807,17 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
                           ? _translatedTextController
                           : _textController,
                       maxLines: null,
-                      style: const TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 14,
-                      ),
+                      style: _contentTextStyle,
                       decoration: InputDecoration(
                         border: const OutlineInputBorder(),
                         hintText: S.of(context).editTextContentHint,
                       ),
+                      onChanged: (_) => _refreshSearchResults(),
                     )
-                  : SelectableText(
+                  : _buildPreviewContent(
                       _showTranslation && _translatedContent != null
                           ? _translatedContent!
                           : _content ?? '',
-                      style: const TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 14,
-                      ),
                     ),
             ),
           ),
@@ -570,6 +825,28 @@ class _TextPreviewScreenState extends State<TextPreviewScreen> {
       ],
     );
   }
+}
+
+class _TextSearchMatch {
+  const _TextSearchMatch(this.start, this.end);
+
+  final int start;
+  final int end;
+}
+
+List<_TextSearchMatch> _findTextMatches(String content, String query) {
+  final normalizedQuery = query.trim();
+  if (content.isEmpty || normalizedQuery.isEmpty) return const [];
+
+  final expression = RegExp(
+    RegExp.escape(normalizedQuery),
+    caseSensitive: false,
+    unicode: true,
+  );
+  return expression
+      .allMatches(content)
+      .map((match) => _TextSearchMatch(match.start, match.end))
+      .toList(growable: false);
 }
 
 class TimeoutException implements Exception {
