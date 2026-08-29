@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../models/audio_track.dart';
 import '../models/audio_gain_settings.dart';
+import '../models/audio_tap_playlist_mode.dart';
 import '../models/work.dart';
 import '../services/audio_player_service.dart';
 import '../services/log_service.dart';
@@ -229,7 +230,11 @@ class AudioPlayerController extends StateNotifier<AudioPlayerState> {
 
   Future<void> playTrack(AudioTrack track) async {
     await _pendingDismissal;
-    final shouldAppend = state.appendMode && queue.isNotEmpty;
+    final playlistMode = await _ref
+        .read(audioTapPlaylistModeProvider.notifier)
+        .getMode();
+    final shouldAppend =
+        playlistMode != AudioTapPlaylistMode.replaceQueue && queue.isNotEmpty;
 
     if (shouldAppend) {
       final indexMap = await _service.appendTracks([track]);
@@ -260,24 +265,41 @@ class AudioPlayerController extends StateNotifier<AudioPlayerState> {
   }
 
   Future<void> playTracks(List<AudioTrack> tracks,
-      {int startIndex = 0, Work? work}) async {
+      {int startIndex = 0,
+      Work? work,
+      AudioTapPlaylistMode? playlistMode}) async {
     await _pendingDismissal;
-    _log.captureOutput(
-        '[AudioController] playTracks调用: ${tracks.length}个轨道, startIndex=$startIndex');
-    _log.captureOutput(
-        '[AudioController] 第一个轨道: title="${tracks.first.title}", url="${tracks.first.url}"');
+    if (tracks.isEmpty) return;
 
-    final shouldAppend = state.appendMode && queue.isNotEmpty;
+    final AudioTapPlaylistMode effectiveMode = playlistMode ??
+        await _ref.read(audioTapPlaylistModeProvider.notifier).getMode();
+    final selectedIndex = startIndex.clamp(0, tracks.length - 1);
+    final selectedTrack = tracks[selectedIndex];
+    final queueTracks = effectiveMode == AudioTapPlaylistMode.appendSingle
+        ? <AudioTrack>[selectedTrack]
+        : tracks;
+    final queueStartIndex =
+        effectiveMode == AudioTapPlaylistMode.appendSingle ? 0 : selectedIndex;
+
+    _log.captureOutput(
+        '[AudioController] playTracks调用: ${queueTracks.length}个轨道, '
+        'startIndex=$queueStartIndex, mode=${effectiveMode.name}');
+    _log.captureOutput(
+        '[AudioController] 第一个轨道: title="${queueTracks.first.title}", '
+        'url="${queueTracks.first.url}"');
+
+    final shouldAppend = effectiveMode != AudioTapPlaylistMode.replaceQueue &&
+        queue.isNotEmpty;
 
     if (shouldAppend) {
-      final indexMap = await _service.appendTracks(tracks);
-      final targetTrack = tracks[startIndex.clamp(0, tracks.length - 1)];
+      final indexMap = await _service.appendTracks(queueTracks);
+      final targetTrack = queueTracks[queueStartIndex];
       final targetIndex = indexMap[targetTrack.id];
       if (targetIndex != null) {
         await _service.skipToIndex(targetIndex);
       }
     } else {
-      await _service.updateQueue(tracks, startIndex: startIndex);
+      await _service.updateQueue(queueTracks, startIndex: queueStartIndex);
       _log.captureOutput('[AudioController] updateQueue完成');
       await _service.play();
       _log.captureOutput('[AudioController] play完成');
@@ -366,16 +388,6 @@ class AudioPlayerController extends StateNotifier<AudioPlayerState> {
     state = state.copyWith(shuffleMode: enabled);
   }
 
-  bool toggleAppendMode() {
-    final newValue = !state.appendMode;
-    final shouldShowHint = newValue && !state.hasShownAppendHint;
-    state = state.copyWith(
-      appendMode: newValue,
-      hasShownAppendHint: state.hasShownAppendHint || shouldShowHint,
-    );
-    return shouldShowHint;
-  }
-
   Future<void> setVolume(double volume) async {
     await _service.setVolume(volume);
     state = state.copyWith(volume: volume);
@@ -401,16 +413,12 @@ class AudioPlayerState {
   final bool shuffleMode;
   final double volume;
   final double speed;
-  final bool appendMode;
-  final bool hasShownAppendHint;
 
   const AudioPlayerState({
     this.repeatMode = LoopMode.off,
     this.shuffleMode = false,
     this.volume = 1.0,
     this.speed = 1.0,
-    this.appendMode = false,
-    this.hasShownAppendHint = false,
   });
 
   AudioPlayerState copyWith({
@@ -418,16 +426,12 @@ class AudioPlayerState {
     bool? shuffleMode,
     double? volume,
     double? speed,
-    bool? appendMode,
-    bool? hasShownAppendHint,
   }) {
     return AudioPlayerState(
       repeatMode: repeatMode ?? this.repeatMode,
       shuffleMode: shuffleMode ?? this.shuffleMode,
       volume: volume ?? this.volume,
       speed: speed ?? this.speed,
-      appendMode: appendMode ?? this.appendMode,
-      hasShownAppendHint: hasShownAppendHint ?? this.hasShownAppendHint,
     );
   }
 }

@@ -970,6 +970,35 @@ class SRu extends S {
   String get audioFormatSubtitle => 'Приоритет аудиоформатов';
 
   @override
+  String get audioTapPlaylistMode => 'Режим добавления в плейлист';
+
+  @override
+  String get selectAudioTapPlaylistMode =>
+      'Выберите, как нажатие на аудио изменяет плейлист:';
+
+  @override
+  String get audioTapPlaylistModeReplace => 'Заменить весь список';
+
+  @override
+  String get audioTapPlaylistModeReplaceDescription =>
+      'Заменить текущий плейлист всеми доступными аудиофайлами из папки выбранного файла.';
+
+  @override
+  String get audioTapPlaylistModeAppendDirectory => 'Добавить папку';
+
+  @override
+  String get audioTapPlaylistModeAppendDirectoryDescription =>
+      'Добавить в конец все доступные аудиофайлы из папки выбранного файла. Дубликаты не добавляются.';
+
+  @override
+  String get audioTapPlaylistModeAppendSingle =>
+      'Добавить только выбранное аудио';
+
+  @override
+  String get audioTapPlaylistModeAppendSingleDescription =>
+      'Добавить в конец только выбранный аудиофайл. Дубликаты не добавляются.';
+
+  @override
   String get preloadNextTitle => 'Предзагрузка следующего';
 
   @override
@@ -2167,23 +2196,7 @@ class SRu extends S {
   String get floatingSubtitle => 'Плавающие субтитры';
 
   @override
-  String get appendMode => 'Режим добавления';
-
-  @override
-  String get appendModeStatusOn => 'Режим добавления: Вкл';
-
-  @override
-  String get appendModeStatusOff => 'Режим добавления: Выкл';
-
-  @override
   String get playlistEmpty => 'Плейлист пуст';
-
-  @override
-  String get appendModeEnabled => 'Режим добавления включён';
-
-  @override
-  String get appendModeHint =>
-      'Следующие нажатия на аудио добавят треки в конец текущего плейлиста, а не заменят его.\nДубликаты не добавляются.';
 
   @override
   String get gotIt => 'Понятно';

@@ -324,6 +324,9 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
 
     if (!mounted) return;
 
+    final playlistMode =
+        await ref.read(audioTapPlaylistModeProvider.notifier).getMode();
+    if (!mounted) return;
     final plan = await _audioPlaybackPlanBuilder.build(
       fileTree: _rootFiles,
       parentPath: parentPath,
@@ -339,6 +342,7 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
       work: widget.work,
       unknownTitle: l10n.unknown,
       artworkUrl: coverUrl,
+      playlistMode: playlistMode,
     );
 
     if (!mounted) return;
@@ -368,6 +372,7 @@ class _FileExplorerWidgetState extends ConsumerState<FileExplorerWidget> {
                 queue.tracks,
                 startIndex: queue.startIndex,
                 work: widget.work,
+                playlistMode: playlistMode,
               );
         } catch (e) {
           _log.captureOutput('播放音频失败: $e');

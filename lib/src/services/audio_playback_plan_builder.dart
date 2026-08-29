@@ -1,4 +1,5 @@
 import '../models/work.dart';
+import '../models/audio_tap_playlist_mode.dart';
 import '../utils/file_tree_utils.dart';
 import 'audio_track_queue_builder.dart';
 
@@ -62,6 +63,7 @@ class AudioPlaybackPlanBuilder {
     String? artworkUrl,
     String? subtitleWorkDirPath,
     bool requireHash = false,
+    AudioTapPlaylistMode playlistMode = AudioTapPlaylistMode.replaceQueue,
   }) async {
     final selectedTitle =
         FileTreeUtils.titleOf(selectedFile, defaultValue: unknownTitle);
@@ -74,8 +76,12 @@ class AudioPlaybackPlanBuilder {
       return AudioPlaybackPlan.selectedFileMissing(selectedTitle);
     }
 
+    final queueFiles = playlistMode == AudioTapPlaylistMode.appendSingle
+        ? <dynamic>[selectedFile]
+        : audioFiles;
+
     final queue = await queueBuilder.build(
-      audioFiles: audioFiles,
+      audioFiles: queueFiles,
       selectedFile: selectedFile,
       resolveUrl: resolveUrl,
       workId: work.id,

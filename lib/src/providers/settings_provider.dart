@@ -6,7 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:real_liquid_glass/real_liquid_glass.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/audio_gain_settings.dart';
+import '../models/audio_tap_playlist_mode.dart';
 import '../models/sort_options.dart';
+import '../utils/persistent_enum_preference.dart';
 
 /// Triggers when Settings screen should refresh cache-related information.
 final settingsCacheRefreshTriggerProvider = StateProvider<int>((ref) => 0);
@@ -186,6 +188,45 @@ class SubtitleLibraryPriorityNotifier
 final subtitleLibraryPriorityProvider = StateNotifierProvider<
     SubtitleLibraryPriorityNotifier, SubtitleLibraryPriority>((ref) {
   return SubtitleLibraryPriorityNotifier();
+});
+
+/// Controls how tapping an audio file updates the playback queue.
+class AudioTapPlaylistModeNotifier
+    extends StateNotifier<AudioTapPlaylistMode> {
+  static const String preferenceKey = 'audio_tap_playlist_mode';
+
+  AudioTapPlaylistModeNotifier() : super(AudioTapPlaylistMode.replaceQueue) {
+    _preferenceLoad = _loadPreference();
+  }
+
+  late final Future<void> _preferenceLoad;
+  final _preference = PersistentEnumPreference<AudioTapPlaylistMode>(
+    key: preferenceKey,
+    values: AudioTapPlaylistMode.values,
+    fallback: AudioTapPlaylistMode.replaceQueue,
+  );
+
+  Future<void> _loadPreference() async {
+    final savedMode = await _preference.load();
+    if (savedMode != null) {
+      state = savedMode;
+    }
+  }
+
+  Future<void> updateMode(AudioTapPlaylistMode mode) async {
+    state = mode;
+    await _preference.save(mode);
+  }
+
+  Future<AudioTapPlaylistMode> getMode() async {
+    await _preferenceLoad;
+    return state;
+  }
+}
+
+final audioTapPlaylistModeProvider = StateNotifierProvider<
+    AudioTapPlaylistModeNotifier, AudioTapPlaylistMode>((ref) {
+  return AudioTapPlaylistModeNotifier();
 });
 
 /// 音频格式类型

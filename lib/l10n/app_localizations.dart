@@ -1866,6 +1866,54 @@ abstract class S {
   /// **'Audio format priority'**
   String get audioFormatSubtitle;
 
+  /// No description provided for @audioTapPlaylistMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Playlist Add Mode'**
+  String get audioTapPlaylistMode;
+
+  /// No description provided for @selectAudioTapPlaylistMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose how tapping audio updates the playlist:'**
+  String get selectAudioTapPlaylistMode;
+
+  /// No description provided for @audioTapPlaylistModeReplace.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace Entire List'**
+  String get audioTapPlaylistModeReplace;
+
+  /// No description provided for @audioTapPlaylistModeReplaceDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace the current playlist with every playable audio file in the tapped file\'s folder.'**
+  String get audioTapPlaylistModeReplaceDescription;
+
+  /// No description provided for @audioTapPlaylistModeAppendDirectory.
+  ///
+  /// In en, this message translates to:
+  /// **'Append Folder'**
+  String get audioTapPlaylistModeAppendDirectory;
+
+  /// No description provided for @audioTapPlaylistModeAppendDirectoryDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Append every playable audio file in the tapped file\'s folder. Existing tracks are not duplicated.'**
+  String get audioTapPlaylistModeAppendDirectoryDescription;
+
+  /// No description provided for @audioTapPlaylistModeAppendSingle.
+  ///
+  /// In en, this message translates to:
+  /// **'Append Tapped Audio Only'**
+  String get audioTapPlaylistModeAppendSingle;
+
+  /// No description provided for @audioTapPlaylistModeAppendSingleDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Append only the tapped audio file. Existing tracks are not duplicated.'**
+  String get audioTapPlaylistModeAppendSingleDescription;
+
   /// No description provided for @preloadNextTitle.
   ///
   /// In en, this message translates to:
@@ -3978,41 +4026,11 @@ abstract class S {
   /// **'Floating Subtitle'**
   String get floatingSubtitle;
 
-  /// No description provided for @appendMode.
-  ///
-  /// In en, this message translates to:
-  /// **'Append Mode'**
-  String get appendMode;
-
-  /// No description provided for @appendModeStatusOn.
-  ///
-  /// In en, this message translates to:
-  /// **'Append Mode: On'**
-  String get appendModeStatusOn;
-
-  /// No description provided for @appendModeStatusOff.
-  ///
-  /// In en, this message translates to:
-  /// **'Append Mode: Off'**
-  String get appendModeStatusOff;
-
   /// No description provided for @playlistEmpty.
   ///
   /// In en, this message translates to:
   /// **'Playlist is empty'**
   String get playlistEmpty;
-
-  /// No description provided for @appendModeEnabled.
-  ///
-  /// In en, this message translates to:
-  /// **'Append Mode Enabled'**
-  String get appendModeEnabled;
-
-  /// No description provided for @appendModeHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Audio tapped next will be appended to the end of the current playlist instead of replacing it.\nDuplicate tracks won\'t be added.'**
-  String get appendModeHint;
 
   /// No description provided for @gotIt.
   ///

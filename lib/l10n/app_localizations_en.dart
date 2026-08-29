@@ -965,6 +965,34 @@ class SEn extends S {
   String get audioFormatSubtitle => 'Audio format priority';
 
   @override
+  String get audioTapPlaylistMode => 'Playlist Add Mode';
+
+  @override
+  String get selectAudioTapPlaylistMode =>
+      'Choose how tapping audio updates the playlist:';
+
+  @override
+  String get audioTapPlaylistModeReplace => 'Replace Entire List';
+
+  @override
+  String get audioTapPlaylistModeReplaceDescription =>
+      'Replace the current playlist with every playable audio file in the tapped file\'s folder.';
+
+  @override
+  String get audioTapPlaylistModeAppendDirectory => 'Append Folder';
+
+  @override
+  String get audioTapPlaylistModeAppendDirectoryDescription =>
+      'Append every playable audio file in the tapped file\'s folder. Existing tracks are not duplicated.';
+
+  @override
+  String get audioTapPlaylistModeAppendSingle => 'Append Tapped Audio Only';
+
+  @override
+  String get audioTapPlaylistModeAppendSingleDescription =>
+      'Append only the tapped audio file. Existing tracks are not duplicated.';
+
+  @override
   String get preloadNextTitle => 'Preload Next Track';
 
   @override
@@ -2160,23 +2188,7 @@ class SEn extends S {
   String get floatingSubtitle => 'Floating Subtitle';
 
   @override
-  String get appendMode => 'Append Mode';
-
-  @override
-  String get appendModeStatusOn => 'Append Mode: On';
-
-  @override
-  String get appendModeStatusOff => 'Append Mode: Off';
-
-  @override
   String get playlistEmpty => 'Playlist is empty';
-
-  @override
-  String get appendModeEnabled => 'Append Mode Enabled';
-
-  @override
-  String get appendModeHint =>
-      'Audio tapped next will be appended to the end of the current playlist instead of replacing it.\nDuplicate tracks won\'t be added.';
 
   @override
   String get gotIt => 'Got it';

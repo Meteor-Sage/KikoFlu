@@ -292,6 +292,9 @@ class _OfflineFileExplorerWidgetState
         '[OfflineFileExplorer] 播放目标: title="$title", '
         'workDir=${target.workDir}, localPath=${target.localPath}',
       );
+      final playlistMode =
+          await ref.read(audioTapPlaylistModeProvider.notifier).getMode();
+      if (!mounted) return;
       final plan = await _audioPlaybackPlanBuilder.build(
         fileTree: _localFiles,
         parentPath: parentPath,
@@ -305,6 +308,7 @@ class _OfflineFileExplorerWidgetState
         unknownTitle: l10n.unknown,
         artworkUrl: target.artworkUrl,
         subtitleWorkDirPath: target.workDir,
+        playlistMode: playlistMode,
       );
 
       if (!mounted) return;
@@ -336,6 +340,7 @@ class _OfflineFileExplorerWidgetState
                 queue.tracks,
                 startIndex: queue.startIndex,
                 work: widget.work,
+                playlistMode: playlistMode,
               );
       }
     } catch (e, st) {

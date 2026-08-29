@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kikoeru_flutter/src/models/audio_tap_playlist_mode.dart';
 import 'package:kikoeru_flutter/src/models/work.dart';
 import 'package:kikoeru_flutter/src/services/audio_playback_plan_builder.dart';
 
@@ -100,6 +101,34 @@ void main() {
       plan.queue!.tracks.first.subtitleWorkDirPath,
       '/downloads/123456',
     );
+  });
+
+  test('append-single mode only resolves and queues the selected audio',
+      () async {
+    final fileTree = [
+      audioItem('track01.mp3', hash: 'h1'),
+      audioItem('track02.mp3', hash: 'h2'),
+      audioItem('track03.mp3', hash: 'h3'),
+    ];
+    final resolvedTitles = <String>[];
+
+    final plan = await const AudioPlaybackPlanBuilder().build(
+      fileTree: fileTree,
+      parentPath: '',
+      selectedFile: fileTree[1],
+      resolveUrl: (file) async {
+        resolvedTitles.add(file['title'] as String);
+        return 'file://${file['title']}';
+      },
+      work: _work,
+      unknownTitle: 'Unknown',
+      playlistMode: AudioTapPlaylistMode.appendSingle,
+    );
+
+    expect(plan.status, AudioPlaybackPlanStatus.ready);
+    expect(plan.queue!.tracks.map((track) => track.id), ['h2']);
+    expect(plan.queue!.startIndex, 0);
+    expect(resolvedTitles, ['track02.mp3']);
   });
 
   test('honors requireHash for local playback queues', () async {
