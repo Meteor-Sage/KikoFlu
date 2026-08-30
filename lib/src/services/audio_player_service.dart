@@ -61,6 +61,8 @@ class AudioPlayerService {
   bool _sessionCompleted = false;
   bool _handlingTrackCompletion = false;
   String? _sessionOwnerKey;
+  Duration? _deferredRestorePosition;
+  Future<void>? _deferredRestoreLoad;
 
   // 下一首预加载：剩余时长低于此阈值时提前缓存下一首，避免切歌空档
   // null 表示关闭预加载。默认 10 秒，可由设置更新。
@@ -117,6 +119,12 @@ class AudioPlayerService {
       StreamController.broadcast();
   final StreamController<bool> _trackLoadingController =
       StreamController<bool>.broadcast();
+  final StreamController<Duration> _positionController =
+      StreamController<Duration>.broadcast();
+  final StreamController<Duration?> _durationController =
+      StreamController<Duration?>.broadcast();
+  StreamSubscription<Duration>? _positionSubscription;
+  StreamSubscription<Duration?>? _durationSubscription;
 
   // Initialize the service
   Future<void> initialize() async {
@@ -244,9 +252,17 @@ class AudioPlayerService {
 
   void _setupPlayerListeners() {
     // 预加载下一首：当前剩余时长低于阈值时，后台提前缓存队列中下一首
-    _player.positionStream.listen((position) {
+    _positionSubscription = _player.positionStream.listen((position) {
+      if (_deferredRestorePosition == null) {
+        _positionController.add(position);
+      }
       _maybePreloadNextTrack(position, _player.duration);
       _checkpointPlaybackSession(position);
+    });
+    _durationSubscription = _player.durationStream.listen((duration) {
+      if (_deferredRestorePosition == null) {
+        _durationController.add(duration);
+      }
     });
 
     // Listen to player state changes
@@ -362,6 +378,7 @@ class AudioPlayerService {
     List<AudioTrack> tracks, {
     int startIndex = 0,
   }) async {
+    _discardDeferredRestore();
     if (tracks.isEmpty) {
       await clearQueue();
       return;
@@ -387,6 +404,7 @@ class AudioPlayerService {
   }
 
   Future<void> clearQueue() async {
+    _discardDeferredRestore(resetTimeline: true);
     _queue.clear();
     _currentIndex = 0;
     _queueController.add(const []);
@@ -735,6 +753,7 @@ class AudioPlayerService {
 
   // Playback controls
   Future<void> play() async {
+    await _loadDeferredRestoredSourceIfNeeded();
     _sessionCompleted = false;
 
     // macOS specific: Ensure completion check timer is running
@@ -771,6 +790,13 @@ class AudioPlayerService {
   }
 
   Future<void> pause() async {
+    if (_deferredRestorePosition != null && _deferredRestoreLoad == null) {
+      await persistPlaybackPosition();
+      return;
+    }
+    if (_deferredRestoreLoad != null) {
+      await _deferredRestoreLoad;
+    }
     await _player.pause();
     _updatePlaybackState();
     await _hapticsService.pause();
@@ -778,6 +804,13 @@ class AudioPlayerService {
   }
 
   Future<void> stop() async {
+    if (_deferredRestorePosition != null && _deferredRestoreLoad == null) {
+      await persistPlaybackPosition();
+      return;
+    }
+    if (_deferredRestoreLoad != null) {
+      await _deferredRestoreLoad;
+    }
     await _player.stop();
     _updatePlaybackState();
     await _hapticsService.stop();
@@ -785,6 +818,20 @@ class AudioPlayerService {
   }
 
   Future<void> seek(Duration position) async {
+    if (_deferredRestorePosition != null && _deferredRestoreLoad == null) {
+      final restoredPosition = _clampRestoredPosition(
+        position,
+        currentTrack?.duration,
+      );
+      _deferredRestorePosition = restoredPosition;
+      _lastSessionPositionMs = restoredPosition.inMilliseconds;
+      _positionController.add(restoredPosition);
+      await persistPlaybackPosition();
+      return;
+    }
+    if (_deferredRestoreLoad != null) {
+      await _deferredRestoreLoad;
+    }
     // macOS specific: Reset completion flag when seeking to allow new completion detection
     if (Platform.isMacOS) {
       _completionHandled = false;
@@ -796,26 +843,18 @@ class AudioPlayerService {
   }
 
   Future<void> seekForward(Duration duration) async {
-    final currentPosition = _player.position;
-    final totalDuration = _player.duration;
+    final currentPosition = position;
+    final totalDuration = this.duration;
     if (totalDuration != null) {
       final newPosition = currentPosition + duration;
-      await _player.seek(
-        newPosition > totalDuration ? totalDuration : newPosition,
-      );
-      _updatePlaybackState();
-      await persistPlaybackPosition();
+      await seek(newPosition > totalDuration ? totalDuration : newPosition);
     }
   }
 
   Future<void> seekBackward(Duration duration) async {
-    final currentPosition = _player.position;
+    final currentPosition = position;
     final newPosition = currentPosition - duration;
-    await _player.seek(
-      newPosition < Duration.zero ? Duration.zero : newPosition,
-    );
-    _updatePlaybackState();
-    await persistPlaybackPosition();
+    await seek(newPosition < Duration.zero ? Duration.zero : newPosition);
   }
 
   Future<void> skipToNext() async {
@@ -843,6 +882,7 @@ class AudioPlayerService {
   }
 
   Future<void> _switchToIndexAndPlay(int index) async {
+    _discardDeferredRestore();
     final previousIndex = _currentIndex;
     _currentIndex = index;
     try {
@@ -858,6 +898,9 @@ class AudioPlayerService {
     if (index < 0 || index >= _queue.length) return;
 
     final wasCurrent = index == _currentIndex;
+    if (wasCurrent) {
+      _discardDeferredRestore();
+    }
     final currentTrackId = (_queue.isNotEmpty && _currentIndex < _queue.length)
         ? _queue[_currentIndex].id
         : null;
@@ -979,6 +1022,7 @@ class AudioPlayerService {
     if (_queue.isEmpty ||
         _isRestoringSession ||
         _isSwitchingTrack ||
+        _deferredRestorePosition != null ||
         _sessionCompleted) {
       return;
     }
@@ -1003,7 +1047,7 @@ class AudioPlayerService {
     final snapshot = PlaybackSessionSnapshot(
       queue: List<AudioTrack>.from(_queue),
       currentIndex: _currentIndex,
-      position: _player.position,
+      position: position,
       ownerKey: _sessionOwnerKey ??= _currentSessionOwnerKey() ?? '',
     );
     if (snapshot.ownerKey.isEmpty) return _sessionWrite;
@@ -1015,10 +1059,10 @@ class AudioPlayerService {
     if (_queue.isEmpty || _isRestoringSession || _sessionCompleted) {
       return _sessionWrite;
     }
-    final position = _player.position;
-    _lastSessionPositionMs = position.inMilliseconds;
+    final currentPosition = position;
+    _lastSessionPositionMs = currentPosition.inMilliseconds;
     return _enqueueSessionWrite(
-      () => _playbackSessionStore.savePosition(position),
+      () => _playbackSessionStore.savePosition(currentPosition),
     );
   }
 
@@ -1051,15 +1095,32 @@ class AudioPlayerService {
         ..addAll(snapshot.queue.map(_refreshStoredTrackCredentials));
       _currentIndex = snapshot.currentIndex;
       _queueController.add(List<AudioTrack>.from(_queue));
+
+      if (Platform.isWindows) {
+        final track = _queue[_currentIndex];
+        final restoredPosition = _clampRestoredPosition(
+          snapshot.position,
+          track.duration,
+        );
+        _deferredRestorePosition = restoredPosition;
+        _lastSessionPositionMs = restoredPosition.inMilliseconds;
+        _positionController.add(restoredPosition);
+        _durationController.add(track.duration);
+        _currentTrackController.add(track);
+        _log.captureOutput(
+          '[AudioSession] Restored ${_queue.length} tracks at '
+          'index=$_currentIndex position=${restoredPosition.inMilliseconds}ms; '
+          'Windows native source loading deferred until playback',
+        );
+        return;
+      }
+
       await _loadTrack(_queue[_currentIndex], emitCurrentTrack: false);
 
-      var restoredPosition = snapshot.position;
-      final trackDuration = _player.duration;
-      if (trackDuration != null &&
-          trackDuration > Duration.zero &&
-          restoredPosition >= trackDuration) {
-        restoredPosition = trackDuration - const Duration(milliseconds: 1);
-      }
+      final restoredPosition = _clampRestoredPosition(
+        snapshot.position,
+        _player.duration,
+      );
       await _player.seek(restoredPosition);
       _lastSessionPositionMs = restoredPosition.inMilliseconds;
       _updatePlaybackState();
@@ -1073,6 +1134,72 @@ class AudioPlayerService {
       await clearQueue();
     } finally {
       _isRestoringSession = false;
+    }
+  }
+
+  Future<void> _loadDeferredRestoredSourceIfNeeded() {
+    if (_deferredRestorePosition == null) return Future.value();
+    return _deferredRestoreLoad ??= _loadDeferredRestoredSource().whenComplete(
+      () => _deferredRestoreLoad = null,
+    );
+  }
+
+  Future<void> _loadDeferredRestoredSource() async {
+    final track = currentTrack;
+    final savedPosition = _deferredRestorePosition;
+    if (track == null || savedPosition == null) return;
+
+    _isRestoringSession = true;
+    try {
+      _log.captureOutput(
+        '[AudioSession] Loading deferred Windows source after playback request',
+      );
+      await _loadTrack(track, emitCurrentTrack: false);
+      final restoredPosition = _clampRestoredPosition(
+        savedPosition,
+        _player.duration ?? track.duration,
+      );
+      await _player.seek(restoredPosition);
+      _deferredRestorePosition = null;
+      _lastSessionPositionMs = restoredPosition.inMilliseconds;
+      _positionController.add(restoredPosition);
+      _durationController.add(_player.duration ?? track.duration);
+      _updatePlaybackState();
+      _log.captureOutput(
+        '[AudioSession] Deferred Windows source ready at '
+        '${restoredPosition.inMilliseconds}ms',
+      );
+    } catch (error) {
+      _log.captureOutput(
+        '[AudioSession] Failed to load deferred Windows source: $error',
+      );
+      _discardDeferredRestore(resetTimeline: true);
+      // clearQueue() calls stop(); do not let it await this same Future.
+      _deferredRestoreLoad = null;
+      await clearQueue();
+      rethrow;
+    } finally {
+      _isRestoringSession = false;
+    }
+  }
+
+  Duration _clampRestoredPosition(Duration value, Duration? trackDuration) {
+    if (trackDuration != null &&
+        trackDuration > Duration.zero &&
+        value >= trackDuration) {
+      return trackDuration > const Duration(milliseconds: 1)
+          ? trackDuration - const Duration(milliseconds: 1)
+          : Duration.zero;
+    }
+    return value < Duration.zero ? Duration.zero : value;
+  }
+
+  void _discardDeferredRestore({bool resetTimeline = false}) {
+    if (_deferredRestorePosition == null) return;
+    _deferredRestorePosition = null;
+    if (resetTimeline) {
+      _positionController.add(Duration.zero);
+      _durationController.add(null);
     }
   }
 
@@ -1115,14 +1242,16 @@ class AudioPlayerService {
 
   // Getters and Streams
   Stream<PlayerState> get playerStateStream => _player.playerStateStream;
-  Stream<Duration> get positionStream => _player.positionStream;
-  Stream<Duration?> get durationStream => _player.durationStream;
+  Stream<Duration> get positionStream => _positionController.stream;
+  Stream<Duration?> get durationStream => _durationController.stream;
   Stream<List<AudioTrack>> get queueStream => _queueController.stream;
   Stream<AudioTrack?> get currentTrackStream => _currentTrackController.stream;
   Stream<bool> get trackLoadingStream => _trackLoadingController.stream;
 
-  Duration get position => _player.position;
-  Duration? get duration => _player.duration;
+  Duration get position => _deferredRestorePosition ?? _player.position;
+  Duration? get duration => _deferredRestorePosition != null
+      ? currentTrack?.duration
+      : _player.duration;
   bool get playing => _player.playing;
   PlayerState get playerState => _player.playerState;
 
@@ -1251,10 +1380,14 @@ class AudioPlayerService {
   Future<void> dispose() async {
     await persistPlaybackPosition();
     _completionCheckTimer?.cancel();
+    await _positionSubscription?.cancel();
+    await _durationSubscription?.cancel();
     await _hapticsService.stop();
     await _cleanupTempPlaybackFile();
     await _queueController.close();
     await _currentTrackController.close();
+    await _positionController.close();
+    await _durationController.close();
     await _player.dispose();
   }
 
