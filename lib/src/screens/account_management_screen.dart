@@ -224,58 +224,71 @@ class _AccountManagementScreenState
                                 : FontWeight.normal,
                           ),
                         ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(account.host),
-                            if (account.isActive)
-                              Text(
-                                S.of(context).currentAccount,
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.primary,
+                        subtitle: Text(account.host),
+                        trailing: account.isActive
+                            ? Chip(
+                                avatar: Icon(
+                                  Icons.check,
+                                  size: 16,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onPrimaryContainer,
+                                ),
+                                label: Text(S.of(context).currentAccount),
+                                labelStyle: TextStyle(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onPrimaryContainer,
                                   fontSize: 12,
+                                  fontWeight: FontWeight.w600,
                                 ),
-                              ),
-                          ],
-                        ),
-                        trailing: PopupMenuButton(
-                          itemBuilder: (context) => [
-                            if (!account.isActive)
-                              PopupMenuItem(
-                                value: 'switch',
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.swap_horiz),
-                                    const SizedBox(width: 8),
-                                    Text(S.of(context).switchAction),
-                                  ],
+                                backgroundColor: Theme.of(context)
+                                    .colorScheme
+                                    .primaryContainer,
+                                side: BorderSide.none,
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                                visualDensity: VisualDensity.compact,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
                                 ),
+                              )
+                            : PopupMenuButton(
+                                itemBuilder: (context) => [
+                                  PopupMenuItem(
+                                    value: 'switch',
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.swap_horiz),
+                                        const SizedBox(width: 8),
+                                        Text(S.of(context).switchAction),
+                                      ],
+                                    ),
+                                  ),
+                                  PopupMenuItem(
+                                    value: 'delete',
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.delete, color: Colors.red),
+                                        const SizedBox(width: 8),
+                                        Text(S.of(context).delete,
+                                            style:
+                                                const TextStyle(color: Colors.red)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                                onSelected: (value) {
+                                  switch (value) {
+                                    case 'switch':
+                                      _switchAccount(account);
+                                      break;
+                                    case 'delete':
+                                      _deleteAccount(account);
+                                      break;
+                                  }
+                                },
                               ),
-                            if (!account.isActive)
-                              PopupMenuItem(
-                                value: 'delete',
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.delete, color: Colors.red),
-                                    const SizedBox(width: 8),
-                                    Text(S.of(context).delete,
-                                        style:
-                                            const TextStyle(color: Colors.red)),
-                                  ],
-                                ),
-                              ),
-                          ],
-                          onSelected: (value) {
-                            switch (value) {
-                              case 'switch':
-                                _switchAccount(account);
-                                break;
-                              case 'delete':
-                                _deleteAccount(account);
-                                break;
-                            }
-                          },
-                        ),
                         onTap: () {
                           if (!account.isActive) {
                             _switchAccount(account);

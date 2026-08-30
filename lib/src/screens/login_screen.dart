@@ -12,6 +12,7 @@ import '../../l10n/app_localizations.dart';
 import '../services/proxy_config.dart';
 import '../widgets/responsive_dialog.dart';
 import '../widgets/radio_option_group.dart';
+import '../widgets/settings_option_dialog.dart';
 import '../widgets/scrollable_appbar.dart';
 import 'main_screen.dart';
 
@@ -294,102 +295,116 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => ResponsiveAlertDialog(
-          maxWidth: 520,
-          title: Row(
-            children: [
-              const Icon(Icons.tune),
-              const SizedBox(width: 12),
-              Text(S.of(context).loginAdvancedSettings),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              RadioOptionGroup<ProxyMode>(
-                groupValue: proxyMode,
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                options: [
-                  for (final mode in ProxyMode.values)
-                    RadioOption(
-                      value: mode,
-                      title: Text(mode.localizedName(context)),
-                      subtitle: Text(mode.localizedDescription(context)),
+        builder: (context, setDialogState) {
+          Future<void> closeDialog() async {
+            _proxyFocusNode.unfocus();
+            final accepted = await _saveProxyAddress();
+            if (!dialogContext.mounted) return;
+            if (accepted) {
+              Navigator.of(dialogContext).pop();
+            } else {
+              setDialogState(() {});
+            }
+          }
+
+          final colorScheme = Theme.of(context).colorScheme;
+
+          return ResponsiveDialog(
+            maxWidth: 520,
+            titlePadding: const EdgeInsets.fromLTRB(20, 14, 8, 0),
+            contentPadding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            title: Row(
+              children: [
+                Icon(Icons.tune, size: 22, color: colorScheme.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    S.of(context).loginAdvancedSettings,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
-                ],
-                onChanged: (value) async {
-                  if (proxyMode == ProxyMode.manual) {
-                    await _saveProxyAddress();
-                  }
-                  if (!mounted || !dialogContext.mounted) return;
-                  await ref.read(proxySettingsProvider.notifier).setMode(value);
-                  if (!dialogContext.mounted) return;
-                  setDialogState(() => proxyMode = value);
-                },
-              ),
-              if (proxyMode == ProxyMode.manual) ...[
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _proxyController,
-                  focusNode: _proxyFocusNode,
-                  keyboardType: TextInputType.url,
-                  textInputAction: TextInputAction.done,
-                  decoration: InputDecoration(
-                    labelText: S.of(context).proxyAddress,
-                    hintText: '127.0.0.1:7890',
-                    helperText: S.of(context).proxyAddressFormat,
-                    errorText: _proxyErrorText,
-                    prefixIcon: const Icon(Icons.dns_outlined),
-                    border: const OutlineInputBorder(),
                   ),
-                  onChanged: (_) {
-                    if (_proxyErrorText == null) return;
-                    setState(() => _proxyErrorText = null);
-                    setDialogState(() {});
-                  },
-                  onSubmitted: (_) async {
-                    await _saveProxyAddress();
-                    if (!dialogContext.mounted) return;
-                    setDialogState(() {});
-                  },
-                  onTapOutside: (_) async {
-                    _proxyFocusNode.unfocus();
-                    await _saveProxyAddress();
-                    if (!dialogContext.mounted) return;
-                    setDialogState(() {});
-                  },
+                ),
+                IconButton(
+                  onPressed: closeDialog,
+                  icon: const Icon(Icons.close),
+                  tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
                 ),
               ],
-              const SizedBox(height: 20),
-              TextField(
-                controller: _serverCookieController,
-                decoration: const InputDecoration(
-                  labelText: 'Cookie',
-                  prefixIcon: Icon(Icons.security_outlined),
-                  border: OutlineInputBorder(),
-                ),
-                textInputAction: TextInputAction.done,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () async {
-                _proxyFocusNode.unfocus();
-                final accepted = await _saveProxyAddress();
-                if (!dialogContext.mounted) return;
-                if (accepted) {
-                  Navigator.of(dialogContext).pop();
-                } else {
-                  setDialogState(() {});
-                }
-              },
-              child: Text(S.of(context).close),
             ),
-          ],
-        ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                CompactRadioOptionGroup<ProxyMode>(
+                  groupValue: proxyMode,
+                  options: [
+                    for (final mode in ProxyMode.values)
+                      RadioOption(
+                        value: mode,
+                        title: Text(mode.localizedName(context)),
+                        subtitle: Text(mode.localizedDescription(context)),
+                      ),
+                  ],
+                  onChanged: (value) async {
+                    if (proxyMode == ProxyMode.manual) {
+                      await _saveProxyAddress();
+                    }
+                    if (!mounted || !dialogContext.mounted) return;
+                    await ref
+                        .read(proxySettingsProvider.notifier)
+                        .setMode(value);
+                    if (!dialogContext.mounted) return;
+                    setDialogState(() => proxyMode = value);
+                  },
+                ),
+                if (proxyMode == ProxyMode.manual) ...[
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _proxyController,
+                    focusNode: _proxyFocusNode,
+                    keyboardType: TextInputType.url,
+                    textInputAction: TextInputAction.done,
+                    decoration: settingsDialogInputDecoration(
+                      context,
+                      labelText: S.of(context).proxyAddress,
+                      hintText: '127.0.0.1:7890',
+                      helperText: S.of(context).proxyAddressFormat,
+                      errorText: _proxyErrorText,
+                      prefixIcon: const Icon(Icons.dns_outlined),
+                    ),
+                    onChanged: (_) {
+                      if (_proxyErrorText == null) return;
+                      setState(() => _proxyErrorText = null);
+                      setDialogState(() {});
+                    },
+                    onSubmitted: (_) async {
+                      await _saveProxyAddress();
+                      if (!dialogContext.mounted) return;
+                      setDialogState(() {});
+                    },
+                    onTapOutside: (_) async {
+                      _proxyFocusNode.unfocus();
+                      await _saveProxyAddress();
+                      if (!dialogContext.mounted) return;
+                      setDialogState(() {});
+                    },
+                  ),
+                ],
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _serverCookieController,
+                  decoration: settingsDialogInputDecoration(
+                    context,
+                    labelText: 'Cookie',
+                    prefixIcon: const Icon(Icons.security_outlined),
+                  ),
+                  textInputAction: TextInputAction.done,
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
     if (!mounted) return;

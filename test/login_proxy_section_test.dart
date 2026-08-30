@@ -80,7 +80,7 @@ void main() {
       expect(find.text('应用代理地址'), findsNothing);
       expect(find.text('Server Cookie'), findsNothing);
 
-      await tester.tap(find.widgetWithText(TextButton, '关闭'));
+      await tester.tap(find.byIcon(Icons.close));
       await tester.pumpAndSettle();
       expect(find.text('Cookie'), findsNothing);
     },

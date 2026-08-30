@@ -14,10 +14,10 @@ import '../providers/settings_provider.dart';
 import '../services/proxy_config.dart';
 import '../utils/l10n_extensions.dart';
 import '../utils/snackbar_util.dart';
-import '../utils/ui_tokens.dart';
 import '../widgets/radio_option_group.dart';
-import '../widgets/settings_option_dialog.dart';
+import '../widgets/responsive_dialog.dart';
 import '../widgets/settings_section.dart';
+import '../widgets/settings_option_dialog.dart';
 import '../widgets/sort_dialog.dart';
 
 /// 偏好设置页面
@@ -25,9 +25,12 @@ class PreferencesScreen extends ConsumerWidget {
   const PreferencesScreen({super.key});
 
   Future<void> _showAudioTapPlaylistModeDialog(
-      BuildContext pageContext, WidgetRef ref) async {
-    final currentMode =
-        await ref.read(audioTapPlaylistModeProvider.notifier).getMode();
+    BuildContext pageContext,
+    WidgetRef ref,
+  ) async {
+    final currentMode = await ref
+        .read(audioTapPlaylistModeProvider.notifier)
+        .getMode();
     if (!pageContext.mounted) return;
 
     AudioTapPlaylistMode? selectedMode;
@@ -65,66 +68,40 @@ class PreferencesScreen extends ConsumerWidget {
   }
 
   void _showSubtitleLibraryPriorityDialog(
-      BuildContext pageContext, WidgetRef ref) {
+    BuildContext pageContext,
+    WidgetRef ref,
+  ) {
     final currentPriority = ref.read(subtitleLibraryPriorityProvider);
 
     showDialog(
       context: pageContext,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(
-          S.of(dialogContext).subtitleLibraryPriority,
-          style: UiTextStyles.pageTitle,
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              S.of(dialogContext).selectSubtitlePriority,
-              style: const TextStyle(fontSize: 14),
+      builder: (dialogContext) => CommonOptionDialog<SubtitleLibraryPriority>(
+        title: S.of(dialogContext).subtitleLibraryPriority,
+        icon: Icons.library_books,
+        description: S.of(dialogContext).selectSubtitlePriority,
+        value: currentPriority,
+        options: [
+          for (final priority in SubtitleLibraryPriority.values)
+            RadioOption(
+              value: priority,
+              title: Text(priority.localizedName(dialogContext)),
+              subtitle: Text(
+                priority == SubtitleLibraryPriority.highest
+                    ? S.of(dialogContext).subtitlePriorityHighestDesc
+                    : S.of(dialogContext).subtitlePriorityLowestDesc,
+              ),
             ),
-            const SizedBox(height: 16),
-            RadioOptionGroup<SubtitleLibraryPriority>(
-              groupValue: currentPriority,
-              options: [
-                for (final priority in SubtitleLibraryPriority.values)
-                  RadioOption(
-                    value: priority,
-                    title: Text(priority.localizedName(dialogContext)),
-                    subtitle: Text(
-                      priority == SubtitleLibraryPriority.highest
-                          ? S.of(dialogContext).subtitlePriorityHighestDesc
-                          : S.of(dialogContext).subtitlePriorityLowestDesc,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(dialogContext)
-                            .colorScheme
-                            .onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-              ],
-              onChanged: (value) {
-                ref
-                    .read(subtitleLibraryPriorityProvider.notifier)
-                    .updatePriority(value);
-                Navigator.pop(dialogContext);
-                SnackBarUtil.showSuccess(
-                  pageContext,
-                  S
-                      .of(pageContext)
-                      .setToValue(value.localizedName(pageContext)),
-                );
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(S.of(dialogContext).close),
-          ),
         ],
+        onChanged: (value) {
+          ref
+              .read(subtitleLibraryPriorityProvider.notifier)
+              .updatePriority(value);
+          SnackBarUtil.showSuccess(
+            pageContext,
+            S.of(pageContext).setToValue(value.localizedName(pageContext)),
+          );
+          return true;
+        },
       ),
     );
   }
@@ -145,10 +122,7 @@ class PreferencesScreen extends ConsumerWidget {
           ref
               .read(defaultSortProvider.notifier)
               .updateDefaultSort(option, direction);
-          SnackBarUtil.showSuccess(
-            context,
-            S.of(context).defaultSortUpdated,
-          );
+          SnackBarUtil.showSuccess(context, S.of(context).defaultSortUpdated);
         },
         autoClose: false,
       ),
@@ -160,119 +134,88 @@ class PreferencesScreen extends ConsumerWidget {
 
     showDialog(
       context: pageContext,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(
-          S.of(dialogContext).translationSourceSettings,
-          style: UiTextStyles.pageTitle,
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              S.of(dialogContext).selectTranslationProvider,
-              style: const TextStyle(fontSize: 14),
+      builder: (dialogContext) => CommonOptionDialog<TranslationSource>(
+        title: S.of(dialogContext).translationSourceSettings,
+        icon: Icons.translate,
+        description: S.of(dialogContext).selectTranslationProvider,
+        value: currentSource,
+        options: [
+          for (final source in TranslationSource.values)
+            RadioOption(
+              value: source,
+              title: Text(source.localizedName(dialogContext)),
+              subtitle: Text(
+                _getTranslationSourceDescription(dialogContext, source),
+              ),
             ),
-            const SizedBox(height: 16),
-            RadioOptionGroup<TranslationSource>(
-              groupValue: currentSource,
-              options: [
-                for (final source in TranslationSource.values)
-                  RadioOption(
-                    value: source,
-                    title: Text(source.localizedName(dialogContext)),
-                    subtitle: Text(
-                      _getTranslationSourceDescription(dialogContext, source),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(dialogContext)
-                            .colorScheme
-                            .onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-              ],
-              onChanged: (value) {
-                if (value == TranslationSource.llm) {
-                  final llmSettings = ref.read(llmSettingsProvider);
-                  if (llmSettings.apiKey.isEmpty) {
-                    showDialog(
-                      context: dialogContext,
-                      builder: (configContext) => AlertDialog(
-                        title: Text(S.of(configContext).needsConfiguration),
-                        content:
-                            Text(S.of(configContext).llmConfigRequiredMessage),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(configContext),
-                            child: Text(S.of(configContext).cancel),
-                          ),
-                          TextButton(
-                            onPressed: () async {
-                              final navigator = Navigator.of(configContext);
-                              navigator.pop(); // Close alert dialog
-                              navigator.pop(); // Close source selection dialog
-                              await navigator.push(
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const LLMSettingsScreen(),
-                                ),
-                              );
-
-                              // Check if configured successfully
-                              final newSettings = ref.read(llmSettingsProvider);
-                              if (newSettings.apiKey.isNotEmpty) {
-                                ref
-                                    .read(translationSourceProvider.notifier)
-                                    .updateSource(TranslationSource.llm);
-                                if (pageContext.mounted) {
-                                  SnackBarUtil.showSuccess(
-                                    pageContext,
-                                    S.of(pageContext).autoSwitchedToLlm,
-                                  );
-                                }
-                              }
-                            },
-                            child: Text(S.of(configContext).goToConfigure),
-                          ),
-                        ],
-                      ),
-                    );
-                    return;
-                  }
-                }
-
-                ref
-                    .read(translationSourceProvider.notifier)
-                    .updateSource(value);
-                Navigator.pop(dialogContext);
-                SnackBarUtil.showSuccess(
-                  pageContext,
-                  S
-                      .of(pageContext)
-                      .setToValue(value.localizedName(pageContext)),
-                );
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(S.of(dialogContext).close),
-          ),
         ],
+        onChanged: (value) async {
+          if (value == TranslationSource.llm) {
+            final llmSettings = ref.read(llmSettingsProvider);
+            if (llmSettings.apiKey.isEmpty) {
+              await showDialog(
+                context: dialogContext,
+                builder: (configContext) => AlertDialog(
+                  title: Text(S.of(configContext).needsConfiguration),
+                  content: Text(S.of(configContext).llmConfigRequiredMessage),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(configContext),
+                      child: Text(S.of(configContext).cancel),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        final navigator = Navigator.of(configContext);
+                        navigator.pop();
+                        navigator.pop();
+                        await navigator.push(
+                          MaterialPageRoute(
+                            builder: (context) => const LLMSettingsScreen(),
+                          ),
+                        );
+
+                        final newSettings = ref.read(llmSettingsProvider);
+                        if (newSettings.apiKey.isNotEmpty &&
+                            pageContext.mounted) {
+                          ref
+                              .read(translationSourceProvider.notifier)
+                              .updateSource(TranslationSource.llm);
+                          SnackBarUtil.showSuccess(
+                            pageContext,
+                            S.of(pageContext).autoSwitchedToLlm,
+                          );
+                        }
+                      },
+                      child: Text(S.of(configContext).goToConfigure),
+                    ),
+                  ],
+                ),
+              );
+              return false;
+            }
+          }
+
+          ref.read(translationSourceProvider.notifier).updateSource(value);
+          SnackBarUtil.showSuccess(
+            pageContext,
+            S.of(pageContext).setToValue(value.localizedName(pageContext)),
+          );
+          return true;
+        },
       ),
     );
   }
 
   void _showTranslationTargetLanguageDialog(
-      BuildContext pageContext, WidgetRef ref) {
+    BuildContext pageContext,
+    WidgetRef ref,
+  ) {
     final translationSource = ref.read(translationSourceProvider);
     final preferences = ref.read(translationLanguagePreferencesProvider);
     final customLanguageEnabled = translationSource == TranslationSource.llm;
     final currentLanguage = preferences.targetLanguage;
-    final groupValue = currentLanguage == TranslationTargetLanguage.custom &&
+    final groupValue =
+        currentLanguage == TranslationTargetLanguage.custom &&
             !customLanguageEnabled
         ? TranslationTargetLanguage.followApp
         : currentLanguage;
@@ -280,88 +223,61 @@ class PreferencesScreen extends ConsumerWidget {
 
     showDialog(
       context: pageContext,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(
-          S.of(dialogContext).translationTargetLanguage,
-          style: UiTextStyles.pageTitle,
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              S.of(dialogContext).selectTranslationTargetLanguage,
-              style: const TextStyle(fontSize: 14),
+      builder: (dialogContext) => CommonOptionDialog<TranslationTargetLanguage>(
+        title: S.of(dialogContext).translationTargetLanguage,
+        icon: Icons.language,
+        description: S.of(dialogContext).selectTranslationTargetLanguage,
+        value: groupValue,
+        options: [
+          for (final language in options)
+            RadioOption(
+              value: language,
+              enabled:
+                  customLanguageEnabled ||
+                  language != TranslationTargetLanguage.custom,
+              title: Text(
+                _languageOptionLabel(
+                  dialogContext,
+                  language.localizedName(dialogContext),
+                  language == TranslationTargetLanguage.custom
+                      ? preferences.customTargetLanguage
+                      : null,
+                ),
+              ),
+              subtitle:
+                  language == TranslationTargetLanguage.custom &&
+                      !customLanguageEnabled
+                  ? Text(S.of(dialogContext).translationCustomTargetRequiresLlm)
+                  : null,
             ),
-            const SizedBox(height: 16),
-            RadioOptionGroup<TranslationTargetLanguage>(
-              groupValue: groupValue,
-              options: [
-                for (final language in options)
-                  RadioOption(
-                    value: language,
-                    enabled: customLanguageEnabled ||
-                        language != TranslationTargetLanguage.custom,
-                    title: Text(_languageOptionLabel(
-                      dialogContext,
-                      language.localizedName(dialogContext),
-                      language == TranslationTargetLanguage.custom
-                          ? preferences.customTargetLanguage
-                          : null,
-                    )),
-                    subtitle: language == TranslationTargetLanguage.custom &&
-                            !customLanguageEnabled
-                        ? Text(
-                            S
-                                .of(dialogContext)
-                                .translationCustomTargetRequiresLlm,
-                            style: TextStyle(
-                              color: Theme.of(dialogContext)
-                                  .colorScheme
-                                  .onSurfaceVariant,
-                            ),
-                          )
-                        : null,
-                  ),
-              ],
-              onChanged: (value) async {
-                if (value == TranslationTargetLanguage.custom &&
-                    !customLanguageEnabled) {
-                  return;
-                }
-                if (value == TranslationTargetLanguage.custom) {
-                  final customLanguage = await _showCustomLanguageDialog(
-                    pageContext,
-                    title: S.of(pageContext).translationCustomTargetLanguage,
-                    initialValue: preferences.customTargetLanguage,
-                  );
-                  if (customLanguage == null) return;
-                  await ref
-                      .read(translationLanguagePreferencesProvider.notifier)
-                      .updateCustomTargetLanguage(customLanguage);
-                }
-
-                await ref
-                    .read(translationLanguagePreferencesProvider.notifier)
-                    .updateTargetLanguage(value);
-                if (!dialogContext.mounted) return;
-                Navigator.pop(dialogContext);
-                SnackBarUtil.showSuccess(
-                  pageContext,
-                  S
-                      .of(pageContext)
-                      .setToValue(value.localizedName(pageContext)),
-                );
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(S.of(dialogContext).close),
-          ),
         ],
+        onChanged: (value) async {
+          if (value == TranslationTargetLanguage.custom &&
+              !customLanguageEnabled) {
+            return false;
+          }
+          if (value == TranslationTargetLanguage.custom) {
+            final customLanguage = await _showCustomLanguageDialog(
+              pageContext,
+              title: S.of(pageContext).translationCustomTargetLanguage,
+              initialValue: preferences.customTargetLanguage,
+            );
+            if (customLanguage == null) return false;
+            await ref
+                .read(translationLanguagePreferencesProvider.notifier)
+                .updateCustomTargetLanguage(customLanguage);
+          }
+
+          await ref
+              .read(translationLanguagePreferencesProvider.notifier)
+              .updateTargetLanguage(value);
+          if (!pageContext.mounted) return false;
+          SnackBarUtil.showSuccess(
+            pageContext,
+            S.of(pageContext).setToValue(value.localizedName(pageContext)),
+          );
+          return true;
+        },
       ),
     );
   }
@@ -443,186 +359,11 @@ class PreferencesScreen extends ConsumerWidget {
     }
   }
 
-  void _showPreloadThresholdDialog(BuildContext pageContext, WidgetRef ref) {
-    final currentSettings = ref.read(preloadNextSettingsProvider);
-
-    showDialog(
+  void _showPreloadThresholdDialog(BuildContext pageContext) {
+    showDialog<void>(
       context: pageContext,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(
-          S.of(dialogContext).preloadNextTitle,
-          style: UiTextStyles.pageTitle,
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              S.of(dialogContext).selectPreloadThreshold,
-              style: const TextStyle(fontSize: 14),
-            ),
-            const SizedBox(height: 16),
-            RadioOptionGroup<PreloadThresholdMode>(
-              groupValue: currentSettings.mode,
-              options: [
-                RadioOption(
-                  value: PreloadThresholdMode.off,
-                  title: Text(
-                      PreloadThresholdMode.off.localizedName(dialogContext)),
-                ),
-                RadioOption(
-                  value: PreloadThresholdMode.seconds10,
-                  title: Text(PreloadThresholdMode.seconds10
-                      .localizedName(dialogContext)),
-                ),
-                RadioOption(
-                  value: PreloadThresholdMode.seconds20,
-                  title: Text(PreloadThresholdMode.seconds20
-                      .localizedName(dialogContext)),
-                ),
-                RadioOption(
-                  value: PreloadThresholdMode.seconds30,
-                  title: Text(PreloadThresholdMode.seconds30
-                      .localizedName(dialogContext)),
-                ),
-                RadioOption(
-                  value: PreloadThresholdMode.custom,
-                  title: Text(
-                      PreloadThresholdMode.custom.localizedName(dialogContext)),
-                  subtitle: currentSettings.mode == PreloadThresholdMode.custom
-                      ? Text(
-                          S.of(dialogContext).preloadCustomValueLabel(
-                              currentSettings.customSeconds),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(dialogContext)
-                                .colorScheme
-                                .onSurfaceVariant,
-                          ),
-                        )
-                      : null,
-                ),
-              ],
-              onChanged: (value) async {
-                if (value == PreloadThresholdMode.custom) {
-                  final inputSeconds = await _showPreloadCustomSecondsDialog(
-                    pageContext,
-                    initialValue: currentSettings.customSeconds,
-                  );
-                  if (inputSeconds == null) {
-                    return; // 用户取消输入，保持原选中项不变
-                  }
-                  await ref
-                      .read(preloadNextSettingsProvider.notifier)
-                      .updateCustomSeconds(inputSeconds);
-                }
-
-                await ref
-                    .read(preloadNextSettingsProvider.notifier)
-                    .updateMode(value);
-
-                if (!dialogContext.mounted) return;
-                Navigator.pop(dialogContext);
-
-                final updated = ref.read(preloadNextSettingsProvider);
-                SnackBarUtil.showSuccess(
-                  pageContext,
-                  S.of(pageContext).setToValue(
-                        _preloadValueLabel(pageContext, updated),
-                      ),
-                );
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(S.of(dialogContext).close),
-          ),
-        ],
-      ),
+      builder: (_) => _PreloadThresholdDialog(pageContext: pageContext),
     );
-  }
-
-  Future<int?> _showPreloadCustomSecondsDialog(
-    BuildContext pageContext, {
-    required int initialValue,
-  }) async {
-    final controller = TextEditingController(text: initialValue.toString());
-    String? errorText;
-    // 解析并校验输入：合法返回正整数，越界/非法返回 null 并设置 errorText
-    int? validate(BuildContext context) {
-      final value = int.tryParse(controller.text.trim());
-      if (value == null ||
-          value < PreloadNextSettings.minSeconds ||
-          value > PreloadNextSettings.maxSeconds) {
-        errorText = S.of(context).preloadCustomInputRangeError;
-        return null;
-      }
-      errorText = null;
-      return value;
-    }
-
-    final result = await showDialog<int>(
-      context: pageContext,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (stContext, setState) => AlertDialog(
-          title: Text(S.of(stContext).preloadCustomInputTitle),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(S.of(stContext).preloadCustomInputHint),
-              const SizedBox(height: 12),
-              TextField(
-                controller: controller,
-                autofocus: true,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: InputDecoration(
-                  hintText: S.of(stContext).preloadCustomInputHint,
-                  errorText: errorText,
-                ),
-                textInputAction: TextInputAction.done,
-                onChanged: (_) {
-                  if (errorText != null) {
-                    setState(() => errorText = null);
-                  }
-                },
-                onSubmitted: (_) {
-                  final value = validate(stContext);
-                  if (value != null) {
-                    Navigator.pop(dialogContext, value);
-                  } else {
-                    setState(() {});
-                  }
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(S.of(stContext).cancel),
-            ),
-            TextButton(
-              onPressed: () {
-                final value = validate(stContext);
-                if (value != null) {
-                  Navigator.pop(dialogContext, value);
-                } else {
-                  setState(() {});
-                }
-              },
-              child: Text(S.of(stContext).confirm),
-            ),
-          ],
-        ),
-      ),
-    );
-    controller.dispose();
-    return result;
   }
 
   String _targetLanguageLabel(
@@ -644,7 +385,9 @@ class PreferencesScreen extends ConsumerWidget {
   }
 
   String _getTranslationSourceDescription(
-      BuildContext context, TranslationSource source) {
+    BuildContext context,
+    TranslationSource source,
+  ) {
     final s = S.of(context);
     switch (source) {
       case TranslationSource.google:
@@ -658,95 +401,21 @@ class PreferencesScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _showProxyAddressDialog(
-    BuildContext context,
-    WidgetRef ref,
-    String currentAddress,
-  ) async {
-    final controller = TextEditingController(text: currentAddress);
-    String? result;
-    try {
-      result = await showDialog<String>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: Text(S.of(dialogContext).proxyAddress),
-          content: TextField(
-            controller: controller,
-            keyboardType: TextInputType.url,
-            decoration: InputDecoration(
-              hintText: '127.0.0.1:7890',
-              helperText: S.of(dialogContext).proxyAddressFormat,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(S.of(dialogContext).cancel),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(controller.text),
-              child: Text(S.of(dialogContext).save),
-            ),
-          ],
-        ),
-      );
-    } finally {
-      controller.dispose();
-    }
-
-    if (result == null) return;
-    final accepted =
-        await ref.read(proxySettingsProvider.notifier).setAddress(result);
-    if (!accepted && context.mounted) {
-      SnackBarUtil.showError(context, S.of(context).invalidProxyAddress);
-    }
+  void _showProxySettingsDialog(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => const _ProxySettingsDialog(),
+    );
   }
 
   Widget _buildProxySettings(BuildContext context, WidgetRef ref) {
     final proxySettings = ref.watch(proxySettingsProvider);
-    final notifier = ref.read(proxySettingsProvider.notifier);
-    return Column(
-      children: [
-        SettingsListTile(
-          icon: Icons.vpn_lock_outlined,
-          title: S.of(context).proxySettingsOptional,
-          subtitle: proxySettings.mode.localizedDescription(context),
-          trailing: Text(proxySettings.mode.localizedName(context)),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(left: 52),
-          child: RadioOptionGroup<ProxyMode>(
-            groupValue: proxySettings.mode,
-            contentPadding: EdgeInsets.zero,
-            dense: true,
-            options: [
-              for (final mode in ProxyMode.values)
-                RadioOption(
-                  value: mode,
-                  title: Text(mode.localizedName(context)),
-                  subtitle: Text(mode.localizedDescription(context)),
-                ),
-            ],
-            onChanged: notifier.setMode,
-          ),
-        ),
-        if (proxySettings.mode == ProxyMode.manual) ...[
-          const SettingsDivider(),
-          SettingsListTile(
-            leading: const SizedBox(width: 24),
-            title: S.of(context).proxyAddress,
-            subtitle: proxySettings.address.isEmpty
-                ? S.of(context).proxyAddressNotSet
-                : proxySettings.address,
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () => _showProxyAddressDialog(
-              context,
-              ref,
-              proxySettings.address,
-            ),
-          ),
-        ],
-      ],
+    return SettingsListTile(
+      icon: Icons.vpn_lock_outlined,
+      title: S.of(context).proxySettingsOptional,
+      subtitle: proxySettings.mode.localizedDescription(context),
+      trailing: Text(proxySettings.mode.localizedName(context)),
+      onTap: () => _showProxySettingsDialog(context),
     );
   }
 
@@ -755,10 +424,12 @@ class PreferencesScreen extends ConsumerWidget {
     final priority = ref.watch(subtitleLibraryPriorityProvider);
     final defaultSort = ref.watch(defaultSortProvider);
     final translationSource = ref.watch(translationSourceProvider);
-    final translationLanguagePreferences =
-        ref.watch(translationLanguagePreferencesProvider);
-    final autoSaveTranslatedLyrics =
-        ref.watch(autoSaveTranslatedLyricsProvider);
+    final translationLanguagePreferences = ref.watch(
+      translationLanguagePreferencesProvider,
+    );
+    final autoSaveTranslatedLyrics = ref.watch(
+      autoSaveTranslatedLyricsProvider,
+    );
     final preloadSettings = ref.watch(preloadNextSettingsProvider);
     final audioTapPlaylistMode = ref.watch(audioTapPlaylistModeProvider);
 
@@ -772,7 +443,9 @@ class PreferencesScreen extends ConsumerWidget {
               SettingsNavigationTile(
                 icon: Icons.translate,
                 title: S.of(context).translationSource,
-                subtitle: S.of(context).currentSettingLabel(
+                subtitle: S
+                    .of(context)
+                    .currentSettingLabel(
                       translationSource.localizedName(context),
                     ),
                 onTap: () => _showTranslationSourceDialog(context, ref),
@@ -780,7 +453,9 @@ class PreferencesScreen extends ConsumerWidget {
               SettingsNavigationTile(
                 icon: Icons.language,
                 title: S.of(context).translationTargetLanguage,
-                subtitle: S.of(context).currentSettingLabel(
+                subtitle: S
+                    .of(context)
+                    .currentSettingLabel(
                       _targetLanguageLabel(
                         context,
                         translationLanguagePreferences,
@@ -871,10 +546,12 @@ class PreferencesScreen extends ConsumerWidget {
               SettingsNavigationTile(
                 icon: Icons.fast_forward,
                 title: S.of(context).preloadNextTitle,
-                subtitle: S.of(context).currentSettingLabel(
+                subtitle: S
+                    .of(context)
+                    .currentSettingLabel(
                       _preloadValueLabel(context, preloadSettings),
                     ),
-                onTap: () => _showPreloadThresholdDialog(context, ref),
+                onTap: () => _showPreloadThresholdDialog(context),
               ),
               if (_supportsAudioGain(Theme.of(context).platform))
                 _AudioGainSettingsTile(ref: ref),
@@ -897,12 +574,11 @@ class PreferencesScreen extends ConsumerWidget {
                 SettingsSwitchTile(
                   icon: Icons.surround_sound,
                   title: S.of(context).audioPassthrough,
-                  subtitle: Theme.of(context).platform ==
-                          TargetPlatform.windows
+                  subtitle: Theme.of(context).platform == TargetPlatform.windows
                       ? S.of(context).audioPassthroughDescWindows
                       : Theme.of(context).platform == TargetPlatform.macOS
-                          ? S.of(context).audioPassthroughDescMac
-                          : S.of(context).audioPassthroughDescAndroid,
+                      ? S.of(context).audioPassthroughDescMac
+                      : S.of(context).audioPassthroughDescAndroid,
                   subtitleStyle: const TextStyle(fontSize: 12),
                   value: ref.watch(audioPassthroughProvider),
                   onChanged: (value) async {
@@ -934,11 +610,11 @@ class PreferencesScreen extends ConsumerWidget {
                         context,
                         value
                             ? ((Theme.of(context).platform ==
-                                        TargetPlatform.windows ||
-                                    Theme.of(context).platform ==
-                                        TargetPlatform.macOS)
-                                ? S.of(context).exclusiveModeEnabled
-                                : S.of(context).audioPassthroughEnabled)
+                                          TargetPlatform.windows ||
+                                      Theme.of(context).platform ==
+                                          TargetPlatform.macOS)
+                                  ? S.of(context).exclusiveModeEnabled
+                                  : S.of(context).audioPassthroughEnabled)
                             : S.of(context).audioPassthroughDisabled,
                       );
                     }
@@ -998,8 +674,8 @@ class _AudioGainSettingsTile extends StatelessWidget {
             passthroughEnabled
                 ? S.of(context).audioGainPassthroughDesc
                 : supportsPositiveGain
-                    ? S.of(context).audioGainDesc
-                    : S.of(context).audioGainAttenuationDesc,
+                ? S.of(context).audioGainDesc
+                : S.of(context).audioGainAttenuationDesc,
           ),
         ),
         Padding(
@@ -1011,9 +687,10 @@ class _AudioGainSettingsTile extends StatelessWidget {
                   value: displayedDecibels,
                   min: AudioGainSettings.minDecibels,
                   max: maxDecibels,
-                  divisions: ((maxDecibels - AudioGainSettings.minDecibels) /
-                          AudioGainSettings.stepDecibels)
-                      .round(),
+                  divisions:
+                      ((maxDecibels - AudioGainSettings.minDecibels) /
+                              AudioGainSettings.stepDecibels)
+                          .round(),
                   label: _valueLabel(displayedDecibels),
                   onChanged: passthroughEnabled ? null : notifier.setDecibels,
                 ),
@@ -1088,6 +765,365 @@ class _AudioHapticsSettingsTile extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+class _PreloadThresholdDialog extends ConsumerStatefulWidget {
+  const _PreloadThresholdDialog({required this.pageContext});
+
+  final BuildContext pageContext;
+
+  @override
+  ConsumerState<_PreloadThresholdDialog> createState() =>
+      _PreloadThresholdDialogState();
+}
+
+class _PreloadThresholdDialogState
+    extends ConsumerState<_PreloadThresholdDialog> {
+  late final TextEditingController _controller;
+  late PreloadThresholdMode _selectedMode;
+  late int _customSeconds;
+  String? _errorText;
+
+  @override
+  void initState() {
+    super.initState();
+    final settings = ref.read(preloadNextSettingsProvider);
+    _controller = TextEditingController(
+      text: settings.customSeconds.toString(),
+    );
+    _selectedMode = settings.mode;
+    _customSeconds = settings.customSeconds;
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  int? _validatedSeconds(BuildContext context) {
+    final value = int.tryParse(_controller.text.trim());
+    if (value == null ||
+        value < PreloadNextSettings.minSeconds ||
+        value > PreloadNextSettings.maxSeconds) {
+      _errorText = S.of(context).preloadCustomInputRangeError;
+      return null;
+    }
+    _errorText = null;
+    return value;
+  }
+
+  Future<bool> _saveCustomSeconds(BuildContext context) async {
+    final value = _validatedSeconds(context);
+    if (value == null) return false;
+
+    _customSeconds = value;
+    final notifier = ref.read(preloadNextSettingsProvider.notifier);
+    await notifier.updateCustomSeconds(value);
+    await notifier.updateMode(PreloadThresholdMode.custom);
+    return mounted;
+  }
+
+  Future<void> _closeDialog() async {
+    final accepted = _selectedMode == PreloadThresholdMode.custom
+        ? await _saveCustomSeconds(context)
+        : true;
+    if (!accepted) {
+      if (mounted) setState(() {});
+      return;
+    }
+    if (!mounted) return;
+
+    Navigator.of(context).pop();
+    final pageContext = widget.pageContext;
+    if (!pageContext.mounted) return;
+    final updated = ref.read(preloadNextSettingsProvider);
+    SnackBarUtil.showSuccess(
+      pageContext,
+      S
+          .of(pageContext)
+          .setToValue(_preloadValueLabelForSettings(pageContext, updated)),
+    );
+  }
+
+  String _preloadValueLabelForSettings(
+    BuildContext context,
+    PreloadNextSettings settings,
+  ) {
+    final s = S.of(context);
+    switch (settings.mode) {
+      case PreloadThresholdMode.off:
+        return s.preloadOptionOff;
+      case PreloadThresholdMode.seconds10:
+        return s.preloadOptionSeconds(10);
+      case PreloadThresholdMode.seconds20:
+        return s.preloadOptionSeconds(20);
+      case PreloadThresholdMode.seconds30:
+        return s.preloadOptionSeconds(30);
+      case PreloadThresholdMode.custom:
+        return s.preloadCustomValueLabel(settings.customSeconds);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return ResponsiveDialog(
+      maxWidth: 520,
+      titlePadding: const EdgeInsets.fromLTRB(20, 14, 8, 0),
+      contentPadding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      title: Row(
+        children: [
+          Icon(Icons.fast_forward, size: 22, color: colorScheme.primary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              S.of(context).preloadNextTitle,
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
+          IconButton(
+            onPressed: _closeDialog,
+            icon: const Icon(Icons.close),
+            tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+            child: Text(
+              S.of(context).selectPreloadThreshold,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          CompactRadioOptionGroup<PreloadThresholdMode>(
+            groupValue: _selectedMode,
+            options: [
+              RadioOption(
+                value: PreloadThresholdMode.off,
+                title: Text(PreloadThresholdMode.off.localizedName(context)),
+              ),
+              RadioOption(
+                value: PreloadThresholdMode.seconds10,
+                title: Text(
+                  PreloadThresholdMode.seconds10.localizedName(context),
+                ),
+              ),
+              RadioOption(
+                value: PreloadThresholdMode.seconds20,
+                title: Text(
+                  PreloadThresholdMode.seconds20.localizedName(context),
+                ),
+              ),
+              RadioOption(
+                value: PreloadThresholdMode.seconds30,
+                title: Text(
+                  PreloadThresholdMode.seconds30.localizedName(context),
+                ),
+              ),
+              RadioOption(
+                value: PreloadThresholdMode.custom,
+                title: Text(PreloadThresholdMode.custom.localizedName(context)),
+                subtitle: _selectedMode == PreloadThresholdMode.custom
+                    ? Text(
+                        S.of(context).preloadCustomValueLabel(_customSeconds),
+                      )
+                    : null,
+              ),
+            ],
+            onChanged: (value) async {
+              setState(() => _selectedMode = value);
+              if (value != PreloadThresholdMode.custom) {
+                await ref
+                    .read(preloadNextSettingsProvider.notifier)
+                    .updateMode(value);
+              }
+            },
+          ),
+          if (_selectedMode == PreloadThresholdMode.custom) ...[
+            const SizedBox(height: 8),
+            TextField(
+              controller: _controller,
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: settingsDialogInputDecoration(
+                context,
+                labelText: S.of(context).preloadCustomInputTitle,
+                helperText: S.of(context).preloadCustomInputHint,
+                errorText: _errorText,
+                prefixIcon: const Icon(Icons.timer_outlined),
+              ),
+              textInputAction: TextInputAction.done,
+              onChanged: (_) {
+                if (_errorText != null) {
+                  setState(() => _errorText = null);
+                }
+              },
+              onSubmitted: (_) async {
+                await _saveCustomSeconds(context);
+                if (mounted) setState(() {});
+              },
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ProxySettingsDialog extends ConsumerStatefulWidget {
+  const _ProxySettingsDialog();
+
+  @override
+  ConsumerState<_ProxySettingsDialog> createState() =>
+      _ProxySettingsDialogState();
+}
+
+class _ProxySettingsDialogState extends ConsumerState<_ProxySettingsDialog> {
+  late final TextEditingController _controller;
+  late final FocusNode _focusNode;
+  late ProxyMode _proxyMode;
+  String? _errorText;
+
+  @override
+  void initState() {
+    super.initState();
+    final settings = ref.read(proxySettingsProvider);
+    _controller = TextEditingController(text: settings.address);
+    _focusNode = FocusNode();
+    _proxyMode = settings.mode;
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  Future<bool> _saveAddress(BuildContext context) async {
+    if (_proxyMode != ProxyMode.manual) return true;
+
+    final accepted = await ref
+        .read(proxySettingsProvider.notifier)
+        .setAddress(_controller.text);
+    if (!mounted || !context.mounted) return false;
+    if (!accepted) {
+      _errorText = S.of(context).invalidProxyAddress;
+      return false;
+    }
+
+    _errorText = null;
+    final normalizedAddress = ref.read(proxySettingsProvider).address;
+    if (!_focusNode.hasFocus && _controller.text != normalizedAddress) {
+      _controller.text = normalizedAddress;
+    }
+    return true;
+  }
+
+  Future<void> _closeDialog() async {
+    _focusNode.unfocus();
+    final accepted = await _saveAddress(context);
+    if (!mounted) return;
+    if (accepted) {
+      Navigator.of(context).pop();
+    } else {
+      setState(() {});
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return ResponsiveDialog(
+      maxWidth: 520,
+      titlePadding: const EdgeInsets.fromLTRB(20, 14, 8, 0),
+      contentPadding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      title: Row(
+        children: [
+          Icon(Icons.vpn_lock_outlined, size: 22, color: colorScheme.primary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              S.of(context).proxySettingsOptional,
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
+          IconButton(
+            onPressed: _closeDialog,
+            icon: const Icon(Icons.close),
+            tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          CompactRadioOptionGroup<ProxyMode>(
+            groupValue: _proxyMode,
+            options: [
+              for (final mode in ProxyMode.values)
+                RadioOption(
+                  value: mode,
+                  title: Text(mode.localizedName(context)),
+                  subtitle: Text(mode.localizedDescription(context)),
+                ),
+            ],
+            onChanged: (value) async {
+              if (_proxyMode == ProxyMode.manual) {
+                await _saveAddress(context);
+              }
+              await ref.read(proxySettingsProvider.notifier).setMode(value);
+              if (mounted) setState(() => _proxyMode = value);
+            },
+          ),
+          if (_proxyMode == ProxyMode.manual) ...[
+            const SizedBox(height: 8),
+            TextField(
+              controller: _controller,
+              focusNode: _focusNode,
+              keyboardType: TextInputType.url,
+              textInputAction: TextInputAction.done,
+              decoration: settingsDialogInputDecoration(
+                context,
+                labelText: S.of(context).proxyAddress,
+                hintText: '127.0.0.1:7890',
+                helperText: S.of(context).proxyAddressFormat,
+                errorText: _errorText,
+                prefixIcon: const Icon(Icons.dns_outlined),
+              ),
+              onChanged: (_) {
+                if (_errorText != null) {
+                  setState(() => _errorText = null);
+                }
+              },
+              onSubmitted: (_) async {
+                await _saveAddress(context);
+                if (mounted) setState(() {});
+              },
+              onTapOutside: (_) async {
+                _focusNode.unfocus();
+                await _saveAddress(context);
+                if (mounted) setState(() {});
+              },
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

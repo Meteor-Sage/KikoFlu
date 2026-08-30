@@ -23,9 +23,10 @@ import '../utils/snackbar_util.dart';
 import '../utils/ui_tokens.dart';
 import '../widgets/scrollable_appbar.dart';
 import '../widgets/download_fab.dart';
-import '../widgets/radio_option_group.dart';
 import '../widgets/settings_section.dart';
 import '../widgets/liquid_glass_layout.dart';
+import '../widgets/radio_option_group.dart';
+import '../widgets/settings_option_dialog.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -122,10 +123,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Scaffold(
       floatingActionButton: const DownloadFab(),
       appBar: ScrollableAppBar(
-        title: Text(
-          S.of(context).settingsTitle,
-          style: UiTextStyles.pageTitle,
-        ),
+        title: Text(S.of(context).settingsTitle, style: UiTextStyles.pageTitle),
       ),
       body: isLandscape
           ? _buildLandscapeLayout(cards, dockExtent: dockExtent)
@@ -413,21 +411,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => SimpleDialog(
-        title: Text(S.of(context).settingsLanguage),
-        children: [
-          RadioOptionGroup<int>(
-            groupValue: selectedIndex >= 0 ? selectedIndex : null,
-            options: [
-              for (var index = 0; index < options.length; index++)
-                RadioOption(value: index, title: Text(options[index].$1)),
-            ],
-            onChanged: (index) {
-              ref.read(localeProvider.notifier).setLocale(options[index].$2);
-              Navigator.of(context).pop();
-            },
-          ),
+      builder: (dialogContext) => CommonOptionDialog<int>(
+        title: S.of(dialogContext).settingsLanguage,
+        icon: Icons.language,
+        value: selectedIndex >= 0 ? selectedIndex : null,
+        options: [
+          for (var index = 0; index < options.length; index++)
+            RadioOption(value: index, title: Text(options[index].$1)),
         ],
+        onChanged: (index) {
+          ref.read(localeProvider.notifier).setLocale(options[index].$2);
+          return true;
+        },
       ),
     );
   }

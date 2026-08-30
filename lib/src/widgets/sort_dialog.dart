@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../models/sort_options.dart';
 import '../utils/l10n_extensions.dart';
+import 'radio_option_group.dart';
 import 'responsive_dialog.dart';
+import 'settings_option_dialog.dart';
 
 /// 通用排序对话框
 ///
@@ -172,64 +174,15 @@ class _SortSection<T> extends StatelessWidget {
             ),
           ),
         ),
-        RadioGroup<T>(
+        CompactRadioOptionGroup<T>(
           groupValue: value,
-          onChanged: (nextValue) {
-            if (nextValue != null) onChanged(nextValue);
-          },
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final option in options)
-                _SortOptionTile<T>(
-                  value: option,
-                  label: labelBuilder(option),
-                  selected: option == value,
-                ),
-            ],
-          ),
+          options: [
+            for (final option in options)
+              RadioOption(value: option, title: Text(labelBuilder(option))),
+          ],
+          onChanged: onChanged,
         ),
       ],
-    );
-  }
-}
-
-class _SortOptionTile<T> extends StatelessWidget {
-  const _SortOptionTile({
-    required this.value,
-    required this.label,
-    required this.selected,
-  });
-
-  final T value;
-  final String label;
-  final bool selected;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return RadioListTile<T>(
-      value: value,
-      selected: selected,
-      dense: true,
-      controlAffinity: ListTileControlAffinity.leading,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-      horizontalTitleGap: 4,
-      minLeadingWidth: 32,
-      minVerticalPadding: 0,
-      minTileHeight: 44,
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      visualDensity: const VisualDensity(horizontal: -2, vertical: -2),
-      radioScaleFactor: 0.9,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-      selectedTileColor: colorScheme.primaryContainer.withValues(alpha: 0.42),
-      title: Text(
-        label,
-        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-          color: colorScheme.onSurface,
-          fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-        ),
-      ),
     );
   }
 }
