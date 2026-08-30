@@ -14,43 +14,60 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('playlist mode toggle cycles through all modes', (tester) async {
+  testWidgets('playlist mode menu selects and persists all modes', (
+    tester,
+  ) async {
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp(
-          locale: const Locale('en'),
+        child: const MaterialApp(
+          locale: Locale('en'),
           localizationsDelegates: S.localizationsDelegates,
           supportedLocales: S.supportedLocales,
-          home: const Scaffold(body: PlaylistModeToggle()),
+          home: Scaffold(body: PlaylistModeToggle()),
         ),
       ),
     );
     await tester.pump();
 
     expect(find.byIcon(Icons.playlist_play), findsOneWidget);
-    expect(find.byType(Chip), findsNothing);
+    expect(find.byType(PopupMenuButton<AudioTapPlaylistMode>), findsOneWidget);
 
-    await tester.tap(find.byType(IconButton));
-    await tester.pump();
+    await tester.tap(find.byType(PopupMenuButton<AudioTapPlaylistMode>));
+    await tester.pumpAndSettle();
+    expect(find.text('Replace Entire List'), findsOneWidget);
+    expect(find.text('Append Folder'), findsOneWidget);
+    expect(find.text('Append Tapped Audio Only'), findsOneWidget);
+
+    await tester.tap(
+      find.ancestor(
+        of: find.text('Append Folder'),
+        matching: find.byType(CheckedPopupMenuItem<AudioTapPlaylistMode>),
+      ),
+    );
+    await tester.pumpAndSettle();
     expect(find.byIcon(Icons.playlist_add), findsOneWidget);
-    expect(find.text('Append Mode'), findsOneWidget);
-
-    await tester.tap(find.byType(IconButton));
-    await tester.pump();
-    expect(find.byIcon(Icons.queue_music), findsOneWidget);
-    expect(find.text('Single-Track Append'), findsOneWidget);
-
-    await tester.tap(find.byType(IconButton));
-    await tester.pump();
-    expect(find.byIcon(Icons.playlist_play), findsOneWidget);
-    expect(find.byType(Chip), findsNothing);
     expect(
       container.read(audioTapPlaylistModeProvider),
-      AudioTapPlaylistMode.replaceQueue,
+      AudioTapPlaylistMode.appendDirectory,
+    );
+
+    await tester.tap(find.byType(PopupMenuButton<AudioTapPlaylistMode>));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.ancestor(
+        of: find.text('Append Tapped Audio Only'),
+        matching: find.byType(CheckedPopupMenuItem<AudioTapPlaylistMode>),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.queue_music), findsOneWidget);
+    expect(
+      container.read(audioTapPlaylistModeProvider),
+      AudioTapPlaylistMode.appendSingle,
     );
   });
 }

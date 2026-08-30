@@ -335,60 +335,39 @@ class PlaylistDialog extends ConsumerWidget {
   }
 }
 
-/// Cycles through the queue update modes and shows the active append mode.
+/// Opens the queue update mode menu and shows the currently selected mode.
 class PlaylistModeToggle extends ConsumerWidget {
   const PlaylistModeToggle({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final mode = ref.watch(audioTapPlaylistModeProvider);
-    final chipLabel = mode.localizedChipLabel(context);
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (chipLabel != null)
-          Padding(
-            padding: const EdgeInsets.only(right: 2),
-            child: Chip(
-              label: Text(
-                chipLabel,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: colorScheme.onPrimaryContainer,
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-              visualDensity: const VisualDensity(horizontal: -3, vertical: -3),
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              side: BorderSide.none,
-              backgroundColor: colorScheme.primaryContainer,
-            ),
+    return PopupMenuButton<AudioTapPlaylistMode>(
+      tooltip:
+          '${S.of(context).audioTapPlaylistMode}: ${mode.localizedName(context)}',
+      initialValue: mode,
+      icon: Icon(
+        _modeIcon(mode),
+        color: mode == AudioTapPlaylistMode.replaceQueue
+            ? null
+            : colorScheme.primary,
+      ),
+      onSelected: (nextMode) {
+        ref
+            .read(audioTapPlaylistModeProvider.notifier)
+            .updateMode(nextMode);
+      },
+      itemBuilder: (context) => [
+        for (final option in AudioTapPlaylistMode.values)
+          CheckedPopupMenuItem(
+            value: option,
+            checked: option == mode,
+            child: Text(option.localizedName(context)),
           ),
-        IconButton(
-          tooltip:
-              '${S.of(context).audioTapPlaylistMode}: ${mode.localizedName(context)}',
-          icon: Icon(_modeIcon(mode)),
-          color: mode == AudioTapPlaylistMode.replaceQueue
-              ? null
-              : colorScheme.primary,
-          onPressed: () {
-            ref
-                .read(audioTapPlaylistModeProvider.notifier)
-                .updateMode(_nextMode(mode));
-          },
-        ),
       ],
     );
-  }
-
-  static AudioTapPlaylistMode _nextMode(AudioTapPlaylistMode mode) {
-    return switch (mode) {
-      AudioTapPlaylistMode.replaceQueue => AudioTapPlaylistMode.appendDirectory,
-      AudioTapPlaylistMode.appendDirectory => AudioTapPlaylistMode.appendSingle,
-      AudioTapPlaylistMode.appendSingle => AudioTapPlaylistMode.replaceQueue,
-    };
   }
 
   static IconData _modeIcon(AudioTapPlaylistMode mode) {
