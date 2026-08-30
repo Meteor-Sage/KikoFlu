@@ -16,6 +16,7 @@ import '../utils/l10n_extensions.dart';
 import '../utils/snackbar_util.dart';
 import '../utils/ui_tokens.dart';
 import '../widgets/radio_option_group.dart';
+import '../widgets/settings_option_dialog.dart';
 import '../widgets/settings_section.dart';
 import '../widgets/sort_dialog.dart';
 
@@ -29,66 +30,36 @@ class PreferencesScreen extends ConsumerWidget {
         await ref.read(audioTapPlaylistModeProvider.notifier).getMode();
     if (!pageContext.mounted) return;
 
-    final selectedMode = await showDialog<AudioTapPlaylistMode>(
+    AudioTapPlaylistMode? selectedMode;
+    await showDialog<void>(
       context: pageContext,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(
-          S.of(dialogContext).audioTapPlaylistMode,
-          style: UiTextStyles.pageTitle,
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                S.of(dialogContext).selectAudioTapPlaylistMode,
-                style: const TextStyle(fontSize: 14),
-              ),
-              const SizedBox(height: 16),
-              RadioOptionGroup<AudioTapPlaylistMode>(
-                groupValue: currentMode,
-                options: [
-                  for (final mode in AudioTapPlaylistMode.values)
-                    RadioOption(
-                      value: mode,
-                      title: Text(mode.localizedName(dialogContext)),
-                      subtitle: Text(
-                        mode.localizedDescription(dialogContext),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Theme.of(dialogContext)
-                              .colorScheme
-                              .onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                ],
-                onChanged: (value) async {
-                  await ref
-                      .read(audioTapPlaylistModeProvider.notifier)
-                      .updateMode(value);
-                  if (dialogContext.mounted) {
-                    Navigator.pop(dialogContext, value);
-                  }
-                },
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(S.of(dialogContext).close),
-          ),
+      builder: (dialogContext) => CommonOptionDialog<AudioTapPlaylistMode>(
+        title: S.of(dialogContext).audioTapPlaylistMode,
+        description: S.of(dialogContext).selectAudioTapPlaylistMode,
+        icon: Icons.playlist_play,
+        value: currentMode,
+        options: [
+          for (final mode in AudioTapPlaylistMode.values)
+            RadioOption(
+              value: mode,
+              title: Text(mode.localizedName(dialogContext)),
+              subtitle: Text(mode.localizedDescription(dialogContext)),
+            ),
         ],
+        onChanged: (value) async {
+          selectedMode = value;
+          await ref
+              .read(audioTapPlaylistModeProvider.notifier)
+              .updateMode(value);
+          return true;
+        },
       ),
     );
 
     if (selectedMode != null && pageContext.mounted) {
       SnackBarUtil.showSuccess(
         pageContext,
-        S.of(pageContext).setToValue(selectedMode.localizedName(pageContext)),
+        S.of(pageContext).setToValue(selectedMode!.localizedName(pageContext)),
       );
     }
   }

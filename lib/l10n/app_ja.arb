@@ -337,6 +337,8 @@
   "audioTapPlaylistModeAppendDirectoryDescription": "タップした音声と同じフォルダー内の再生可能な音声をすべて末尾に追加します。既存のトラックは重複しません。",
   "audioTapPlaylistModeAppendSingle": "タップした音声のみ追加",
   "audioTapPlaylistModeAppendSingleDescription": "タップした音声だけを末尾に追加します。既存のトラックは重複しません。",
+  "audioTapPlaylistModeAppendChip": "追加モード",
+  "audioTapPlaylistModeAppendSingleChip": "単曲追加モード",
   "preloadNextTitle": "次をプリロード",
   "preloadNextSubtitle": "現在のトラックが終わる前に次のトラックをキャッシュし、切り替え時の途切れを防ぐ",
   "selectPreloadThreshold": "残り時間がこの閾値を下回ったらプリロードを開始：",

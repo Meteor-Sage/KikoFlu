@@ -993,6 +993,12 @@ class SEn extends S {
       'Append only the tapped audio file. Existing tracks are not duplicated.';
 
   @override
+  String get audioTapPlaylistModeAppendChip => 'Append Mode';
+
+  @override
+  String get audioTapPlaylistModeAppendSingleChip => 'Single-Track Append';
+
+  @override
   String get preloadNextTitle => 'Preload Next Track';
 
   @override

@@ -971,6 +971,12 @@ class SJa extends S {
       'タップした音声だけを末尾に追加します。既存のトラックは重複しません。';
 
   @override
+  String get audioTapPlaylistModeAppendChip => '追加モード';
+
+  @override
+  String get audioTapPlaylistModeAppendSingleChip => '単曲追加モード';
+
+  @override
   String get preloadNextTitle => '次をプリロード';
 
   @override

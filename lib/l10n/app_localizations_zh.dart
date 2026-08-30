@@ -969,6 +969,12 @@ class SZh extends S {
       '只将点击的这个音频追加到播放列表尾部；不会重复添加已有音轨。';
 
   @override
+  String get audioTapPlaylistModeAppendChip => '追加模式';
+
+  @override
+  String get audioTapPlaylistModeAppendSingleChip => '单曲追加模式';
+
+  @override
   String get preloadNextTitle => '预加载下一首';
 
   @override
@@ -4585,6 +4591,12 @@ class SZhHant extends SZh {
   @override
   String get audioTapPlaylistModeAppendSingleDescription =>
       '只將所點擊的音訊追加到播放清單尾端；不會重複新增已有音軌。';
+
+  @override
+  String get audioTapPlaylistModeAppendChip => '追加模式';
+
+  @override
+  String get audioTapPlaylistModeAppendSingleChip => '單曲追加模式';
 
   @override
   String get preloadNextTitle => '預載下一首';

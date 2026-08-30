@@ -337,6 +337,8 @@
   "audioTapPlaylistModeAppendDirectoryDescription": "Добавить в конец все доступные аудиофайлы из папки выбранного файла. Дубликаты не добавляются.",
   "audioTapPlaylistModeAppendSingle": "Добавить только выбранное аудио",
   "audioTapPlaylistModeAppendSingleDescription": "Добавить в конец только выбранный аудиофайл. Дубликаты не добавляются.",
+  "audioTapPlaylistModeAppendChip": "Режим добавления",
+  "audioTapPlaylistModeAppendSingleChip": "Добавление одного трека",
   "preloadNextTitle": "Предзагрузка следующего",
   "preloadNextSubtitle": "Предзагрузка следующего трека в кэш до окончания текущего, чтобы избежать пауз при переключении",
   "selectPreloadThreshold": "Предзагрузка начнётся, когда оставшееся время ниже этого порога:",

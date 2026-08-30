@@ -999,6 +999,12 @@ class SRu extends S {
       'Добавить в конец только выбранный аудиофайл. Дубликаты не добавляются.';
 
   @override
+  String get audioTapPlaylistModeAppendChip => 'Режим добавления';
+
+  @override
+  String get audioTapPlaylistModeAppendSingleChip => 'Добавление одного трека';
+
+  @override
   String get preloadNextTitle => 'Предзагрузка следующего';
 
   @override

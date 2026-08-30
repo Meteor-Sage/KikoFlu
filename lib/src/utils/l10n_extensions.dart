@@ -187,6 +187,16 @@ extension AudioTapPlaylistModeL10n on AudioTapPlaylistMode {
         s.audioTapPlaylistModeAppendSingleDescription,
     };
   }
+
+  String? localizedChipLabel(BuildContext context) {
+    final s = S.of(context);
+    return switch (this) {
+      AudioTapPlaylistMode.replaceQueue => null,
+      AudioTapPlaylistMode.appendDirectory => s.audioTapPlaylistModeAppendChip,
+      AudioTapPlaylistMode.appendSingle =>
+        s.audioTapPlaylistModeAppendSingleChip,
+    };
+  }
 }
 
 // ============================================================

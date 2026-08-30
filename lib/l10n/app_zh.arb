@@ -337,6 +337,8 @@
   "audioTapPlaylistModeAppendDirectoryDescription": "将点击音频所在目录下的所有可播放音频追加到播放列表尾部；不会重复添加已有音轨。",
   "audioTapPlaylistModeAppendSingle": "仅追加单个音频",
   "audioTapPlaylistModeAppendSingleDescription": "只将点击的这个音频追加到播放列表尾部；不会重复添加已有音轨。",
+  "audioTapPlaylistModeAppendChip": "追加模式",
+  "audioTapPlaylistModeAppendSingleChip": "单曲追加模式",
   "preloadNextTitle": "预加载下一首",
   "preloadNextSubtitle": "当前曲目播放结束前提前缓存下一首，避免切歌空档",
   "selectPreloadThreshold": "当前曲目剩余时间低于此阈值时开始预加载：",

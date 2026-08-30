@@ -1914,6 +1914,18 @@ abstract class S {
   /// **'Append only the tapped audio file. Existing tracks are not duplicated.'**
   String get audioTapPlaylistModeAppendSingleDescription;
 
+  /// No description provided for @audioTapPlaylistModeAppendChip.
+  ///
+  /// In en, this message translates to:
+  /// **'Append Mode'**
+  String get audioTapPlaylistModeAppendChip;
+
+  /// No description provided for @audioTapPlaylistModeAppendSingleChip.
+  ///
+  /// In en, this message translates to:
+  /// **'Single-Track Append'**
+  String get audioTapPlaylistModeAppendSingleChip;
+
   /// No description provided for @preloadNextTitle.
   ///
   /// In en, this message translates to:
