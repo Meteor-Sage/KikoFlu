@@ -402,8 +402,16 @@ class AudioPlayerService {
     AudioTrack track, {
     bool emitCurrentTrack = true,
   }) async {
+    final localPath = LocalFileUrl.pathFromUrl(track.url);
+    final sourceUri = Uri.tryParse(track.url);
+    final sourceKind = localPath != null
+        ? 'local'
+        : (sourceUri?.scheme.isNotEmpty ?? false)
+        ? sourceUri!.scheme
+        : 'unknown';
     _log.captureOutput(
-      '[Audio] _loadTrack: title="${track.title}", url="${track.url}"',
+      '[Audio] _loadTrack: id="${track.id}", title="${track.title}", '
+      'source=$sourceKind',
     );
 
     // 换曲目后清空预加载标记，让新的"下一首"可重新触发预取
@@ -432,7 +440,6 @@ class AudioPlayerService {
       bool loaded = false;
 
       // 优先检查是否是本地文件（file:// 协议）
-      final localPath = LocalFileUrl.pathFromUrl(track.url);
       if (localPath != null) {
         final localFile = File(localPath);
         _log.captureOutput('[Audio] 检查本地文件: $localPath');
@@ -1051,6 +1058,9 @@ class AudioPlayerService {
         ..addAll(snapshot.queue.map(_refreshStoredTrackCredentials));
       _currentIndex = snapshot.currentIndex;
       _queueController.add(List<AudioTrack>.from(_queue));
+      _log.captureOutput(
+        '[AudioSession] Loading restored source at index=$_currentIndex',
+      );
       await _loadTrack(_queue[_currentIndex], emitCurrentTrack: false);
 
       var restoredPosition = snapshot.position;
