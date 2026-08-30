@@ -204,7 +204,10 @@ void main() {
     );
 
     final glass = find.byType(LiquidGlassContainer);
-    expect(tester.widget<LiquidGlassContainer>(glass).fallbackIntensity, 0.9);
+    expect(
+      tester.widget<LiquidGlassContainer>(glass).fallbackIntensity,
+      0.9,
+    );
     final fallbackDecoration = tester
         .widgetList<DecoratedBox>(
           find.descendant(of: glass, matching: find.byType(DecoratedBox)),
@@ -398,7 +401,7 @@ void main() {
     expect(selectedMode, 1);
   });
 
-  testWidgets('native liquid glass dropdown keeps its menu in Flutter', (
+  testWidgets('native mode dropdown keeps the bounded glass menu', (
     tester,
   ) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
@@ -437,12 +440,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Filter option 1'), findsOneWidget);
-    expect(find.byType(LiquidGlassContainer), findsNWidgets(2));
-    expect(find.byType(BackdropFilter), findsOneWidget);
-    expect(
-      tester.getSize(find.byType(BackdropFilter)).height,
-      lessThanOrEqualTo(300),
-    );
+    expect(find.byType(LiquidGlassContainer), findsNWidgets(3));
+    final menuSurface = tester.getSize(find.byType(LiquidGlassContainer).last);
+    expect(menuSurface.height, lessThanOrEqualTo(300));
     debugDefaultTargetPlatformOverride = null;
   });
 
