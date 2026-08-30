@@ -27,6 +27,7 @@ class CompactRadioOptionGroup<T> extends StatelessWidget {
     final subtitleColor = isEnabled
         ? colorScheme.onSurfaceVariant
         : colorScheme.onSurfaceVariant.withValues(alpha: 0.38);
+    final hasSubtitle = option.subtitle != null;
 
     return RadioListTile<T>(
       value: option.value,
@@ -37,10 +38,13 @@ class CompactRadioOptionGroup<T> extends StatelessWidget {
       contentPadding: const EdgeInsets.symmetric(horizontal: 4),
       horizontalTitleGap: 4,
       minLeadingWidth: 32,
-      minVerticalPadding: 0,
-      minTileHeight: 44,
+      minVerticalPadding: hasSubtitle ? 6 : 0,
+      minTileHeight: hasSubtitle ? 68 : 44,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      visualDensity: const VisualDensity(horizontal: -2, vertical: -2),
+      visualDensity: VisualDensity(
+        horizontal: -2,
+        vertical: hasSubtitle ? -1 : -2,
+      ),
       radioScaleFactor: 0.9,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
       selectedTileColor: colorScheme.primaryContainer.withValues(alpha: 0.42),
@@ -54,7 +58,11 @@ class CompactRadioOptionGroup<T> extends StatelessWidget {
       subtitle: option.subtitle == null
           ? null
           : DefaultTextStyle.merge(
-              style: TextStyle(color: subtitleColor, fontSize: 12),
+              style: TextStyle(
+                color: subtitleColor,
+                fontSize: 12,
+                height: 1.25,
+              ),
               child: option.subtitle!,
             ),
     );

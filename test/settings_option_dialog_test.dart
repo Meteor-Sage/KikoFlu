@@ -29,7 +29,11 @@ void main() {
         description: 'Choose how many items to show per page.',
         value: 20,
         options: const [
-          RadioOption(value: 20, title: Text('20 items')),
+          RadioOption(
+            value: 20,
+            title: Text('20 items'),
+            subtitle: Text('Recommended for most devices.'),
+          ),
           RadioOption(value: 40, title: Text('40 items')),
           RadioOption(value: 60, title: Text('60 items')),
         ],
@@ -47,7 +51,14 @@ void main() {
       findsOneWidget,
     );
     expect(find.byType(RadioListTile<int>), findsNWidgets(3));
-    for (final element in find.byType(RadioListTile<int>).evaluate()) {
+    final tiles = find.byType(RadioListTile<int>).evaluate().toList();
+    expect(
+      tester
+          .getSize(find.byElementPredicate((value) => value == tiles.first))
+          .height,
+      greaterThanOrEqualTo(60),
+    );
+    for (final element in tiles.skip(1)) {
       expect(
         tester
             .getSize(find.byElementPredicate((value) => value == element))
