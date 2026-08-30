@@ -18,6 +18,13 @@
       "tintColor": "6750A4",
       "versions": [
         {
+          "version": "3.8.2",
+          "date": "2026-08-30",
+          "size": 13375072,
+          "downloadURL": "https://github.com/pa-jesusf/KikoFlu/releases/download/v3.8.2/KikoFlu-ios-unsigned_382.ipa",
+          "localizedDescription": "**新增：**\r\n1. Linux 平台现已支持悬浮字幕，包括透明悬浮窗、受支持桌面环境下的窗口置顶以及点击穿透模式。\r\n2. 桌面平台悬浮字幕新增点击穿透模式。\r\n3. 代理设置新增直连、系统代理和手动代理三种模式。系统代理现为默认选项，默认设置不再需求TUN模式才能进行代理。\r\n4. 字幕文本预览新增全文搜索。\r\n5. 播放列表新增单音频追加模式。\r\n6. 重新设计排序和设置弹窗，统一交互与视觉样式。\r\n7. 大量UI优化\r\n\r\n**修复：**\r\n1. 修复 Windows 恢复上次播放会话时，音源加载失败可能导致初始化一直等待的问题。\r\n2. 修复 macOS 重新启动应用后 Mini Player 和播放会话无法恢复的问题。\r\n3. 修复部分情况下 Android 从最近任务中移除应用后，音频和媒体服务仍会继续运行的问题。\r\n4. 修复部分 LRC 字幕因使用毫秒、逗号分隔符、单数字段或省略小数部分而被识别为不支持格式的问题。\r\n5. 增强音频缓存和预加载的可靠性；不完整或无法读取的缓存文件会被自动丢弃，并回退到远程音频源继续播放。\r\n6. 改进 iOS 和 macOS 缓存音频与 AVFoundation 的兼容性，为缓存文件保留可识别的音频扩展名。\r\n7. 减少信息流和悬浮工具栏的不必要重建，改善 iOS 平台的滚动性能。\r\n8. 修复液态玻璃模式下，搜索历史底部内容被导航区域遮挡的问题。\r\n\r\n**New:**\r\n1. Added floating lyrics on Linux, including transparent windows, always-on-top behavior in supported desktop environments, and click-through mode.\r\n2. Added click-through mode for floating lyrics on desktop platforms.\r\n3. Added Direct, System Proxy, and Manual Proxy modes. System Proxy is now the default, so the default configuration no longer requires TUN mode to use a proxy.\r\n4. Added full-text search to subtitle text previews.\r\n5. Added Single-Audio Append Mode to playlists.\r\n6. Redesigned sorting and settings popups for a more consistent visual style and interaction experience.\r\n7. Various UI improvements.\r\n\r\n**Fixes:**\r\n1. Fixed an issue where a failed audio source could leave playback-session restoration waiting indefinitely on Windows.\r\n2. Fixed Mini Player and playback-session restoration failing after relaunching the app on macOS.\r\n3. Fixed an issue where Android audio playback and the media service could continue running after the app was removed from Recents.\r\n4. Fixed some LRC subtitles being reported as unsupported when timestamps use milliseconds, comma separators, single-digit fields, or omit the fractional part.\r\n5. Improved audio cache and preload reliability. Incomplete or unreadable cache files are now discarded automatically, allowing playback to fall back to the remote audio source.\r\n6. Improved cached-audio compatibility with AVFoundation on iOS and macOS by preserving recognizable audio file extensions.\r\n7. Reduced unnecessary feed and floating-toolbar rebuilds to improve scrolling performance on iOS.\r\n8. Fixed search-history content near the bottom of the page being obscured in Liquid Glass mode."
+        },
+        {
           "version": "3.8.1",
           "date": "2026-08-24",
           "size": 13312453,
