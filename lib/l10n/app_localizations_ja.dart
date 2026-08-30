@@ -944,6 +944,39 @@ class SJa extends S {
   String get audioFormatSubtitle => '音声形式の優先順位';
 
   @override
+  String get audioTapPlaylistMode => 'プレイリストへの追加方法';
+
+  @override
+  String get selectAudioTapPlaylistMode => '音声をタップしたときのプレイリスト更新方法を選択：';
+
+  @override
+  String get audioTapPlaylistModeReplace => 'リスト全体を置き換え';
+
+  @override
+  String get audioTapPlaylistModeReplaceDescription =>
+      'タップした音声と同じフォルダー内の再生可能な音声すべてで現在のプレイリストを置き換えます。';
+
+  @override
+  String get audioTapPlaylistModeAppendDirectory => 'フォルダー内を追加';
+
+  @override
+  String get audioTapPlaylistModeAppendDirectoryDescription =>
+      'タップした音声と同じフォルダー内の再生可能な音声をすべて末尾に追加します。既存のトラックは重複しません。';
+
+  @override
+  String get audioTapPlaylistModeAppendSingle => 'タップした音声のみ追加';
+
+  @override
+  String get audioTapPlaylistModeAppendSingleDescription =>
+      'タップした音声だけを末尾に追加します。既存のトラックは重複しません。';
+
+  @override
+  String get audioTapPlaylistModeAppendChip => '追加モード';
+
+  @override
+  String get audioTapPlaylistModeAppendSingleChip => '単曲追加モード';
+
+  @override
   String get preloadNextTitle => '次をプリロード';
 
   @override
@@ -2106,23 +2139,7 @@ class SJa extends S {
   String get floatingSubtitle => 'フローティング字幕';
 
   @override
-  String get appendMode => '追加モード';
-
-  @override
-  String get appendModeStatusOn => '追加モード：オン';
-
-  @override
-  String get appendModeStatusOff => '追加モード：オフ';
-
-  @override
   String get playlistEmpty => 'プレイリストが空です';
-
-  @override
-  String get appendModeEnabled => '追加モードが有効です';
-
-  @override
-  String get appendModeHint =>
-      '次にタップした音声は現在のプレイリストの末尾に追加されます。リスト全体を置き換えません。\n同じトラックは重複追加されません。';
 
   @override
   String get gotIt => '了解';

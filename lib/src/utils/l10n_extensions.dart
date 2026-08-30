@@ -3,6 +3,7 @@ import '../../l10n/app_localizations.dart';
 import '../models/search_type.dart';
 import '../models/sort_options.dart';
 import '../models/playlist.dart';
+import '../models/audio_tap_playlist_mode.dart';
 import '../providers/settings_provider.dart';
 import '../providers/works_provider.dart';
 import '../providers/my_reviews_provider.dart';
@@ -156,6 +157,44 @@ extension SubtitleLibraryPriorityL10n on SubtitleLibraryPriority {
     return switch (this) {
       SubtitleLibraryPriority.highest => s.subtitlePriorityHighest,
       SubtitleLibraryPriority.lowest => s.subtitlePriorityLowest,
+    };
+  }
+}
+
+// ============================================================
+// AudioTapPlaylistMode
+// ============================================================
+
+extension AudioTapPlaylistModeL10n on AudioTapPlaylistMode {
+  String localizedName(BuildContext context) {
+    final s = S.of(context);
+    return switch (this) {
+      AudioTapPlaylistMode.replaceQueue => s.audioTapPlaylistModeReplace,
+      AudioTapPlaylistMode.appendDirectory =>
+        s.audioTapPlaylistModeAppendDirectory,
+      AudioTapPlaylistMode.appendSingle => s.audioTapPlaylistModeAppendSingle,
+    };
+  }
+
+  String localizedDescription(BuildContext context) {
+    final s = S.of(context);
+    return switch (this) {
+      AudioTapPlaylistMode.replaceQueue =>
+        s.audioTapPlaylistModeReplaceDescription,
+      AudioTapPlaylistMode.appendDirectory =>
+        s.audioTapPlaylistModeAppendDirectoryDescription,
+      AudioTapPlaylistMode.appendSingle =>
+        s.audioTapPlaylistModeAppendSingleDescription,
+    };
+  }
+
+  String? localizedChipLabel(BuildContext context) {
+    final s = S.of(context);
+    return switch (this) {
+      AudioTapPlaylistMode.replaceQueue => null,
+      AudioTapPlaylistMode.appendDirectory => s.audioTapPlaylistModeAppendChip,
+      AudioTapPlaylistMode.appendSingle =>
+        s.audioTapPlaylistModeAppendSingleChip,
     };
   }
 }

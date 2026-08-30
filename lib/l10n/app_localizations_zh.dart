@@ -942,6 +942,39 @@ class SZh extends S {
   String get audioFormatSubtitle => '调整音频格式优先级';
 
   @override
+  String get audioTapPlaylistMode => '播放列表添加模式';
+
+  @override
+  String get selectAudioTapPlaylistMode => '选择点击音频时如何更新播放列表：';
+
+  @override
+  String get audioTapPlaylistModeReplace => '替换整个列表';
+
+  @override
+  String get audioTapPlaylistModeReplaceDescription =>
+      '用点击音频所在目录下的所有可播放音频替换当前播放列表。';
+
+  @override
+  String get audioTapPlaylistModeAppendDirectory => '追加所在目录';
+
+  @override
+  String get audioTapPlaylistModeAppendDirectoryDescription =>
+      '将点击音频所在目录下的所有可播放音频追加到播放列表尾部；不会重复添加已有音轨。';
+
+  @override
+  String get audioTapPlaylistModeAppendSingle => '仅追加单个音频';
+
+  @override
+  String get audioTapPlaylistModeAppendSingleDescription =>
+      '只将点击的这个音频追加到播放列表尾部；不会重复添加已有音轨。';
+
+  @override
+  String get audioTapPlaylistModeAppendChip => '追加模式';
+
+  @override
+  String get audioTapPlaylistModeAppendSingleChip => '单曲追加模式';
+
+  @override
   String get preloadNextTitle => '预加载下一首';
 
   @override
@@ -2099,22 +2132,7 @@ class SZh extends S {
   String get floatingSubtitle => '悬浮字幕';
 
   @override
-  String get appendMode => '追加模式';
-
-  @override
-  String get appendModeStatusOn => '追加模式：开启';
-
-  @override
-  String get appendModeStatusOff => '追加模式：关闭';
-
-  @override
   String get playlistEmpty => '播放列表为空';
-
-  @override
-  String get appendModeEnabled => '追加模式已开启';
-
-  @override
-  String get appendModeHint => '之后点击音频会追加到当前播放列表尾部，而不是替换整个列表。\n不会重复添加同一音轨。';
 
   @override
   String get gotIt => '知道了';
@@ -4548,6 +4566,39 @@ class SZhHant extends SZh {
   String get audioFormatSubtitle => '調整音訊格式優先順序';
 
   @override
+  String get audioTapPlaylistMode => '播放清單新增模式';
+
+  @override
+  String get selectAudioTapPlaylistMode => '選擇點擊音訊時如何更新播放清單：';
+
+  @override
+  String get audioTapPlaylistModeReplace => '取代整個清單';
+
+  @override
+  String get audioTapPlaylistModeReplaceDescription =>
+      '以所點音訊所在目錄中的所有可播放音訊取代目前播放清單。';
+
+  @override
+  String get audioTapPlaylistModeAppendDirectory => '追加所在目錄';
+
+  @override
+  String get audioTapPlaylistModeAppendDirectoryDescription =>
+      '將所點音訊所在目錄中的所有可播放音訊追加到播放清單尾端；不會重複新增已有音軌。';
+
+  @override
+  String get audioTapPlaylistModeAppendSingle => '僅追加單個音訊';
+
+  @override
+  String get audioTapPlaylistModeAppendSingleDescription =>
+      '只將所點擊的音訊追加到播放清單尾端；不會重複新增已有音軌。';
+
+  @override
+  String get audioTapPlaylistModeAppendChip => '追加模式';
+
+  @override
+  String get audioTapPlaylistModeAppendSingleChip => '單曲追加模式';
+
+  @override
   String get preloadNextTitle => '預載下一首';
 
   @override
@@ -5705,22 +5756,7 @@ class SZhHant extends SZh {
   String get floatingSubtitle => '懸浮字幕';
 
   @override
-  String get appendMode => '追加模式';
-
-  @override
-  String get appendModeStatusOn => '追加模式：開啟';
-
-  @override
-  String get appendModeStatusOff => '追加模式：關閉';
-
-  @override
   String get playlistEmpty => '播放列表為空';
-
-  @override
-  String get appendModeEnabled => '追加模式已開啟';
-
-  @override
-  String get appendModeHint => '之後點擊音訊會追加到目前播放列表尾部，而不是替換整個列表。\n不會重複新增同一音軌。';
 
   @override
   String get gotIt => '知道了';

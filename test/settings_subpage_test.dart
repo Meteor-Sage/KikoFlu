@@ -8,7 +8,9 @@ import 'package:kikoeru_flutter/src/providers/player_buttons_provider.dart';
 import 'package:kikoeru_flutter/src/providers/player_lyric_style_provider.dart';
 import 'package:kikoeru_flutter/src/providers/settings_provider.dart';
 import 'package:kikoeru_flutter/src/providers/theme_provider.dart';
+import 'package:kikoeru_flutter/src/models/audio_tap_playlist_mode.dart';
 import 'package:kikoeru_flutter/src/screens/audio_format_settings_screen.dart';
+import 'package:kikoeru_flutter/src/screens/preferences_screen.dart';
 import 'package:kikoeru_flutter/src/screens/player_buttons_settings_screen.dart';
 import 'package:kikoeru_flutter/src/screens/player_lyric_style_screen.dart';
 import 'package:kikoeru_flutter/src/screens/ui_settings_screen.dart';
@@ -159,6 +161,61 @@ void main() {
       prefs.getStringList('audio_format_preference'),
       expected.map((format) => format.extension).toList(),
     );
+  });
+
+  testWidgets('preferences selects and persists the audio tap playlist mode',
+      (tester) async {
+    tester.view.physicalSize = const Size(390, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      _testApp(const PreferencesScreen(), container: container),
+    );
+    await tester.runAsync(_pumpPreferences);
+    await tester.pump();
+
+    expect(find.text('Playlist Add Mode'), findsOneWidget);
+    expect(find.text('Current: Replace Entire List'), findsOneWidget);
+
+    await tester.tap(find.text('Playlist Add Mode'));
+    await tester.pumpAndSettle();
+    expect(find.text('Append Tapped Audio Only'), findsOneWidget);
+
+    await tester.tap(find.text('Append Tapped Audio Only'));
+    await tester.pumpAndSettle();
+
+    expect(
+      container.read(audioTapPlaylistModeProvider),
+      AudioTapPlaylistMode.appendSingle,
+    );
+    expect(find.text('Current: Append Tapped Audio Only'), findsOneWidget);
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(
+      prefs.getString(AudioTapPlaylistModeNotifier.preferenceKey),
+      AudioTapPlaylistMode.appendSingle.name,
+    );
+  });
+
+  test('audio tap playlist mode restores the persisted selection', () async {
+    SharedPreferences.setMockInitialValues({
+      AudioTapPlaylistModeNotifier.preferenceKey:
+          AudioTapPlaylistMode.appendDirectory.name,
+    });
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    final restoredMode = await container
+        .read(audioTapPlaylistModeProvider.notifier)
+        .getMode();
+
+    expect(restoredMode, AudioTapPlaylistMode.appendDirectory);
+    expect(container.read(audioTapPlaylistModeProvider), restoredMode);
   });
 
   testWidgets('lyric style restores defaults from the app bar', (tester) async {

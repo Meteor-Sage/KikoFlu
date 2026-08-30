@@ -7,6 +7,7 @@ import 'audio_format_settings_screen.dart';
 import 'blocked_items_screen.dart';
 import 'llm_settings_screen.dart';
 import '../models/audio_gain_settings.dart';
+import '../models/audio_tap_playlist_mode.dart';
 import '../models/sort_options.dart';
 import '../providers/proxy_provider.dart';
 import '../providers/settings_provider.dart';
@@ -22,6 +23,49 @@ import '../widgets/sort_dialog.dart';
 /// 偏好设置页面
 class PreferencesScreen extends ConsumerWidget {
   const PreferencesScreen({super.key});
+
+  Future<void> _showAudioTapPlaylistModeDialog(
+    BuildContext pageContext,
+    WidgetRef ref,
+  ) async {
+    final currentMode = await ref
+        .read(audioTapPlaylistModeProvider.notifier)
+        .getMode();
+    if (!pageContext.mounted) return;
+
+    AudioTapPlaylistMode? selectedMode;
+    await showDialog<void>(
+      context: pageContext,
+      builder: (dialogContext) => CommonOptionDialog<AudioTapPlaylistMode>(
+        title: S.of(dialogContext).audioTapPlaylistMode,
+        description: S.of(dialogContext).selectAudioTapPlaylistMode,
+        icon: Icons.playlist_play,
+        value: currentMode,
+        options: [
+          for (final mode in AudioTapPlaylistMode.values)
+            RadioOption(
+              value: mode,
+              title: Text(mode.localizedName(dialogContext)),
+              subtitle: Text(mode.localizedDescription(dialogContext)),
+            ),
+        ],
+        onChanged: (value) async {
+          selectedMode = value;
+          await ref
+              .read(audioTapPlaylistModeProvider.notifier)
+              .updateMode(value);
+          return true;
+        },
+      ),
+    );
+
+    if (selectedMode != null && pageContext.mounted) {
+      SnackBarUtil.showSuccess(
+        pageContext,
+        S.of(pageContext).setToValue(selectedMode!.localizedName(pageContext)),
+      );
+    }
+  }
 
   void _showSubtitleLibraryPriorityDialog(
     BuildContext pageContext,
@@ -387,6 +431,7 @@ class PreferencesScreen extends ConsumerWidget {
       autoSaveTranslatedLyricsProvider,
     );
     final preloadSettings = ref.watch(preloadNextSettingsProvider);
+    final audioTapPlaylistMode = ref.watch(audioTapPlaylistModeProvider);
 
     return SettingsSubpageScaffold(
       title: S.of(context).preferenceSettings,
@@ -478,6 +523,14 @@ class PreferencesScreen extends ConsumerWidget {
           const SizedBox(height: 16),
           SettingsSectionList(
             children: [
+              SettingsNavigationTile(
+                icon: Icons.playlist_play,
+                title: S.of(context).audioTapPlaylistMode,
+                subtitle: S.of(context).currentSettingLabel(
+                      audioTapPlaylistMode.localizedName(context),
+                    ),
+                onTap: () => _showAudioTapPlaylistModeDialog(context, ref),
+              ),
               SettingsNavigationTile(
                 icon: Icons.audio_file,
                 title: S.of(context).audioFormatPreference,
