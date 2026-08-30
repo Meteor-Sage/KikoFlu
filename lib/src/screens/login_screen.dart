@@ -308,56 +308,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           }
 
           final colorScheme = Theme.of(context).colorScheme;
-          InputDecoration fieldDecoration({
-            required String labelText,
-            Widget? prefixIcon,
-            String? hintText,
-            String? helperText,
-            String? errorText,
-          }) {
-            final borderColor = colorScheme.outlineVariant.withValues(
-              alpha: 0.7,
-            );
-            final borderRadius = BorderRadius.circular(8);
-
-            return InputDecoration(
-              labelText: labelText,
-              hintText: hintText,
-              helperText: helperText,
-              errorText: errorText,
-              prefixIcon: prefixIcon,
-              isDense: true,
-              filled: true,
-              fillColor: colorScheme.surfaceContainerHighest.withValues(
-                alpha: 0.42,
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 14,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: borderRadius,
-                borderSide: BorderSide(color: borderColor),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: borderRadius,
-                borderSide: BorderSide(color: borderColor),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: borderRadius,
-                borderSide: BorderSide(color: colorScheme.primary, width: 2),
-              ),
-              errorBorder: OutlineInputBorder(
-                borderRadius: borderRadius,
-                borderSide: BorderSide(color: colorScheme.error),
-              ),
-              focusedErrorBorder: OutlineInputBorder(
-                borderRadius: borderRadius,
-                borderSide: BorderSide(color: colorScheme.error, width: 2),
-              ),
-              prefixIconConstraints: const BoxConstraints(minWidth: 48),
-            );
-          }
 
           return ResponsiveDialog(
             maxWidth: 520,
@@ -415,7 +365,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     focusNode: _proxyFocusNode,
                     keyboardType: TextInputType.url,
                     textInputAction: TextInputAction.done,
-                    decoration: fieldDecoration(
+                    decoration: settingsDialogInputDecoration(
+                      context,
                       labelText: S.of(context).proxyAddress,
                       hintText: '127.0.0.1:7890',
                       helperText: S.of(context).proxyAddressFormat,
@@ -443,7 +394,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 16),
                 TextField(
                   controller: _serverCookieController,
-                  decoration: fieldDecoration(
+                  decoration: settingsDialogInputDecoration(
+                    context,
                     labelText: 'Cookie',
                     prefixIcon: const Icon(Icons.security_outlined),
                   ),

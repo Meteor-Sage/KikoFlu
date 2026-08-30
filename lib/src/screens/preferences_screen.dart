@@ -14,6 +14,7 @@ import '../services/proxy_config.dart';
 import '../utils/l10n_extensions.dart';
 import '../utils/snackbar_util.dart';
 import '../widgets/radio_option_group.dart';
+import '../widgets/responsive_dialog.dart';
 import '../widgets/settings_section.dart';
 import '../widgets/settings_option_dialog.dart';
 import '../widgets/sort_dialog.dart';
@@ -314,161 +315,11 @@ class PreferencesScreen extends ConsumerWidget {
     }
   }
 
-  void _showPreloadThresholdDialog(BuildContext pageContext, WidgetRef ref) {
-    final currentSettings = ref.read(preloadNextSettingsProvider);
-
-    showDialog(
+  void _showPreloadThresholdDialog(BuildContext pageContext) {
+    showDialog<void>(
       context: pageContext,
-      builder: (dialogContext) => CommonOptionDialog<PreloadThresholdMode>(
-        title: S.of(dialogContext).preloadNextTitle,
-        icon: Icons.fast_forward,
-        description: S.of(dialogContext).selectPreloadThreshold,
-        value: currentSettings.mode,
-        options: [
-          RadioOption(
-            value: PreloadThresholdMode.off,
-            title: Text(PreloadThresholdMode.off.localizedName(dialogContext)),
-          ),
-          RadioOption(
-            value: PreloadThresholdMode.seconds10,
-            title: Text(
-              PreloadThresholdMode.seconds10.localizedName(dialogContext),
-            ),
-          ),
-          RadioOption(
-            value: PreloadThresholdMode.seconds20,
-            title: Text(
-              PreloadThresholdMode.seconds20.localizedName(dialogContext),
-            ),
-          ),
-          RadioOption(
-            value: PreloadThresholdMode.seconds30,
-            title: Text(
-              PreloadThresholdMode.seconds30.localizedName(dialogContext),
-            ),
-          ),
-          RadioOption(
-            value: PreloadThresholdMode.custom,
-            title: Text(
-              PreloadThresholdMode.custom.localizedName(dialogContext),
-            ),
-            subtitle: currentSettings.mode == PreloadThresholdMode.custom
-                ? Text(
-                    S
-                        .of(dialogContext)
-                        .preloadCustomValueLabel(currentSettings.customSeconds),
-                  )
-                : null,
-          ),
-        ],
-        onChanged: (value) async {
-          if (value == PreloadThresholdMode.custom) {
-            final inputSeconds = await _showPreloadCustomSecondsDialog(
-              pageContext,
-              initialValue: currentSettings.customSeconds,
-            );
-            if (inputSeconds == null) return false;
-            await ref
-                .read(preloadNextSettingsProvider.notifier)
-                .updateCustomSeconds(inputSeconds);
-          }
-
-          await ref
-              .read(preloadNextSettingsProvider.notifier)
-              .updateMode(value);
-
-          if (!pageContext.mounted) return false;
-          final updated = ref.read(preloadNextSettingsProvider);
-          SnackBarUtil.showSuccess(
-            pageContext,
-            S
-                .of(pageContext)
-                .setToValue(_preloadValueLabel(pageContext, updated)),
-          );
-          return true;
-        },
-      ),
+      builder: (_) => _PreloadThresholdDialog(pageContext: pageContext),
     );
-  }
-
-  Future<int?> _showPreloadCustomSecondsDialog(
-    BuildContext pageContext, {
-    required int initialValue,
-  }) async {
-    final controller = TextEditingController(text: initialValue.toString());
-    String? errorText;
-    // 解析并校验输入：合法返回正整数，越界/非法返回 null 并设置 errorText
-    int? validate(BuildContext context) {
-      final value = int.tryParse(controller.text.trim());
-      if (value == null ||
-          value < PreloadNextSettings.minSeconds ||
-          value > PreloadNextSettings.maxSeconds) {
-        errorText = S.of(context).preloadCustomInputRangeError;
-        return null;
-      }
-      errorText = null;
-      return value;
-    }
-
-    final result = await showDialog<int>(
-      context: pageContext,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (stContext, setState) => AlertDialog(
-          title: Text(S.of(stContext).preloadCustomInputTitle),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(S.of(stContext).preloadCustomInputHint),
-              const SizedBox(height: 12),
-              TextField(
-                controller: controller,
-                autofocus: true,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: InputDecoration(
-                  hintText: S.of(stContext).preloadCustomInputHint,
-                  errorText: errorText,
-                ),
-                textInputAction: TextInputAction.done,
-                onChanged: (_) {
-                  if (errorText != null) {
-                    setState(() => errorText = null);
-                  }
-                },
-                onSubmitted: (_) {
-                  final value = validate(stContext);
-                  if (value != null) {
-                    Navigator.pop(dialogContext, value);
-                  } else {
-                    setState(() {});
-                  }
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(S.of(stContext).cancel),
-            ),
-            TextButton(
-              onPressed: () {
-                final value = validate(stContext);
-                if (value != null) {
-                  Navigator.pop(dialogContext, value);
-                } else {
-                  setState(() {});
-                }
-              },
-              child: Text(S.of(stContext).confirm),
-            ),
-          ],
-        ),
-      ),
-    );
-    controller.dispose();
-    return result;
   }
 
   String _targetLanguageLabel(
@@ -506,93 +357,21 @@ class PreferencesScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _showProxyAddressDialog(
-    BuildContext context,
-    WidgetRef ref,
-    String currentAddress,
-  ) async {
-    final controller = TextEditingController(text: currentAddress);
-    String? result;
-    try {
-      result = await showDialog<String>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: Text(S.of(dialogContext).proxyAddress),
-          content: TextField(
-            controller: controller,
-            keyboardType: TextInputType.url,
-            decoration: InputDecoration(
-              hintText: '127.0.0.1:7890',
-              helperText: S.of(dialogContext).proxyAddressFormat,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(S.of(dialogContext).cancel),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(controller.text),
-              child: Text(S.of(dialogContext).save),
-            ),
-          ],
-        ),
-      );
-    } finally {
-      controller.dispose();
-    }
-
-    if (result == null) return;
-    final accepted = await ref
-        .read(proxySettingsProvider.notifier)
-        .setAddress(result);
-    if (!accepted && context.mounted) {
-      SnackBarUtil.showError(context, S.of(context).invalidProxyAddress);
-    }
+  void _showProxySettingsDialog(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => const _ProxySettingsDialog(),
+    );
   }
 
   Widget _buildProxySettings(BuildContext context, WidgetRef ref) {
     final proxySettings = ref.watch(proxySettingsProvider);
-    final notifier = ref.read(proxySettingsProvider.notifier);
-    return Column(
-      children: [
-        SettingsListTile(
-          icon: Icons.vpn_lock_outlined,
-          title: S.of(context).proxySettingsOptional,
-          subtitle: proxySettings.mode.localizedDescription(context),
-          trailing: Text(proxySettings.mode.localizedName(context)),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(left: 52),
-          child: RadioOptionGroup<ProxyMode>(
-            groupValue: proxySettings.mode,
-            contentPadding: EdgeInsets.zero,
-            dense: true,
-            options: [
-              for (final mode in ProxyMode.values)
-                RadioOption(
-                  value: mode,
-                  title: Text(mode.localizedName(context)),
-                  subtitle: Text(mode.localizedDescription(context)),
-                ),
-            ],
-            onChanged: notifier.setMode,
-          ),
-        ),
-        if (proxySettings.mode == ProxyMode.manual) ...[
-          const SettingsDivider(),
-          SettingsListTile(
-            leading: const SizedBox(width: 24),
-            title: S.of(context).proxyAddress,
-            subtitle: proxySettings.address.isEmpty
-                ? S.of(context).proxyAddressNotSet
-                : proxySettings.address,
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () =>
-                _showProxyAddressDialog(context, ref, proxySettings.address),
-          ),
-        ],
-      ],
+    return SettingsListTile(
+      icon: Icons.vpn_lock_outlined,
+      title: S.of(context).proxySettingsOptional,
+      subtitle: proxySettings.mode.localizedDescription(context),
+      trailing: Text(proxySettings.mode.localizedName(context)),
+      onTap: () => _showProxySettingsDialog(context),
     );
   }
 
@@ -719,7 +498,7 @@ class PreferencesScreen extends ConsumerWidget {
                     .currentSettingLabel(
                       _preloadValueLabel(context, preloadSettings),
                     ),
-                onTap: () => _showPreloadThresholdDialog(context, ref),
+                onTap: () => _showPreloadThresholdDialog(context),
               ),
               if (_supportsAudioGain(Theme.of(context).platform))
                 _AudioGainSettingsTile(ref: ref),
@@ -933,6 +712,365 @@ class _AudioHapticsSettingsTile extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+class _PreloadThresholdDialog extends ConsumerStatefulWidget {
+  const _PreloadThresholdDialog({required this.pageContext});
+
+  final BuildContext pageContext;
+
+  @override
+  ConsumerState<_PreloadThresholdDialog> createState() =>
+      _PreloadThresholdDialogState();
+}
+
+class _PreloadThresholdDialogState
+    extends ConsumerState<_PreloadThresholdDialog> {
+  late final TextEditingController _controller;
+  late PreloadThresholdMode _selectedMode;
+  late int _customSeconds;
+  String? _errorText;
+
+  @override
+  void initState() {
+    super.initState();
+    final settings = ref.read(preloadNextSettingsProvider);
+    _controller = TextEditingController(
+      text: settings.customSeconds.toString(),
+    );
+    _selectedMode = settings.mode;
+    _customSeconds = settings.customSeconds;
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  int? _validatedSeconds(BuildContext context) {
+    final value = int.tryParse(_controller.text.trim());
+    if (value == null ||
+        value < PreloadNextSettings.minSeconds ||
+        value > PreloadNextSettings.maxSeconds) {
+      _errorText = S.of(context).preloadCustomInputRangeError;
+      return null;
+    }
+    _errorText = null;
+    return value;
+  }
+
+  Future<bool> _saveCustomSeconds(BuildContext context) async {
+    final value = _validatedSeconds(context);
+    if (value == null) return false;
+
+    _customSeconds = value;
+    final notifier = ref.read(preloadNextSettingsProvider.notifier);
+    await notifier.updateCustomSeconds(value);
+    await notifier.updateMode(PreloadThresholdMode.custom);
+    return mounted;
+  }
+
+  Future<void> _closeDialog() async {
+    final accepted = _selectedMode == PreloadThresholdMode.custom
+        ? await _saveCustomSeconds(context)
+        : true;
+    if (!accepted) {
+      if (mounted) setState(() {});
+      return;
+    }
+    if (!mounted) return;
+
+    Navigator.of(context).pop();
+    final pageContext = widget.pageContext;
+    if (!pageContext.mounted) return;
+    final updated = ref.read(preloadNextSettingsProvider);
+    SnackBarUtil.showSuccess(
+      pageContext,
+      S
+          .of(pageContext)
+          .setToValue(_preloadValueLabelForSettings(pageContext, updated)),
+    );
+  }
+
+  String _preloadValueLabelForSettings(
+    BuildContext context,
+    PreloadNextSettings settings,
+  ) {
+    final s = S.of(context);
+    switch (settings.mode) {
+      case PreloadThresholdMode.off:
+        return s.preloadOptionOff;
+      case PreloadThresholdMode.seconds10:
+        return s.preloadOptionSeconds(10);
+      case PreloadThresholdMode.seconds20:
+        return s.preloadOptionSeconds(20);
+      case PreloadThresholdMode.seconds30:
+        return s.preloadOptionSeconds(30);
+      case PreloadThresholdMode.custom:
+        return s.preloadCustomValueLabel(settings.customSeconds);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return ResponsiveDialog(
+      maxWidth: 520,
+      titlePadding: const EdgeInsets.fromLTRB(20, 14, 8, 0),
+      contentPadding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      title: Row(
+        children: [
+          Icon(Icons.fast_forward, size: 22, color: colorScheme.primary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              S.of(context).preloadNextTitle,
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
+          IconButton(
+            onPressed: _closeDialog,
+            icon: const Icon(Icons.close),
+            tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+            child: Text(
+              S.of(context).selectPreloadThreshold,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          CompactRadioOptionGroup<PreloadThresholdMode>(
+            groupValue: _selectedMode,
+            options: [
+              RadioOption(
+                value: PreloadThresholdMode.off,
+                title: Text(PreloadThresholdMode.off.localizedName(context)),
+              ),
+              RadioOption(
+                value: PreloadThresholdMode.seconds10,
+                title: Text(
+                  PreloadThresholdMode.seconds10.localizedName(context),
+                ),
+              ),
+              RadioOption(
+                value: PreloadThresholdMode.seconds20,
+                title: Text(
+                  PreloadThresholdMode.seconds20.localizedName(context),
+                ),
+              ),
+              RadioOption(
+                value: PreloadThresholdMode.seconds30,
+                title: Text(
+                  PreloadThresholdMode.seconds30.localizedName(context),
+                ),
+              ),
+              RadioOption(
+                value: PreloadThresholdMode.custom,
+                title: Text(PreloadThresholdMode.custom.localizedName(context)),
+                subtitle: _selectedMode == PreloadThresholdMode.custom
+                    ? Text(
+                        S.of(context).preloadCustomValueLabel(_customSeconds),
+                      )
+                    : null,
+              ),
+            ],
+            onChanged: (value) async {
+              setState(() => _selectedMode = value);
+              if (value != PreloadThresholdMode.custom) {
+                await ref
+                    .read(preloadNextSettingsProvider.notifier)
+                    .updateMode(value);
+              }
+            },
+          ),
+          if (_selectedMode == PreloadThresholdMode.custom) ...[
+            const SizedBox(height: 8),
+            TextField(
+              controller: _controller,
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: settingsDialogInputDecoration(
+                context,
+                labelText: S.of(context).preloadCustomInputTitle,
+                helperText: S.of(context).preloadCustomInputHint,
+                errorText: _errorText,
+                prefixIcon: const Icon(Icons.timer_outlined),
+              ),
+              textInputAction: TextInputAction.done,
+              onChanged: (_) {
+                if (_errorText != null) {
+                  setState(() => _errorText = null);
+                }
+              },
+              onSubmitted: (_) async {
+                await _saveCustomSeconds(context);
+                if (mounted) setState(() {});
+              },
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ProxySettingsDialog extends ConsumerStatefulWidget {
+  const _ProxySettingsDialog();
+
+  @override
+  ConsumerState<_ProxySettingsDialog> createState() =>
+      _ProxySettingsDialogState();
+}
+
+class _ProxySettingsDialogState extends ConsumerState<_ProxySettingsDialog> {
+  late final TextEditingController _controller;
+  late final FocusNode _focusNode;
+  late ProxyMode _proxyMode;
+  String? _errorText;
+
+  @override
+  void initState() {
+    super.initState();
+    final settings = ref.read(proxySettingsProvider);
+    _controller = TextEditingController(text: settings.address);
+    _focusNode = FocusNode();
+    _proxyMode = settings.mode;
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  Future<bool> _saveAddress(BuildContext context) async {
+    if (_proxyMode != ProxyMode.manual) return true;
+
+    final accepted = await ref
+        .read(proxySettingsProvider.notifier)
+        .setAddress(_controller.text);
+    if (!mounted || !context.mounted) return false;
+    if (!accepted) {
+      _errorText = S.of(context).invalidProxyAddress;
+      return false;
+    }
+
+    _errorText = null;
+    final normalizedAddress = ref.read(proxySettingsProvider).address;
+    if (!_focusNode.hasFocus && _controller.text != normalizedAddress) {
+      _controller.text = normalizedAddress;
+    }
+    return true;
+  }
+
+  Future<void> _closeDialog() async {
+    _focusNode.unfocus();
+    final accepted = await _saveAddress(context);
+    if (!mounted) return;
+    if (accepted) {
+      Navigator.of(context).pop();
+    } else {
+      setState(() {});
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return ResponsiveDialog(
+      maxWidth: 520,
+      titlePadding: const EdgeInsets.fromLTRB(20, 14, 8, 0),
+      contentPadding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      title: Row(
+        children: [
+          Icon(Icons.vpn_lock_outlined, size: 22, color: colorScheme.primary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              S.of(context).proxySettingsOptional,
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
+          IconButton(
+            onPressed: _closeDialog,
+            icon: const Icon(Icons.close),
+            tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          CompactRadioOptionGroup<ProxyMode>(
+            groupValue: _proxyMode,
+            options: [
+              for (final mode in ProxyMode.values)
+                RadioOption(
+                  value: mode,
+                  title: Text(mode.localizedName(context)),
+                  subtitle: Text(mode.localizedDescription(context)),
+                ),
+            ],
+            onChanged: (value) async {
+              if (_proxyMode == ProxyMode.manual) {
+                await _saveAddress(context);
+              }
+              await ref.read(proxySettingsProvider.notifier).setMode(value);
+              if (mounted) setState(() => _proxyMode = value);
+            },
+          ),
+          if (_proxyMode == ProxyMode.manual) ...[
+            const SizedBox(height: 8),
+            TextField(
+              controller: _controller,
+              focusNode: _focusNode,
+              keyboardType: TextInputType.url,
+              textInputAction: TextInputAction.done,
+              decoration: settingsDialogInputDecoration(
+                context,
+                labelText: S.of(context).proxyAddress,
+                hintText: '127.0.0.1:7890',
+                helperText: S.of(context).proxyAddressFormat,
+                errorText: _errorText,
+                prefixIcon: const Icon(Icons.dns_outlined),
+              ),
+              onChanged: (_) {
+                if (_errorText != null) {
+                  setState(() => _errorText = null);
+                }
+              },
+              onSubmitted: (_) async {
+                await _saveAddress(context);
+                if (mounted) setState(() {});
+              },
+              onTapOutside: (_) async {
+                _focusNode.unfocus();
+                await _saveAddress(context);
+                if (mounted) setState(() {});
+              },
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

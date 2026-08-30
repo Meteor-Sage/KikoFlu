@@ -5,6 +5,53 @@ import 'package:flutter/material.dart';
 import 'radio_option_group.dart';
 import 'responsive_dialog.dart';
 
+/// Input decoration shared by settings dialogs that edit a value inline.
+InputDecoration settingsDialogInputDecoration(
+  BuildContext context, {
+  required String labelText,
+  Widget? prefixIcon,
+  String? hintText,
+  String? helperText,
+  String? errorText,
+}) {
+  final colorScheme = Theme.of(context).colorScheme;
+  final borderColor = colorScheme.outlineVariant.withValues(alpha: 0.7);
+  final borderRadius = BorderRadius.circular(8);
+
+  return InputDecoration(
+    labelText: labelText,
+    hintText: hintText,
+    helperText: helperText,
+    errorText: errorText,
+    prefixIcon: prefixIcon,
+    isDense: true,
+    filled: true,
+    fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.42),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    border: OutlineInputBorder(
+      borderRadius: borderRadius,
+      borderSide: BorderSide(color: borderColor),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: borderRadius,
+      borderSide: BorderSide(color: borderColor),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: borderRadius,
+      borderSide: BorderSide(color: colorScheme.primary, width: 2),
+    ),
+    errorBorder: OutlineInputBorder(
+      borderRadius: borderRadius,
+      borderSide: BorderSide(color: colorScheme.error),
+    ),
+    focusedErrorBorder: OutlineInputBorder(
+      borderRadius: borderRadius,
+      borderSide: BorderSide(color: colorScheme.error, width: 2),
+    ),
+    prefixIconConstraints: const BoxConstraints(minWidth: 48),
+  );
+}
+
 /// A compact, consistently styled radio list used by settings dialogs.
 class CompactRadioOptionGroup<T> extends StatelessWidget {
   const CompactRadioOptionGroup({
@@ -51,6 +98,7 @@ class CompactRadioOptionGroup<T> extends StatelessWidget {
       title: DefaultTextStyle.merge(
         style: TextStyle(
           color: titleColor,
+          fontSize: 17,
           fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
         ),
         child: option.title,
@@ -60,7 +108,7 @@ class CompactRadioOptionGroup<T> extends StatelessWidget {
           : DefaultTextStyle.merge(
               style: TextStyle(
                 color: subtitleColor,
-                fontSize: 12,
+                fontSize: 13,
                 height: 1.25,
               ),
               child: option.subtitle!,

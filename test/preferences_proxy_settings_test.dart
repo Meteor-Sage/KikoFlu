@@ -5,6 +5,7 @@ import 'package:kikoeru_flutter/l10n/app_localizations.dart';
 import 'package:kikoeru_flutter/src/screens/preferences_screen.dart';
 import 'package:kikoeru_flutter/src/providers/settings_provider.dart';
 import 'package:kikoeru_flutter/src/services/proxy_config.dart';
+import 'package:kikoeru_flutter/src/widgets/responsive_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Widget _testApp({TargetPlatform platform = TargetPlatform.android}) {
@@ -22,12 +23,13 @@ Widget _testApp({TargetPlatform platform = TargetPlatform.android}) {
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
-    ProxyConfig.enabled = false;
+    ProxyConfig.mode = ProxyMode.system;
     ProxyConfig.address = '127.0.0.1:7890';
   });
 
-  testWidgets('proxy address is only shown for manual proxy mode',
-      (tester) async {
+  testWidgets('proxy settings open as one dialog with manual address field', (
+    tester,
+  ) async {
     await tester.pumpWidget(_testApp());
     await tester.pump();
 
@@ -40,17 +42,56 @@ void main() {
     expect(find.text('System proxy'), findsOneWidget);
     expect(find.text('Proxy address'), findsNothing);
 
+    await tester.tap(find.text('Proxy').first);
+    await tester.pumpAndSettle();
+    expect(find.byType(ResponsiveDialog), findsOneWidget);
+    expect(find.text('Manual proxy'), findsOneWidget);
+
     await tester.tap(find.text('Manual proxy'));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.text('Proxy address'), findsOneWidget);
 
     await tester.tap(find.text('Direct'));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.text('Proxy address'), findsNothing);
+
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
+    expect(find.byType(ResponsiveDialog), findsNothing);
   });
 
-  testWidgets('translated lyrics auto-save switch toggles and persists',
-      (tester) async {
+  testWidgets('preload custom threshold uses an inline editor', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'preload_next_mode': 'seconds10',
+      'preload_next_custom_seconds': 45,
+    });
+
+    await tester.pumpWidget(_testApp());
+    await tester.pumpAndSettle();
+    final preloadTile = find.text('Preload Next Track').first;
+    await tester.ensureVisible(preloadTile);
+    await tester.pump();
+    await tester.tap(find.text('Preload Next Track').first);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ResponsiveDialog), findsOneWidget);
+    await tester.tap(find.text('Custom'));
+    await tester.pumpAndSettle();
+    expect(find.text('Custom Preload Threshold'), findsOneWidget);
+    expect(find.byType(TextField), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), '60');
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('preload_next_mode'), 'custom');
+    expect(prefs.getInt('preload_next_custom_seconds'), 60);
+  });
+
+  testWidgets('translated lyrics auto-save switch toggles and persists', (
+    tester,
+  ) async {
     await tester.pumpWidget(_testApp());
     await tester.pump();
 
@@ -73,8 +114,9 @@ void main() {
     );
   });
 
-  testWidgets('audio gain and haptics omit restore defaults actions',
-      (tester) async {
+  testWidgets('audio gain and haptics omit restore defaults actions', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(390, 1600);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -107,8 +149,9 @@ void main() {
     );
   });
 
-  testWidgets('global audio gain updates immediately and persists',
-      (tester) async {
+  testWidgets('global audio gain updates immediately and persists', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -134,21 +177,17 @@ void main() {
     expect(find.text('+6 dB'), findsOneWidget);
 
     final prefs = await SharedPreferences.getInstance();
-    expect(
-      prefs.getDouble(AudioGainSettingsNotifier.preferenceKey),
-      6,
-    );
+    expect(prefs.getDouble(AudioGainSettingsNotifier.preferenceKey), 6);
   });
 
-  testWidgets('audio passthrough disables global gain adjustment',
-      (tester) async {
+  testWidgets('audio passthrough disables global gain adjustment', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    SharedPreferences.setMockInitialValues({
-      'audio_passthrough_enabled': true,
-    });
+    SharedPreferences.setMockInitialValues({'audio_passthrough_enabled': true});
 
     await tester.pumpWidget(_testApp());
     await tester.pumpAndSettle();
@@ -166,8 +205,9 @@ void main() {
     expect(tester.widget<Slider>(find.byType(Slider).first).onChanged, isNull);
   });
 
-  testWidgets('iOS exposes attenuation without unsupported positive gain',
-      (tester) async {
+  testWidgets('iOS exposes attenuation without unsupported positive gain', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
