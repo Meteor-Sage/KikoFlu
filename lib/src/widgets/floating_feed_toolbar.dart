@@ -290,47 +290,52 @@ class _ModeDropdown extends ConsumerWidget {
           ),
         ),
         menuChildren: [
-          LiquidGlassContainer(
-            shape: const LiquidGlassShape.roundedRectangle(18),
-            style: LiquidGlassStyle.regular,
-            fallbackIntensity: fallbackIntensity,
-            child: Material(
-              type: MaterialType.transparency,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minWidth: maxWidth,
-                  maxHeight: 300,
-                ),
-                child: SingleChildScrollView(
-                  primary: false,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      for (final action in actions)
-                        MenuItemButton(
-                          onPressed: () {
-                            controller.close();
-                            action.onPressed();
-                          },
-                          style: const ButtonStyle(
-                            padding: WidgetStatePropertyAll(
-                              EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 4,
+          LiquidGlassGroup(
+            spacing: 0,
+            child: LiquidGlassContainer(
+              shape: const LiquidGlassShape.roundedRectangle(18),
+              style: LiquidGlassStyle.regular,
+              fallbackIntensity: fallbackIntensity,
+              child: Material(
+                type: MaterialType.transparency,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minWidth: maxWidth,
+                    maxHeight: 300,
+                  ),
+                  child: SingleChildScrollView(
+                    primary: false,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (final action in actions)
+                          MenuItemButton(
+                            onPressed: () {
+                              controller.close();
+                              action.onPressed();
+                            },
+                            style: const ButtonStyle(
+                              padding: WidgetStatePropertyAll(
+                                EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 4,
+                                ),
                               ),
                             ),
+                            leadingIcon: Icon(action.icon, size: 18),
+                            trailingIcon: action.isSelected
+                                ? Icon(
+                                    Icons.check,
+                                    size: 18,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
+                                  )
+                                : null,
+                            child: Text(action.label),
                           ),
-                          leadingIcon: Icon(action.icon, size: 18),
-                          trailingIcon: action.isSelected
-                              ? Icon(
-                                  Icons.check,
-                                  size: 18,
-                                  color: Theme.of(context).colorScheme.primary,
-                                )
-                              : null,
-                          child: Text(action.label),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
