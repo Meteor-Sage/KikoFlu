@@ -204,10 +204,7 @@ void main() {
     );
 
     final glass = find.byType(LiquidGlassContainer);
-    expect(
-      tester.widget<LiquidGlassContainer>(glass).fallbackIntensity,
-      0.9,
-    );
+    expect(tester.widget<LiquidGlassContainer>(glass).fallbackIntensity, 0.9);
     final fallbackDecoration = tester
         .widgetList<DecoratedBox>(
           find.descendant(of: glass, matching: find.byType(DecoratedBox)),
@@ -399,6 +396,54 @@ void main() {
     await tester.tap(find.text('Filter option 1'));
     await tester.pumpAndSettle();
     expect(selectedMode, 1);
+  });
+
+  testWidgets('native liquid glass dropdown keeps its menu in Flutter', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    await container
+        .read(liquidGlassNavigationProvider.notifier)
+        .setEnabled(true);
+
+    await tester.pumpWidget(
+      _testApp(
+        FloatingFeedToolbar(
+          modeActions: [
+            for (var index = 0; index < 8; index++)
+              FloatingFeedModeAction(
+                icon: Icons.filter_alt,
+                label: 'Filter option $index',
+                isSelected: index == 0,
+                onPressed: () {},
+              ),
+          ],
+          toolActions: [
+            FloatingFeedToolAction(
+              icon: Icons.sort,
+              tooltip: 'Sort',
+              onPressed: () {},
+            ),
+          ],
+        ),
+        container: container,
+      ),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('feed-mode-dropdown')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Filter option 1'), findsOneWidget);
+    expect(find.byType(LiquidGlassContainer), findsNWidgets(2));
+    expect(find.byType(BackdropFilter), findsOneWidget);
+    expect(
+      tester.getSize(find.byType(BackdropFilter)).height,
+      lessThanOrEqualTo(300),
+    );
+    debugDefaultTargetPlatformOverride = null;
   });
 
   testWidgets('can keep every mode as buttons in a narrow toolbar', (

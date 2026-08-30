@@ -948,21 +948,21 @@ class SZh extends S {
   String get selectAudioTapPlaylistMode => '选择点击音频时如何更新播放列表：';
 
   @override
-  String get audioTapPlaylistModeReplace => '替换整个列表';
+  String get audioTapPlaylistModeReplace => '替换模式';
 
   @override
   String get audioTapPlaylistModeReplaceDescription =>
       '用点击音频所在目录下的所有可播放音频替换当前播放列表。';
 
   @override
-  String get audioTapPlaylistModeAppendDirectory => '追加所在目录';
+  String get audioTapPlaylistModeAppendDirectory => '追加模式';
 
   @override
   String get audioTapPlaylistModeAppendDirectoryDescription =>
       '将点击音频所在目录下的所有可播放音频追加到播放列表尾部；不会重复添加已有音轨。';
 
   @override
-  String get audioTapPlaylistModeAppendSingle => '仅追加单个音频';
+  String get audioTapPlaylistModeAppendSingle => '单音频追加模式';
 
   @override
   String get audioTapPlaylistModeAppendSingleDescription =>
@@ -972,7 +972,7 @@ class SZh extends S {
   String get audioTapPlaylistModeAppendChip => '追加模式';
 
   @override
-  String get audioTapPlaylistModeAppendSingleChip => '单曲追加模式';
+  String get audioTapPlaylistModeAppendSingleChip => '单音频追加模式';
 
   @override
   String get preloadNextTitle => '预加载下一首';
@@ -4572,21 +4572,21 @@ class SZhHant extends SZh {
   String get selectAudioTapPlaylistMode => '選擇點擊音訊時如何更新播放清單：';
 
   @override
-  String get audioTapPlaylistModeReplace => '取代整個清單';
+  String get audioTapPlaylistModeReplace => '取代模式';
 
   @override
   String get audioTapPlaylistModeReplaceDescription =>
       '以所點音訊所在目錄中的所有可播放音訊取代目前播放清單。';
 
   @override
-  String get audioTapPlaylistModeAppendDirectory => '追加所在目錄';
+  String get audioTapPlaylistModeAppendDirectory => '追加模式';
 
   @override
   String get audioTapPlaylistModeAppendDirectoryDescription =>
       '將所點音訊所在目錄中的所有可播放音訊追加到播放清單尾端；不會重複新增已有音軌。';
 
   @override
-  String get audioTapPlaylistModeAppendSingle => '僅追加單個音訊';
+  String get audioTapPlaylistModeAppendSingle => '單音訊追加模式';
 
   @override
   String get audioTapPlaylistModeAppendSingleDescription =>
@@ -4596,7 +4596,7 @@ class SZhHant extends SZh {
   String get audioTapPlaylistModeAppendChip => '追加模式';
 
   @override
-  String get audioTapPlaylistModeAppendSingleChip => '單曲追加模式';
+  String get audioTapPlaylistModeAppendSingleChip => '單音訊追加模式';
 
   @override
   String get preloadNextTitle => '預載下一首';

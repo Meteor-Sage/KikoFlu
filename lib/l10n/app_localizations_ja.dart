@@ -950,21 +950,21 @@ class SJa extends S {
   String get selectAudioTapPlaylistMode => '音声をタップしたときのプレイリスト更新方法を選択：';
 
   @override
-  String get audioTapPlaylistModeReplace => 'リスト全体を置き換え';
+  String get audioTapPlaylistModeReplace => '置き換えモード';
 
   @override
   String get audioTapPlaylistModeReplaceDescription =>
       'タップした音声と同じフォルダー内の再生可能な音声すべてで現在のプレイリストを置き換えます。';
 
   @override
-  String get audioTapPlaylistModeAppendDirectory => 'フォルダー内を追加';
+  String get audioTapPlaylistModeAppendDirectory => '追加モード';
 
   @override
   String get audioTapPlaylistModeAppendDirectoryDescription =>
       'タップした音声と同じフォルダー内の再生可能な音声をすべて末尾に追加します。既存のトラックは重複しません。';
 
   @override
-  String get audioTapPlaylistModeAppendSingle => 'タップした音声のみ追加';
+  String get audioTapPlaylistModeAppendSingle => '単一音声追加モード';
 
   @override
   String get audioTapPlaylistModeAppendSingleDescription =>
@@ -974,7 +974,7 @@ class SJa extends S {
   String get audioTapPlaylistModeAppendChip => '追加モード';
 
   @override
-  String get audioTapPlaylistModeAppendSingleChip => '単曲追加モード';
+  String get audioTapPlaylistModeAppendSingleChip => '単一音声追加モード';
 
   @override
   String get preloadNextTitle => '次をプリロード';

@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:real_liquid_glass/real_liquid_glass.dart';
@@ -38,7 +40,6 @@ class LiquidGlassDropdownButtonFormField<T> extends ConsumerWidget {
       );
     }
 
-    final fallbackIntensity = ref.watch(fallbackGlassTransparencyProvider);
     return LayoutBuilder(
       builder: (context, constraints) {
         final selected = items.cast<DropdownMenuItem<T>?>().firstWhere(
@@ -46,6 +47,7 @@ class LiquidGlassDropdownButtonFormField<T> extends ConsumerWidget {
           orElse: () => null,
         );
         final selectedChild = selected?.child ?? const SizedBox.shrink();
+        final colorScheme = Theme.of(context).colorScheme;
         final controller = MenuController();
 
         return MenuAnchor(
@@ -63,60 +65,64 @@ class LiquidGlassDropdownButtonFormField<T> extends ConsumerWidget {
             ),
           ),
           menuChildren: [
-            LiquidGlassContainer(
-              shape: const LiquidGlassShape.roundedRectangle(18),
-              style: LiquidGlassStyle.regular,
-              fallbackIntensity: fallbackIntensity,
-              child: Material(
-                type: MaterialType.transparency,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minWidth: constraints.maxWidth.isFinite
-                        ? constraints.maxWidth
-                        : 0,
-                    maxHeight: menuMaxHeight,
-                  ),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        for (final item in items)
-                          MenuItemButton(
-                            onPressed: item.enabled
-                                ? () {
-                                    controller.close();
-                                    item.onTap?.call();
-                                    if (item.onTap == null) {
-                                      onChanged?.call(item.value);
-                                    }
+            LiquidGlassPopupSurface(
+              maxHeight: menuMaxHeight,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minWidth: constraints.maxWidth.isFinite
+                      ? constraints.maxWidth
+                      : 0,
+                ),
+                child: SingleChildScrollView(
+                  primary: false,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (final item in items)
+                        MenuItemButton(
+                          onPressed: item.enabled
+                              ? () {
+                                  controller.close();
+                                  item.onTap?.call();
+                                  if (item.onTap == null) {
+                                    onChanged?.call(item.value);
                                   }
-                                : null,
-                            style: const ButtonStyle(
-                              padding: WidgetStatePropertyAll(
-                                EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 4,
-                                ),
-                              ),
+                                }
+                              : null,
+                          style: ButtonStyle(
+                            foregroundColor: WidgetStateProperty.resolveWith(
+                              (states) => states.contains(WidgetState.disabled)
+                                  ? colorScheme.onSurface.withValues(
+                                      alpha: 0.38,
+                                    )
+                                  : colorScheme.onSurface,
                             ),
-                            child: Row(
-                              children: [
-                                Expanded(child: item.child),
-                                if (item.value == initialValue) ...[
-                                  const SizedBox(width: 12),
-                                  Icon(
-                                    Icons.check,
-                                    size: 18,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.primary,
-                                  ),
-                                ],
-                              ],
+                            iconColor: WidgetStateProperty.resolveWith(
+                              (states) => states.contains(WidgetState.disabled)
+                                  ? colorScheme.onSurfaceVariant.withValues(
+                                      alpha: 0.38,
+                                    )
+                                  : colorScheme.onSurfaceVariant,
+                            ),
+                            padding: const WidgetStatePropertyAll(
+                              EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                             ),
                           ),
-                      ],
-                    ),
+                          child: Row(
+                            children: [
+                              Expanded(child: item.child),
+                              if (item.value == initialValue) ...[
+                                const SizedBox(width: 12),
+                                Icon(
+                                  Icons.check,
+                                  size: 18,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ),
@@ -180,6 +186,36 @@ class LiquidGlassPopupSurface extends ConsumerWidget {
         borderRadius: BorderRadius.circular(4),
         clipBehavior: Clip.antiAlias,
         child: content,
+      );
+    }
+
+    // Native glass is a platform view. When it is mounted inside a menu
+    // overlay, iOS/macOS can composite that view above Flutter descendants,
+    // which hides the menu labels and icons. Keep popup content in Flutter's
+    // compositing tree while retaining the same blur/material appearance.
+    if (LiquidGlass.isNativePlatform) {
+      final theme = Theme.of(context);
+      final colorScheme = theme.colorScheme;
+      final fillOpacity = theme.brightness == Brightness.dark ? 0.72 : 0.82;
+      final radius = BorderRadius.circular(18);
+      return ClipRRect(
+        borderRadius: radius,
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest.withValues(
+                alpha: fillOpacity,
+              ),
+              borderRadius: radius,
+              border: Border.all(
+                color: colorScheme.outlineVariant.withValues(alpha: 0.32),
+                width: 0.8,
+              ),
+            ),
+            child: Material(type: MaterialType.transparency, child: content),
+          ),
+        ),
       );
     }
 

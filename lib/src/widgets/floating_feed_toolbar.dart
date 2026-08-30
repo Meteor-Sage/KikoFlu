@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:real_liquid_glass/real_liquid_glass.dart';
 
 import '../providers/settings_provider.dart';
+import 'liquid_glass_dropdown.dart';
 
 class FloatingFeedModeAction {
   const FloatingFeedModeAction({
@@ -207,7 +208,7 @@ class _ModeDropdown extends ConsumerWidget {
     final selected = actions[effectiveIndex];
     final useLiquidGlass = ref.watch(liquidGlassNavigationProvider);
     if (useLiquidGlass) {
-      return _buildLiquidGlassMenu(context, ref, selected);
+      return _buildLiquidGlassMenu(context, selected);
     }
 
     return SizedBox(
@@ -266,10 +267,8 @@ class _ModeDropdown extends ConsumerWidget {
 
   Widget _buildLiquidGlassMenu(
     BuildContext context,
-    WidgetRef ref,
     FloatingFeedModeAction selected,
   ) {
-    final fallbackIntensity = ref.watch(fallbackGlassTransparencyProvider);
     final controller = MenuController();
     return SizedBox(
       key: const ValueKey('feed-mode-dropdown'),
@@ -290,14 +289,12 @@ class _ModeDropdown extends ConsumerWidget {
           ),
         ),
         menuChildren: [
-          LiquidGlassContainer(
-            shape: const LiquidGlassShape.roundedRectangle(18),
-            style: LiquidGlassStyle.regular,
-            fallbackIntensity: fallbackIntensity,
-            child: Material(
-              type: MaterialType.transparency,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minWidth: maxWidth),
+          LiquidGlassPopupSurface(
+            maxHeight: 300,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minWidth: maxWidth),
+              child: SingleChildScrollView(
+                primary: false,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -307,12 +304,22 @@ class _ModeDropdown extends ConsumerWidget {
                           controller.close();
                           action.onPressed();
                         },
-                        style: const ButtonStyle(
-                          padding: WidgetStatePropertyAll(
+                        style: ButtonStyle(
+                          foregroundColor: WidgetStatePropertyAll(
+                            Theme.of(context).colorScheme.onSurface,
+                          ),
+                          iconColor: WidgetStatePropertyAll(
+                            Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                          padding: const WidgetStatePropertyAll(
                             EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                           ),
                         ),
-                        leadingIcon: Icon(action.icon, size: 18),
+                        leadingIcon: Icon(
+                          action.icon,
+                          size: 18,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                         trailingIcon: action.isSelected
                             ? Icon(
                                 Icons.check,

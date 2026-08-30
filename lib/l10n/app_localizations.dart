@@ -1881,7 +1881,7 @@ abstract class S {
   /// No description provided for @audioTapPlaylistModeReplace.
   ///
   /// In en, this message translates to:
-  /// **'Replace Entire List'**
+  /// **'Replace Mode'**
   String get audioTapPlaylistModeReplace;
 
   /// No description provided for @audioTapPlaylistModeReplaceDescription.
@@ -1893,7 +1893,7 @@ abstract class S {
   /// No description provided for @audioTapPlaylistModeAppendDirectory.
   ///
   /// In en, this message translates to:
-  /// **'Append Folder'**
+  /// **'Append Mode'**
   String get audioTapPlaylistModeAppendDirectory;
 
   /// No description provided for @audioTapPlaylistModeAppendDirectoryDescription.
@@ -1905,7 +1905,7 @@ abstract class S {
   /// No description provided for @audioTapPlaylistModeAppendSingle.
   ///
   /// In en, this message translates to:
-  /// **'Append Tapped Audio Only'**
+  /// **'Single-Audio Append Mode'**
   String get audioTapPlaylistModeAppendSingle;
 
   /// No description provided for @audioTapPlaylistModeAppendSingleDescription.
@@ -1923,7 +1923,7 @@ abstract class S {
   /// No description provided for @audioTapPlaylistModeAppendSingleChip.
   ///
   /// In en, this message translates to:
-  /// **'Single-Track Append'**
+  /// **'Single-Audio Append Mode'**
   String get audioTapPlaylistModeAppendSingleChip;
 
   /// No description provided for @preloadNextTitle.

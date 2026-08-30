@@ -180,20 +180,20 @@ void main() {
     await tester.pump();
 
     expect(find.text('Playlist Add Mode'), findsOneWidget);
-    expect(find.text('Current: Replace Entire List'), findsOneWidget);
+    expect(find.text('Current: Replace Mode'), findsOneWidget);
 
     await tester.tap(find.text('Playlist Add Mode'));
     await tester.pumpAndSettle();
-    expect(find.text('Append Tapped Audio Only'), findsOneWidget);
+    expect(find.text('Single-Audio Append Mode'), findsOneWidget);
 
-    await tester.tap(find.text('Append Tapped Audio Only'));
+    await tester.tap(find.text('Single-Audio Append Mode'));
     await tester.pumpAndSettle();
 
     expect(
       container.read(audioTapPlaylistModeProvider),
       AudioTapPlaylistMode.appendSingle,
     );
-    expect(find.text('Current: Append Tapped Audio Only'), findsOneWidget);
+    expect(find.text('Current: Single-Audio Append Mode'), findsOneWidget);
 
     final prefs = await SharedPreferences.getInstance();
     expect(

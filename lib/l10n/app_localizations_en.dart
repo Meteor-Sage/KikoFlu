@@ -972,21 +972,21 @@ class SEn extends S {
       'Choose how tapping audio updates the playlist:';
 
   @override
-  String get audioTapPlaylistModeReplace => 'Replace Entire List';
+  String get audioTapPlaylistModeReplace => 'Replace Mode';
 
   @override
   String get audioTapPlaylistModeReplaceDescription =>
       'Replace the current playlist with every playable audio file in the tapped file\'s folder.';
 
   @override
-  String get audioTapPlaylistModeAppendDirectory => 'Append Folder';
+  String get audioTapPlaylistModeAppendDirectory => 'Append Mode';
 
   @override
   String get audioTapPlaylistModeAppendDirectoryDescription =>
       'Append every playable audio file in the tapped file\'s folder. Existing tracks are not duplicated.';
 
   @override
-  String get audioTapPlaylistModeAppendSingle => 'Append Tapped Audio Only';
+  String get audioTapPlaylistModeAppendSingle => 'Single-Audio Append Mode';
 
   @override
   String get audioTapPlaylistModeAppendSingleDescription =>
@@ -996,7 +996,7 @@ class SEn extends S {
   String get audioTapPlaylistModeAppendChip => 'Append Mode';
 
   @override
-  String get audioTapPlaylistModeAppendSingleChip => 'Single-Track Append';
+  String get audioTapPlaylistModeAppendSingleChip => 'Single-Audio Append Mode';
 
   @override
   String get preloadNextTitle => 'Preload Next Track';

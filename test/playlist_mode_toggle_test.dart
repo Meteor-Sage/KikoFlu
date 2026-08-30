@@ -38,13 +38,13 @@ void main() {
 
     await tester.tap(find.byType(PopupMenuButton<AudioTapPlaylistMode>));
     await tester.pumpAndSettle();
-    expect(find.text('Replace Entire List'), findsOneWidget);
-    expect(find.text('Append Folder'), findsOneWidget);
-    expect(find.text('Append Tapped Audio Only'), findsOneWidget);
+    expect(find.text('Replace Mode'), findsOneWidget);
+    expect(find.text('Append Mode'), findsOneWidget);
+    expect(find.text('Single-Audio Append Mode'), findsOneWidget);
 
     await tester.tap(
       find.ancestor(
-        of: find.text('Append Folder'),
+        of: find.text('Append Mode'),
         matching: find.byType(CheckedPopupMenuItem<AudioTapPlaylistMode>),
       ),
     );
@@ -59,7 +59,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(
       find.ancestor(
-        of: find.text('Append Tapped Audio Only'),
+        of: find.text('Single-Audio Append Mode'),
         matching: find.byType(CheckedPopupMenuItem<AudioTapPlaylistMode>),
       ),
     );
