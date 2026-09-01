@@ -214,7 +214,7 @@ void main() {
     expect(circleRect.top, greaterThan(coverRect.bottom));
   });
 
-  testWidgets('card action stays out of the cover badge area', (tester) async {
+  testWidgets('card action stays to the right of metadata', (tester) async {
     SharedPreferences.setMockInitialValues({
       WorkCardDisplayNotifier.keyAgeRating: true,
     });
@@ -225,6 +225,7 @@ void main() {
       sourceId: 'RJ234567',
       age: 'R18',
       name: 'Circle',
+      price: 660,
     );
 
     await tester.pumpWidget(
@@ -258,9 +259,60 @@ void main() {
     );
     final titleRect = tester.getRect(find.text(cardWork.title));
     final circleRect = tester.getRect(find.text('Circle'));
+    final priceRect = tester.getRect(find.text('660 Yen'));
     expect(ageRect.overlaps(actionRect), isFalse);
+    expect(actionRect.left, greaterThan(circleRect.right));
+    expect(priceRect.left, lessThan(actionRect.left));
     expect(actionRect.top, greaterThanOrEqualTo(titleRect.bottom));
-    expect(actionRect.right, lessThan(circleRect.left));
-    expect(actionRect.center.dy, closeTo(circleRect.center.dy, 2));
+    expect(actionRect.top, lessThan(circleRect.bottom));
+    expect(actionRect.bottom, greaterThan(circleRect.top));
   });
+
+  testWidgets('compact card keeps badges below the cover and date below title',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({
+      WorkCardDisplayNotifier.keyAgeRating: true,
+    });
+
+    const compactWork = Work(
+      id: 456789,
+      title: 'Compact card title',
+      sourceId: 'RJ456789',
+      age: 'R18',
+      release: '2025-01-02',
+    );
+
+    await tester.pumpWidget(
+      _testApp(
+        const MediaQuery(
+          data: MediaQueryData(size: Size(400, 800)),
+          child: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 180,
+                child: EnhancedWorkCard(
+                  work: compactWork,
+                  crossAxisCount: 3,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await _pumpAsyncPreferenceLoad(tester);
+
+    final coverRect = tester.getRect(find.byType(AspectRatio));
+    final rjRect = tester.getRect(find.text('RJ456789'));
+    final ageRect = tester.getRect(find.byType(AgeRatingChip));
+    final titleRect = tester.getRect(find.text(compactWork.title));
+    final dateRect = tester.getRect(find.text('2025-01-02'));
+    expect(coverRect.width, greaterThan(coverRect.height));
+    expect(rjRect.top, greaterThanOrEqualTo(coverRect.bottom));
+    expect(ageRect.top, greaterThanOrEqualTo(coverRect.bottom));
+    expect(rjRect.bottom, lessThanOrEqualTo(titleRect.top));
+    expect(dateRect.top, greaterThanOrEqualTo(titleRect.bottom));
+    expect(dateRect.right, closeTo(coverRect.right - 6, 6));
+  });
+
 }

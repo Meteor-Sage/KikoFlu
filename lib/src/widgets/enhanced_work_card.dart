@@ -202,6 +202,14 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
         MediaQuery.orientationOf(context) == Orientation.landscape;
     final titleFontSize =
         displaySettings.scaleFontSize(isLandscape ? 13.5 : 11.0);
+    final chipFontSize =
+        displaySettings.scaleFontSize(isLandscape ? 12.0 : 10.0);
+    final dateFontSize =
+        displaySettings.scaleFontSize(isLandscape ? 11.0 : 9.0);
+    final hasReleaseDate = displaySettings.showReleaseDate &&
+        widget.work.release != null &&
+        widget.work.release!.trim().isNotEmpty;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -216,23 +224,10 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
           children: [
             // 封面图片区域
             AspectRatio(
-              aspectRatio: 1.0,
+              aspectRatio: 1.35,
               child: Stack(
                 children: [
                   _buildCoverImage(context, host, token),
-                  // 作品编号标签 (左上角)
-                  Positioned(
-                    top: 4,
-                    left: 4,
-                    child: _buildRjTag(),
-                  ),
-                  if (displaySettings.showAgeRating &&
-                      AgeRatingFormatter.hasValue(widget.work.age))
-                    Positioned(
-                      top: 4,
-                      right: 4,
-                      child: AgeRatingChip(age: widget.work.age, compact: true),
-                    ),
                   // 字幕标签 (左下角)
                   if (displaySettings.showSubtitleTag &&
                       (widget.work.hasSubtitle == true || hasLocalSubtitle))
@@ -244,14 +239,6 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                         isLocal: hasLocalSubtitle,
                       ),
                     ),
-                  // 日期标签 (右下角)
-                  if (displaySettings.showReleaseDate &&
-                      widget.work.release != null)
-                    Positioned(
-                      bottom: 4,
-                      right: 4,
-                      child: _buildDateTag(),
-                    ),
                 ],
               ),
             ),
@@ -262,6 +249,40 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // RJ 号和年龄分级使用与列表卡片一致的 chip 样式。
+                  Wrap(
+                    spacing: 4,
+                    runSpacing: 3,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: colorScheme.secondaryContainer,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          widget.work.displayId,
+                          style: TextStyle(
+                            color: colorScheme.onSecondaryContainer,
+                            fontSize: chipFontSize,
+                            fontWeight: FontWeight.w600,
+                            height: 1.1,
+                          ),
+                        ),
+                      ),
+                      if (displaySettings.showAgeRating &&
+                          AgeRatingFormatter.hasValue(widget.work.age))
+                        AgeRatingChip(
+                          age: widget.work.age,
+                          compact: true,
+                          fontSize: chipFontSize,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
                   // 标题
                   Text(
                     widget.work.title,
@@ -271,11 +292,34 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                           fontSize: titleFontSize,
                         ),
                   ),
-                  if (trailingAction != null) ...[
-                    const SizedBox(height: 4),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: trailingAction,
+                  if (hasReleaseDate || trailingAction != null) ...[
+                    const SizedBox(height: 3),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        if (trailingAction != null) ...[
+                          trailingAction,
+                          if (hasReleaseDate) const SizedBox(width: 4),
+                        ],
+                        if (hasReleaseDate)
+                          Expanded(
+                            child: Align(
+                              alignment: Alignment.centerRight,
+                              child: Text(
+                                widget.work.release!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: colorScheme.outline,
+                                      fontSize: dateFontSize,
+                                    ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ],
                 ],
@@ -308,11 +352,6 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
     final ratingFontSize =
         displaySettings.scaleFontSize(isLandscape ? 13.0 : 9.0);
     final iconSize = isLandscape ? 14.0 : 12.0;
-    final hasCircle = displaySettings.showCircle &&
-        widget.work.name != null &&
-        widget.work.name!.trim().isNotEmpty;
-    final hasPrice = displaySettings.showPrice && widget.work.price != null;
-
     return Card(
       clipBehavior: Clip.antiAlias,
       margin: const EdgeInsets.all(0),
@@ -380,105 +419,103 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                         ),
                   ),
                   const SizedBox(height: 3),
-                  // 首行元信息承载移除操作，避免挤压标题。
-                  if (trailingAction != null || hasCircle || hasPrice)
-                    Row(
-                      children: [
-                        if (trailingAction != null) ...[
-                          trailingAction,
-                          if (hasCircle || hasPrice)
-                            const SizedBox(width: 6),
-                        ],
-                        if (hasCircle)
-                          Expanded(
-                            child: Text(
-                              widget.work.name!.trim(),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(
-                                    color: Colors.grey[600],
-                                    fontSize: bodyFontSize,
-                                  ),
-                            ),
-                          ),
-                        if (!hasCircle) const Spacer(),
-                        if (hasPrice)
-                          Text(
-                            S.of(context).priceInYen(widget.work.price!),
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(
-                                  color: Colors.red[700],
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: priceFontSize,
-                                ),
-                          ),
-                      ],
-                    ),
-                  // 评分信息
-                  if (displaySettings.showRating &&
-                      widget.work.rateAverage != null &&
-                      widget.work.rateCount != null &&
-                      (widget.work.rateCount! > 0 ||
-                          widget.work.rateAverage! != 0)) ...[
-                    const SizedBox(height: 3),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.star,
-                          color: Colors.amber[700],
-                          size: iconSize,
-                        ),
-                        const SizedBox(width: 2),
-                        Text(
-                          '${widget.work.rateAverage!.toStringAsFixed(1)} (${widget.work.rateCount})',
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // 社团名称
+                            if (displaySettings.showCircle)
+                              Text(
+                                widget.work.name ?? '',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Colors.grey[600],
+                                      fontSize: bodyFontSize,
+                                    ),
+                              ),
+                            if (displaySettings.showCircle) const SizedBox(height: 3),
+                            // 价格
+                            if (displaySettings.showPrice && widget.work.price != null)
+                              Text(
+                                S.of(context).priceInYen(widget.work.price!),
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Colors.red[700],
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: priceFontSize,
+                                    ),
+                              ),
+                            // 评分信息
+                            if (displaySettings.showRating &&
+                                widget.work.rateAverage != null &&
+                                widget.work.rateCount != null &&
+                                (widget.work.rateCount! > 0 ||
+                                    widget.work.rateAverage! != 0)) ...[
+                              const SizedBox(height: 3),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.star,
                                     color: Colors.amber[700],
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: ratingFontSize,
+                                    size: iconSize,
                                   ),
-                        ),
-                      ],
-                    ),
-                  ],
-                  // 时长信息
-                  if (displaySettings.showDuration &&
-                      widget.work.duration != null &&
-                      widget.work.duration! > 0) ...[
-                    const SizedBox(height: 3),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.access_time,
-                          color: Colors.blue,
-                          size: iconSize,
-                        ),
-                        const SizedBox(width: 2),
-                        Text(
-                          formatDuration(
-                              Duration(seconds: widget.work.duration!)),
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Colors.blue[700],
-                                    fontSize: bodyFontSize,
-                                    fontWeight: FontWeight.w500,
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    '${widget.work.rateAverage!.toStringAsFixed(1)} (${widget.work.rateCount})',
+                                    style:
+                                        Theme.of(context).textTheme.bodySmall?.copyWith(
+                                              color: Colors.amber[700],
+                                              fontWeight: FontWeight.w500,
+                                              fontSize: ratingFontSize,
+                                            ),
                                   ),
+                                ],
+                              ),
+                            ],
+                            // 时长信息
+                            if (displaySettings.showDuration &&
+                                widget.work.duration != null &&
+                                widget.work.duration! > 0) ...[
+                              const SizedBox(height: 3),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.access_time,
+                                    color: Colors.blue,
+                                    size: iconSize,
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    formatDuration(
+                                        Duration(seconds: widget.work.duration!)),
+                                    style:
+                                        Theme.of(context).textTheme.bodySmall?.copyWith(
+                                              color: Colors.blue[700],
+                                              fontSize: bodyFontSize,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                            const SizedBox(height: 4),
+                            if (widget.work.vas != null && widget.work.vas!.isNotEmpty)
+                              _buildVoiceActorsRow(context),
+                            const SizedBox(height: 2),
+                            if (widget.work.tags != null && widget.work.tags!.isNotEmpty)
+                              _buildTagsRow(context),
+                            const SizedBox(height: 2),
+                          ],
                         ),
+                      ),
+                      if (trailingAction != null) ...[
+                        const SizedBox(width: 8),
+                        trailingAction,
                       ],
-                    ),
-                  ],
-                  const SizedBox(height: 4),
-                  if (widget.work.vas != null && widget.work.vas!.isNotEmpty)
-                    _buildVoiceActorsRow(context),
-                  const SizedBox(height: 2),
-                  if (widget.work.tags != null && widget.work.tags!.isNotEmpty)
-                    _buildTagsRow(context),
-                  const SizedBox(height: 2),
+                    ],
+                  ),
                 ],
               ),
             ),
