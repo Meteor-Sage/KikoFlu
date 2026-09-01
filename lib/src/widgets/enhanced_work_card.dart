@@ -495,12 +495,6 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
     final rjFontSize = displaySettings.scaleFontSize(isLandscape ? 12.0 : 11.0);
     final titleFontSize =
         displaySettings.scaleFontSize(isLandscape ? 18.0 : 16.0);
-    final bodyFontSize =
-        displaySettings.scaleFontSize(isLandscape ? 14.0 : 13.0);
-    final metaFontSize =
-        displaySettings.scaleFontSize(isLandscape ? 13.0 : 12.0);
-    final tagFontSize =
-        displaySettings.scaleFontSize(isLandscape ? 13.0 : 12.0);
     final colorScheme = Theme.of(context).colorScheme;
 
     return LayoutBuilder(
@@ -510,23 +504,6 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
             : MediaQuery.sizeOf(context).width;
         final coverWidth = (availableWidth * 0.24).clamp(120.0, 260.0).toDouble();
 
-        final hasCircle = displaySettings.showCircle &&
-            widget.work.name != null &&
-            widget.work.name!.trim().isNotEmpty;
-        final hasPrice = displaySettings.showPrice && widget.work.price != null;
-        final hasRelease = displaySettings.showReleaseDate &&
-            widget.work.release != null;
-        final hasRating = displaySettings.showRating &&
-            widget.work.rateAverage != null &&
-            widget.work.rateCount != null &&
-            widget.work.rateCount! > 0;
-        final hasDuration = displaySettings.showDuration &&
-            widget.work.duration != null &&
-            widget.work.duration! > 0;
-        final hasSales = displaySettings.showSales && widget.work.dlCount != null;
-        final hasSubtitle = displaySettings.showSubtitleTag &&
-            (widget.work.hasSubtitle == true || hasLocalSubtitle);
-
         return Card(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           elevation: 4,
@@ -535,225 +512,105 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
             onLongPress: _onLongPress,
             child: Padding(
               padding: const EdgeInsets.all(12),
-              child: Row(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 列表封面使用横向比例，降低卡片高度并提升信息密度。
-                  SizedBox(
-                    width: coverWidth,
-                    child: AspectRatio(
-                      aspectRatio: isLandscape ? 1.55 : 1.4,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: _buildCoverImage(context, host, token),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // RJ 号和年龄分级在信息区内并排显示，不再覆盖封面。
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 6,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: colorScheme.secondaryContainer,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                widget.work.displayId,
-                                style: TextStyle(
-                                  color: colorScheme.onSecondaryContainer,
-                                  fontSize: rjFontSize,
-                                  fontWeight: FontWeight.w600,
-                                  height: 1.1,
-                                ),
-                              ),
-                            ),
-                            if (displaySettings.showAgeRating &&
-                                AgeRatingFormatter.hasValue(widget.work.age))
-                              AgeRatingChip(
-                                age: widget.work.age,
-                                fontSize: rjFontSize,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 3,
-                                ),
-                              ),
-                          ],
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 列表封面使用横向比例，降低卡片高度并提升信息密度。
+                      SizedBox(
+                        width: coverWidth,
+                        child: AspectRatio(
+                          aspectRatio: isLandscape ? 1.55 : 1.4,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: _buildCoverImage(context, host, token),
+                          ),
                         ),
-                        const SizedBox(height: 8),
-                        Row(
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: Text(
-                                widget.work.title,
-                                maxLines: 3,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleSmall
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      height: 1.25,
-                                      fontSize: titleFontSize,
+                            // 顶部标签与标题和封面保持同一行。
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 6,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.secondaryContainer,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    widget.work.displayId,
+                                    style: TextStyle(
+                                      color: colorScheme.onSecondaryContainer,
+                                      fontSize: rjFontSize,
+                                      fontWeight: FontWeight.w600,
+                                      height: 1.1,
                                     ),
-                              ),
+                                  ),
+                                ),
+                                if (displaySettings.showAgeRating &&
+                                    AgeRatingFormatter.hasValue(widget.work.age))
+                                  AgeRatingChip(
+                                    age: widget.work.age,
+                                    fontSize: rjFontSize,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
+                                  ),
+                                if (displaySettings.showSubtitleTag &&
+                                    (widget.work.hasSubtitle == true ||
+                                        hasLocalSubtitle))
+                                  _buildSubtitleTag(
+                                    context,
+                                    isLocal: hasLocalSubtitle,
+                                  ),
+                              ],
                             ),
-                            if (trailingAction != null) ...[
-                              const SizedBox(width: 4),
-                              trailingAction,
-                            ],
-                          ],
-                        ),
-                        if (hasCircle || hasPrice) ...[
-                          const SizedBox(height: 10),
-                          Row(
-                            children: [
-                              if (hasCircle)
+                            const SizedBox(height: 8),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
                                 Expanded(
                                   child: Text(
-                                    widget.work.name!.trim(),
-                                    maxLines: 1,
+                                    widget.work.title,
+                                    maxLines: 3,
                                     overflow: TextOverflow.ellipsis,
                                     style: Theme.of(context)
                                         .textTheme
-                                        .bodyMedium
+                                        .titleSmall
                                         ?.copyWith(
-                                          color: colorScheme.onSurfaceVariant,
-                                          fontSize: bodyFontSize,
+                                          fontWeight: FontWeight.bold,
+                                          height: 1.25,
+                                          fontSize: titleFontSize,
                                         ),
-                                    ),
                                   ),
-                              if (!hasCircle) const Spacer(),
-                              if (hasPrice)
-                                Text(
-                                  S.of(context).priceInYen(widget.work.price!),
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
-                                      ?.copyWith(
-                                        color: colorScheme.error,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: bodyFontSize,
-                                      ),
                                 ),
-                            ],
-                          ),
-                        ],
-                        if (hasRelease ||
-                            hasRating ||
-                            hasDuration ||
-                            hasSales ||
-                            hasSubtitle) ...[
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 12,
-                            runSpacing: 6,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              if (hasRelease)
-                                Text(
-                                  widget.work.release!,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(
-                                        color: colorScheme.outline,
-                                        fontSize: metaFontSize,
-                                      ),
-                                ),
-                              if (hasRating)
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.star,
-                                      color: Colors.amber[700],
-                                      size: 16,
-                                    ),
-                                    const SizedBox(width: 3),
-                                    Text(
-                                      '${widget.work.rateAverage!.toStringAsFixed(1)} (${widget.work.rateCount})',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall
-                                          ?.copyWith(
-                                            color: Colors.amber[700],
-                                            fontWeight: FontWeight.w500,
-                                            fontSize: metaFontSize,
-                                          ),
-                                    ),
-                                  ],
-                                ),
-                              if (hasDuration)
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.access_time,
-                                      color: Colors.blue[700],
-                                      size: 16,
-                                    ),
-                                    const SizedBox(width: 3),
-                                    Text(
-                                      formatDuration(
-                                        Duration(seconds: widget.work.duration!),
-                                      ),
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall
-                                          ?.copyWith(
-                                            color: Colors.blue[700],
-                                            fontWeight: FontWeight.w500,
-                                            fontSize: metaFontSize,
-                                          ),
-                                    ),
-                                  ],
-                                ),
-                              if (hasSales)
-                                Text(
-                                  S.of(context).soldCount('${widget.work.dlCount}'),
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(
-                                        color: colorScheme.outline,
-                                        fontSize: metaFontSize,
-                                      ),
-                                ),
-                              if (hasSubtitle)
-                                _buildSubtitleTag(
-                                  context,
-                                  isLocal: hasLocalSubtitle,
-                                ),
-                            ],
-                          ),
-                        ],
-                        if (widget.work.vas != null &&
-                            widget.work.vas!.isNotEmpty) ...[
-                          const SizedBox(height: 10),
-                          _buildVoiceActorsWrap(
-                            context,
-                            fontSize: tagFontSize,
-                          ),
-                        ],
-                        if (widget.work.tags != null &&
-                            widget.work.tags!.isNotEmpty) ...[
-                          const SizedBox(height: 6),
-                          _buildTagsWrap(context, fontSize: tagFontSize),
-                        ],
-                      ],
-                    ),
+                                if (trailingAction != null) ...[
+                                  const SizedBox(width: 4),
+                                  trailingAction,
+                                ],
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _buildFullCardDetails(
+                    context,
+                    displaySettings,
                   ),
                 ],
               ),
@@ -761,6 +618,148 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildFullCardDetails(
+    BuildContext context,
+    WorkCardDisplaySettings displaySettings,
+  ) {
+    final isLandscape =
+        MediaQuery.orientationOf(context) == Orientation.landscape;
+    final bodyFontSize =
+        displaySettings.scaleFontSize(isLandscape ? 14.0 : 13.0);
+    final metaFontSize =
+        displaySettings.scaleFontSize(isLandscape ? 13.0 : 12.0);
+    final tagFontSize =
+        displaySettings.scaleFontSize(isLandscape ? 13.0 : 12.0);
+    final colorScheme = Theme.of(context).colorScheme;
+    final hasCircle = displaySettings.showCircle &&
+        widget.work.name != null &&
+        widget.work.name!.trim().isNotEmpty;
+    final hasPrice = displaySettings.showPrice && widget.work.price != null;
+    final hasRelease = displaySettings.showReleaseDate &&
+        widget.work.release != null;
+    final hasRating = displaySettings.showRating &&
+        widget.work.rateAverage != null &&
+        widget.work.rateCount != null &&
+        widget.work.rateCount! > 0;
+    final hasDuration = displaySettings.showDuration &&
+        widget.work.duration != null &&
+        widget.work.duration! > 0;
+    final hasSales = displaySettings.showSales && widget.work.dlCount != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (hasCircle || hasPrice) ...[
+          Row(
+            children: [
+              if (hasCircle)
+                Expanded(
+                  child: Text(
+                    widget.work.name!.trim(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                          fontSize: bodyFontSize,
+                        ),
+                  ),
+                ),
+              if (!hasCircle) const Spacer(),
+              if (hasPrice)
+                Text(
+                  S.of(context).priceInYen(widget.work.price!),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.error,
+                        fontWeight: FontWeight.w600,
+                        fontSize: bodyFontSize,
+                      ),
+                ),
+            ],
+          ),
+        ],
+        if (hasRelease || hasRating || hasDuration || hasSales) ...[
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 12,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              if (hasRelease)
+                Text(
+                  widget.work.release!,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colorScheme.outline,
+                        fontSize: metaFontSize,
+                      ),
+                ),
+              if (hasRating)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.star,
+                      color: Colors.amber[700],
+                      size: 16,
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      '${widget.work.rateAverage!.toStringAsFixed(1)} (${widget.work.rateCount})',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.amber[700],
+                            fontWeight: FontWeight.w500,
+                            fontSize: metaFontSize,
+                          ),
+                    ),
+                  ],
+                ),
+              if (hasDuration)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.access_time,
+                      color: Colors.blue[700],
+                      size: 16,
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      formatDuration(
+                        Duration(seconds: widget.work.duration!),
+                      ),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.blue[700],
+                            fontWeight: FontWeight.w500,
+                            fontSize: metaFontSize,
+                          ),
+                    ),
+                  ],
+                ),
+              if (hasSales)
+                Text(
+                  S.of(context).soldCount('${widget.work.dlCount}'),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colorScheme.outline,
+                        fontSize: metaFontSize,
+                      ),
+                ),
+            ],
+          ),
+        ],
+        if (widget.work.vas != null && widget.work.vas!.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          _buildVoiceActorsWrap(
+            context,
+            fontSize: tagFontSize,
+          ),
+        ],
+        if (widget.work.tags != null && widget.work.tags!.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          _buildTagsWrap(context, fontSize: tagFontSize),
+        ],
+      ],
     );
   }
 

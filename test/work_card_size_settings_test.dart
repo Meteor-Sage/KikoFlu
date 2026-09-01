@@ -179,6 +179,7 @@ void main() {
       sourceId: 'RJ123456',
       age: 'R18',
       name: 'Circle',
+      hasSubtitle: true,
     );
 
     await tester.pumpWidget(
@@ -201,10 +202,16 @@ void main() {
     expect(coverRatio.aspectRatio, greaterThan(1.0));
     expect(find.text('RJ123456'), findsOneWidget);
     expect(find.byType(AgeRatingChip), findsOneWidget);
+    expect(find.byIcon(Icons.closed_caption), findsOneWidget);
 
+    final coverRect = tester.getRect(find.byType(AspectRatio));
     final rjRect = tester.getRect(find.text('RJ123456'));
     final ageRect = tester.getRect(find.byType(AgeRatingChip));
+    final subtitleRect = tester.getRect(find.byIcon(Icons.closed_caption));
+    final circleRect = tester.getRect(find.text('Circle'));
     expect(rjRect.overlaps(ageRect), isFalse);
+    expect(subtitleRect.top, lessThan(coverRect.bottom));
+    expect(circleRect.top, greaterThan(coverRect.bottom));
   });
 
   testWidgets('card action stays out of the cover badge area', (tester) async {
