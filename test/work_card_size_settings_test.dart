@@ -7,6 +7,8 @@ import 'package:kikoeru_flutter/src/models/work.dart';
 import 'package:kikoeru_flutter/src/providers/work_card_display_provider.dart';
 import 'package:kikoeru_flutter/src/providers/works_provider.dart';
 import 'package:kikoeru_flutter/src/screens/work_card_display_settings_screen.dart';
+import 'package:kikoeru_flutter/src/widgets/age_rating_chip.dart';
+import 'package:kikoeru_flutter/src/widgets/enhanced_work_card.dart';
 import 'package:kikoeru_flutter/src/widgets/works_grid_view.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -163,5 +165,45 @@ void main() {
       container.read(workCardDisplayProvider).fontScale,
       WorkCardFontScale.extraLarge,
     );
+  });
+
+  testWidgets('list card keeps RJ and age badges in the information area',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({
+      WorkCardDisplayNotifier.keyAgeRating: true,
+    });
+
+    const listWork = Work(
+      id: 123456,
+      title: 'A long work title that should stay readable in list layout',
+      sourceId: 'RJ123456',
+      age: 'R18',
+      name: 'Circle',
+    );
+
+    await tester.pumpWidget(
+      _testApp(
+        const MediaQuery(
+          data: MediaQueryData(size: Size(800, 600)),
+          child: Scaffold(
+            body: EnhancedWorkCard(
+              work: listWork,
+              crossAxisCount: 1,
+              isListLayout: true,
+            ),
+          ),
+        ),
+      ),
+    );
+    await _pumpAsyncPreferenceLoad(tester);
+
+    final coverRatio = tester.widget<AspectRatio>(find.byType(AspectRatio));
+    expect(coverRatio.aspectRatio, greaterThan(1.0));
+    expect(find.text('RJ123456'), findsOneWidget);
+    expect(find.byType(AgeRatingChip), findsOneWidget);
+
+    final rjRect = tester.getRect(find.text('RJ123456'));
+    final ageRect = tester.getRect(find.byType(AgeRatingChip));
+    expect(rjRect.overlaps(ageRect), isFalse);
   });
 }

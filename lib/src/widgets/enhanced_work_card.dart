@@ -462,223 +462,261 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
   ) {
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
-    final rjFontSize = displaySettings.scaleFontSize(isLandscape ? 11.0 : 10.0);
+    final rjFontSize = displaySettings.scaleFontSize(isLandscape ? 12.0 : 11.0);
     final titleFontSize =
-        displaySettings.scaleFontSize(isLandscape ? 16.0 : 14.0);
+        displaySettings.scaleFontSize(isLandscape ? 18.0 : 16.0);
     final bodyFontSize =
-        displaySettings.scaleFontSize(isLandscape ? 14.0 : 12.0);
+        displaySettings.scaleFontSize(isLandscape ? 14.0 : 13.0);
     final metaFontSize =
-        displaySettings.scaleFontSize(isLandscape ? 13.0 : 11.0);
+        displaySettings.scaleFontSize(isLandscape ? 13.0 : 12.0);
     final tagFontSize =
-        displaySettings.scaleFontSize(isLandscape ? 13.0 : 11.0);
+        displaySettings.scaleFontSize(isLandscape ? 13.0 : 12.0);
+    final colorScheme = Theme.of(context).colorScheme;
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      elevation: 4,
-      child: InkWell(
-        onTap: cardOnTap,
-        onLongPress: _onLongPress,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 第一行：封面和标题
-              Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.hasBoundedWidth
+            ? constraints.maxWidth
+            : MediaQuery.sizeOf(context).width;
+        final coverWidth = (availableWidth * 0.24).clamp(120.0, 260.0).toDouble();
+
+        final hasCircle = displaySettings.showCircle &&
+            widget.work.name != null &&
+            widget.work.name!.trim().isNotEmpty;
+        final hasPrice = displaySettings.showPrice && widget.work.price != null;
+        final hasRelease = displaySettings.showReleaseDate &&
+            widget.work.release != null;
+        final hasRating = displaySettings.showRating &&
+            widget.work.rateAverage != null &&
+            widget.work.rateCount != null &&
+            widget.work.rateCount! > 0;
+        final hasDuration = displaySettings.showDuration &&
+            widget.work.duration != null &&
+            widget.work.duration! > 0;
+        final hasSales = displaySettings.showSales && widget.work.dlCount != null;
+        final hasSubtitle = displaySettings.showSubtitleTag &&
+            (widget.work.hasSubtitle == true || hasLocalSubtitle);
+
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          elevation: 4,
+          child: InkWell(
+            onTap: cardOnTap,
+            onLongPress: _onLongPress,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 封面图片
+                  // 列表封面使用横向比例，降低卡片高度并提升信息密度。
                   SizedBox(
-                    width: 80,
-                    height: 80,
-                    child: Stack(
+                    width: coverWidth,
+                    child: AspectRatio(
+                      aspectRatio: isLandscape ? 1.55 : 1.4,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: _buildCoverImage(context, host, token),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: _buildCoverImage(context, host, token),
-                        ),
-                        // 作品编号标签
-                        Positioned(
-                          top: 2,
-                          left: 2,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 4, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.7),
-                              borderRadius: BorderRadius.circular(3),
-                            ),
-                            child: Text(
-                              widget.work.displayId,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: rjFontSize,
-                                fontWeight: FontWeight.bold,
+                        // RJ 号和年龄分级在信息区内并排显示，不再覆盖封面。
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: colorScheme.secondaryContainer,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                widget.work.displayId,
+                                style: TextStyle(
+                                  color: colorScheme.onSecondaryContainer,
+                                  fontSize: rjFontSize,
+                                  fontWeight: FontWeight.w600,
+                                  height: 1.1,
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                        if (displaySettings.showAgeRating &&
-                            AgeRatingFormatter.hasValue(widget.work.age))
-                          Positioned(
-                            top: 2,
-                            right: 2,
-                            child: AgeRatingChip(
-                              age: widget.work.age,
-                              compact: true,
-                              fontSize: rjFontSize,
-                            ),
-                          ),
-                        // 字幕标签 (左下角)
-                        if (displaySettings.showSubtitleTag &&
-                            (widget.work.hasSubtitle == true ||
-                                hasLocalSubtitle))
-                          Positioned(
-                            bottom: 2,
-                            left: 2,
-                            child: _buildSubtitleTag(
-                              context,
-                              isLocal: hasLocalSubtitle,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // 标题
-                  Expanded(
-                    child: Text(
-                      widget.work.title,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            height: 1.3,
-                            fontSize: titleFontSize,
-                          ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              // 第二行：其他信息
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 社团和价格行
-                  Row(
-                    children: [
-                      if (displaySettings.showCircle)
-                        Expanded(
-                          child: Text(
-                            widget.work.name ?? '',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(
-                                  color: Colors.grey[600],
-                                  fontSize: bodyFontSize,
+                            if (displaySettings.showAgeRating &&
+                                AgeRatingFormatter.hasValue(widget.work.age))
+                              AgeRatingChip(
+                                age: widget.work.age,
+                                fontSize: rjFontSize,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
                                 ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          widget.work.title,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                height: 1.25,
+                                fontSize: titleFontSize,
+                              ),
+                        ),
+                        if (hasCircle || hasPrice) ...[
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              if (hasCircle)
+                                Expanded(
+                                  child: Text(
+                                    widget.work.name!.trim(),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: colorScheme.onSurfaceVariant,
+                                          fontSize: bodyFontSize,
+                                        ),
+                                    ),
+                                  ),
+                              if (!hasCircle) const Spacer(),
+                              if (hasPrice)
+                                Text(
+                                  S.of(context).priceInYen(widget.work.price!),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        color: colorScheme.error,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: bodyFontSize,
+                                      ),
+                                ),
+                            ],
                           ),
-                        ),
-                      if (displaySettings.showPrice &&
-                          widget.work.price != null)
-                        Text(
-                          S.of(context).priceInYen(widget.work.price!),
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Colors.red[700],
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: metaFontSize,
-                                  ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  // 日期和下载数
-                  Row(
-                    children: [
-                      if (displaySettings.showReleaseDate &&
-                          widget.work.release != null)
-                        Text(
-                          widget.work.release!,
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Colors.grey[500],
-                                    fontSize: metaFontSize,
-                                  ),
-                        ),
-                      // 评分信息
-                      if (displaySettings.showRating &&
-                          widget.work.rateAverage != null &&
-                          widget.work.rateCount != null &&
-                          widget.work.rateCount! > 0) ...[
-                        if (displaySettings.showReleaseDate &&
-                            widget.work.release != null)
-                          const SizedBox(width: 8),
-                        Icon(
-                          Icons.star,
-                          color: Colors.amber[700],
-                          size: 14,
-                        ),
-                        const SizedBox(width: 2),
-                        Text(
-                          '${widget.work.rateAverage!.toStringAsFixed(1)} (${widget.work.rateCount})',
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Colors.amber[700],
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: metaFontSize,
-                                  ),
-                        ),
+                        ],
+                        if (hasRelease ||
+                            hasRating ||
+                            hasDuration ||
+                            hasSales ||
+                            hasSubtitle) ...[
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 6,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              if (hasRelease)
+                                Text(
+                                  widget.work.release!,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: colorScheme.outline,
+                                        fontSize: metaFontSize,
+                                      ),
+                                ),
+                              if (hasRating)
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.star,
+                                      color: Colors.amber[700],
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      '${widget.work.rateAverage!.toStringAsFixed(1)} (${widget.work.rateCount})',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: Colors.amber[700],
+                                            fontWeight: FontWeight.w500,
+                                            fontSize: metaFontSize,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              if (hasDuration)
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.access_time,
+                                      color: Colors.blue[700],
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      formatDuration(
+                                        Duration(seconds: widget.work.duration!),
+                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: Colors.blue[700],
+                                            fontWeight: FontWeight.w500,
+                                            fontSize: metaFontSize,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              if (hasSales)
+                                Text(
+                                  S.of(context).soldCount('${widget.work.dlCount}'),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: colorScheme.outline,
+                                        fontSize: metaFontSize,
+                                      ),
+                                ),
+                              if (hasSubtitle)
+                                _buildSubtitleTag(
+                                  context,
+                                  isLocal: hasLocalSubtitle,
+                                ),
+                            ],
+                          ),
+                        ],
+                        if (widget.work.vas != null &&
+                            widget.work.vas!.isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          _buildVoiceActorsWrap(
+                            context,
+                            fontSize: tagFontSize,
+                          ),
+                        ],
+                        if (widget.work.tags != null &&
+                            widget.work.tags!.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          _buildTagsWrap(context, fontSize: tagFontSize),
+                        ],
                       ],
-                      // 时长信息
-                      if (displaySettings.showDuration &&
-                          widget.work.duration != null &&
-                          widget.work.duration! > 0) ...[
-                        const SizedBox(width: 8),
-                        const Icon(
-                          Icons.access_time,
-                          color: Colors.blue,
-                          size: 14,
-                        ),
-                        const SizedBox(width: 2),
-                        Text(
-                          formatDuration(
-                              Duration(seconds: widget.work.duration!)),
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Colors.blue[700],
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: metaFontSize,
-                                  ),
-                        ),
-                      ],
-                      const Spacer(),
-                      if (displaySettings.showSales &&
-                          widget.work.dlCount != null)
-                        Text(
-                          S.of(context).soldCount('${widget.work.dlCount}'),
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Colors.grey[500],
-                                    fontSize: metaFontSize,
-                                  ),
-                        ),
-                    ],
+                    ),
                   ),
-                  const SizedBox(height: 8),
-                  // 声优
-                  if (widget.work.vas != null && widget.work.vas!.isNotEmpty)
-                    _buildVoiceActorsWrap(context, fontSize: tagFontSize),
-                  const SizedBox(height: 6),
-                  // 标签
-                  if (widget.work.tags != null && widget.work.tags!.isNotEmpty)
-                    _buildTagsWrap(context, fontSize: tagFontSize),
                 ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
