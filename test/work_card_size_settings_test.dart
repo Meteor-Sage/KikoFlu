@@ -206,4 +206,48 @@ void main() {
     final ageRect = tester.getRect(find.byType(AgeRatingChip));
     expect(rjRect.overlaps(ageRect), isFalse);
   });
+
+  testWidgets('card action stays out of the cover badge area', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      WorkCardDisplayNotifier.keyAgeRating: true,
+    });
+
+    const cardWork = Work(
+      id: 234567,
+      title: 'Card work with a removable playlist action',
+      sourceId: 'RJ234567',
+      age: 'R18',
+    );
+
+    await tester.pumpWidget(
+      _testApp(
+        const MediaQuery(
+          data: MediaQueryData(size: Size(400, 800)),
+          child: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 180,
+                child: EnhancedWorkCard(
+                  work: cardWork,
+                  crossAxisCount: 2,
+                  trailingAction: IconButton(
+                    key: ValueKey('playlist-remove-action'),
+                    onPressed: null,
+                    icon: Icon(Icons.remove_circle_outline),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await _pumpAsyncPreferenceLoad(tester);
+
+    final ageRect = tester.getRect(find.byType(AgeRatingChip));
+    final actionRect = tester.getRect(
+      find.byKey(const ValueKey('playlist-remove-action')),
+    );
+    expect(ageRect.overlaps(actionRect), isFalse);
+  });
 }

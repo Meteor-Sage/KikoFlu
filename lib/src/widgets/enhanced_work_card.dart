@@ -21,6 +21,7 @@ import 'privacy_blur_cover.dart';
 class EnhancedWorkCard extends ConsumerStatefulWidget {
   final Work work;
   final VoidCallback? onTap;
+  final Widget? trailingAction;
   final int crossAxisCount;
   final bool? isListLayout;
 
@@ -28,6 +29,7 @@ class EnhancedWorkCard extends ConsumerStatefulWidget {
     super.key,
     required this.work,
     this.onTap,
+    this.trailingAction,
     this.crossAxisCount = 2,
     this.isListLayout,
   });
@@ -159,6 +161,7 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
             cardOnTap,
             displaySettings,
             hasLocalSubtitle,
+            trailingAction: widget.trailingAction,
           );
         }
         if (isCompact) {
@@ -169,6 +172,7 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
             cardOnTap,
             displaySettings,
             hasLocalSubtitle,
+            trailingAction: widget.trailingAction,
           );
         }
         return _buildMediumCard(
@@ -178,6 +182,7 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
           cardOnTap,
           displaySettings,
           hasLocalSubtitle,
+          trailingAction: widget.trailingAction,
         );
       },
     );
@@ -190,8 +195,9 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
     String token,
     VoidCallback cardOnTap,
     WorkCardDisplaySettings displaySettings,
-    bool hasLocalSubtitle,
-  ) {
+    bool hasLocalSubtitle, {
+    Widget? trailingAction,
+  }) {
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
     final titleFontSize =
@@ -257,13 +263,24 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // 标题
-                  Text(
-                    widget.work.title,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          height: 1.1,
-                          fontSize: titleFontSize,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          widget.work.title,
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                height: 1.1,
+                                fontSize: titleFontSize,
+                              ),
                         ),
+                      ),
+                      if (trailingAction != null) ...[
+                        const SizedBox(width: 4),
+                        trailingAction,
+                      ],
+                    ],
                   ),
                 ],
               ),
@@ -281,8 +298,9 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
     String token,
     VoidCallback cardOnTap,
     WorkCardDisplaySettings displaySettings,
-    bool hasLocalSubtitle,
-  ) {
+    bool hasLocalSubtitle, {
+    Widget? trailingAction,
+  }) {
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
     final titleFontSize =
@@ -353,13 +371,24 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // 标题
-                  Text(
-                    widget.work.title,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          height: 1.1,
-                          fontSize: titleFontSize,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          widget.work.title,
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                height: 1.1,
+                                fontSize: titleFontSize,
+                              ),
                         ),
+                      ),
+                      if (trailingAction != null) ...[
+                        const SizedBox(width: 4),
+                        trailingAction,
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 3),
                   // 社团名称
@@ -458,8 +487,9 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
     String token,
     VoidCallback cardOnTap,
     WorkCardDisplaySettings displaySettings,
-    bool hasLocalSubtitle,
-  ) {
+    bool hasLocalSubtitle, {
+    Widget? trailingAction,
+  }) {
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
     final rjFontSize = displaySettings.scaleFontSize(isLandscape ? 12.0 : 11.0);
@@ -561,15 +591,29 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                           ],
                         ),
                         const SizedBox(height: 8),
-                        Text(
-                          widget.work.title,
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                height: 1.25,
-                                fontSize: titleFontSize,
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                widget.work.title,
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleSmall
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      height: 1.25,
+                                      fontSize: titleFontSize,
+                                    ),
                               ),
+                            ),
+                            if (trailingAction != null) ...[
+                              const SizedBox(width: 4),
+                              trailingAction,
+                            ],
+                          ],
                         ),
                         if (hasCircle || hasPrice) ...[
                           const SizedBox(height: 10),

@@ -20,8 +20,10 @@ import '../widgets/virtualized_sliver_collection.dart';
 import '../utils/responsive_grid_helper.dart';
 import '../utils/work_cover_prefetch.dart';
 import '../utils/scroll_optimization.dart';
+import '../utils/age_rating.dart';
 import '../../l10n/app_localizations.dart';
 import '../widgets/confirmation_dialog.dart';
+import '../widgets/age_rating_chip.dart';
 
 class PlaylistDetailScreen extends ConsumerStatefulWidget {
   final String playlistId;
@@ -505,33 +507,29 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
     bool isOwner, {
     required int crossAxisCount,
   }) {
-    return Stack(
+    return EnhancedWorkCard(
       key: ValueKey(work.id),
-      children: [
-        EnhancedWorkCard(
-          work: work,
-          crossAxisCount: crossAxisCount,
-          isListLayout: false,
-        ),
-        if (isOwner)
-          Positioned(
-            top: 4,
-            right: 4,
-            child: Material(
-              color: Colors.black.withValues(alpha: 0.45),
-              shape: const CircleBorder(),
-              child: IconButton(
-                icon: const Icon(Icons.remove_circle_outline, size: 18),
-                color: Colors.white,
-                visualDensity: VisualDensity.compact,
-                constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-                padding: EdgeInsets.zero,
-                onPressed: () => _showRemoveWorkConfirmDialog(work),
-                tooltip: S.of(context).removeFromPlaylist,
-              ),
-            ),
-          ),
-      ],
+      work: work,
+      crossAxisCount: crossAxisCount,
+      isListLayout: false,
+      trailingAction: isOwner ? _buildPlaylistRemoveAction(work) : null,
+    );
+  }
+
+  Widget _buildPlaylistRemoveAction(Work work) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return IconButton(
+      icon: const Icon(Icons.remove_circle_outline, size: 17),
+      tooltip: S.of(context).removeFromPlaylist,
+      onPressed: () => _showRemoveWorkConfirmDialog(work),
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints.tightFor(width: 30, height: 30),
+      visualDensity: VisualDensity.compact,
+      style: IconButton.styleFrom(
+        foregroundColor: colorScheme.error,
+        backgroundColor: colorScheme.errorContainer.withValues(alpha: 0.72),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
     );
   }
 
@@ -544,6 +542,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
   ) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final displaySettings = ref.watch(workCardDisplayProvider);
 
     final httpHeaders = StorageService.serverCookieHeaders;
     final initialCoverImageProvider = host.isEmpty
@@ -650,6 +649,9 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                           fontWeight: FontWeight.w500,
                         ),
                       ),
+                      if (displaySettings.showAgeRating &&
+                          AgeRatingFormatter.hasValue(work.age))
+                        AgeRatingChip(age: work.age, compact: true),
                       if (work.name != null && work.name!.isNotEmpty)
                         Text(
                           work.name!,
@@ -702,13 +704,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
             // 移除按钮（仅作者可见）
             if (isOwner) ...[
               const SizedBox(width: 8),
-              IconButton(
-                icon: const Icon(Icons.remove_circle_outline, size: 20),
-                color: colorScheme.error,
-                visualDensity: VisualDensity.compact,
-                onPressed: () => _showRemoveWorkConfirmDialog(work),
-                tooltip: S.of(context).removeFromPlaylist,
-              ),
+              _buildPlaylistRemoveAction(work),
             ],
           ],
         ),
