@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../l10n/app_localizations.dart';
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
-import '../widgets/responsive_dialog.dart';
+import '../widgets/confirmation_dialog.dart';
 import 'main_screen.dart';
 import 'login_screen.dart';
 
@@ -55,26 +55,15 @@ class _UserSwitchScreenState extends ConsumerState<UserSwitchScreen> {
   }
 
   void _showDeleteConfirmation(User user) {
-    showDialog(
+    showCommonConfirmationDialog(
       context: context,
-      builder: (context) => ResponsiveAlertDialog(
-        title: Text(S.of(context).deleteAccount),
-        content: Text(S.of(context).deleteAccountConfirm(user.name)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(S.of(context).cancel),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _deleteUser(user);
-            },
-            child: Text(S.of(context).delete),
-          ),
-        ],
-      ),
-    );
+      title: S.of(context).deleteAccount,
+      content: Text(S.of(context).deleteAccountConfirm(user.name)),
+      confirmLabel: S.of(context).delete,
+      variant: ConfirmationDialogVariant.danger,
+    ).then((confirmed) {
+      if (confirmed) _deleteUser(user);
+    });
   }
 
   @override

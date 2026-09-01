@@ -22,6 +22,7 @@ import '../utils/age_rating.dart';
 import '../../l10n/app_localizations.dart';
 import 'privacy_blur_cover.dart';
 import 'age_rating_chip.dart';
+import 'confirmation_dialog.dart';
 
 final _log = LogService.instance;
 
@@ -71,26 +72,17 @@ class HistoryWorkCard extends ConsumerWidget {
           );
         },
         onLongPress: () {
-          showDialog(
+          showCommonConfirmationDialog(
             context: context,
-            builder: (context) => AlertDialog(
-              title: Text(S.of(context).deleteRecord),
-              content: Text(S.of(context).deletePlayRecordConfirm(work.title)),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(S.of(context).cancel),
-                ),
-                TextButton(
-                  onPressed: () {
-                    ref.read(historyProvider.notifier).remove(work.id);
-                    Navigator.pop(context);
-                  },
-                  child: Text(S.of(context).delete),
-                ),
-              ],
-            ),
-          );
+            title: S.of(context).deleteRecord,
+            content: Text(S.of(context).deletePlayRecordConfirm(work.title)),
+            confirmLabel: S.of(context).delete,
+            variant: ConfirmationDialogVariant.danger,
+          ).then((confirmed) {
+            if (confirmed) {
+              ref.read(historyProvider.notifier).remove(work.id);
+            }
+          });
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

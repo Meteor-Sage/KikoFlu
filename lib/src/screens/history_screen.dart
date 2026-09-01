@@ -7,6 +7,7 @@ import '../utils/scroll_optimization.dart';
 import '../widgets/history_work_card.dart';
 import '../widgets/virtualized_sliver_collection.dart';
 import '../../l10n/app_localizations.dart';
+import '../widgets/confirmation_dialog.dart';
 
 class HistoryScreen extends ConsumerWidget {
   const HistoryScreen({
@@ -109,22 +110,12 @@ class HistoryScreen extends ConsumerWidget {
 
   Future<void> _showClearConfirmation(
       BuildContext context, WidgetRef ref) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showCommonConfirmationDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(S.of(context).clearHistoryTitle),
-        content: Text(S.of(context).clearHistoryConfirm),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(S.of(context).cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(S.of(context).clear),
-          ),
-        ],
-      ),
+      title: S.of(context).clearHistoryTitle,
+      content: Text(S.of(context).clearHistoryConfirm),
+      confirmLabel: S.of(context).clear,
+      variant: ConfirmationDialogVariant.danger,
     );
 
     if (confirmed == true) {

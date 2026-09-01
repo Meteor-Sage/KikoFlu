@@ -21,6 +21,7 @@ import '../utils/responsive_grid_helper.dart';
 import '../utils/work_cover_prefetch.dart';
 import '../utils/scroll_optimization.dart';
 import '../../l10n/app_localizations.dart';
+import '../widgets/confirmation_dialog.dart';
 
 class PlaylistDetailScreen extends ConsumerStatefulWidget {
   final String playlistId;
@@ -71,32 +72,18 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
       return;
     }
 
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showCommonConfirmationDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(isOwner
-            ? S.of(context).deletePlaylist
-            : S.of(context).unfavoritePlaylist),
-        content: Text(
-          isOwner
-              ? S.of(context).deletePlaylistConfirm
-              : S.of(context).unfavoritePlaylistConfirm(playlist.displayName),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(S.of(context).cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-            child:
-                Text(isOwner ? S.of(context).delete : S.of(context).unfavorite),
-          ),
-        ],
+      title: isOwner
+          ? S.of(context).deletePlaylist
+          : S.of(context).unfavoritePlaylist,
+      content: Text(
+        isOwner
+            ? S.of(context).deletePlaylistConfirm
+            : S.of(context).unfavoritePlaylistConfirm(playlist.displayName),
       ),
+      confirmLabel: isOwner ? S.of(context).delete : S.of(context).unfavorite,
+      variant: ConfirmationDialogVariant.danger,
     );
 
     if (confirmed == true) {
@@ -222,25 +209,12 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
 
   /// 显示移除作品确认对话框
   Future<void> _showRemoveWorkConfirmDialog(Work work) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showCommonConfirmationDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(S.of(context).removeWork),
-        content: Text(S.of(context).removeWorkConfirm(work.title)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(S.of(context).cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-            child: Text(S.of(context).remove),
-          ),
-        ],
-      ),
+      title: S.of(context).removeWork,
+      content: Text(S.of(context).removeWorkConfirm(work.title)),
+      confirmLabel: S.of(context).remove,
+      variant: ConfirmationDialogVariant.danger,
     );
 
     if (confirmed == true) {

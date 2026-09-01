@@ -4,6 +4,7 @@ import '../../l10n/app_localizations.dart';
 import '../utils/snackbar_util.dart';
 import '../utils/ui_tokens.dart';
 import 'scrollable_appbar.dart';
+import 'confirmation_dialog.dart';
 
 class SettingsSubpageScaffold extends StatelessWidget {
   const SettingsSubpageScaffold({
@@ -50,24 +51,12 @@ Future<bool> showSettingsResetConfirmation({
   String? title,
   String? confirmLabel,
 }) async {
-  final confirmed = await showDialog<bool>(
+  return showCommonConfirmationDialog(
     context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: Text(title ?? S.of(dialogContext).restoreDefaultSettings),
-      content: Text(message),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(dialogContext).pop(false),
-          child: Text(S.of(dialogContext).cancel),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(dialogContext).pop(true),
-          child: Text(confirmLabel ?? S.of(dialogContext).confirm),
-        ),
-      ],
-    ),
+    title: title ?? S.of(context).restoreDefaultSettings,
+    content: Text(message),
+    confirmLabel: confirmLabel ?? S.of(context).confirm,
   );
-  return confirmed ?? false;
 }
 
 Future<bool> confirmAndRestoreSettingsDefaults({

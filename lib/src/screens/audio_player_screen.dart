@@ -17,6 +17,7 @@ import '../widgets/player/player_controls_widget.dart';
 import '../widgets/player/lyric_display_widget.dart';
 import '../widgets/player/playlist_dialog.dart';
 import '../widgets/work_bookmark_manager.dart';
+import '../widgets/confirmation_dialog.dart';
 import 'work_detail_screen.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -204,25 +205,15 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
     }
     if (!context.mounted) return false;
 
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showCommonConfirmationDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(S.of(dialogContext).translateLyrics),
-        content: Text(S.of(dialogContext).lyricTranslationConfirmMessage),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(S.of(dialogContext).cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(S.of(dialogContext).confirm),
-          ),
-        ],
-      ),
+      title: S.of(context).translateLyrics,
+      content: Text(S.of(context).lyricTranslationConfirmMessage),
+      confirmLabel: S.of(context).confirm,
+      variant: ConfirmationDialogVariant.warning,
     );
 
-    if (confirmed == true) {
+    if (confirmed) {
       await prefs.setBool(_lyricTranslationConfirmKey, true);
       return true;
     }

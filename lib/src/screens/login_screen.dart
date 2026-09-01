@@ -14,6 +14,7 @@ import '../widgets/responsive_dialog.dart';
 import '../widgets/radio_option_group.dart';
 import '../widgets/settings_option_dialog.dart';
 import '../widgets/scrollable_appbar.dart';
+import '../widgets/confirmation_dialog.dart';
 import 'main_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -186,28 +187,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
 
     // 显示二次确认对话框
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showCommonConfirmationDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(S.of(context).guestModeTitle),
-          content: Text(S.of(context).guestModeMessage),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text(S.of(context).cancel),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: Text(S.of(context).continueGuestMode),
-            ),
-          ],
-        );
-      },
+      title: S.of(context).guestModeTitle,
+      content: Text(S.of(context).guestModeMessage),
+      confirmLabel: S.of(context).continueGuestMode,
+      variant: ConfirmationDialogVariant.warning,
     );
 
     // 用户取消了操作
-    if (confirmed != true) {
+    if (!confirmed) {
       return;
     }
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
-import 'responsive_dialog.dart';
+import 'confirmation_dialog.dart';
 
 Future<bool> showFileDeleteConfirmationDialog(
   BuildContext context, {
@@ -29,8 +29,8 @@ class FileDeleteConfirmationDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = S.of(context);
 
-    return ResponsiveAlertDialog(
-      title: Text(l10n.deletionConfirmTitle),
+    return CommonConfirmationDialog(
+      title: l10n.deletionConfirmTitle,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -46,19 +46,8 @@ class FileDeleteConfirmationDialog extends StatelessWidget {
           ),
         ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: Text(l10n.cancel),
-        ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(true),
-          style: TextButton.styleFrom(
-            foregroundColor: Theme.of(context).colorScheme.error,
-          ),
-          child: Text(l10n.delete),
-        ),
-      ],
+      confirmLabel: l10n.delete,
+      variant: ConfirmationDialogVariant.danger,
     );
   }
 }

@@ -7,6 +7,7 @@ import '../providers/auth_provider.dart';
 import '../utils/ui_tokens.dart';
 import '../widgets/scrollable_appbar.dart';
 import '../widgets/settings_section.dart';
+import '../widgets/confirmation_dialog.dart';
 import 'login_screen.dart';
 
 class AccountManagementScreen extends ConsumerStatefulWidget {
@@ -41,22 +42,11 @@ class _AccountManagementScreenState
   Future<void> _switchAccount(Account account) async {
     if (account.isActive) return;
 
-    final confirm = await showDialog<bool>(
+    final confirm = await showCommonConfirmationDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(S.of(context).switchAccountTitle),
-        content: Text(S.of(context).switchAccountConfirm(account.username)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(S.of(context).cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(S.of(context).confirm),
-          ),
-        ],
-      ),
+      title: S.of(context).switchAccountTitle,
+      content: Text(S.of(context).switchAccountConfirm(account.username)),
+      confirmLabel: S.of(context).confirm,
     );
 
     if (confirm != true) return;
@@ -115,25 +105,12 @@ class _AccountManagementScreenState
       return;
     }
 
-    final confirm = await showDialog<bool>(
+    final confirm = await showCommonConfirmationDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(S.of(context).deleteAccount),
-        content: Text(S.of(context).deleteAccountConfirm(account.username)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(S.of(context).cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
-            child: Text(S.of(context).delete),
-          ),
-        ],
-      ),
+      title: S.of(context).deleteAccount,
+      content: Text(S.of(context).deleteAccountConfirm(account.username)),
+      confirmLabel: S.of(context).delete,
+      variant: ConfirmationDialogVariant.danger,
     );
 
     if (confirm != true) return;

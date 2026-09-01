@@ -13,6 +13,7 @@ import '../utils/local_file_url.dart';
 import '../services/storage_service.dart';
 import '../../l10n/app_localizations.dart';
 import 'cached_image_widget.dart';
+import 'confirmation_dialog.dart';
 
 /// 图片画廊屏幕，支持查看、缩放、保存图片
 class ImageGalleryScreen extends StatefulWidget {
@@ -158,22 +159,12 @@ class _ImageGalleryScreenState extends State<ImageGalleryScreen> {
 
     if (!status.isGranted) {
       if (status.isPermanentlyDenied) {
-        final shouldOpenSettings = await showDialog<bool>(
+        final shouldOpenSettings = await showCommonConfirmationDialog(
           context: context,
-          builder: (context) => AlertDialog(
-            title: Text(l10n.storagePermissionRequired),
-            content: Text(l10n.storagePermissionForGalleryDesc),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: Text(l10n.cancel),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: Text(l10n.goToSettings),
-              ),
-            ],
-          ),
+          title: l10n.storagePermissionRequired,
+          content: Text(l10n.storagePermissionForGalleryDesc),
+          confirmLabel: l10n.goToSettings,
+          variant: ConfirmationDialogVariant.warning,
         );
 
         if (shouldOpenSettings == true) {

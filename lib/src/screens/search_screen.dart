@@ -18,6 +18,7 @@ import '../widgets/floating_feed_toolbar.dart';
 import '../widgets/liquid_glass_dropdown.dart';
 import '../widgets/liquid_glass_layout.dart';
 import '../widgets/search_condition_chip.dart';
+import '../widgets/confirmation_dialog.dart';
 import 'search_result_screen.dart';
 
 // 搜索条件项
@@ -776,26 +777,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
           Text(S.of(context).searchHistory, style: theme.textTheme.titleSmall),
           TextButton.icon(
             onPressed: () {
-              showDialog(
+              showCommonConfirmationDialog(
                 context: context,
-                builder: (context) => AlertDialog(
-                  title: Text(S.of(context).clearSearchHistory),
-                  content: Text(S.of(context).clearSearchHistoryConfirm),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text(S.of(context).cancel),
-                    ),
-                    FilledButton(
-                      onPressed: () {
-                        ref.read(searchHistoryProvider.notifier).clearHistory();
-                        Navigator.pop(context);
-                      },
-                      child: Text(S.of(context).confirm),
-                    ),
-                  ],
-                ),
-              );
+                title: S.of(context).clearSearchHistory,
+                content: Text(S.of(context).clearSearchHistoryConfirm),
+                confirmLabel: S.of(context).confirm,
+                variant: ConfirmationDialogVariant.danger,
+              ).then((confirmed) {
+                if (confirmed) {
+                  ref.read(searchHistoryProvider.notifier).clearHistory();
+                }
+              });
             },
             icon: const Icon(Icons.delete_outline, size: 18),
             label: Text(S.of(context).clear),

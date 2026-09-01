@@ -7,6 +7,7 @@ import '../services/download_service.dart';
 import '../utils/string_utils.dart';
 import '../utils/ui_tokens.dart';
 import '../widgets/virtualized_sliver_collection.dart';
+import '../widgets/confirmation_dialog.dart';
 
 class DownloadsScreen extends ConsumerStatefulWidget {
   const DownloadsScreen({super.key});
@@ -352,23 +353,12 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
   }
 
   Future<void> _confirmDelete(DownloadTask task) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showCommonConfirmationDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(S.of(context).deletionConfirmTitle),
-        content: Text(S.of(context).deleteFileConfirm(task.fileName)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(S.of(context).cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: Text(S.of(context).delete),
-          ),
-        ],
-      ),
+      title: S.of(context).deletionConfirmTitle,
+      content: Text(S.of(context).deleteFileConfirm(task.fileName)),
+      confirmLabel: S.of(context).delete,
+      variant: ConfirmationDialogVariant.danger,
     );
 
     if (confirmed == true) {
@@ -382,25 +372,14 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
   }
 
   Future<void> _confirmBatchDelete() async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showCommonConfirmationDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(S.of(context).deletionConfirmTitle),
-        content: Text(
-          S.of(context).deleteSelectedFilesConfirm(_selectedTaskIds.length),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(S.of(context).cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: Text(S.of(context).delete),
-          ),
-        ],
+      title: S.of(context).deletionConfirmTitle,
+      content: Text(
+        S.of(context).deleteSelectedFilesConfirm(_selectedTaskIds.length),
       ),
+      confirmLabel: S.of(context).delete,
+      variant: ConfirmationDialogVariant.danger,
     );
 
     if (confirmed == true) {

@@ -19,6 +19,7 @@ import '../widgets/responsive_dialog.dart';
 import '../widgets/settings_section.dart';
 import '../widgets/settings_option_dialog.dart';
 import '../widgets/sort_dialog.dart';
+import '../widgets/confirmation_dialog.dart';
 
 /// 偏好设置页面
 class PreferencesScreen extends ConsumerWidget {
@@ -583,22 +584,12 @@ class PreferencesScreen extends ConsumerWidget {
                   value: ref.watch(audioPassthroughProvider),
                   onChanged: (value) async {
                     if (value) {
-                      final confirmed = await showDialog<bool>(
+                      final confirmed = await showCommonConfirmationDialog(
                         context: context,
-                        builder: (context) => AlertDialog(
-                          title: Text(S.of(context).warning),
-                          content: Text(S.of(context).audioPassthroughWarning),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.of(context).pop(false),
-                              child: Text(S.of(context).cancel),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.of(context).pop(true),
-                              child: Text(S.of(context).confirm),
-                            ),
-                          ],
-                        ),
+                        title: S.of(context).warning,
+                        content: Text(S.of(context).audioPassthroughWarning),
+                        confirmLabel: S.of(context).confirm,
+                        variant: ConfirmationDialogVariant.warning,
                       );
 
                       if (confirmed != true) return;

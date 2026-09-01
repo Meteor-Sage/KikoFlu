@@ -21,6 +21,7 @@ import '../utils/file_icon_utils.dart';
 import '../utils/snackbar_util.dart';
 import '../utils/subtitle_library_display.dart';
 import '../../l10n/app_localizations.dart';
+import '../widgets/confirmation_dialog.dart';
 import '../widgets/responsive_dialog.dart';
 import '../widgets/floating_feed_toolbar.dart';
 
@@ -137,23 +138,12 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
     final selectedPaths = _selectedPaths.toList();
     final totalCount = selectedPaths.length;
 
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showCommonConfirmationDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(S.of(context).confirmDelete),
-        content: Text(S.of(context).deleteSelectedConfirm(totalCount)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(S.of(context).cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: Text(S.of(context).delete),
-          ),
-        ],
-      ),
+      title: S.of(context).confirmDelete,
+      content: Text(S.of(context).deleteSelectedConfirm(totalCount)),
+      confirmLabel: S.of(context).delete,
+      variant: ConfirmationDialogVariant.danger,
     );
 
     if (confirmed != true) return;
@@ -582,23 +572,12 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
         ? '${S.of(context).deleteItemConfirm(title)}\n\n${S.of(context).deleteFolderContentsWarning}'
         : S.of(context).deleteItemConfirm(title);
 
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showCommonConfirmationDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(S.of(context).confirmDelete),
-        content: Text(content),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(S.of(context).cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: Text(S.of(context).delete),
-          ),
-        ],
-      ),
+      title: S.of(context).confirmDelete,
+      content: Text(content),
+      confirmLabel: S.of(context).delete,
+      variant: ConfirmationDialogVariant.danger,
     );
 
     if (confirmed != true) return;

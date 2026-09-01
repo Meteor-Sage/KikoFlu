@@ -21,6 +21,7 @@ import 'offline_work_detail_screen.dart';
 import '../widgets/privacy_blur_cover.dart';
 import '../widgets/virtualized_sliver_collection.dart';
 import '../widgets/floating_feed_toolbar.dart';
+import '../widgets/confirmation_dialog.dart';
 
 final _log = LogService.instance;
 
@@ -261,25 +262,12 @@ class _LocalDownloadsScreenState extends ConsumerState<LocalDownloadsScreen>
     if (_selectedWorkIds.isEmpty) return;
 
     final l10n = S.of(context);
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showCommonConfirmationDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.deletionConfirmTitle),
-        content: Text(l10n.deleteSelectedWorksConfirm(_selectedWorkIds.length)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l10n.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.error,
-            ),
-            child: Text(l10n.delete),
-          ),
-        ],
-      ),
+      title: l10n.deletionConfirmTitle,
+      content: Text(l10n.deleteSelectedWorksConfirm(_selectedWorkIds.length)),
+      confirmLabel: l10n.delete,
+      variant: ConfirmationDialogVariant.danger,
     );
 
     if (confirmed != true) return;

@@ -27,6 +27,7 @@ import '../widgets/settings_section.dart';
 import '../widgets/liquid_glass_layout.dart';
 import '../widgets/radio_option_group.dart';
 import '../widgets/settings_option_dialog.dart';
+import '../widgets/confirmation_dialog.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -595,26 +596,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _confirmAndClearCache(BuildContext dialogContext) async {
     final l10n = S.of(dialogContext);
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showCommonConfirmationDialog(
       context: dialogContext,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.confirmClear),
-        content: Text(l10n.confirmClearCacheMessage),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l10n.cancel),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: Text(l10n.confirmClear),
-          ),
-        ],
-      ),
+      title: l10n.confirmClear,
+      content: Text(l10n.confirmClearCacheMessage),
+      confirmLabel: l10n.confirmClear,
+      variant: ConfirmationDialogVariant.danger,
     );
 
     if (confirmed != true || !mounted || !dialogContext.mounted) return;

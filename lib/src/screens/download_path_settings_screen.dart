@@ -9,6 +9,7 @@ import '../services/log_service.dart';
 import '../providers/settings_provider.dart';
 import '../utils/snackbar_util.dart';
 import '../widgets/settings_section.dart';
+import '../widgets/confirmation_dialog.dart';
 
 class DownloadPathSettingsScreen extends ConsumerStatefulWidget {
   const DownloadPathSettingsScreen({super.key});
@@ -149,51 +150,40 @@ class _DownloadPathSettingsScreenState
   }
 
   Future<bool> _showMigrationConfirmDialog(String newPath) async {
-    final result = await showDialog<bool>(
+    final result = await showCommonConfirmationDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(S.of(context).confirmMigrateFiles),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(S.of(context).migrateFilesToNewDir),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: SelectableText(
-                newPath,
-                style: const TextStyle(
-                  fontFamily: 'monospace',
-                  fontSize: 12,
-                ),
+      title: S.of(context).confirmMigrateFiles,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(S.of(context).migrateFilesToNewDir),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: SelectableText(
+              newPath,
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 12,
               ),
             ),
-            const SizedBox(height: 12),
-            Text(
-              S.of(context).migrationMayTakeTime,
-              style: const TextStyle(fontSize: 12),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(S.of(context).cancel),
           ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(S.of(context).confirmMigrate),
+          const SizedBox(height: 12),
+          Text(
+            S.of(context).migrationMayTakeTime,
+            style: const TextStyle(fontSize: 12),
           ),
         ],
       ),
+      confirmLabel: S.of(context).confirmMigrate,
     );
 
-    return result ?? false;
+    return result;
   }
 
   Future<void> _resetToDefault() async {
@@ -204,22 +194,12 @@ class _DownloadPathSettingsScreenState
       return;
     }
 
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showCommonConfirmationDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(S.of(context).restoreDefaultPath),
-        content: Text(S.of(context).restoreDefaultPathConfirm),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(S.of(context).cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(S.of(context).confirm),
-          ),
-        ],
-      ),
+      title: S.of(context).restoreDefaultPath,
+      content: Text(S.of(context).restoreDefaultPathConfirm),
+      confirmLabel: S.of(context).confirm,
+      variant: ConfirmationDialogVariant.warning,
     );
 
     if (confirmed != true) return;
