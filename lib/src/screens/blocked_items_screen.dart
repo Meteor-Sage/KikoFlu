@@ -6,6 +6,8 @@ import '../utils/snackbar_util.dart';
 import '../utils/tag_localizer.dart';
 import '../utils/ui_tokens.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/responsive_dialog.dart';
+import '../widgets/settings_option_dialog.dart';
 
 class BlockedItemsScreen extends ConsumerWidget {
   const BlockedItemsScreen({super.key});
@@ -16,8 +18,10 @@ class BlockedItemsScreen extends ConsumerWidget {
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          title: Text(S.of(context).blockedItems,
-              style: UiTextStyles.pageTitle),
+          title: Text(
+            S.of(context).blockedItems,
+            style: UiTextStyles.pageTitle,
+          ),
           bottom: TabBar(
             tabs: [
               Tab(text: S.of(context).searchTypeTag),
@@ -88,7 +92,10 @@ class _BlockedList extends ConsumerWidget {
               itemBuilder: (context, index) {
                 final item = items[index];
                 final displayItem = type == _BlockedType.tag
-                    ? TagLocalizer.localizeByName(item, Localizations.localeOf(context))
+                    ? TagLocalizer.localizeByName(
+                        item,
+                        Localizations.localeOf(context),
+                      )
                     : item;
                 return ListTile(
                   title: Text(displayItem),
@@ -96,7 +103,10 @@ class _BlockedList extends ConsumerWidget {
                     icon: const Icon(Icons.delete),
                     onPressed: () {
                       _removeItem(ref, type, item);
-                      SnackBarUtil.showSuccess(context, S.of(context).unblockedItem(item));
+                      SnackBarUtil.showSuccess(
+                        context,
+                        S.of(context).unblockedItem(item),
+                      );
                     },
                   ),
                 );
@@ -170,8 +180,9 @@ class _AddItemDialogState extends ConsumerState<_AddItemDialog> {
         setState(() {
           _suggestions = List<Map<String, dynamic>>.from(data);
           // 按 count 字段从大到小排序
-          _suggestions
-              .sort((a, b) => (b['count'] ?? 0).compareTo(a['count'] ?? 0));
+          _suggestions.sort(
+            (a, b) => (b['count'] ?? 0).compareTo(a['count'] ?? 0),
+          );
           _isLoading = false;
         });
       }
@@ -202,121 +213,166 @@ class _AddItemDialogState extends ConsumerState<_AddItemDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(S.of(context).addBlockedItem(widget.label)),
-      content: SizedBox(
-        width: double.maxFinite,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (_isLoading)
-              const LinearProgressIndicator()
-            else
-              Autocomplete<Map<String, dynamic>>(
-                optionsBuilder: (TextEditingValue textEditingValue) {
-                  List<Map<String, dynamic>> filteredList;
-                  if (textEditingValue.text.trim().isEmpty) {
-                    filteredList = _suggestions.toList();
-                  } else {
-                    final query = textEditingValue.text.trim().toLowerCase();
-                    filteredList = _suggestions.where((option) {
-                      final name = option['name'].toString().toLowerCase();
-                      if (name.contains(query)) return true;
-                      if (widget.type == _BlockedType.tag && option['id'] != null) {
-                        final localizedName = TagLocalizer.localize(
-                          option['id'] as int, option['name'] as String, Localizations.localeOf(context),
-                        ).toLowerCase();
-                        if (localizedName.contains(query)) return true;
-                      }
-                      return false;
-                    }).toList();
-                  }
-                  return filteredList;
-                },
-                displayStringForOption: (Map<String, dynamic> option) {
-                    if (widget.type == _BlockedType.tag && option['id'] != null) {
-                      return TagLocalizer.localize(
-                        option['id'] as int, option['name'], Localizations.localeOf(context),
-                      );
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return ResponsiveDialog(
+      maxWidth: 520,
+      titlePadding: const EdgeInsets.fromLTRB(20, 14, 8, 0),
+      contentPadding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      title: Row(
+        children: [
+          Icon(Icons.block, size: 22, color: colorScheme.primary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              S.of(context).addBlockedItem(widget.label),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
+          IconButton(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.close),
+            tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_isLoading)
+            const LinearProgressIndicator()
+          else
+            Autocomplete<Map<String, dynamic>>(
+              optionsBuilder: (TextEditingValue textEditingValue) {
+                List<Map<String, dynamic>> filteredList;
+                if (textEditingValue.text.trim().isEmpty) {
+                  filteredList = _suggestions.toList();
+                } else {
+                  final query = textEditingValue.text.trim().toLowerCase();
+                  filteredList = _suggestions.where((option) {
+                    final name = option['name'].toString().toLowerCase();
+                    if (name.contains(query)) return true;
+                    if (widget.type == _BlockedType.tag &&
+                        option['id'] != null) {
+                      final localizedName = TagLocalizer.localize(
+                        option['id'] as int,
+                        option['name'] as String,
+                        Localizations.localeOf(context),
+                      ).toLowerCase();
+                      if (localizedName.contains(query)) return true;
                     }
-                    return option['name'];
-                  },
-                fieldViewBuilder: (context, textEditingController, focusNode,
-                    onFieldSubmitted) {
-                  // 同步控制器，以便在点击"添加"按钮时获取文本
-                  textEditingController.addListener(() {
-                    _controller.text = textEditingController.text;
-                  });
-                  return TextField(
-                    controller: textEditingController,
-                    focusNode: focusNode,
-                    decoration: InputDecoration(
-                      labelText: S.of(context).blockedItemName(widget.label),
-                      hintText: S.of(context).enterBlockedItemHint(widget.label),
-                      suffixIcon: _isLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : null,
-                    ),
-                    autofocus: true,
-                    onSubmitted: (value) {
-                      if (value.trim().isNotEmpty) {
-                        _addItem(value.trim());
-                      }
-                    },
+                    return false;
+                  }).toList();
+                }
+                return filteredList;
+              },
+              displayStringForOption: (Map<String, dynamic> option) {
+                if (widget.type == _BlockedType.tag && option['id'] != null) {
+                  return TagLocalizer.localize(
+                    option['id'] as int,
+                    option['name'],
+                    Localizations.localeOf(context),
                   );
-                },
-                optionsViewBuilder: (context, onSelected, options) {
-                  return Align(
-                    alignment: Alignment.topLeft,
-                    child: Material(
-                      elevation: 4.0,
-                      child: SizedBox(
-                        width: 300, // 限制宽度
-                        height: 300, // 限制高度
-                        child: ListView.builder(
-                          padding: EdgeInsets.zero,
-                          itemCount: options.length,
-                          itemBuilder: (BuildContext context, int index) {
-                            final Map<String, dynamic> option =
-                                options.elementAt(index);
-                            final displayName = (widget.type == _BlockedType.tag && option['id'] != null)
-                                ? TagLocalizer.localize(
-                                    option['id'] as int, option['name'], Localizations.localeOf(context),
+                }
+                return option['name'];
+              },
+              fieldViewBuilder:
+                  (
+                    context,
+                    textEditingController,
+                    focusNode,
+                    onFieldSubmitted,
+                  ) {
+                    // 同步控制器，以便在点击"添加"按钮时获取文本
+                    textEditingController.addListener(() {
+                      _controller.text = textEditingController.text;
+                    });
+                    return TextField(
+                      controller: textEditingController,
+                      focusNode: focusNode,
+                      decoration: settingsDialogInputDecoration(
+                        context,
+                        labelText: S.of(context).blockedItemName(widget.label),
+                        hintText: S
+                            .of(context)
+                            .enterBlockedItemHint(widget.label),
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: _isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : null,
+                      ),
+                      autofocus: true,
+                      onSubmitted: (value) {
+                        if (value.trim().isNotEmpty) {
+                          _addItem(value.trim());
+                        }
+                      },
+                    );
+                  },
+              optionsViewBuilder: (context, onSelected, options) {
+                return Align(
+                  alignment: Alignment.topLeft,
+                  child: Material(
+                    elevation: 4.0,
+                    child: SizedBox(
+                      width: 300, // 限制宽度
+                      height: 300, // 限制高度
+                      child: ListView.builder(
+                        padding: EdgeInsets.zero,
+                        itemCount: options.length,
+                        itemBuilder: (BuildContext context, int index) {
+                          final Map<String, dynamic> option = options.elementAt(
+                            index,
+                          );
+                          final displayName =
+                              (widget.type == _BlockedType.tag &&
+                                  option['id'] != null)
+                              ? TagLocalizer.localize(
+                                  option['id'] as int,
+                                  option['name'],
+                                  Localizations.localeOf(context),
+                                )
+                              : option['name'] as String;
+                          return ListTile(
+                            title: Text(displayName),
+                            subtitle: option['count'] != null
+                                ? Text(
+                                    S
+                                        .of(context)
+                                        .workCountLabel(option['count'] as int),
                                   )
-                                : option['name'] as String;
-                            return ListTile(
-                              title: Text(displayName),
-                              subtitle: option['count'] != null
-                                  ? Text(S.of(context).workCountLabel(option['count'] as int))
-                                  : null,
-                              onTap: () {
-                                onSelected(option);
-                              },
-                            );
-                          },
-                        ),
+                                : null,
+                            onTap: () {
+                              onSelected(option);
+                            },
+                          );
+                        },
                       ),
                     ),
-                  );
-                },
-                onSelected: (Map<String, dynamic> selection) {
-                  _controller.text = selection['name'];
-                  // 选中后不自动提交，让用户确认
-                },
-              ),
-          ],
-        ),
+                  ),
+                );
+              },
+              onSelected: (Map<String, dynamic> selection) {
+                _controller.text = selection['name'];
+                // 选中后不自动提交，让用户确认
+              },
+            ),
+        ],
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: Text(S.of(context).cancel),
         ),
-        TextButton(
+        FilledButton(
           onPressed: () {
             final text = _controller.text.trim();
             if (text.isNotEmpty) {

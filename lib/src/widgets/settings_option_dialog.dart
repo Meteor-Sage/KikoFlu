@@ -12,7 +12,9 @@ InputDecoration settingsDialogInputDecoration(
   Widget? prefixIcon,
   String? hintText,
   String? helperText,
+  int? helperMaxLines,
   String? errorText,
+  Widget? suffixIcon,
 }) {
   final colorScheme = Theme.of(context).colorScheme;
   final borderColor = colorScheme.outlineVariant.withValues(alpha: 0.7);
@@ -22,8 +24,10 @@ InputDecoration settingsDialogInputDecoration(
     labelText: labelText,
     hintText: hintText,
     helperText: helperText,
+    helperMaxLines: helperMaxLines,
     errorText: errorText,
     prefixIcon: prefixIcon,
+    suffixIcon: suffixIcon,
     isDense: true,
     filled: true,
     fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.42),

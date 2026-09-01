@@ -5,6 +5,7 @@ import '../../models/work.dart';
 import '../../providers/auth_provider.dart';
 import '../../../l10n/app_localizations.dart';
 import '../responsive_dialog.dart';
+import '../settings_option_dialog.dart';
 import '../../utils/tag_localizer.dart';
 
 /// 添加标签对话框组件
@@ -158,8 +159,31 @@ class _AddTagDialogState extends ConsumerState<AddTagDialog> {
     // 获取已存在的标签ID集合
     final existingTagIds = widget.existingTags.map((tag) => tag.id).toSet();
 
-    return ResponsiveAlertDialog(
-      title: Text(S.of(context).addTag),
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return ResponsiveDialog(
+      maxWidth: 520,
+      titlePadding: const EdgeInsets.fromLTRB(20, 14, 8, 0),
+      contentPadding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      title: Row(
+        children: [
+          Icon(Icons.label_outline, size: 22, color: colorScheme.primary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              S.of(context).addTag,
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
+          IconButton(
+            onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.close),
+            tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+          ),
+        ],
+      ),
       content: SizedBox(
         width: double.maxFinite,
         child: Column(
@@ -168,16 +192,11 @@ class _AddTagDialogState extends ConsumerState<AddTagDialog> {
             // 搜索框
             TextField(
               controller: _searchController,
-              decoration: InputDecoration(
+              decoration: settingsDialogInputDecoration(
+                context,
+                labelText: S.of(context).searchTag,
                 hintText: S.of(context).searchTag,
                 prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -203,7 +222,10 @@ class _AddTagDialogState extends ConsumerState<AddTagDialog> {
                   return Chip(
                     label: Text(
                       TagLocalizer.localize(
-                          tagId, tag['name'], Localizations.localeOf(context)),
+                        tagId,
+                        tag['name'],
+                        Localizations.localeOf(context),
+                      ),
                       style: const TextStyle(fontSize: 11),
                     ),
                     deleteIcon: const Icon(Icons.close, size: 16),
@@ -248,7 +270,10 @@ class _AddTagDialogState extends ConsumerState<AddTagDialog> {
                           final tagId = tag['id'] as int;
                           final tagName = tag['name'] as String;
                           final localizedTagName = TagLocalizer.localize(
-                              tagId, tagName, Localizations.localeOf(context));
+                            tagId,
+                            tagName,
+                            Localizations.localeOf(context),
+                          );
                           final count = tag['count'] ?? 0;
                           final isExisting = existingTagIds.contains(tagId);
                           final isSelected = _selectedTagIds.contains(tagId);
@@ -318,7 +343,7 @@ class _AddTagDialogState extends ConsumerState<AddTagDialog> {
           onPressed: _isSubmitting ? null : () => Navigator.pop(context),
           child: Text(S.of(context).cancel),
         ),
-        ElevatedButton(
+        FilledButton(
           onPressed: _isSubmitting ? null : _submitTags,
           child: _isSubmitting
               ? const SizedBox(

@@ -20,6 +20,7 @@ import '../widgets/settings_section.dart';
 import '../widgets/settings_option_dialog.dart';
 import '../widgets/sort_dialog.dart';
 import '../widgets/confirmation_dialog.dart';
+import '../widgets/common_input_dialog.dart';
 
 /// 偏好设置页面
 class PreferencesScreen extends ConsumerWidget {
@@ -154,44 +155,34 @@ class PreferencesScreen extends ConsumerWidget {
           if (value == TranslationSource.llm) {
             final llmSettings = ref.read(llmSettingsProvider);
             if (llmSettings.apiKey.isEmpty) {
-              await showDialog(
+              final shouldConfigure = await showCommonConfirmationDialog(
                 context: dialogContext,
-                builder: (configContext) => AlertDialog(
-                  title: Text(S.of(configContext).needsConfiguration),
-                  content: Text(S.of(configContext).llmConfigRequiredMessage),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(configContext),
-                      child: Text(S.of(configContext).cancel),
-                    ),
-                    TextButton(
-                      onPressed: () async {
-                        final navigator = Navigator.of(configContext);
-                        navigator.pop();
-                        navigator.pop();
-                        await navigator.push(
-                          MaterialPageRoute(
-                            builder: (context) => const LLMSettingsScreen(),
-                          ),
-                        );
-
-                        final newSettings = ref.read(llmSettingsProvider);
-                        if (newSettings.apiKey.isNotEmpty &&
-                            pageContext.mounted) {
-                          ref
-                              .read(translationSourceProvider.notifier)
-                              .updateSource(TranslationSource.llm);
-                          SnackBarUtil.showSuccess(
-                            pageContext,
-                            S.of(pageContext).autoSwitchedToLlm,
-                          );
-                        }
-                      },
-                      child: Text(S.of(configContext).goToConfigure),
-                    ),
-                  ],
-                ),
+                title: S.of(dialogContext).needsConfiguration,
+                content: Text(S.of(dialogContext).llmConfigRequiredMessage),
+                confirmLabel: S.of(dialogContext).goToConfigure,
+                variant: ConfirmationDialogVariant.warning,
               );
+
+              if (shouldConfigure && dialogContext.mounted) {
+                final navigator = Navigator.of(dialogContext);
+                navigator.pop();
+                await navigator.push(
+                  MaterialPageRoute(
+                    builder: (context) => const LLMSettingsScreen(),
+                  ),
+                );
+
+                final newSettings = ref.read(llmSettingsProvider);
+                if (newSettings.apiKey.isNotEmpty && pageContext.mounted) {
+                  ref
+                      .read(translationSourceProvider.notifier)
+                      .updateSource(TranslationSource.llm);
+                  SnackBarUtil.showSuccess(
+                    pageContext,
+                    S.of(pageContext).autoSwitchedToLlm,
+                  );
+                }
+              }
               return false;
             }
           }
@@ -288,44 +279,19 @@ class PreferencesScreen extends ConsumerWidget {
     required String title,
     required String initialValue,
   }) async {
-    final controller = TextEditingController(text: initialValue);
-    final result = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(title),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: S.of(dialogContext).translationCustomLanguageHint,
-          ),
-          textInputAction: TextInputAction.done,
-          onSubmitted: (_) {
-            final text = controller.text.trim();
-            if (text.isNotEmpty) {
-              Navigator.pop(dialogContext, text);
-            }
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(S.of(dialogContext).cancel),
-          ),
-          TextButton(
-            onPressed: () {
-              final text = controller.text.trim();
-              if (text.isNotEmpty) {
-                Navigator.pop(dialogContext, text);
-              }
-            },
-            child: Text(S.of(dialogContext).confirm),
-          ),
-        ],
-      ),
+    final result = await showCommonTextInputDialog(
+      context,
+      title: title,
+      labelText: S.of(context).translationCustomLanguageHint,
+      hintText: S.of(context).translationCustomLanguageHint,
+      confirmLabel: S.of(context).confirm,
+      initialValue: initialValue,
+      icon: Icons.language,
+      validator: (value) => value.isEmpty
+          ? S.of(context).translationCustomLanguageHint
+          : null,
     );
-    controller.dispose();
-    return result;
+    return result?.trim().isEmpty == true ? null : result?.trim();
   }
 
   String _languageOptionLabel(
@@ -454,9 +420,7 @@ class PreferencesScreen extends ConsumerWidget {
               SettingsNavigationTile(
                 icon: Icons.language,
                 title: S.of(context).translationTargetLanguage,
-                subtitle: S
-                    .of(context)
-                    .currentSettingLabel(
+                subtitle: S.of(context).currentSettingLabel(
                       _targetLanguageLabel(
                         context,
                         translationLanguagePreferences,
@@ -527,7 +491,9 @@ class PreferencesScreen extends ConsumerWidget {
               SettingsNavigationTile(
                 icon: Icons.playlist_play,
                 title: S.of(context).audioTapPlaylistMode,
-                subtitle: S.of(context).currentSettingLabel(
+                subtitle: S
+                    .of(context)
+                    .currentSettingLabel(
                       audioTapPlaylistMode.localizedName(context),
                     ),
                 onTap: () => _showAudioTapPlaylistModeDialog(context, ref),

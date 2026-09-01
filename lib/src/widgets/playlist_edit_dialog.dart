@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../utils/snackbar_util.dart';
+import 'responsive_dialog.dart';
+import 'settings_option_dialog.dart';
 
 class PlaylistMetadataDraft {
   const PlaylistMetadataDraft({
@@ -56,120 +58,99 @@ class _PlaylistEditDialogState extends State<PlaylistEditDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final dialogWidth = isLandscape ? screenWidth * 0.6 : screenWidth * 0.9;
+    final colorScheme = Theme.of(context).colorScheme;
 
-    return Dialog(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: dialogWidth.clamp(300.0, 600.0),
-          maxHeight: MediaQuery.of(context).size.height * 0.85,
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-                child: Row(
-                  children: [
-                    Text(
-                      S.of(context).editPlaylist,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                  ],
-                ),
+    return ResponsiveDialog(
+      maxWidth: 600,
+      titlePadding: const EdgeInsets.fromLTRB(20, 14, 8, 0),
+      contentPadding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      title: Row(
+        children: [
+          Icon(Icons.edit_note, size: 22, color: colorScheme.primary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              S.of(context).editPlaylist,
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
+          IconButton(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.close),
+            tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            key: const ValueKey('playlist-edit-name'),
+            controller: _nameController,
+            decoration: settingsDialogInputDecoration(
+              context,
+              labelText: S.of(context).playlistName,
+              hintText: S.of(context).enterPlaylistName,
+              prefixIcon: const Icon(Icons.title),
+            ),
+            autofocus: true,
+            maxLength: 50,
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<int>(
+            key: const ValueKey('playlist-edit-privacy'),
+            initialValue: _selectedPrivacy,
+            decoration: settingsDialogInputDecoration(
+              context,
+              labelText: S.of(context).privacySetting,
+              prefixIcon: const Icon(Icons.lock_outline),
+              helperText: _privacyDescription(context),
+              helperMaxLines: 2,
+            ),
+            items: [
+              DropdownMenuItem(
+                value: 0,
+                child: Text(S.of(context).playlistPrivacyPrivate),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    TextField(
-                      key: const ValueKey('playlist-edit-name'),
-                      controller: _nameController,
-                      decoration: InputDecoration(
-                        labelText: S.of(context).playlistName,
-                        hintText: S.of(context).enterPlaylistName,
-                        border: const OutlineInputBorder(),
-                        prefixIcon: const Icon(Icons.title),
-                      ),
-                      autofocus: true,
-                      maxLength: 50,
-                    ),
-                    const SizedBox(height: 16),
-                    DropdownButtonFormField<int>(
-                      key: const ValueKey('playlist-edit-privacy'),
-                      initialValue: _selectedPrivacy,
-                      decoration: InputDecoration(
-                        labelText: S.of(context).privacySetting,
-                        border: const OutlineInputBorder(),
-                        prefixIcon: const Icon(Icons.lock_outline),
-                        helperText: _privacyDescription(context),
-                        helperMaxLines: 2,
-                      ),
-                      items: [
-                        DropdownMenuItem(
-                          value: 0,
-                          child: Text(S.of(context).playlistPrivacyPrivate),
-                        ),
-                        DropdownMenuItem(
-                          value: 1,
-                          child: Text(S.of(context).playlistPrivacyUnlisted),
-                        ),
-                        DropdownMenuItem(
-                          value: 2,
-                          child: Text(S.of(context).playlistPrivacyPublic),
-                        ),
-                      ],
-                      onChanged: (value) {
-                        if (value == null) return;
-                        setState(() {
-                          _selectedPrivacy = value;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      key: const ValueKey('playlist-edit-description'),
-                      controller: _descriptionController,
-                      decoration: InputDecoration(
-                        labelText: S.of(context).playlistDescription,
-                        hintText: S.of(context).addDescription,
-                        border: const OutlineInputBorder(),
-                        prefixIcon: const Icon(Icons.description),
-                      ),
-                      maxLines: 1,
-                      maxLength: 200,
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                ),
+              DropdownMenuItem(
+                value: 1,
+                child: Text(S.of(context).playlistPrivacyUnlisted),
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: Text(S.of(context).cancel),
-                    ),
-                    const SizedBox(width: 8),
-                    FilledButton(
-                      onPressed: _submit,
-                      child: Text(S.of(context).save),
-                    ),
-                  ],
-                ),
+              DropdownMenuItem(
+                value: 2,
+                child: Text(S.of(context).playlistPrivacyPublic),
               ),
             ],
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() => _selectedPrivacy = value);
+            },
           ),
-        ),
+          const SizedBox(height: 12),
+          TextField(
+            key: const ValueKey('playlist-edit-description'),
+            controller: _descriptionController,
+            decoration: settingsDialogInputDecoration(
+              context,
+              labelText: S.of(context).playlistDescription,
+              hintText: S.of(context).addDescription,
+              prefixIcon: const Icon(Icons.description),
+            ),
+            maxLines: 1,
+            maxLength: 200,
+          ),
+        ],
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(S.of(context).cancel),
+        ),
+        FilledButton(onPressed: _submit, child: Text(S.of(context).save)),
+      ],
     );
   }
 

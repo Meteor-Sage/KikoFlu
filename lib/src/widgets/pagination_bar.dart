@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../l10n/app_localizations.dart';
-import '../utils/snackbar_util.dart';
+import 'common_input_dialog.dart';
 
 /// 通用分页控制栏组件
 class PaginationBar extends StatefulWidget {
@@ -54,14 +54,6 @@ class PaginationBar extends StatefulWidget {
 }
 
 class _PaginationBarState extends State<PaginationBar> {
-  final TextEditingController _pageController = TextEditingController();
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
   int get _maxPage =>
       widget.totalCount > 0 ? (widget.totalCount / widget.pageSize).ceil() : 1;
 
@@ -181,62 +173,33 @@ class _PaginationBarState extends State<PaginationBar> {
   }
 
   /// 显示页码跳转对话框
-  void _showPageJumpDialog() {
-    _pageController.text = widget.currentPage.toString();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(S.of(context).goToPageTitle),
-        content: TextField(
-          controller: _pageController,
-          keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          decoration: InputDecoration(
-            labelText: S.of(context).pageNumberRange(_maxPage),
-            border: const OutlineInputBorder(),
-            hintText: S.of(context).enterPageNumber,
-          ),
-          autofocus: true,
-          onSubmitted: (_) => _handleJump(context),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(S.of(context).cancel),
-          ),
-          ElevatedButton(
-            onPressed: () => _handleJump(context),
-            child: Text(S.of(context).jumpTo),
-          ),
-        ],
-      ),
+  Future<void> _showPageJumpDialog() async {
+    final pageValue = await showCommonTextInputDialog(
+      context,
+      title: S.of(context).goToPageTitle,
+      labelText: S.of(context).pageNumberRange(_maxPage),
+      hintText: S.of(context).enterPageNumber,
+      confirmLabel: S.of(context).jumpTo,
+      initialValue: widget.currentPage.toString(),
+      icon: Icons.find_in_page_outlined,
+      keyboardType: TextInputType.number,
+      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+      validator: (value) {
+        if (value.isEmpty) return S.of(context).enterPageNumber;
+        final page = int.tryParse(value);
+        if (page == null || page < 1 || page > _maxPage) {
+          return S.of(context).enterValidPageNumber(_maxPage);
+        }
+        return null;
+      },
     );
-  }
 
-  /// 处理跳转
-  void _handleJump(BuildContext dialogContext) {
-    final pageStr = _pageController.text.trim();
-    if (pageStr.isEmpty) {
-      SnackBarUtil.showWarning(context, S.of(context).enterPageNumber);
-      return;
+    final targetPage = int.tryParse(pageValue ?? '');
+    if (targetPage == null || !mounted) return;
+    if (targetPage != widget.currentPage) {
+      widget.onGoToPage?.call(targetPage);
+      widget.onScrollToTop?.call();
     }
-
-    final targetPage = int.tryParse(pageStr);
-    if (targetPage == null || targetPage < 1 || targetPage > _maxPage) {
-      SnackBarUtil.showWarning(
-          context, S.of(context).enterValidPageNumber(_maxPage));
-      return;
-    }
-
-    if (targetPage == widget.currentPage) {
-      Navigator.pop(dialogContext);
-      return;
-    }
-
-    Navigator.pop(dialogContext);
-    widget.onGoToPage?.call(targetPage);
-    widget.onScrollToTop?.call();
   }
 
   @override

@@ -22,6 +22,7 @@ import '../utils/snackbar_util.dart';
 import '../utils/subtitle_library_display.dart';
 import '../../l10n/app_localizations.dart';
 import '../widgets/confirmation_dialog.dart';
+import '../widgets/common_input_dialog.dart';
 import '../widgets/responsive_dialog.dart';
 import '../widgets/floating_feed_toolbar.dart';
 
@@ -499,38 +500,26 @@ class _SubtitleLibraryScreenState extends ConsumerState<SubtitleLibraryScreen> {
   }
 
   Future<void> _renameItem(Map<String, dynamic> item) async {
-    final controller = TextEditingController(text: item['title']);
-
-    final newName = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(S.of(context).rename),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            labelText: S.of(context).newName,
-            border: const OutlineInputBorder(),
-          ),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(S.of(context).cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, controller.text),
-            child: Text(S.of(context).confirm),
-          ),
-        ],
-      ),
+    final newName = await showCommonTextInputDialog(
+      context,
+      title: S.of(context).rename,
+      labelText: S.of(context).newName,
+      confirmLabel: S.of(context).confirm,
+      initialValue: item['title'] as String? ?? '',
+      icon: Icons.drive_file_rename_outline,
     );
 
-    if (newName == null || newName.isEmpty || newName == item['title']) {
+    final normalizedName = newName?.trim();
+    if (normalizedName == null ||
+        normalizedName.isEmpty ||
+        normalizedName == item['title']) {
       return;
     }
 
-    final success = await SubtitleLibraryService.rename(item['path'], newName);
+    final success = await SubtitleLibraryService.rename(
+      item['path'],
+      normalizedName,
+    );
 
     if (!mounted) return;
 
