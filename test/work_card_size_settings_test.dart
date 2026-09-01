@@ -224,6 +224,7 @@ void main() {
       title: 'Card work with a removable playlist action',
       sourceId: 'RJ234567',
       age: 'R18',
+      name: 'Circle',
     );
 
     await tester.pumpWidget(
@@ -255,6 +256,11 @@ void main() {
     final actionRect = tester.getRect(
       find.byKey(const ValueKey('playlist-remove-action')),
     );
+    final titleRect = tester.getRect(find.text(cardWork.title));
+    final circleRect = tester.getRect(find.text('Circle'));
     expect(ageRect.overlaps(actionRect), isFalse);
+    expect(actionRect.top, greaterThanOrEqualTo(titleRect.bottom));
+    expect(actionRect.right, lessThan(circleRect.left));
+    expect(actionRect.center.dy, closeTo(circleRect.center.dy, 2));
   });
 }

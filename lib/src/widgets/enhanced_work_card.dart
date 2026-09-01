@@ -263,25 +263,21 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // 标题
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          widget.work.title,
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                height: 1.1,
-                                fontSize: titleFontSize,
-                              ),
+                  Text(
+                    widget.work.title,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          height: 1.1,
+                          fontSize: titleFontSize,
                         ),
-                      ),
-                      if (trailingAction != null) ...[
-                        const SizedBox(width: 4),
-                        trailingAction,
-                      ],
-                    ],
                   ),
+                  if (trailingAction != null) ...[
+                    const SizedBox(height: 4),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: trailingAction,
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -312,6 +308,10 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
     final ratingFontSize =
         displaySettings.scaleFontSize(isLandscape ? 13.0 : 9.0);
     final iconSize = isLandscape ? 14.0 : 12.0;
+    final hasCircle = displaySettings.showCircle &&
+        widget.work.name != null &&
+        widget.work.name!.trim().isNotEmpty;
+    final hasPrice = displaySettings.showPrice && widget.work.price != null;
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -371,45 +371,53 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // 标题
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          widget.work.title,
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                height: 1.1,
-                                fontSize: titleFontSize,
-                              ),
+                  Text(
+                    widget.work.title,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          height: 1.1,
+                          fontSize: titleFontSize,
                         ),
-                      ),
-                      if (trailingAction != null) ...[
-                        const SizedBox(width: 4),
-                        trailingAction,
-                      ],
-                    ],
                   ),
                   const SizedBox(height: 3),
-                  // 社团名称
-                  if (displaySettings.showCircle)
-                    Text(
-                      widget.work.name ?? '',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey[600],
-                            fontSize: bodyFontSize,
+                  // 首行元信息承载移除操作，避免挤压标题。
+                  if (trailingAction != null || hasCircle || hasPrice)
+                    Row(
+                      children: [
+                        if (trailingAction != null) ...[
+                          trailingAction,
+                          if (hasCircle || hasPrice)
+                            const SizedBox(width: 6),
+                        ],
+                        if (hasCircle)
+                          Expanded(
+                            child: Text(
+                              widget.work.name!.trim(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: Colors.grey[600],
+                                    fontSize: bodyFontSize,
+                                  ),
+                            ),
                           ),
-                    ),
-                  if (displaySettings.showCircle) const SizedBox(height: 3),
-                  // 价格
-                  if (displaySettings.showPrice && widget.work.price != null)
-                    Text(
-                      S.of(context).priceInYen(widget.work.price!),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.red[700],
-                            fontWeight: FontWeight.w600,
-                            fontSize: priceFontSize,
+                        if (!hasCircle) const Spacer(),
+                        if (hasPrice)
+                          Text(
+                            S.of(context).priceInYen(widget.work.price!),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  color: Colors.red[700],
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: priceFontSize,
+                                ),
                           ),
+                      ],
                     ),
                   // 评分信息
                   if (displaySettings.showRating &&
@@ -494,7 +502,7 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
         MediaQuery.orientationOf(context) == Orientation.landscape;
     final rjFontSize = displaySettings.scaleFontSize(isLandscape ? 12.0 : 11.0);
     final titleFontSize =
-        displaySettings.scaleFontSize(isLandscape ? 18.0 : 16.0);
+        displaySettings.scaleFontSize(isLandscape ? 17.0 : 15.0);
     final colorScheme = Theme.of(context).colorScheme;
 
     return LayoutBuilder(
@@ -502,7 +510,7 @@ class _EnhancedWorkCardState extends ConsumerState<EnhancedWorkCard> {
         final availableWidth = constraints.hasBoundedWidth
             ? constraints.maxWidth
             : MediaQuery.sizeOf(context).width;
-        final coverWidth = (availableWidth * 0.24).clamp(120.0, 260.0).toDouble();
+        final coverWidth = (availableWidth * 0.26).clamp(120.0, 280.0).toDouble();
 
         return Card(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
