@@ -7,6 +7,7 @@ import 'package:real_liquid_glass/real_liquid_glass.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/audio_gain_settings.dart';
 import '../models/audio_tap_playlist_mode.dart';
+import '../models/llm_api_protocol.dart';
 import '../models/sort_options.dart';
 import '../utils/persistent_enum_preference.dart';
 
@@ -316,13 +317,15 @@ class LLMSettings {
   static const int defaultConcurrency = 3;
 
   final String apiUrl;
+  final LLMApiProtocol apiProtocol;
   final String apiKey;
   final String model;
   final String prompt;
   final int concurrency;
 
   const LLMSettings({
-    this.apiUrl = 'https://api.openai.com/v1/chat/completions',
+    this.apiUrl = 'https://api.openai.com/v1',
+    this.apiProtocol = LLMApiProtocol.chatCompletions,
     this.apiKey = '',
     this.model = 'gpt-3.5-turbo',
     this.prompt = '',
@@ -336,6 +339,7 @@ class LLMSettings {
 
   LLMSettings copyWith({
     String? apiUrl,
+    LLMApiProtocol? apiProtocol,
     String? apiKey,
     String? model,
     String? prompt,
@@ -343,6 +347,7 @@ class LLMSettings {
   }) {
     return LLMSettings(
       apiUrl: apiUrl ?? this.apiUrl,
+      apiProtocol: apiProtocol ?? this.apiProtocol,
       apiKey: apiKey ?? this.apiKey,
       model: model ?? this.model,
       prompt: prompt ?? this.prompt,
@@ -355,6 +360,17 @@ class LLMSettings {
 
 class LLMSettingsNotifier extends StateNotifier<LLMSettings> {
   static const String _prefix = 'llm_settings_';
+  static const String apiUrlPreferenceKey = '${_prefix}api_url';
+  static const String apiProtocolPreferenceKey = '${_prefix}api_protocol';
+  static const String apiKeyPreferenceKey = '${_prefix}api_key';
+  static const String modelPreferenceKey = '${_prefix}model';
+  static const String promptPreferenceKey = '${_prefix}prompt';
+  static const String concurrencyPreferenceKey = '${_prefix}concurrency';
+
+  bool _changedLocally = false;
+  bool _settingsLoaded = false;
+
+  bool get isLoaded => _settingsLoaded;
 
   LLMSettingsNotifier() : super(const LLMSettings()) {
     _loadSettings();
@@ -363,33 +379,48 @@ class LLMSettingsNotifier extends StateNotifier<LLMSettings> {
   Future<void> _loadSettings() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      if (!mounted || _changedLocally) return;
+      final savedApiUrl = prefs.getString(apiUrlPreferenceKey) ?? state.apiUrl;
+      final apiProtocol = LLMApiProtocol.fromPreference(
+        prefs.getString(apiProtocolPreferenceKey),
+        apiUrl: savedApiUrl,
+      );
       state = LLMSettings(
-        apiUrl: prefs.getString('${_prefix}api_url') ?? state.apiUrl,
-        apiKey: prefs.getString('${_prefix}api_key') ?? state.apiKey,
-        model: prefs.getString('${_prefix}model') ?? state.model,
-        prompt: prefs.getString('${_prefix}prompt') ?? state.prompt,
+        apiUrl: LLMApiProtocol.baseUrlFrom(savedApiUrl),
+        apiProtocol: apiProtocol,
+        apiKey: prefs.getString(apiKeyPreferenceKey) ?? state.apiKey,
+        model: prefs.getString(modelPreferenceKey) ?? state.model,
+        prompt: prefs.getString(promptPreferenceKey) ?? state.prompt,
         concurrency: LLMSettings.normalizeConcurrency(
-          prefs.getInt('${_prefix}concurrency'),
+          prefs.getInt(concurrencyPreferenceKey),
         ),
       );
     } catch (e) {
       // ignore
+    } finally {
+      _settingsLoaded = true;
     }
   }
 
   Future<void> updateSettings(LLMSettings settings) async {
+    _changedLocally = true;
     final normalizedSettings = settings.copyWith(
+      apiUrl: LLMApiProtocol.baseUrlFrom(settings.apiUrl),
       concurrency: LLMSettings.normalizeConcurrency(settings.concurrency),
     );
     state = normalizedSettings;
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('${_prefix}api_url', normalizedSettings.apiUrl);
-      await prefs.setString('${_prefix}api_key', normalizedSettings.apiKey);
-      await prefs.setString('${_prefix}model', normalizedSettings.model);
-      await prefs.setString('${_prefix}prompt', normalizedSettings.prompt);
+      await prefs.setString(apiUrlPreferenceKey, normalizedSettings.apiUrl);
+      await prefs.setString(
+        apiProtocolPreferenceKey,
+        normalizedSettings.apiProtocol.preferenceValue,
+      );
+      await prefs.setString(apiKeyPreferenceKey, normalizedSettings.apiKey);
+      await prefs.setString(modelPreferenceKey, normalizedSettings.model);
+      await prefs.setString(promptPreferenceKey, normalizedSettings.prompt);
       await prefs.setInt(
-        '${_prefix}concurrency',
+        concurrencyPreferenceKey,
         normalizedSettings.concurrency,
       );
     } catch (e) {

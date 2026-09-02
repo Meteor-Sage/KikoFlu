@@ -1851,7 +1851,7 @@ abstract class S {
   /// No description provided for @llmSettingsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'API URL, key, and model'**
+  /// **'API URL, protocol, key, and model'**
   String get llmSettingsSubtitle;
 
   /// No description provided for @audioFormatPreference.
@@ -6048,10 +6048,34 @@ abstract class S {
   /// **'API Endpoint URL'**
   String get apiEndpointUrl;
 
+  /// No description provided for @apiBaseUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'API Base URL'**
+  String get apiBaseUrl;
+
+  /// No description provided for @apiProtocol.
+  ///
+  /// In en, this message translates to:
+  /// **'API Protocol'**
+  String get apiProtocol;
+
+  /// No description provided for @chatCompletionsProtocol.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat Completions (/chat/completions)'**
+  String get chatCompletionsProtocol;
+
+  /// No description provided for @responsesProtocol.
+  ///
+  /// In en, this message translates to:
+  /// **'Responses (/responses)'**
+  String get responsesProtocol;
+
   /// No description provided for @openaiCompatibleEndpoint.
   ///
   /// In en, this message translates to:
-  /// **'OpenAI-compatible endpoint URL'**
+  /// **'OpenAI-compatible API base URL'**
   String get openaiCompatibleEndpoint;
 
   /// No description provided for @pleaseEnterApiUrl.

@@ -961,7 +961,7 @@ class SRu extends S {
   String get llmSettings => 'Настройки LLM';
 
   @override
-  String get llmSettingsSubtitle => 'API URL, ключ и модель';
+  String get llmSettingsSubtitle => 'URL API, протокол, ключ и модель';
 
   @override
   String get audioFormatPreference => 'Аудиоформат';
@@ -3420,7 +3420,19 @@ class SRu extends S {
   String get apiEndpointUrl => 'URL-адрес API';
 
   @override
-  String get openaiCompatibleEndpoint => 'URL-адрес, совместимый с OpenAI';
+  String get apiBaseUrl => 'Базовый URL API';
+
+  @override
+  String get apiProtocol => 'Протокол API';
+
+  @override
+  String get chatCompletionsProtocol => 'Chat Completions (/chat/completions)';
+
+  @override
+  String get responsesProtocol => 'Responses (/responses)';
+
+  @override
+  String get openaiCompatibleEndpoint => 'Базовый URL OpenAI-совместимого API';
 
   @override
   String get pleaseEnterApiUrl => 'Введите URL-адрес API';

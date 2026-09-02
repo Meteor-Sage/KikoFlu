@@ -933,7 +933,7 @@ class SZh extends S {
   String get llmSettings => 'LLM设置';
 
   @override
-  String get llmSettingsSubtitle => 'API 地址、密钥和模型';
+  String get llmSettingsSubtitle => 'API 地址、协议、密钥和模型';
 
   @override
   String get audioFormatPreference => '音频格式偏好';
@@ -3298,7 +3298,19 @@ class SZh extends S {
   String get apiEndpointUrl => 'API 接口地址';
 
   @override
-  String get openaiCompatibleEndpoint => 'OpenAI 兼容接口地址';
+  String get apiBaseUrl => 'API 基础地址';
+
+  @override
+  String get apiProtocol => '接口协议';
+
+  @override
+  String get chatCompletionsProtocol => 'Chat Completions (/chat/completions)';
+
+  @override
+  String get responsesProtocol => 'Responses (/responses)';
+
+  @override
+  String get openaiCompatibleEndpoint => 'OpenAI 兼容 API 的基础地址';
 
   @override
   String get pleaseEnterApiUrl => '请输入 API 接口地址';
@@ -4557,7 +4569,7 @@ class SZhHant extends SZh {
   String get llmSettings => 'LLM設定';
 
   @override
-  String get llmSettingsSubtitle => 'API 位址、金鑰和模型';
+  String get llmSettingsSubtitle => 'API 位址、協議、金鑰和模型';
 
   @override
   String get audioFormatPreference => '音訊格式偏好';
@@ -6922,7 +6934,19 @@ class SZhHant extends SZh {
   String get apiEndpointUrl => 'API 介面地址';
 
   @override
-  String get openaiCompatibleEndpoint => 'OpenAI 相容介面地址';
+  String get apiBaseUrl => 'API 基礎位址';
+
+  @override
+  String get apiProtocol => '介面協議';
+
+  @override
+  String get chatCompletionsProtocol => 'Chat Completions (/chat/completions)';
+
+  @override
+  String get responsesProtocol => 'Responses (/responses)';
+
+  @override
+  String get openaiCompatibleEndpoint => 'OpenAI 相容 API 的基礎位址';
 
   @override
   String get pleaseEnterApiUrl => '請輸入 API 介面地址';

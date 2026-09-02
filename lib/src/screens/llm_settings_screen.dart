@@ -1,9 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../l10n/app_localizations.dart';
+import '../models/llm_api_protocol.dart';
 import '../providers/settings_provider.dart';
 import '../services/translation_service.dart';
-import '../utils/snackbar_util.dart';
 import '../widgets/settings_section.dart';
 
 class LLMSettingsScreen extends ConsumerStatefulWidget {
@@ -14,12 +16,18 @@ class LLMSettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _LLMSettingsScreenState extends ConsumerState<LLMSettingsScreen> {
-  final _formKey = GlobalKey<FormState>();
   late TextEditingController _apiUrlController;
   late TextEditingController _apiKeyController;
   late TextEditingController _modelController;
   late TextEditingController _promptController;
+  late LLMSettingsNotifier _settingsNotifier;
+  late LLMApiProtocol _apiProtocol;
   late double _concurrency;
+  Timer? _saveTimer;
+  Future<void>? _saveFuture;
+  LLMSettings? _pendingSettings;
+  bool _syncingSettings = false;
+  bool _hasLocalChanges = false;
 
   @override
   void initState() {
@@ -29,7 +37,23 @@ class _LLMSettingsScreenState extends ConsumerState<LLMSettingsScreen> {
     _apiKeyController = TextEditingController(text: settings.apiKey);
     _modelController = TextEditingController(text: settings.model);
     _promptController = TextEditingController(text: settings.prompt);
+    _settingsNotifier = ref.read(llmSettingsProvider.notifier);
+    _apiProtocol = settings.apiProtocol;
     _concurrency = settings.concurrency.toDouble();
+
+    for (final controller in [
+      _apiUrlController,
+      _apiKeyController,
+      _modelController,
+      _promptController,
+    ]) {
+      controller.addListener(_handleTextChanged);
+    }
+
+    ref.listenManual<LLMSettings>(llmSettingsProvider, (previous, next) {
+      if (!mounted || _hasLocalChanges) return;
+      setState(() => _applySettings(next));
+    });
   }
 
   @override
@@ -42,6 +66,10 @@ class _LLMSettingsScreenState extends ConsumerState<LLMSettingsScreen> {
 
   @override
   void dispose() {
+    _saveTimer?.cancel();
+    if (_hasLocalChanges) {
+      _queueSettingsForSave();
+    }
     _apiUrlController.dispose();
     _apiKeyController.dispose();
     _modelController.dispose();
@@ -49,38 +77,87 @@ class _LLMSettingsScreenState extends ConsumerState<LLMSettingsScreen> {
     super.dispose();
   }
 
-  Future<void> _saveSettings() async {
-    if (_formKey.currentState!.validate()) {
-      final prompt = _promptController.text.trim();
-      final settings = LLMSettings(
-        apiUrl: _apiUrlController.text.trim(),
-        apiKey: _apiKeyController.text.trim(),
-        model: _modelController.text.trim(),
-        prompt: TranslationService.isGeneratedDefaultLLMPrompt(prompt)
-            ? ''
-            : prompt,
-        concurrency: _concurrency.toInt(),
-      );
-
-      await ref.read(llmSettingsProvider.notifier).updateSettings(settings);
-
-      if (mounted) {
-        SnackBarUtil.showSuccess(context, S.of(context).settingsSaved);
-        Navigator.pop(context);
-      }
+  void _applySettings(LLMSettings settings) {
+    _syncingSettings = true;
+    _apiUrlController.text = settings.apiUrl;
+    _apiKeyController.text = settings.apiKey;
+    _modelController.text = settings.model;
+    if (settings.prompt.isNotEmpty) {
+      _promptController.text = settings.prompt;
     }
+    _apiProtocol = settings.apiProtocol;
+    _concurrency = settings.concurrency.toDouble();
+    _syncingSettings = false;
+  }
+
+  void _handleTextChanged() {
+    if (_syncingSettings) return;
+    _scheduleSave();
+  }
+
+  void _scheduleSave() {
+    if (!_settingsNotifier.isLoaded) return;
+    _hasLocalChanges = true;
+    _saveTimer?.cancel();
+    _saveTimer = Timer(
+      const Duration(milliseconds: 450),
+      _queueSettingsForSave,
+    );
+  }
+
+  LLMSettings _buildSettings() {
+    final prompt = _promptController.text.trim();
+    return LLMSettings(
+      apiUrl: _apiUrlController.text.trim(),
+      apiProtocol: _apiProtocol,
+      apiKey: _apiKeyController.text.trim(),
+      model: _modelController.text.trim(),
+      prompt: TranslationService.isGeneratedDefaultLLMPrompt(prompt)
+          ? ''
+          : prompt,
+      concurrency: _concurrency.toInt(),
+    );
+  }
+
+  void _queueSettingsForSave() {
+    _saveTimer?.cancel();
+    _pendingSettings = _buildSettings();
+    _saveFuture ??= _drainSaveQueue();
+  }
+
+  Future<void> _drainSaveQueue() async {
+    while (_pendingSettings != null) {
+      final settings = _pendingSettings!;
+      _pendingSettings = null;
+      await _settingsNotifier.updateSettings(settings);
+    }
+    _saveFuture = null;
+    _hasLocalChanges = false;
   }
 
   Future<void> _fillDefaultPrompt() async {
-    final prompt =
-        await TranslationService().getDefaultLLMPromptForCurrentLocale();
+    final prompt = await TranslationService()
+        .getDefaultLLMPromptForCurrentLocale();
     if (!mounted || _promptController.text.isNotEmpty) return;
+    _syncingSettings = true;
     _promptController.text = prompt;
+    _syncingSettings = false;
   }
 
   Future<void> _restoreDefaultPrompt() async {
-    _promptController.text =
-        await TranslationService().getDefaultLLMPromptForCurrentLocale();
+    final prompt = await TranslationService()
+        .getDefaultLLMPromptForCurrentLocale();
+    if (!mounted) return;
+    _promptController.text = prompt;
+  }
+
+  String _protocolLabel(BuildContext context, LLMApiProtocol protocol) {
+    switch (protocol) {
+      case LLMApiProtocol.chatCompletions:
+        return S.of(context).chatCompletionsProtocol;
+      case LLMApiProtocol.responses:
+        return S.of(context).responsesProtocol;
+    }
   }
 
   @override
@@ -88,7 +165,6 @@ class _LLMSettingsScreenState extends ConsumerState<LLMSettingsScreen> {
     return SettingsSubpageScaffold(
       title: S.of(context).llmTranslationSettings,
       body: Form(
-        key: _formKey,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
@@ -100,9 +176,10 @@ class _LLMSettingsScreenState extends ConsumerState<LLMSettingsScreen> {
                   children: [
                     TextFormField(
                       controller: _apiUrlController,
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
                       decoration: InputDecoration(
-                        labelText: S.of(context).apiEndpointUrl,
-                        hintText: 'https://api.openai.com/v1/chat/completions',
+                        labelText: S.of(context).apiBaseUrl,
+                        hintText: 'https://api.openai.com/v1',
                         helperText: S.of(context).openaiCompatibleEndpoint,
                         border: const OutlineInputBorder(),
                       ),
@@ -117,8 +194,32 @@ class _LLMSettingsScreenState extends ConsumerState<LLMSettingsScreen> {
                       },
                     ),
                     const SizedBox(height: 16),
+                    DropdownButtonFormField<LLMApiProtocol>(
+                      initialValue: _apiProtocol,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: S.of(context).apiProtocol,
+                        border: const OutlineInputBorder(),
+                      ),
+                      items: [
+                        for (final protocol in LLMApiProtocol.values)
+                          DropdownMenuItem(
+                            value: protocol,
+                            child: Text(_protocolLabel(context, protocol)),
+                          ),
+                      ],
+                      onChanged: (protocol) {
+                        if (protocol == null || protocol == _apiProtocol) {
+                          return;
+                        }
+                        setState(() => _apiProtocol = protocol);
+                        _scheduleSave();
+                      },
+                    ),
+                    const SizedBox(height: 16),
                     TextFormField(
                       controller: _apiKeyController,
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
                       decoration: const InputDecoration(
                         labelText: 'API Key',
                         hintText: 'sk-...',
@@ -135,6 +236,7 @@ class _LLMSettingsScreenState extends ConsumerState<LLMSettingsScreen> {
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _modelController,
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
                       decoration: InputDecoration(
                         labelText: S.of(context).modelName,
                         hintText: 'gpt-3.5-turbo',
@@ -153,8 +255,10 @@ class _LLMSettingsScreenState extends ConsumerState<LLMSettingsScreen> {
                       children: [
                         Row(
                           children: [
-                            Text(S.of(context).concurrencyCount,
-                                style: const TextStyle(fontSize: 16)),
+                            Text(
+                              S.of(context).concurrencyCount,
+                              style: const TextStyle(fontSize: 16),
+                            ),
                             const SizedBox(width: 8),
                             Text(
                               '${_concurrency.toInt()}',
@@ -167,8 +271,10 @@ class _LLMSettingsScreenState extends ConsumerState<LLMSettingsScreen> {
                         ),
                         Text(
                           S.of(context).concurrencyDescription,
-                          style:
-                              const TextStyle(fontSize: 12, color: Colors.grey),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
                         ),
                         Slider(
                           value: _concurrency,
@@ -180,6 +286,7 @@ class _LLMSettingsScreenState extends ConsumerState<LLMSettingsScreen> {
                             setState(() {
                               _concurrency = value;
                             });
+                            _scheduleSave();
                           },
                         ),
                       ],
@@ -210,6 +317,7 @@ class _LLMSettingsScreenState extends ConsumerState<LLMSettingsScreen> {
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _promptController,
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
                       maxLines: 5,
                       decoration: InputDecoration(
                         border: const OutlineInputBorder(),
@@ -230,15 +338,6 @@ class _LLMSettingsScreenState extends ConsumerState<LLMSettingsScreen> {
                     ),
                   ],
                 ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: _saveSettings,
-                icon: const Icon(Icons.save),
-                label: Text(S.of(context).saveSettings),
               ),
             ),
           ],

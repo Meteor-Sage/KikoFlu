@@ -956,7 +956,7 @@ class SEn extends S {
   String get llmSettings => 'LLM Settings';
 
   @override
-  String get llmSettingsSubtitle => 'API URL, key, and model';
+  String get llmSettingsSubtitle => 'API URL, protocol, key, and model';
 
   @override
   String get audioFormatPreference => 'Audio Format Preference';
@@ -3405,7 +3405,19 @@ class SEn extends S {
   String get apiEndpointUrl => 'API Endpoint URL';
 
   @override
-  String get openaiCompatibleEndpoint => 'OpenAI-compatible endpoint URL';
+  String get apiBaseUrl => 'API Base URL';
+
+  @override
+  String get apiProtocol => 'API Protocol';
+
+  @override
+  String get chatCompletionsProtocol => 'Chat Completions (/chat/completions)';
+
+  @override
+  String get responsesProtocol => 'Responses (/responses)';
+
+  @override
+  String get openaiCompatibleEndpoint => 'OpenAI-compatible API base URL';
 
   @override
   String get pleaseEnterApiUrl => 'Please enter API endpoint URL';

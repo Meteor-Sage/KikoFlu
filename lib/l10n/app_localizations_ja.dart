@@ -935,7 +935,7 @@ class SJa extends S {
   String get llmSettings => 'LLM設定';
 
   @override
-  String get llmSettingsSubtitle => 'API URL、キー、モデル';
+  String get llmSettingsSubtitle => 'API URL、プロトコル、キー、モデル';
 
   @override
   String get audioFormatPreference => 'オーディオフォーマット設定';
@@ -3314,7 +3314,19 @@ class SJa extends S {
   String get apiEndpointUrl => 'APIエンドポイントURL';
 
   @override
-  String get openaiCompatibleEndpoint => 'OpenAI互換エンドポイントURL';
+  String get apiBaseUrl => 'APIベースURL';
+
+  @override
+  String get apiProtocol => 'APIプロトコル';
+
+  @override
+  String get chatCompletionsProtocol => 'Chat Completions (/chat/completions)';
+
+  @override
+  String get responsesProtocol => 'Responses (/responses)';
+
+  @override
+  String get openaiCompatibleEndpoint => 'OpenAI互換APIのベースURL';
 
   @override
   String get pleaseEnterApiUrl => 'APIエンドポイントURLを入力してください';

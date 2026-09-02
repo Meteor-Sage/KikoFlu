@@ -1,27 +1,45 @@
 import 'dart:ui';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/llm_api_protocol.dart';
+import '../providers/settings_provider.dart';
 import 'log_service.dart';
 import 'translation_service.dart';
 
 class LLMTranslator {
-  final Dio _dio = Dio();
+  LLMTranslator({Dio? dio}) : _dio = dio ?? Dio();
 
-  Future<String> translate(String text,
-      {String? sourceLang,
-      Locale? locale,
-      String? sourceLanguageName,
-      String? targetLanguageName}) async {
+  final Dio _dio;
+
+  Future<String> translate(
+    String text, {
+    String? sourceLang,
+    Locale? locale,
+    String? sourceLanguageName,
+    String? targetLanguageName,
+  }) async {
     if (text.isEmpty) return text;
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      final apiUrl = prefs.getString('llm_settings_api_url') ??
-          'https://api.openai.com/v1/chat/completions';
-      final apiKey = prefs.getString('llm_settings_api_key') ?? '';
-      final model = prefs.getString('llm_settings_model') ?? 'gpt-3.5-turbo';
-      final savedPrompt = prefs.getString('llm_settings_prompt');
-      final useDefaultPrompt = savedPrompt == null ||
+      final savedApiUrl =
+          prefs.getString(LLMSettingsNotifier.apiUrlPreferenceKey) ??
+          const LLMSettings().apiUrl;
+      final apiProtocol = LLMApiProtocol.fromPreference(
+        prefs.getString(LLMSettingsNotifier.apiProtocolPreferenceKey),
+        apiUrl: savedApiUrl,
+      );
+      final apiUrl = apiProtocol.resolveEndpoint(savedApiUrl);
+      final apiKey =
+          prefs.getString(LLMSettingsNotifier.apiKeyPreferenceKey) ?? '';
+      final model =
+          prefs.getString(LLMSettingsNotifier.modelPreferenceKey) ??
+          const LLMSettings().model;
+      final savedPrompt = prefs.getString(
+        LLMSettingsNotifier.promptPreferenceKey,
+      );
+      final useDefaultPrompt =
+          savedPrompt == null ||
           savedPrompt.isEmpty ||
           TranslationService.isGeneratedDefaultLLMPrompt(savedPrompt);
       final prompt = useDefaultPrompt
@@ -45,26 +63,20 @@ class LLMTranslator {
           },
           responseType: ResponseType.json,
         ),
-        data: {
-          'model': model,
-          'messages': [
-            {'role': 'system', 'content': prompt},
-            {'role': 'user', 'content': text},
-          ],
-          'temperature': 0.3,
-        },
+        data: buildRequestData(
+          protocol: apiProtocol,
+          model: model,
+          prompt: prompt,
+          text: text,
+        ),
       );
 
       if (response.statusCode == 200) {
-        final data = response.data;
-        if (data != null &&
-            data['choices'] != null &&
-            data['choices'].isNotEmpty) {
-          final choice = data['choices'][0];
-          final message = choice is Map ? choice['message'] : null;
-          final content = message is Map ? message['content'] : null;
-          return content?.toString().trim() ?? text;
-        }
+        return extractTranslatedText(
+              protocol: apiProtocol,
+              data: response.data,
+            ) ??
+            text;
       }
       return text;
     } catch (e) {
@@ -77,5 +89,77 @@ class LLMTranslator {
       }
       return text;
     }
+  }
+
+  static Map<String, dynamic> buildRequestData({
+    required LLMApiProtocol protocol,
+    required String model,
+    required String prompt,
+    required String text,
+  }) {
+    switch (protocol) {
+      case LLMApiProtocol.chatCompletions:
+        return {
+          'model': model,
+          'messages': [
+            {'role': 'system', 'content': prompt},
+            {'role': 'user', 'content': text},
+          ],
+          'temperature': 0.3,
+        };
+      case LLMApiProtocol.responses:
+        return {'model': model, 'instructions': prompt, 'input': text};
+    }
+  }
+
+  static String? extractTranslatedText({
+    required LLMApiProtocol protocol,
+    required dynamic data,
+  }) {
+    if (data is! Map) return null;
+
+    switch (protocol) {
+      case LLMApiProtocol.chatCompletions:
+        final choices = data['choices'];
+        if (choices is! List || choices.isEmpty) return null;
+        final choice = choices.first;
+        final message = choice is Map ? choice['message'] : null;
+        final content = message is Map ? message['content'] : null;
+        if (content is String) return _nonEmptyTrimmed(content);
+        if (content is List) {
+          return _joinTextBlocks(content);
+        }
+        return null;
+      case LLMApiProtocol.responses:
+        final outputText = data['output_text'];
+        if (outputText is String) return _nonEmptyTrimmed(outputText);
+
+        final output = data['output'];
+        if (output is! List) return null;
+        final textBlocks = <dynamic>[];
+        for (final item in output) {
+          if (item is! Map || item['type'] != 'message') continue;
+          final content = item['content'];
+          if (content is List) textBlocks.addAll(content);
+        }
+        return _joinTextBlocks(textBlocks);
+    }
+  }
+
+  static String? _joinTextBlocks(List<dynamic> blocks) {
+    final parts = <String>[];
+    for (final block in blocks) {
+      if (block is! Map) continue;
+      final text = block['text'];
+      if (text is String && text.trim().isNotEmpty) {
+        parts.add(text.trim());
+      }
+    }
+    return parts.isEmpty ? null : parts.join('\n');
+  }
+
+  static String? _nonEmptyTrimmed(String value) {
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
   }
 }
