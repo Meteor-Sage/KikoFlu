@@ -3326,7 +3326,10 @@ class SJa extends S {
   String get responsesProtocol => 'Responses (/responses)';
 
   @override
-  String get openaiCompatibleEndpoint => 'OpenAI互換APIのベースURL';
+  String get anthropicProtocol => 'Anthropic Messages (/messages)';
+
+  @override
+  String get openaiCompatibleEndpoint => '選択したプロトコルのサフィックスが自動的に追加されます';
 
   @override
   String get pleaseEnterApiUrl => 'APIエンドポイントURLを入力してください';

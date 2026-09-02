@@ -57,10 +57,7 @@ class LLMTranslator {
       final response = await _dio.post(
         apiUrl,
         options: Options(
-          headers: {
-            'Authorization': 'Bearer $apiKey',
-            'Content-Type': 'application/json',
-          },
+          headers: buildHeaders(protocol: apiProtocol, apiKey: apiKey),
           responseType: ResponseType.json,
         ),
         data: buildRequestData(
@@ -109,6 +106,36 @@ class LLMTranslator {
         };
       case LLMApiProtocol.responses:
         return {'model': model, 'instructions': prompt, 'input': text};
+      case LLMApiProtocol.anthropic:
+        return {
+          'model': model,
+          'max_tokens': 4096,
+          'system': prompt,
+          'messages': [
+            {'role': 'user', 'content': text},
+          ],
+          'temperature': 0.3,
+        };
+    }
+  }
+
+  static Map<String, String> buildHeaders({
+    required LLMApiProtocol protocol,
+    required String apiKey,
+  }) {
+    switch (protocol) {
+      case LLMApiProtocol.anthropic:
+        return {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'Content-Type': 'application/json',
+        };
+      case LLMApiProtocol.chatCompletions:
+      case LLMApiProtocol.responses:
+        return {
+          'Authorization': 'Bearer $apiKey',
+          'Content-Type': 'application/json',
+        };
     }
   }
 
@@ -143,6 +170,12 @@ class LLMTranslator {
           if (content is List) textBlocks.addAll(content);
         }
         return _joinTextBlocks(textBlocks);
+      case LLMApiProtocol.anthropic:
+        return _joinTextBlocks(
+          data['content'] is List
+              ? data['content'] as List<dynamic>
+              : const <dynamic>[],
+        );
     }
   }
 

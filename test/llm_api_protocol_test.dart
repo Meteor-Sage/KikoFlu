@@ -77,6 +77,12 @@ void main() {
       ),
       'https://example.com/v1/responses',
     );
+    expect(
+      LLMApiProtocol.anthropic.resolveEndpoint(
+        'https://example.com/v1/messages/',
+      ),
+      'https://example.com/v1/messages',
+    );
   });
 
   test('Chat Completions request uses messages', () {
@@ -111,6 +117,34 @@ void main() {
     });
   });
 
+  test('Anthropic request uses Messages API fields and headers', () {
+    final request = LLMTranslator.buildRequestData(
+      protocol: LLMApiProtocol.anthropic,
+      model: 'claude-sonnet-5',
+      prompt: 'Translate only.',
+      text: 'hello',
+    );
+    final headers = LLMTranslator.buildHeaders(
+      protocol: LLMApiProtocol.anthropic,
+      apiKey: 'test-key',
+    );
+
+    expect(request, {
+      'model': 'claude-sonnet-5',
+      'max_tokens': 4096,
+      'system': 'Translate only.',
+      'messages': [
+        {'role': 'user', 'content': 'hello'},
+      ],
+      'temperature': 0.3,
+    });
+    expect(headers, {
+      'x-api-key': 'test-key',
+      'anthropic-version': '2023-06-01',
+      'Content-Type': 'application/json',
+    });
+  });
+
   test('Responses output message text is extracted', () {
     final translated = LLMTranslator.extractTranslatedText(
       protocol: LLMApiProtocol.responses,
@@ -124,6 +158,19 @@ void main() {
               {'type': 'output_text', 'text': '  你好  '},
             ],
           },
+        ],
+      },
+    );
+
+    expect(translated, '你好');
+  });
+
+  test('Anthropic content blocks are extracted', () {
+    final translated = LLMTranslator.extractTranslatedText(
+      protocol: LLMApiProtocol.anthropic,
+      data: {
+        'content': [
+          {'type': 'text', 'text': '  你好  '},
         ],
       },
     );

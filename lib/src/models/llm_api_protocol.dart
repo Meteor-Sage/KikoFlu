@@ -3,7 +3,8 @@ enum LLMApiProtocol {
     preferenceValue: 'chat_completions',
     endpointSuffix: '/chat/completions',
   ),
-  responses(preferenceValue: 'responses', endpointSuffix: '/responses');
+  responses(preferenceValue: 'responses', endpointSuffix: '/responses'),
+  anthropic(preferenceValue: 'anthropic', endpointSuffix: '/messages');
 
   const LLMApiProtocol({
     required this.preferenceValue,
@@ -22,8 +23,10 @@ enum LLMApiProtocol {
     }
 
     final normalizedUrl = _withoutTrailingSlash(apiUrl);
-    if (normalizedUrl.endsWith(responses.endpointSuffix)) {
-      return responses;
+    for (final protocol in values.reversed) {
+      if (normalizedUrl.endsWith(protocol.endpointSuffix)) {
+        return protocol;
+      }
     }
     return chatCompletions;
   }

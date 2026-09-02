@@ -3310,7 +3310,10 @@ class SZh extends S {
   String get responsesProtocol => 'Responses (/responses)';
 
   @override
-  String get openaiCompatibleEndpoint => 'OpenAI 兼容 API 的基础地址';
+  String get anthropicProtocol => 'Anthropic Messages (/messages)';
+
+  @override
+  String get openaiCompatibleEndpoint => '系统会自动添加所选协议后缀';
 
   @override
   String get pleaseEnterApiUrl => '请输入 API 接口地址';
@@ -6946,7 +6949,10 @@ class SZhHant extends SZh {
   String get responsesProtocol => 'Responses (/responses)';
 
   @override
-  String get openaiCompatibleEndpoint => 'OpenAI 相容 API 的基礎位址';
+  String get anthropicProtocol => 'Anthropic Messages (/messages)';
+
+  @override
+  String get openaiCompatibleEndpoint => '系統會自動添加所選協議後綴';
 
   @override
   String get pleaseEnterApiUrl => '請輸入 API 介面地址';

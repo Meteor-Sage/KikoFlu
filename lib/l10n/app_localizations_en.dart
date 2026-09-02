@@ -3417,7 +3417,11 @@ class SEn extends S {
   String get responsesProtocol => 'Responses (/responses)';
 
   @override
-  String get openaiCompatibleEndpoint => 'OpenAI-compatible API base URL';
+  String get anthropicProtocol => 'Anthropic Messages (/messages)';
+
+  @override
+  String get openaiCompatibleEndpoint =>
+      'The selected protocol suffix is added automatically';
 
   @override
   String get pleaseEnterApiUrl => 'Please enter API endpoint URL';

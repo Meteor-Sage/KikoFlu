@@ -379,6 +379,7 @@ class LLMSettingsNotifier extends StateNotifier<LLMSettings> {
   Future<void> _loadSettings() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      _settingsLoaded = true;
       if (!mounted || _changedLocally) return;
       final savedApiUrl = prefs.getString(apiUrlPreferenceKey) ?? state.apiUrl;
       final apiProtocol = LLMApiProtocol.fromPreference(

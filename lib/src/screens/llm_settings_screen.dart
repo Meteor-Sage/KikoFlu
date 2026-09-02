@@ -28,6 +28,14 @@ class _LLMSettingsScreenState extends ConsumerState<LLMSettingsScreen> {
   LLMSettings? _pendingSettings;
   bool _syncingSettings = false;
   bool _hasLocalChanges = false;
+  final Set<String> _dirtyFields = <String>{};
+
+  static const _apiUrlField = 'apiUrl';
+  static const _apiKeyField = 'apiKey';
+  static const _modelField = 'model';
+  static const _promptField = 'prompt';
+  static const _protocolField = 'protocol';
+  static const _concurrencyField = 'concurrency';
 
   @override
   void initState() {
@@ -41,17 +49,19 @@ class _LLMSettingsScreenState extends ConsumerState<LLMSettingsScreen> {
     _apiProtocol = settings.apiProtocol;
     _concurrency = settings.concurrency.toDouble();
 
-    for (final controller in [
-      _apiUrlController,
-      _apiKeyController,
-      _modelController,
-      _promptController,
-    ]) {
-      controller.addListener(_handleTextChanged);
-    }
+    _apiUrlController.addListener(() => _handleTextChanged(_apiUrlField));
+    _apiKeyController.addListener(() => _handleTextChanged(_apiKeyField));
+    _modelController.addListener(() => _handleTextChanged(_modelField));
+    _promptController.addListener(() => _handleTextChanged(_promptField));
 
     ref.listenManual<LLMSettings>(llmSettingsProvider, (previous, next) {
-      if (!mounted || _hasLocalChanges) return;
+      if (!mounted) return;
+      if (_hasLocalChanges) {
+        if (_settingsNotifier.isLoaded && _saveFuture == null) {
+          _scheduleSave();
+        }
+        return;
+      }
       setState(() => _applySettings(next));
     });
   }
@@ -79,25 +89,36 @@ class _LLMSettingsScreenState extends ConsumerState<LLMSettingsScreen> {
 
   void _applySettings(LLMSettings settings) {
     _syncingSettings = true;
-    _apiUrlController.text = settings.apiUrl;
-    _apiKeyController.text = settings.apiKey;
-    _modelController.text = settings.model;
-    if (settings.prompt.isNotEmpty) {
+    if (!_dirtyFields.contains(_apiUrlField)) {
+      _apiUrlController.text = settings.apiUrl;
+    }
+    if (!_dirtyFields.contains(_apiKeyField)) {
+      _apiKeyController.text = settings.apiKey;
+    }
+    if (!_dirtyFields.contains(_modelField)) {
+      _modelController.text = settings.model;
+    }
+    if (!_dirtyFields.contains(_promptField) && settings.prompt.isNotEmpty) {
       _promptController.text = settings.prompt;
     }
-    _apiProtocol = settings.apiProtocol;
-    _concurrency = settings.concurrency.toDouble();
+    if (!_dirtyFields.contains(_protocolField)) {
+      _apiProtocol = settings.apiProtocol;
+    }
+    if (!_dirtyFields.contains(_concurrencyField)) {
+      _concurrency = settings.concurrency.toDouble();
+    }
     _syncingSettings = false;
   }
 
-  void _handleTextChanged() {
+  void _handleTextChanged(String field) {
     if (_syncingSettings) return;
+    _dirtyFields.add(field);
     _scheduleSave();
   }
 
   void _scheduleSave() {
-    if (!_settingsNotifier.isLoaded) return;
     _hasLocalChanges = true;
+    if (!_settingsNotifier.isLoaded) return;
     _saveTimer?.cancel();
     _saveTimer = Timer(
       const Duration(milliseconds: 450),
@@ -133,6 +154,7 @@ class _LLMSettingsScreenState extends ConsumerState<LLMSettingsScreen> {
     }
     _saveFuture = null;
     _hasLocalChanges = false;
+    _dirtyFields.clear();
   }
 
   Future<void> _fillDefaultPrompt() async {
@@ -157,6 +179,8 @@ class _LLMSettingsScreenState extends ConsumerState<LLMSettingsScreen> {
         return S.of(context).chatCompletionsProtocol;
       case LLMApiProtocol.responses:
         return S.of(context).responsesProtocol;
+      case LLMApiProtocol.anthropic:
+        return S.of(context).anthropicProtocol;
     }
   }
 
@@ -179,7 +203,9 @@ class _LLMSettingsScreenState extends ConsumerState<LLMSettingsScreen> {
                       autovalidateMode: AutovalidateMode.onUserInteraction,
                       decoration: InputDecoration(
                         labelText: S.of(context).apiBaseUrl,
-                        hintText: 'https://api.openai.com/v1',
+                        hintText: _apiProtocol == LLMApiProtocol.anthropic
+                            ? 'https://api.anthropic.com/v1'
+                            : 'https://api.openai.com/v1',
                         helperText: S.of(context).openaiCompatibleEndpoint,
                         border: const OutlineInputBorder(),
                       ),
@@ -195,6 +221,7 @@ class _LLMSettingsScreenState extends ConsumerState<LLMSettingsScreen> {
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<LLMApiProtocol>(
+                      key: ValueKey(_apiProtocol),
                       initialValue: _apiProtocol,
                       isExpanded: true,
                       decoration: InputDecoration(
@@ -213,6 +240,7 @@ class _LLMSettingsScreenState extends ConsumerState<LLMSettingsScreen> {
                           return;
                         }
                         setState(() => _apiProtocol = protocol);
+                        _dirtyFields.add(_protocolField);
                         _scheduleSave();
                       },
                     ),
@@ -286,6 +314,7 @@ class _LLMSettingsScreenState extends ConsumerState<LLMSettingsScreen> {
                             setState(() {
                               _concurrency = value;
                             });
+                            _dirtyFields.add(_concurrencyField);
                             _scheduleSave();
                           },
                         ),

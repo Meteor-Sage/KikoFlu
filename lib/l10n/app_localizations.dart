@@ -6072,10 +6072,16 @@ abstract class S {
   /// **'Responses (/responses)'**
   String get responsesProtocol;
 
+  /// No description provided for @anthropicProtocol.
+  ///
+  /// In en, this message translates to:
+  /// **'Anthropic Messages (/messages)'**
+  String get anthropicProtocol;
+
   /// No description provided for @openaiCompatibleEndpoint.
   ///
   /// In en, this message translates to:
-  /// **'OpenAI-compatible API base URL'**
+  /// **'The selected protocol suffix is added automatically'**
   String get openaiCompatibleEndpoint;
 
   /// No description provided for @pleaseEnterApiUrl.

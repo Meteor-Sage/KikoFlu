@@ -3432,7 +3432,11 @@ class SRu extends S {
   String get responsesProtocol => 'Responses (/responses)';
 
   @override
-  String get openaiCompatibleEndpoint => 'Базовый URL OpenAI-совместимого API';
+  String get anthropicProtocol => 'Anthropic Messages (/messages)';
+
+  @override
+  String get openaiCompatibleEndpoint =>
+      'Суффикс выбранного протокола добавляется автоматически';
 
   @override
   String get pleaseEnterApiUrl => 'Введите URL-адрес API';
