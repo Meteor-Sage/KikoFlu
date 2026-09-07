@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
@@ -41,6 +42,16 @@ class AudioPlayerService {
     }
   }
 
+  @visibleForTesting
+  AudioPlayerService.forTesting(
+    AudioPlayer player, {
+    List<AudioTrack> queue = const [],
+  }) {
+    _player = player;
+    _queue.addAll(queue);
+    _setupPlayerListeners();
+  }
+
   late final AudioPlayer _player;
   AndroidLoudnessEnhancer? _androidLoudnessEnhancer;
   final AudioHapticsService _hapticsService = AudioHapticsService.instance;
@@ -60,6 +71,7 @@ class AudioPlayerService {
   bool _isRestoringSession = false;
   bool _sessionCompleted = false;
   bool _handlingTrackCompletion = false;
+  int _pauseGeneration = 0;
   String? _sessionOwnerKey;
 
   // 下一首预加载：剩余时长低于此阈值时提前缓存下一首，避免切歌空档
@@ -117,6 +129,11 @@ class AudioPlayerService {
       StreamController.broadcast();
   final StreamController<bool> _trackLoadingController =
       StreamController<bool>.broadcast();
+  // Synchronous delivery lets a sleep timer veto repeat/advance before it starts.
+  final StreamController<void> _trackEndController =
+      StreamController<void>.broadcast(sync: true);
+
+  Stream<void> get trackEndStream => _trackEndController.stream;
 
   // Initialize the service
   Future<void> initialize() async {
@@ -251,7 +268,7 @@ class AudioPlayerService {
 
     // Listen to player state changes
     _player.playerStateStream.listen((state) {
-      if (state.processingState == ProcessingState.completed) {
+      if (state.playing && state.processingState == ProcessingState.completed) {
         if (Platform.isMacOS) {
           // macOS: Use dedicated handler to prevent duplicate triggers
           if (!_completionHandled) {
@@ -610,9 +627,14 @@ class AudioPlayerService {
 
   // Handle track completion logic
   Future<void> _handleTrackCompletion() async {
-    if (_sessionCompleted || _handlingTrackCompletion) return;
+    if (!_player.playing || _sessionCompleted || _handlingTrackCompletion) {
+      return;
+    }
     _handlingTrackCompletion = true;
     try {
+      final pauseGeneration = _pauseGeneration;
+      _trackEndController.add(null);
+      if (pauseGeneration != _pauseGeneration) return;
       if (_appLoopMode == LoopMode.one) {
         // Single track repeat - replay current track
         // macOS: Reset completion flag before replaying to allow next completion detection
@@ -620,6 +642,7 @@ class AudioPlayerService {
           _completionHandled = false;
         }
         await seek(Duration.zero);
+        if (pauseGeneration != _pauseGeneration) return;
         unawaited(play());
       } else if (_currentIndex < _queue.length - 1) {
         // Has next track - play it
@@ -778,6 +801,7 @@ class AudioPlayerService {
   }
 
   Future<void> pause() async {
+    _pauseGeneration++;
     await _player.pause();
     _updatePlaybackState();
     await _hapticsService.pause();
@@ -785,6 +809,7 @@ class AudioPlayerService {
   }
 
   Future<void> stop() async {
+    _pauseGeneration++;
     await _player.stop();
     _updatePlaybackState();
     await _hapticsService.stop();
@@ -850,10 +875,12 @@ class AudioPlayerService {
   }
 
   Future<void> _switchToIndexAndPlay(int index) async {
+    final pauseGeneration = _pauseGeneration;
     final previousIndex = _currentIndex;
     _currentIndex = index;
     try {
       await _loadTrack(_queue[_currentIndex]);
+      if (pauseGeneration != _pauseGeneration) return;
       await play();
     } catch (_) {
       _currentIndex = previousIndex;
@@ -1265,6 +1292,7 @@ class AudioPlayerService {
     await _cleanupTempPlaybackFile();
     await _queueController.close();
     await _currentTrackController.close();
+    await _trackEndController.close();
     await _player.dispose();
   }
 

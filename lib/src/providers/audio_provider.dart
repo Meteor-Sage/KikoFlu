@@ -459,16 +459,24 @@ final miniPlayerVisibilityProvider =
 
 // Sleep Timer Controller
 class SleepTimerController extends StateNotifier<SleepTimerState> {
-  final Ref _ref;
+  final AudioPlayerService _service;
+  final Future<void> Function() pause;
+  final DateTime Function() _now;
   Timer? _timer;
   Timer? _countdownTimer;
   StreamSubscription? _trackSubscription;
+  StreamSubscription<void>? _trackEndSubscription;
 
-  SleepTimerController(this._ref) : super(const SleepTimerState());
+  SleepTimerController(
+    this._service, {
+    required this.pause,
+    DateTime Function()? now,
+  }) : _now = now ?? DateTime.now,
+       super(const SleepTimerState());
 
   /// 设置定时器（按时长）
   void setTimer(Duration duration, {bool finishCurrentTrack = false}) {
-    final endTime = DateTime.now().add(duration);
+    final endTime = _now().add(duration);
     _setTimerInternal(endTime, finishCurrentTrack: finishCurrentTrack);
   }
 
@@ -482,7 +490,7 @@ class SleepTimerController extends StateNotifier<SleepTimerState> {
     // 取消现有定时器
     cancelTimer();
 
-    final duration = endTime.difference(DateTime.now());
+    final duration = endTime.difference(_now());
 
     // 如果时间已经过了，则不设置
     if (duration.isNegative || duration.inSeconds < 1) {
@@ -494,17 +502,13 @@ class SleepTimerController extends StateNotifier<SleepTimerState> {
       if (state.finishCurrentTrack) {
         _waitForTrackEndAndPause();
       } else {
-        final audioController =
-            _ref.read(audioPlayerControllerProvider.notifier);
-        audioController.pause();
-        // 定时器结束后重置状态
-        cancelTimer();
+        unawaited(_pauseAndCancel());
       }
     });
 
     // 设置倒计时更新定时器 - 每秒更新一次剩余时间
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      final remaining = endTime.difference(DateTime.now());
+      final remaining = endTime.difference(_now());
       if (remaining.isNegative) {
         timer.cancel();
         return;
@@ -523,6 +527,15 @@ class SleepTimerController extends StateNotifier<SleepTimerState> {
       remainingTime: duration,
       finishCurrentTrack: finishCurrentTrack,
     );
+
+    if (finishCurrentTrack) {
+      // Check the wall-clock deadline even if a background Timer callback is late.
+      _trackEndSubscription = _service.trackEndStream.listen((_) {
+        if (!_now().isBefore(endTime)) {
+          unawaited(_pauseAndCancel());
+        }
+      });
+    }
   }
 
   /// 等待当前音轨播放结束并暂停
@@ -532,11 +545,12 @@ class SleepTimerController extends StateNotifier<SleepTimerState> {
     _countdownTimer?.cancel();
     _countdownTimer = null;
 
-    final audioController = _ref.read(audioPlayerControllerProvider.notifier);
-    final initialTrack = audioController.currentTrack;
+    final initialTrack = _service.currentTrack;
 
-    if (initialTrack == null) {
-      cancelTimer();
+    if (initialTrack == null ||
+        !_service.playing ||
+        _service.playerState.processingState == ProcessingState.completed) {
+      unawaited(_pauseAndCancel());
       return;
     }
 
@@ -546,15 +560,23 @@ class SleepTimerController extends StateNotifier<SleepTimerState> {
     );
 
     _trackSubscription?.cancel();
-    _trackSubscription = audioController.currentTrackStream.listen(
-      (track) {
-        // 当音轨发生变化（切换到下一首或停止）时暂停
-        if (track?.id != initialTrack.id) {
-          audioController.pause();
-          cancelTimer();
-        }
-      },
-    );
+    _trackSubscription = _service.currentTrackStream.listen((track) {
+      // 当音轨发生变化（切换到下一首或停止）时暂停
+      if (track?.id != initialTrack.id) {
+        unawaited(_pauseAndCancel());
+      }
+    });
+  }
+
+  Future<void> _pauseAndCancel() async {
+    // Start pausing synchronously so completion cannot advance the queue.
+    final pausing = Future<void>.sync(pause);
+    cancelTimer();
+    try {
+      await pausing;
+    } catch (error) {
+      _log.captureOutput('[SleepTimer] Failed to pause playback: $error');
+    }
   }
 
   /// 取消定时器
@@ -565,20 +587,20 @@ class SleepTimerController extends StateNotifier<SleepTimerState> {
     _countdownTimer = null;
     _trackSubscription?.cancel();
     _trackSubscription = null;
+    _trackEndSubscription?.cancel();
+    _trackEndSubscription = null;
     state = const SleepTimerState();
   }
 
   /// 添加时间（延长定时器）
   void addTime(Duration duration) {
     if (state.isActive && state.endTime != null) {
-      final newEndTime = state.endTime!.add(duration);
-      final newRemaining = newEndTime.difference(DateTime.now());
+      final now = _now();
+      final baseTime = state.endTime!.isAfter(now) ? state.endTime! : now;
+      final newEndTime = baseTime.add(duration);
 
       // 重新设置定时器，并保持当前的"播完暂停"状态
-      setTimer(
-        newRemaining,
-        finishCurrentTrack: state.finishCurrentTrack,
-      );
+      setTimerUntil(newEndTime, finishCurrentTrack: state.finishCurrentTrack);
     }
   }
 
@@ -587,6 +609,7 @@ class SleepTimerController extends StateNotifier<SleepTimerState> {
     _timer?.cancel();
     _countdownTimer?.cancel();
     _trackSubscription?.cancel();
+    _trackEndSubscription?.cancel();
     super.dispose();
   }
 }
@@ -641,5 +664,8 @@ class SleepTimerState {
 // Sleep Timer Provider
 final sleepTimerProvider =
     StateNotifierProvider<SleepTimerController, SleepTimerState>((ref) {
-  return SleepTimerController(ref);
-});
+      return SleepTimerController(
+        ref.read(audioPlayerServiceProvider),
+        pause: () => ref.read(audioPlayerControllerProvider.notifier).pause(),
+      );
+    });
